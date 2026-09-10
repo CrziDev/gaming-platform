@@ -1,0 +1,27 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Go
+/backend/bin/
+/backend/tmp/
+*.test
+*.out
+
+# Node
+node_modules/
+/frontend/dist/
+/frontend/coverage/
+/frontend/.vite/
+npm-debug.log*
+
+# Editors and OS
+.DS_Store
+.idea/
+*.swp
+
+# Local working docs
+/docs/
