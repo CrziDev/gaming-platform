@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { AdminUserRecord } from '@/api/types'
+import type { AdminUser, Wallet } from '@/api/types'
 import { Button } from '@/components/ui/Button'
 import { Field, Select } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
@@ -10,27 +10,36 @@ import { currencySymbol, formatMoney, money, parseMoneyInput } from '@/lib/money
 export type AdjustDirection = 'credit' | 'debit'
 
 type WalletAdjustDialogProps = {
-  user: AdminUserRecord | null
+  user: AdminUser | null
+  wallet: Wallet | null
   direction: AdjustDirection
   onClose: () => void
 }
 
-export function WalletAdjustDialog({ user, direction, onClose }: WalletAdjustDialogProps) {
-  if (!user) {
+export function WalletAdjustDialog({ user, wallet, direction, onClose }: WalletAdjustDialogProps) {
+  if (!user || !wallet) {
     return null
   }
 
   return (
-    <AdjustForm key={`${user.id}-${direction}`} user={user} direction={direction} onClose={onClose} />
+    <AdjustForm
+      key={`${user.id}-${wallet.currency}-${direction}`}
+      user={user}
+      wallet={wallet}
+      direction={direction}
+      onClose={onClose}
+    />
   )
 }
 
 function AdjustForm({
   user,
+  wallet,
   direction,
   onClose,
 }: {
-  user: AdminUserRecord
+  user: AdminUser
+  wallet: Wallet
   direction: AdjustDirection
   onClose: () => void
 }) {
@@ -40,11 +49,11 @@ function AdjustForm({
   const [error, setError] = useState<string | undefined>(undefined)
 
   const crediting = direction === 'credit'
-  const balance = money(user.balance_minor, user.currency)
-  const amountMinor = parseMoneyInput(amount, user.currency)
+  const balance = money(wallet.balance_minor, wallet.currency)
+  const amountMinor = parseMoneyInput(amount, wallet.currency)
   const valid = amountMinor !== null && amountMinor > 0
   const nextBalance = valid
-    ? money(balance.amount_minor + (crediting ? amountMinor : -amountMinor), user.currency)
+    ? money(balance.amount_minor + (crediting ? amountMinor : -amountMinor), wallet.currency)
     : balance
 
   const submit = async () => {
@@ -63,7 +72,7 @@ function AdjustForm({
 
     await adjust.mutateAsync({
       user_id: user.id,
-      currency: user.currency,
+      currency: wallet.currency,
       direction,
       amount_minor: amountMinor,
       reason,
@@ -76,7 +85,7 @@ function AdjustForm({
       open
       onClose={onClose}
       title={crediting ? 'Credit account' : 'Debit account'}
-      description={`${user.account_ref} · balance ${formatMoney(balance)}`}
+      description={`${user.id.slice(0, 8).toUpperCase()} · ${wallet.currency} balance ${formatMoney(balance)}`}
       footer={
         <div className="flex flex-col gap-3">
           {error ? (
@@ -94,7 +103,7 @@ function AdjustForm({
               onClick={() => void submit()}
             >
               {crediting ? 'Credit' : 'Debit'}{' '}
-              {valid ? formatMoney(money(amountMinor, user.currency)) : ''}
+              {valid ? formatMoney(money(amountMinor, wallet.currency)) : ''}
             </Button>
           </div>
         </div>
@@ -111,13 +120,13 @@ function AdjustForm({
         <Field
           label={
             crediting
-              ? `Amount (${user.currency})`
-              : `Amount (${user.currency}) · max ${formatMoney(balance)}`
+              ? `Amount (${wallet.currency})`
+              : `Amount (${wallet.currency}) · max ${formatMoney(balance)}`
           }
           htmlFor="adjust-amount"
         >
           <div className="flex min-h-12 items-center gap-2.5 rounded-input border border-line-strong bg-base px-3.5">
-            <span className="font-mono text-ink-mute">{currencySymbol(user.currency)}</span>
+            <span className="font-mono text-ink-mute">{currencySymbol(wallet.currency)}</span>
             <input
               id="adjust-amount"
               inputMode="decimal"

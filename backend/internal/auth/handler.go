@@ -221,6 +221,78 @@ func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(response, total, query.Page, query.Size))
 }
 
+func (h *Handler) AdminUser(w http.ResponseWriter, r *http.Request) {
+	account, ok := h.currentUser(w, r)
+	if !ok {
+		return
+	}
+	if account.Role != "admin" {
+		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
+		return
+	}
+	if !httpx.IsUUID(r.PathValue("id")) {
+		httpx.WriteError(w, http.StatusNotFound, "Account not found")
+		return
+	}
+
+	target, err := user.FindByID(r.Context(), h.db, r.PathValue("id"))
+	if errors.Is(err, user.ErrNoUser) {
+		httpx.WriteError(w, http.StatusNotFound, "Account not found")
+		return
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, newAdminUserResponse(target))
+}
+
+func (h *Handler) AdminUserStatus(w http.ResponseWriter, r *http.Request) {
+	account, ok := h.currentUser(w, r)
+	if !ok {
+		return
+	}
+	if account.Role != "admin" {
+		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
+		return
+	}
+	if !httpx.IsUUID(r.PathValue("id")) {
+		httpx.WriteError(w, http.StatusNotFound, "Account not found")
+		return
+	}
+
+	var body struct {
+		Status string `json:"status"`
+	}
+	if !httpx.ReadJSON(w, r, &body) {
+		return
+	}
+	body.Status = strings.ToLower(strings.TrimSpace(body.Status))
+	if body.Status != "active" && body.Status != "suspended" {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"status": "Status must be active or suspended"})
+		return
+	}
+
+	target, err := user.ChangeStatus(r.Context(), h.db, account.ID, r.PathValue("id"), body.Status)
+	if errors.Is(err, user.ErrNoUser) {
+		httpx.WriteError(w, http.StatusNotFound, "Account not found")
+		return
+	}
+	if errors.Is(err, user.ErrSelfStatusChange) {
+		httpx.WriteCodedError(w, http.StatusConflict, "Administrators cannot change their own status", "SELF_STATUS_CHANGE")
+		return
+	}
+	if errors.Is(err, user.ErrAccountClosed) {
+		httpx.WriteCodedError(w, http.StatusConflict, "A closed account cannot be reinstated or suspended", "ACCOUNT_CLOSED")
+		return
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, newAdminUserResponse(target))
+}
+
 func validateRegistration(email, password, displayName string) map[string]string {
 	fields := make(map[string]string)
 

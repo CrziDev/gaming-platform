@@ -35,6 +35,7 @@ type Transaction struct {
 	ID, WalletID, UserID, Currency, Kind     string
 	AmountMinor, BalanceBefore, BalanceAfter int64
 	ReferenceType, ReferenceID, Reason       string
+	ActorUserID, ActorDisplayName            string
 	CreatedAt                                time.Time
 }
 
@@ -74,17 +75,17 @@ type AdminTransactionFilter struct {
 
 func ListAdminTransactions(ctx context.Context, db *sql.DB, filter AdminTransactionFilter) ([]Transaction, int, error) {
 	args := []any{filter.UserID, filter.Currency, filter.Kind, filter.From, filter.To}
-	where := `WHERE (NULLIF($1, '')::uuid IS NULL OR user_id = NULLIF($1, '')::uuid)
-      AND ($2 = '' OR currency = $2)
-      AND ($3 = '' OR kind = $3)
-      AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
-      AND ($5::timestamptz IS NULL OR created_at <= $5::timestamptz)`
+	where := `WHERE (NULLIF($1, '')::uuid IS NULL OR wt.user_id = NULLIF($1, '')::uuid)
+	      AND ($2 = '' OR wt.currency = $2)
+	      AND ($3 = '' OR wt.kind = $3)
+	      AND ($4::timestamptz IS NULL OR wt.created_at >= $4::timestamptz)
+	      AND ($5::timestamptz IS NULL OR wt.created_at <= $5::timestamptz)`
 	var total int
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM wallet_transactions `+where, args...).Scan(&total); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM wallet_transactions wt `+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("wallet: count admin transactions: %w", err)
 	}
 	args = append(args, filter.Size, (filter.Page-1)*filter.Size)
-	rows, err := db.QueryContext(ctx, `SELECT id::text, wallet_id::text, user_id::text, currency, kind, amount_minor, balance_before, balance_after, COALESCE(reason, ''), created_at FROM wallet_transactions `+where+` ORDER BY created_at DESC, id DESC LIMIT $6 OFFSET $7`, args...)
+	rows, err := db.QueryContext(ctx, `SELECT wt.id::text, wt.wallet_id::text, wt.user_id::text, wt.currency, wt.kind, wt.amount_minor, wt.balance_before, wt.balance_after, COALESCE(wt.reason, ''), COALESCE(wt.actor_user_id::text, ''), COALESCE(actor.display_name, ''), wt.created_at FROM wallet_transactions wt LEFT JOIN users actor ON actor.id = wt.actor_user_id `+where+` ORDER BY wt.created_at DESC, wt.id DESC LIMIT $6 OFFSET $7`, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("wallet: list admin transactions: %w", err)
 	}
@@ -92,7 +93,7 @@ func ListAdminTransactions(ctx context.Context, db *sql.DB, filter AdminTransact
 	result := make([]Transaction, 0)
 	for rows.Next() {
 		var item Transaction
-		if err := rows.Scan(&item.ID, &item.WalletID, &item.UserID, &item.Currency, &item.Kind, &item.AmountMinor, &item.BalanceBefore, &item.BalanceAfter, &item.Reason, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.WalletID, &item.UserID, &item.Currency, &item.Kind, &item.AmountMinor, &item.BalanceBefore, &item.BalanceAfter, &item.Reason, &item.ActorUserID, &item.ActorDisplayName, &item.CreatedAt); err != nil {
 			return nil, 0, fmt.Errorf("wallet: scan admin transaction: %w", err)
 		}
 		result = append(result, item)

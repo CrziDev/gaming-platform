@@ -37,9 +37,11 @@ type transactionResponse struct {
 
 type adminTransactionResponse struct {
 	transactionResponse
-	WalletID string `json:"wallet_id"`
-	UserID   string `json:"user_id"`
-	Reason   string `json:"reason,omitempty"`
+	WalletID         string `json:"wallet_id"`
+	UserID           string `json:"user_id"`
+	ActorUserID      string `json:"actor_user_id,omitempty"`
+	ActorDisplayName string `json:"actor_display_name,omitempty"`
+	Reason           string `json:"reason,omitempty"`
 }
 
 func NewHandler(db *sql.DB, logger *slog.Logger, currentUser CurrentUser) *Handler {
@@ -83,6 +85,39 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, walletResponse{item.ID, item.Currency, item.BalanceMinor, item.Status})
+}
+
+func (h *Handler) AdminUserWallets(w http.ResponseWriter, r *http.Request) {
+	account, ok := h.currentUser(w, r)
+	if !ok {
+		return
+	}
+	if account.Role != "admin" {
+		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
+		return
+	}
+	if !httpx.IsUUID(r.PathValue("id")) {
+		httpx.WriteError(w, http.StatusNotFound, "Account not found")
+		return
+	}
+	if _, err := user.FindByID(r.Context(), h.db, r.PathValue("id")); errors.Is(err, user.ErrNoUser) {
+		httpx.WriteError(w, http.StatusNotFound, "Account not found")
+		return
+	} else if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+
+	wallets, err := List(r.Context(), h.db, r.PathValue("id"))
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	result := make([]walletResponse, 0, len(wallets))
+	for _, item := range wallets {
+		result = append(result, walletResponse{ID: item.ID, Currency: item.Currency, BalanceMinor: item.BalanceMinor, Status: item.Status})
+	}
+	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) Transactions(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +231,8 @@ func (h *Handler) AdminAdjust(w http.ResponseWriter, r *http.Request) {
 		transactionResponse: transactionResponse{ID: transaction.ID, Kind: transaction.Kind, AmountMinor: transaction.AmountMinor,
 			Currency: transaction.Currency, BalanceBefore: transaction.BalanceBefore,
 			BalanceAfter: transaction.BalanceAfter, CreatedAt: transaction.CreatedAt.UTC().Format(time.RFC3339)},
-		WalletID: transaction.WalletID, UserID: transaction.UserID, Reason: transaction.Reason,
+		WalletID: transaction.WalletID, UserID: transaction.UserID, ActorUserID: transaction.ActorUserID,
+		ActorDisplayName: transaction.ActorDisplayName, Reason: transaction.Reason,
 	})
 }
 
@@ -231,7 +267,8 @@ func (h *Handler) AdminTransactions(w http.ResponseWriter, r *http.Request) {
 	for _, item := range items {
 		result = append(result, adminTransactionResponse{
 			transactionResponse: transactionResponse{ID: item.ID, Kind: item.Kind, AmountMinor: item.AmountMinor, Currency: item.Currency, BalanceBefore: item.BalanceBefore, BalanceAfter: item.BalanceAfter, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)},
-			WalletID:            item.WalletID, UserID: item.UserID, Reason: item.Reason,
+			WalletID:            item.WalletID, UserID: item.UserID, ActorUserID: item.ActorUserID,
+			ActorDisplayName: item.ActorDisplayName, Reason: item.Reason,
 		})
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))

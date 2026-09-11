@@ -25,7 +25,7 @@ const consoleRoutes: [string, string][] = [
   ['/admin', 'Today'],
   ['/admin/deposits', 'Deposits'],
   ['/admin/users', 'Users'],
-  ['/admin/users/us-0001', 'Wallet balance · PHP'],
+  ['/admin/users/us-0001', 'PHP wallet'],
   ['/admin/transactions', 'Transactions'],
   ['/admin/rounds', 'Game rounds'],
   ['/admin/games', 'Games'],

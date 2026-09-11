@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gaming-platform/backend/internal/audit"
 	"github.com/gaming-platform/backend/internal/auth"
 	"github.com/gaming-platform/backend/internal/currency"
+	"github.com/gaming-platform/backend/internal/dashboard"
 	"github.com/gaming-platform/backend/internal/deposit"
 	"github.com/gaming-platform/backend/internal/httpx"
 	"github.com/gaming-platform/backend/internal/wallet"
@@ -33,6 +35,8 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	currencyHandler := currency.NewHandler(db, logger)
 	walletHandler := wallet.NewHandler(db, logger, authHandler.CurrentUser)
 	depositHandler := deposit.NewHandler(db, logger, authHandler.CurrentUser, cfg.ProofDir)
+	dashboardHandler := dashboard.NewHandler(db, logger, authHandler.CurrentUser)
+	auditHandler := audit.NewHandler(db, logger, authHandler.CurrentUser)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/register", authHandler.Register)
@@ -47,13 +51,18 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/admin/deposits", depositHandler.AdminList)
 	mux.HandleFunc("GET /api/admin/deposits/{id}/proof", depositHandler.AdminProof)
 	mux.HandleFunc("POST /api/admin/deposits/{id}/review", depositHandler.AdminReview)
+	mux.HandleFunc("GET /api/admin/dashboard", dashboardHandler.Get)
 	mux.HandleFunc("GET /api/wallets", walletHandler.List)
 	mux.HandleFunc("GET /api/wallets/{currency}", walletHandler.Get)
 	mux.HandleFunc("GET /api/wallets/{currency}/transactions", walletHandler.Transactions)
 	mux.HandleFunc("GET /api/transactions", walletHandler.Transactions)
 	mux.HandleFunc("GET /api/admin/users", authHandler.AdminUsers)
+	mux.HandleFunc("GET /api/admin/users/{id}", authHandler.AdminUser)
+	mux.HandleFunc("PATCH /api/admin/users/{id}/status", authHandler.AdminUserStatus)
+	mux.HandleFunc("GET /api/admin/users/{id}/wallets", walletHandler.AdminUserWallets)
 	mux.HandleFunc("GET /api/admin/transactions", walletHandler.AdminTransactions)
 	mux.HandleFunc("POST /api/admin/users/{id}/wallet-adjustments", walletHandler.AdminAdjust)
+	mux.HandleFunc("GET /api/admin/audit-logs", auditHandler.List)
 	mux.HandleFunc("/", notFound)
 
 	return logAndRecover(logger, browserRules(cfg.AllowedOrigins, limitBody(cfg.MaxBodyBytes, mux)))

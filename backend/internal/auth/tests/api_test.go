@@ -570,6 +570,226 @@ func TestAdminUsersRejectsInvalidPagingAndStatus(t *testing.T) {
 	}
 }
 
+func TestAdminDashboardHTTPContract(t *testing.T) {
+	db := requireDB(t)
+	base, adminClient := newServer(t, db)
+	register(t, adminClient, base)
+
+	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE email = $1`, testEmail); err != nil {
+		t.Fatalf("promote admin: %v", err)
+	}
+
+	for name, path := range map[string]string{
+		"missing currency": base + "/api/admin/dashboard",
+		"unknown currency": base + "/api/admin/dashboard?currency=ZZZ",
+	} {
+		t.Run(name, func(t *testing.T) {
+			status, body := send(t, adminClient, http.MethodGet, path, nil)
+			if status != http.StatusBadRequest {
+				t.Fatalf("want 400, got %d (%s)", status, body)
+			}
+		})
+	}
+
+	status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/dashboard?currency=php", nil)
+	if status != http.StatusOK {
+		t.Fatalf("dashboard: want 200, got %d (%s)", status, body)
+	}
+	var summary struct {
+		Currency                string  `json:"currency"`
+		PendingDeposits         int     `json:"pending_deposits"`
+		OldestPendingAt         *string `json:"oldest_pending_at"`
+		EffectiveRTPBasisPoints int     `json:"effective_rtp_basis_points"`
+	}
+	if err := json.Unmarshal(body, &summary); err != nil {
+		t.Fatalf("decode dashboard: %v (%s)", err, body)
+	}
+	if summary.Currency != "PHP" || summary.PendingDeposits != 0 || summary.OldestPendingAt != nil || summary.EffectiveRTPBasisPoints != 0 {
+		t.Fatalf("unexpected dashboard summary: %+v", summary)
+	}
+}
+
+func TestAdminAccountDetailStatusWalletsAndAuditFlow(t *testing.T) {
+	db := requireDB(t)
+	base, playerClient := newServer(t, db)
+	anonymousClient := clientWithCookies(t)
+	missingID := "00000000-0000-4000-8000-000000000000"
+	for _, path := range []string{
+		"/api/admin/users/" + missingID,
+		"/api/admin/users/" + missingID + "/wallets",
+		"/api/admin/audit-logs",
+	} {
+		if status, body := send(t, anonymousClient, http.MethodGet, base+path, nil); status != http.StatusUnauthorized {
+			t.Fatalf("anonymous GET %s: want 401, got %d (%s)", path, status, body)
+		}
+	}
+	if status, body := send(t, anonymousClient, http.MethodPatch, base+"/api/admin/users/"+missingID+"/status", map[string]string{"status": "suspended"}); status != http.StatusUnauthorized {
+		t.Fatalf("anonymous status change: want 401, got %d (%s)", status, body)
+	}
+
+	status, body := register(t, playerClient, base)
+	if status != http.StatusCreated {
+		t.Fatalf("register player: want 201, got %d (%s)", status, body)
+	}
+	var player struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &player); err != nil {
+		t.Fatalf("decode player: %v", err)
+	}
+
+	adminPaths := []string{
+		"/api/admin/users/" + player.ID,
+		"/api/admin/users/" + player.ID + "/wallets",
+		"/api/admin/audit-logs",
+	}
+	for _, path := range adminPaths {
+		if status, body := send(t, playerClient, http.MethodGet, base+path, nil); status != http.StatusForbidden {
+			t.Fatalf("player GET %s: want 403, got %d (%s)", path, status, body)
+		}
+	}
+	if status, body := send(t, playerClient, http.MethodPatch, base+"/api/admin/users/"+player.ID+"/status", map[string]string{"status": "suspended"}); status != http.StatusForbidden {
+		t.Fatalf("player status change: want 403, got %d (%s)", status, body)
+	}
+
+	adminClient := clientWithCookies(t)
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/register", map[string]string{
+		"email": "account-admin@example.com", "password": testPassword, "display_name": "Account Admin",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("register admin: want 201, got %d (%s)", status, body)
+	}
+	var admin struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &admin); err != nil {
+		t.Fatalf("decode admin: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE id = ($1::text)::uuid`, admin.ID); err != nil {
+		t.Fatalf("promote admin: %v", err)
+	}
+
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/users/"+player.ID, nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(testEmail)) || bytes.Contains(body, []byte("password")) {
+		t.Fatalf("account detail: want safe 200 response, got %d (%s)", status, body)
+	}
+	for _, path := range []string{
+		"/api/admin/users/not-a-uuid",
+		"/api/admin/users/" + missingID,
+	} {
+		if status, body := send(t, adminClient, http.MethodGet, base+path, nil); status != http.StatusNotFound {
+			t.Fatalf("GET %s: want 404, got %d (%s)", path, status, body)
+		}
+	}
+
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/users/"+player.ID+"/wallets", nil)
+	if status != http.StatusOK {
+		t.Fatalf("admin wallet list: want 200, got %d (%s)", status, body)
+	}
+	var wallets []struct {
+		Currency     string `json:"currency"`
+		BalanceMinor int64  `json:"balance_minor"`
+	}
+	if err := json.Unmarshal(body, &wallets); err != nil {
+		t.Fatalf("decode wallets: %v (%s)", err, body)
+	}
+	if len(wallets) != 2 || wallets[0].Currency != "PHP" || wallets[1].Currency != "USD" {
+		t.Fatalf("unexpected admin wallets: %+v", wallets)
+	}
+	for _, path := range []string{
+		"/api/admin/users/not-a-uuid/wallets",
+		"/api/admin/users/" + missingID + "/wallets",
+	} {
+		if status, body := send(t, adminClient, http.MethodGet, base+path, nil); status != http.StatusNotFound {
+			t.Fatalf("GET %s: want 404, got %d (%s)", path, status, body)
+		}
+	}
+
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/users/"+admin.ID+"/status", map[string]string{"status": "suspended"})
+	if status != http.StatusConflict || !bytes.Contains(body, []byte("SELF_STATUS_CHANGE")) {
+		t.Fatalf("self status change: want coded 409, got %d (%s)", status, body)
+	}
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/users/"+strings.ToUpper(admin.ID)+"/status", map[string]string{"status": "suspended"})
+	if status != http.StatusConflict || !bytes.Contains(body, []byte("SELF_STATUS_CHANGE")) {
+		t.Fatalf("case-varied self status change: want coded 409, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/users/"+player.ID+"/status", map[string]string{"status": "closed"}); status != http.StatusBadRequest {
+		t.Fatalf("invalid status: want 400, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/users/"+missingID+"/status", map[string]string{"status": "active"}); status != http.StatusNotFound {
+		t.Fatalf("missing account status: want 404, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/users/not-a-uuid/status", map[string]string{"status": "active"}); status != http.StatusNotFound {
+		t.Fatalf("invalid account status id: want 404, got %d (%s)", status, body)
+	}
+	if _, err := db.Exec(`UPDATE users SET status = 'closed' WHERE id = ($1::text)::uuid`, player.ID); err != nil {
+		t.Fatalf("close player: %v", err)
+	}
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/users/"+player.ID+"/status", map[string]string{"status": "active"})
+	if status != http.StatusConflict || !bytes.Contains(body, []byte("ACCOUNT_CLOSED")) {
+		t.Fatalf("closed account status: want coded 409, got %d (%s)", status, body)
+	}
+	if _, err := db.Exec(`UPDATE users SET status = 'active' WHERE id = ($1::text)::uuid`, player.ID); err != nil {
+		t.Fatalf("restore player fixture: %v", err)
+	}
+
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/users/"+player.ID+"/status", map[string]string{"status": "suspended"})
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"status":"suspended"`)) {
+		t.Fatalf("suspend account: want 200, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/me", nil); status != http.StatusUnauthorized {
+		t.Fatalf("suspended session: want 401, got %d (%s)", status, body)
+	}
+	var activeSessions int
+	if err := db.QueryRow(`SELECT count(*) FROM auth_sessions WHERE user_id = ($1::text)::uuid AND revoked_at IS NULL`, player.ID).Scan(&activeSessions); err != nil {
+		t.Fatalf("count active sessions: %v", err)
+	}
+	if activeSessions != 0 {
+		t.Fatalf("active sessions after suspension=%d, want 0", activeSessions)
+	}
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/audit-logs?user_id=not-a-uuid", nil); status != http.StatusBadRequest {
+		t.Fatalf("invalid audit actor filter: want 400, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/audit-logs?page=1&size=1&type=user.suspend&user_id="+admin.ID, nil)
+	if status != http.StatusOK {
+		t.Fatalf("audit list: want 200, got %d (%s)", status, body)
+	}
+	var auditPage struct {
+		Rows []struct {
+			ActorUserID      string         `json:"actor_user_id"`
+			ActorDisplayName string         `json:"actor_display_name"`
+			Action           string         `json:"action"`
+			EntityID         string         `json:"entity_id"`
+			BeforeData       map[string]any `json:"before_data"`
+			AfterData        map[string]any `json:"after_data"`
+		} `json:"rows"`
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(body, &auditPage); err != nil {
+		t.Fatalf("decode audit page: %v (%s)", err, body)
+	}
+	if auditPage.Total != 1 || len(auditPage.Rows) != 1 {
+		t.Fatalf("unexpected audit page: %+v", auditPage)
+	}
+	entry := auditPage.Rows[0]
+	if entry.ActorUserID != admin.ID || entry.ActorDisplayName != "Account Admin" || entry.Action != "user.suspend" || entry.EntityID != player.ID || entry.BeforeData["status"] != "active" || entry.AfterData["status"] != "suspended" {
+		t.Fatalf("unexpected status audit: %+v", entry)
+	}
+
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/users/"+player.ID+"/status", map[string]string{"status": "active"})
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"status":"active"`)) {
+		t.Fatalf("reinstate account: want 200, got %d (%s)", status, body)
+	}
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/audit-logs?page=1&size=10&user_id="+admin.ID, nil)
+	if status != http.StatusOK {
+		t.Fatalf("audit list after reinstate: want 200, got %d (%s)", status, body)
+	}
+	if err := json.Unmarshal(body, &auditPage); err != nil || auditPage.Total != 2 {
+		t.Fatalf("status audit count: total=%d err=%v (%s)", auditPage.Total, err, body)
+	}
+}
+
 func TestAdminWalletAdjustmentAndTransactionHTTPFlow(t *testing.T) {
 	db := requireDB(t)
 	base, playerClient := newServer(t, db)
@@ -947,6 +1167,23 @@ func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	}
 	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/deposits/"+created.ID+"/review", map[string]any{"action": "approve"}); status != http.StatusConflict || !bytes.Contains(body, []byte("DEPOSIT_ALREADY_REVIEWED")) {
 		t.Fatalf("second approval: want coded 409, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/deposits?page=1&size=10&status=approved&user_id="+player.ID, nil)
+	if status != http.StatusOK {
+		t.Fatalf("filtered approved deposits: want 200, got %d (%s)", status, body)
+	}
+	if err := json.Unmarshal(body, &queuePage); err != nil {
+		t.Fatalf("decode filtered deposit page: %v (%s)", err, body)
+	}
+	if queuePage.Total != 1 || len(queuePage.Rows) != 1 || queuePage.Rows[0].ID != created.ID {
+		t.Fatalf("unexpected filtered deposit page: %+v", queuePage)
+	}
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/deposits?status=unknown", nil); status != http.StatusBadRequest {
+		t.Fatalf("invalid deposit status filter: want 400, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/deposits?user_id=not-a-uuid", nil); status != http.StatusBadRequest {
+		t.Fatalf("invalid deposit user filter: want 400, got %d (%s)", status, body)
 	}
 
 	var balance int64

@@ -132,18 +132,6 @@ export type Notification = {
   read: boolean
 }
 
-export type AdminUserRecord = AdminUser & {
-  account_ref: string
-  currency: Currency
-  balance_minor: number
-  staked_30d_minor: number
-  net_30d_minor: number
-  rounds_played: number
-  deposits_approved: number
-  last_active_at: string
-  verified: string
-}
-
 export type Adjustment = {
   id: string
   user_id: string
@@ -206,7 +194,7 @@ export type ConsoleAlert = {
 export type DashboardSummary = {
   pending_deposits: number
   pending_held_minor: number
-  oldest_pending_at: string
+  oldest_pending_at: string | null
   approved_today_minor: number
   approved_today_count: number
   staked_today_minor: number

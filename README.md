@@ -1,7 +1,6 @@
 # Gaming Platform
 
-A mobile-first, real-money gaming platform. Go API and React web app over a shared
-PostgreSQL database.
+Work in progress.
 
 ## Stack
 
@@ -11,12 +10,9 @@ PostgreSQL database.
 | Database | PostgreSQL 18 |
 | Web | React 19 · TypeScript · Vite · Tailwind v4 · TanStack Query · React Hook Form · Zod · React Router |
 
-No web framework, and two direct Go dependencies: a PostgreSQL driver and Argon2id.
-
 ## Requirements
 
-Go 1.26+, Node 22+, PostgreSQL 18, and Make. There is no Docker dependency — the database
-runs natively.
+Go 1.26+, Node 22+, PostgreSQL 18, and Make.
 
 ## One-time database setup
 
@@ -57,12 +53,3 @@ make seed         # create or reset the local admin named by SEED_USER_* in .env
 
 Use `localhost` everywhere, never `127.0.0.1`. They are different cookie hosts, and
 mixing them presents as a session bug that is very hard to read.
-
-## Scope
-
-| Document | What it holds |
-| --- | --- |
-| `docs/phase-1-features.md` | the master Phase 1 delivery checklist and status |
-| `docs/backend-services/SPEC.md` | the platform-services behavior and invariants |
-| `docs/game-engine-integration/SPEC.md` | the engine and RTP integration rules |
-| `docs/games/` | per-game source assessments |

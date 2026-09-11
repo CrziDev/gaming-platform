@@ -1,7 +1,7 @@
 import type {
   AdminDeposit,
   AdminGame,
-  AdminUserRecord,
+  AdminUser,
   Adjustment,
   AuditEntry,
   ConsoleAlert,
@@ -10,6 +10,18 @@ import type {
 } from '@/api/types'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
+
+type AdminUserFixture = AdminUser & {
+  account_ref: string
+  currency: 'PHP' | 'USD'
+  balance_minor: number
+  staked_30d_minor: number
+  net_30d_minor: number
+  rounds_played: number
+  deposits_approved: number
+  last_active_at: string
+  verified: string
+}
 
 export const dashboardSummary: DashboardSummary = {
   pending_deposits: 7,
@@ -35,9 +47,9 @@ export const consoleAlerts: ConsoleAlert[] = [
 const firstNames = ['juan', 'ana', 'dee', 'kris', 'mia', 'leo', 'noel', 'rita', 'sam', 'tess']
 const lastNames = ['martinez', 'rivera', 'tan', 'severino', 'lopez', 'cruz', 'reyes', 'diaz', 'uy', 'go']
 
-function buildUsers(): AdminUserRecord[] {
+function buildUsers(): AdminUserFixture[] {
   const random = seeded(4182)
-  const records: AdminUserRecord[] = []
+  const records: AdminUserFixture[] = []
 
   for (let index = 0; index < 88; index += 1) {
     const first = firstNames[index % firstNames.length] as string
@@ -67,7 +79,7 @@ function buildUsers(): AdminUserRecord[] {
   }
 
   records[0] = {
-    ...(records[0] as AdminUserRecord),
+    ...(records[0] as AdminUserFixture),
     id: 'us-0001',
     account_ref: 'PL-004182',
     display_name: 'jmartinez',
@@ -85,7 +97,7 @@ function buildUsers(): AdminUserRecord[] {
   return records
 }
 
-export const adminUsers: AdminUserRecord[] = buildUsers()
+export const adminUsers: AdminUserFixture[] = buildUsers()
 
 export const adminDeposits: AdminDeposit[] = [
   {

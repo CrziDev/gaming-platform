@@ -54,6 +54,13 @@ type AdminRequest struct {
 	DisplayName string
 }
 
+type AdminListFilter struct {
+	Page   int
+	Size   int
+	UserID string
+	Status string
+}
+
 func ListMethods(ctx context.Context, db *sql.DB) ([]PaymentMethod, error) {
 	rows, err := db.QueryContext(ctx, `SELECT id::text, name, description, pay_to, reference_required FROM payment_methods WHERE enabled = true ORDER BY sort_order, name`)
 	if err != nil {
@@ -181,14 +188,17 @@ func scanRequests(rows *sql.Rows) ([]Request, error) {
 	return result, rows.Err()
 }
 
-func ListPending(ctx context.Context, db *sql.DB, page, size int) ([]AdminRequest, int, error) {
+func ListAdmin(ctx context.Context, db *sql.DB, filter AdminListFilter) ([]AdminRequest, int, error) {
+	where := `WHERE (NULLIF($1, '')::uuid IS NULL OR d.user_id = NULLIF($1, '')::uuid)
+		AND ($2 = '' OR d.status = $2)`
 	var total int
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM deposit_requests WHERE status = 'pending'`).Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("deposit: count pending: %w", err)
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM deposit_requests d `+where, filter.UserID, filter.Status).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("deposit: count admin list: %w", err)
 	}
-	rows, err := db.QueryContext(ctx, `SELECT d.id::text, d.user_id::text, d.wallet_id::text, d.currency, d.method_id::text, p.name, d.amount_minor, COALESCE(d.reference, ''), d.status, d.reviewed_at, COALESCE(d.reason, ''), d.created_at, u.email, u.display_name FROM deposit_requests d JOIN payment_methods p ON p.id = d.method_id JOIN users u ON u.id = d.user_id WHERE d.status = 'pending' ORDER BY d.created_at ASC, d.id ASC LIMIT $1 OFFSET $2`, size, (page-1)*size)
+	offset := int64(filter.Page-1) * int64(filter.Size)
+	rows, err := db.QueryContext(ctx, `SELECT d.id::text, d.user_id::text, d.wallet_id::text, d.currency, d.method_id::text, p.name, d.amount_minor, COALESCE(d.reference, ''), d.status, d.reviewed_at, COALESCE(d.reason, ''), d.created_at, u.email, u.display_name FROM deposit_requests d JOIN payment_methods p ON p.id = d.method_id JOIN users u ON u.id = d.user_id `+where+` ORDER BY d.created_at ASC, d.id ASC LIMIT $3 OFFSET $4`, filter.UserID, filter.Status, filter.Size, offset)
 	if err != nil {
-		return nil, 0, fmt.Errorf("deposit: list pending: %w", err)
+		return nil, 0, fmt.Errorf("deposit: admin list: %w", err)
 	}
 	defer rows.Close()
 	result := make([]AdminRequest, 0)
@@ -203,6 +213,10 @@ func ListPending(ctx context.Context, db *sql.DB, page, size int) ([]AdminReques
 		return nil, 0, err
 	}
 	return result, total, nil
+}
+
+func ListPending(ctx context.Context, db *sql.DB, page, size int) ([]AdminRequest, int, error) {
+	return ListAdmin(ctx, db, AdminListFilter{Page: page, Size: size, Status: "pending"})
 }
 
 func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, amountMinor int64, reason string) (Request, error) {

@@ -21,11 +21,14 @@ export function AdminDashboardPage() {
   const summaryQuery = useDashboard()
   const queueQuery = useDepositQueue()
   const alertsQuery = useConsoleAlerts()
-  const auditQuery = useAuditEntries(4)
+  const auditQuery = useAuditEntries(1, 4)
   const [reviewing, setReviewing] = useState<AdminDeposit | null>(null)
 
   const summary = summaryQuery.data
   const queue = queueQuery.data ?? []
+  const pendingMeta = summary
+    ? `${formatMoney(money(summary.pending_held_minor, summary.currency), { decimals: 'trim' })} held${summary.oldest_pending_at ? ` · oldest ${formatDuration(summary.oldest_pending_at)}` : ''}`
+    : ''
 
   return (
     <div className="flex flex-col gap-6">
@@ -40,7 +43,7 @@ export function AdminDashboardPage() {
             tone="warning"
             label="Pending deposits"
             value={summary.pending_deposits}
-            meta={`${formatMoney(money(summary.pending_held_minor, summary.currency), { decimals: 'trim' })} held · oldest ${formatDuration(summary.oldest_pending_at)}`}
+            meta={pendingMeta}
           />
           <StatCard
             label="Approved today"
@@ -168,7 +171,7 @@ export function AdminDashboardPage() {
               </Link>
             </div>
             <ul className="flex flex-col gap-3">
-              {auditQuery.data?.map((entry) => (
+              {auditQuery.data?.rows.map((entry) => (
                 <li key={entry.id} className="flex gap-3">
                   <span className="w-11 shrink-0 font-mono text-[11.5px] text-ink-mute">
                     {formatClock(entry.created_at)}

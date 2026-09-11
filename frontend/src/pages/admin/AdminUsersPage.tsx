@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 
 import type { AdminUser } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
@@ -13,6 +14,7 @@ import { useAdminUsers, useUserCounts, type UserFilter } from '@/features/admin'
 import { formatRelative } from '@/lib/format'
 
 export function AdminUsersPage() {
+  const navigate = useNavigate()
   const [filter, setFilter] = useState<UserFilter>({ status: 'all', search: '', page: 1 })
   const usersQuery = useAdminUsers(filter)
   const countsQuery = useUserCounts()
@@ -83,8 +85,10 @@ export function AdminUsersPage() {
                 </span>
               }
               leading={<span aria-hidden className="size-9 shrink-0 rounded-full bg-line" />}
+              onClick={() => void navigate(`/admin/users/${row.id}`)}
             />
           )}
+          onRowClick={(row) => void navigate(`/admin/users/${row.id}`)}
           footer={
             <nav className="flex items-center justify-between gap-3" aria-label="Pagination">
               <span className="font-mono text-[12px] text-ink-mute">

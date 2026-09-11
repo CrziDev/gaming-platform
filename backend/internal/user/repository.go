@@ -21,6 +21,11 @@ const (
 		FROM users
 		WHERE email = $1`
 
+	selectUserByIDSQL = `
+		SELECT id::text, email, password_hash, display_name, role, status, created_at
+		FROM users
+		WHERE id = ($1::text)::uuid`
+
 	countUsersSQL = `
 		SELECT count(*)
 		FROM users
@@ -88,6 +93,22 @@ func FindByEmail(ctx context.Context, db *sql.DB, email string) (User, error) {
 	}
 	if err != nil {
 		return User{}, fmt.Errorf("user: find by email: %w", err)
+	}
+	return account, nil
+}
+
+func FindByID(ctx context.Context, db *sql.DB, id string) (User, error) {
+	var account User
+
+	err := db.QueryRowContext(ctx, selectUserByIDSQL, id).Scan(
+		&account.ID, &account.Email, &account.PasswordHash, &account.DisplayName,
+		&account.Role, &account.Status, &account.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return User{}, ErrNoUser
+	}
+	if err != nil {
+		return User{}, fmt.Errorf("user: find by id: %w", err)
 	}
 	return account, nil
 }

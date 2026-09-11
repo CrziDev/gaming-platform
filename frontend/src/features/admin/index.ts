@@ -8,6 +8,7 @@ export {
   useAdminRounds,
   useAdminTransactions,
   useAdminUser,
+  useAdminUserWallets,
   useAdminUsers,
   useAuditEntries,
   useConsoleAlerts,

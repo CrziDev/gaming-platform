@@ -275,7 +275,24 @@ func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	items, total, err := ListPending(r.Context(), h.db, query.Page, query.Size)
+	if query.UserID != "" && !httpx.IsUUID(query.UserID) {
+		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{"user_id": "User ID must be a valid UUID"})
+		return
+	}
+	status := query.Status
+	if status == "" {
+		status = "pending"
+	}
+	if status != "all" && status != "pending" && status != "approved" && status != "rejected" {
+		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{"status": "Status must be all, pending, approved, or rejected"})
+		return
+	}
+	if status == "all" {
+		status = ""
+	}
+	items, total, err := ListAdmin(r.Context(), h.db, AdminListFilter{
+		Page: query.Page, Size: query.Size, UserID: query.UserID, Status: status,
+	})
 	if err != nil {
 		h.internal(w, r, err)
 		return

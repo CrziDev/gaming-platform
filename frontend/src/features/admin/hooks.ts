@@ -20,6 +20,7 @@ import {
   fetchUserCounts,
   fetchUserDeposits,
   fetchUserRounds,
+  fetchUserWallets,
   fetchUsers,
   reviewDeposit,
   setUserStatus,
@@ -34,8 +35,11 @@ export function useConsoleAlerts() {
   return useQuery({ queryKey: ['admin', 'alerts'], queryFn: fetchConsoleAlerts })
 }
 
-export function useAuditEntries(limit?: number) {
-  return useQuery({ queryKey: ['admin', 'audit', limit], queryFn: () => fetchAuditEntries(limit) })
+export function useAuditEntries(page = 1, size?: number) {
+  return useQuery({
+    queryKey: ['admin', 'audit', page, size],
+    queryFn: () => fetchAuditEntries(page, size),
+  })
 }
 
 export function useDepositQueue() {
@@ -61,6 +65,14 @@ export function useUserCounts() {
 
 export function useAdminUser(id: string) {
   return useQuery({ queryKey: ['admin', 'user', id], queryFn: () => fetchUser(id) })
+}
+
+export function useAdminUserWallets(id: string) {
+  return useQuery({
+    queryKey: ['admin', 'user', id, 'wallets'],
+    queryFn: () => fetchUserWallets(id),
+    enabled: id !== '',
+  })
 }
 
 export function useUserRounds(id: string) {
