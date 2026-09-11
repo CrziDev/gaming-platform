@@ -46,32 +46,17 @@ export function Header() {
       <div className="flex-1" />
 
       {user ? (
-        <>
-          <div className="flex items-center gap-1.5">
-            {wallet ? <WalletIndicator balance={money(wallet.balance_minor, wallet.currency)} /> : null}
-            <Link
-              to={paths.deposit}
-              aria-label="Deposit"
-              className={cn(buttonStyles('primary', 'md'), 'gap-1.5 px-3 sm:px-3.5')}
-            >
-              <Wallet aria-hidden size={15} strokeWidth={1.8} />
-              <span className="hidden sm:inline">Deposit</span>
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-0.5 sm:ml-1">
-            <IconButton
-              label="Toggle chat"
-              aria-pressed={chatOpen}
-              onClick={() => setChatOpen(!chatOpen)}
-              className={cn('hidden chat:inline-flex', chatOpen && 'bg-wash text-ink-soft')}
-            >
-              <MessageCircle aria-hidden size={17} strokeWidth={1.6} />
-            </IconButton>
-            <NotificationsPanel />
-            <AccountMenu user={user} />
-          </div>
-        </>
+        <div className="flex items-center gap-1.5">
+          {wallet ? <WalletIndicator balance={money(wallet.balance_minor, wallet.currency)} /> : null}
+          <Link
+            to={paths.deposit}
+            aria-label="Deposit"
+            className={cn(buttonStyles('primary', 'md'), 'gap-1.5 px-3 sm:px-3.5')}
+          >
+            <Wallet aria-hidden size={15} strokeWidth={1.8} />
+            <span className="hidden sm:inline">Deposit</span>
+          </Link>
+        </div>
       ) : (
         <div className="flex items-center gap-1.5">
           <Button variant="ghost" size="sm" onClick={() => open({ tab: 'signin' })}>
@@ -82,6 +67,25 @@ export function Header() {
           </Button>
         </div>
       )}
+
+      <div className="flex items-center gap-0.5 sm:ml-1">
+        <span className="hidden chat:contents">
+          <IconButton
+            label="Toggle chat"
+            aria-pressed={chatOpen}
+            onClick={() => setChatOpen(!chatOpen)}
+            className={cn(chatOpen && 'bg-wash text-ink-soft')}
+          >
+            <MessageCircle aria-hidden size={17} strokeWidth={1.6} />
+          </IconButton>
+        </span>
+        {user ? (
+          <>
+            <NotificationsPanel />
+            <AccountMenu user={user} />
+          </>
+        ) : null}
+      </div>
     </header>
   )
 }

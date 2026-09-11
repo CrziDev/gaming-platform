@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
 import { adminLogin, fetchCurrentUser, login, logout, register } from './api'
 import { clearSessionExpired } from './expiry'
@@ -20,6 +20,7 @@ export function useLogin() {
     mutationFn: login,
     onSuccess: (user) => {
       clearSessionExpired()
+      dropGuestQueries(queryClient)
       queryClient.setQueryData(sessionQueryKey, user)
     },
   })
@@ -32,6 +33,7 @@ export function useAdminLogin() {
     mutationFn: adminLogin,
     onSuccess: (user) => {
       clearSessionExpired()
+      dropGuestQueries(queryClient)
       queryClient.setQueryData(sessionQueryKey, user)
     },
   })
@@ -44,6 +46,7 @@ export function useRegister() {
     mutationFn: register,
     onSuccess: (user) => {
       clearSessionExpired()
+      dropGuestQueries(queryClient)
       queryClient.setQueryData(sessionQueryKey, user)
     },
   })
@@ -57,11 +60,16 @@ export function useLogout() {
     onSuccess: () => {
       clearSessionExpired()
 
-      queryClient.removeQueries({
-        predicate: (query) => query.queryKey[0] !== sessionQueryKey[0],
-      })
-
+      dropGuestQueries(queryClient)
       queryClient.setQueryData(sessionQueryKey, null)
     },
+  })
+}
+
+// Anything fetched before the session changed was scoped to the old identity:
+// a guest's failed wallet read must not linger as the player's wallet.
+function dropGuestQueries(queryClient: QueryClient) {
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[0] !== sessionQueryKey[0],
   })
 }

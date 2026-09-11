@@ -41,7 +41,7 @@ export function AccountMenu({ user }: { user: User }) {
         aria-label="Account menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex min-h-11 items-center gap-2 rounded-chip py-1 pr-2 pl-1 text-ink-soft transition-colors duration-[120ms] hover:bg-wash lg:min-h-8"
+        className="flex min-h-11 items-center gap-2 rounded-chip px-1 py-1 text-ink-soft transition-colors duration-[120ms] hover:bg-wash sm:pr-2 lg:min-h-8"
       >
         <span
           aria-hidden
@@ -52,7 +52,7 @@ export function AccountMenu({ user }: { user: User }) {
         <span aria-hidden className="hidden text-[13px] font-medium sm:inline">
           {surname(user.display_name)}
         </span>
-        <ChevronDown aria-hidden size={12} strokeWidth={2.2} className="text-ink-mute" />
+        <ChevronDown aria-hidden size={12} strokeWidth={2.2} className="hidden text-ink-mute sm:inline" />
       </button>
 
       {open ? (

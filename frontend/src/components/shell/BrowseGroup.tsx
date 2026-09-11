@@ -37,48 +37,59 @@ export function BrowseGroup({ mode = 'expanded', onNavigate }: BrowseGroupProps)
     })),
   ]
 
-  const showEntries = mode !== 'expanded' || open
+  const toggle: Record<RailMode, string> = {
+    expanded: 'flex',
+    collapsed: 'hidden',
+    auto: 'hidden @rail-wide:flex',
+  }
+
+  const closedEntries: Record<RailMode, string> = {
+    expanded: 'hidden',
+    collapsed: 'flex',
+    auto: 'flex @rail-wide:hidden',
+  }
 
   return (
     <div className="flex flex-col gap-px">
-      {mode === 'expanded' ? (
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          aria-expanded={open}
-          className="flex min-h-11 items-center gap-2 rounded-input px-2.75 text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft lg:min-h-9"
-        >
-          <span className="label-mono">Browse</span>
-          <ChevronDown aria-hidden size={14} strokeWidth={1.5} className={cn('ml-auto', open && 'rotate-180')} />
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className={cn(
+          'min-h-11 items-center gap-2 rounded-input px-2.75 text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft lg:min-h-9',
+          toggle[mode],
+        )}
+      >
+        <span className="label-mono">Browse</span>
+        <ChevronDown aria-hidden size={14} strokeWidth={1.5} className={cn('ml-auto', open && 'rotate-180')} />
+      </button>
 
-      {showEntries
-        ? entries.map((entry) => (
-            <NavLink
-              key={entry.to}
-              to={entry.to}
-              end={entry.end}
-              {...(onNavigate ? { onClick: onNavigate } : {})}
-              {...(mode === 'expanded' ? {} : { title: entry.name })}
-              className={({ isActive }) =>
-                cn(
-                  shape,
-                  entry.end && isActive
-                    ? 'bg-wash font-medium text-ink-soft'
-                    : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
-                )
-              }
-            >
-              {entry.slug === '' ? (
-                <Layers aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
-              ) : (
-                <CategoryIcon slug={entry.slug} size={16} className="shrink-0" />
-              )}
-              <span className={railLabel[mode]}>{entry.name}</span>
-            </NavLink>
-          ))
-        : null}
+      <div className={cn('flex-col gap-px', open ? 'flex' : closedEntries[mode])}>
+        {entries.map((entry) => (
+          <NavLink
+            key={entry.to}
+            to={entry.to}
+            end={entry.end}
+            {...(onNavigate ? { onClick: onNavigate } : {})}
+            {...(mode === 'expanded' ? {} : { title: entry.name })}
+            className={({ isActive }) =>
+              cn(
+                shape,
+                entry.end && isActive
+                  ? 'bg-wash font-medium text-ink-soft'
+                  : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
+              )
+            }
+          >
+            {entry.slug === '' ? (
+              <Layers aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
+            ) : (
+              <CategoryIcon slug={entry.slug} size={16} className="shrink-0" />
+            )}
+            <span className={railLabel[mode]}>{entry.name}</span>
+          </NavLink>
+        ))}
+      </div>
     </div>
   )
 }
