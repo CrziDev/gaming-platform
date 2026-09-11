@@ -23,11 +23,11 @@ export function WalletPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="font-display text-[22px] font-semibold tracking-tight text-ink">Wallet</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight text-ink">Wallet</h1>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start">
         <div className="flex flex-col gap-6">
-          <section className="flex flex-col gap-5 rounded-sheet border border-line bg-panel p-6 sm:flex-row sm:items-end sm:justify-between">
+          <section className="flex flex-col gap-5 rounded-card bg-panel p-6 sm:flex-row sm:items-end sm:justify-between">
             {walletQuery.data ? (
               <div className="flex flex-col gap-2">
                 <span className="label-mono text-ink-mute">
@@ -49,7 +49,7 @@ export function WalletPage() {
                 <Plus aria-hidden size={17} strokeWidth={2} />
                 Deposit
               </Link>
-              <span className="text-center font-mono text-[10.5px] text-ink-faint">
+              <span className="text-center font-mono text-[10.5px] text-ink-mute">
                 slot grid · 1 of max 3
               </span>
             </div>
@@ -57,7 +57,7 @@ export function WalletPage() {
 
           <section className="flex flex-col gap-3">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="font-display text-lg font-semibold text-ink">Recent activity</h2>
+              <h2 className="text-lg font-semibold text-ink">Recent activity</h2>
               <Link to={paths.history} className="text-[13px] text-accent hover:underline">
                 Open full history
               </Link>
@@ -97,9 +97,9 @@ export function WalletPage() {
         </div>
 
         {pending ? (
-          <section className="flex flex-col gap-4 rounded-sheet border border-line bg-panel p-5">
+          <section className="flex flex-col gap-4 rounded-card bg-panel p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-[17px] font-semibold text-ink">Open request</h2>
+              <h2 className="text-[17px] font-semibold text-ink">Open request</h2>
               <StatusBadge status="Pending review" tone="warning" />
             </div>
 

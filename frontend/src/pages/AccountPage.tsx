@@ -23,7 +23,7 @@ export function AccountPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="font-display text-[22px] font-semibold tracking-tight text-ink">Account</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight text-ink">Account</h1>
 
       <Panel title="Profile" bodyClassName="flex flex-col gap-3 p-5">
         <Row label="Username">{user.display_name}</Row>

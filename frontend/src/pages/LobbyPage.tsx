@@ -38,10 +38,10 @@ export function LobbyPage() {
 
       <Link
         to={paths.games}
-        className="flex items-center justify-between gap-4 rounded-card border border-line bg-surface-1 px-5 py-3.5 transition-colors duration-[120ms] hover:border-line-hover lg:py-3"
+        className="flex items-center justify-between gap-4 rounded-card bg-surface-1 px-5 py-3.5 transition-colors duration-[120ms] lg:py-3"
       >
         <span className="flex flex-col gap-0.5">
-          <span className="font-display text-[15px] font-semibold text-ink">Browse all games</span>
+          <span className="text-[15px] font-semibold text-ink">Browse all games</span>
           <span className="text-[12.5px] text-ink-mute">
             Search, categories and sort — {gamesQuery.data?.length ?? 0} games
           </span>

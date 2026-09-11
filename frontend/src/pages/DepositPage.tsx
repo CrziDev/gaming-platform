@@ -88,7 +88,7 @@ export function DepositPage() {
   })
 
   if (methodsQuery.isPending || walletQuery.isPending || limitsQuery.isPending) {
-    return <Skeleton className="h-96 rounded-sheet" />
+    return <Skeleton className="h-96 rounded-card" />
   }
 
   if (methodsQuery.isError || walletQuery.isError || limitsQuery.isError) {
@@ -107,7 +107,7 @@ export function DepositPage() {
 
   if (methods.length === 0) {
     return (
-      <p className="rounded-card border border-line bg-surface-1 p-6 text-sm text-ink-mute">
+      <p className="rounded-card bg-surface-1 p-6 text-sm text-ink-mute">
         Deposits are paused while payment methods are being updated. Nothing is wrong with your
         account.
       </p>
@@ -120,13 +120,13 @@ export function DepositPage() {
         <Link
           to={paths.wallet}
           aria-label="Back to wallet"
-          className="flex size-11 items-center justify-center rounded-input border border-line-strong bg-surface-2 text-ink-mute hover:text-ink"
+          className="flex size-11 items-center justify-center rounded-input bg-surface-2 text-ink-mute hover:text-ink"
         >
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
-        <h1 className="font-display text-xl font-semibold text-ink">Deposit</h1>
+        <h1 className="text-xl font-semibold text-ink">Deposit</h1>
         {walletQuery.data ? (
-          <span className="ml-auto rounded-full border border-line-strong bg-surface-2 px-3 py-1.5 font-mono text-[12.5px] font-semibold tnum">
+          <span className="ml-auto rounded-chip bg-inset px-2.5 py-1.5 font-mono text-[12.5px] font-medium tnum">
             {formatMoney(money(walletQuery.data.balance_minor, currency), { decimals: 'trim' })}
           </span>
         ) : null}
@@ -137,8 +137,8 @@ export function DepositPage() {
           <span className="label-mono text-ink-mute">1 · Payment method</span>
 
           {soleMethod ? (
-            <div className="flex items-center gap-3 rounded-input border border-line bg-surface-1 p-3.5">
-              <span aria-hidden className="size-9 rounded-chip bg-line" />
+            <div className="flex items-center gap-3 rounded-input bg-surface-1 p-3.5">
+              <span aria-hidden className="size-9 rounded-chip bg-surface-3" />
               <span className="flex flex-col">
                 <span className="text-sm font-semibold text-ink">{soleMethod.name}</span>
                 <span className="text-[11.5px] text-ink-mute">{soleMethod.description}</span>
@@ -152,15 +152,13 @@ export function DepositPage() {
                 <label
                   key={method.id}
                   className={cn(
-                    'flex min-h-14 cursor-pointer items-center gap-3 rounded-input border p-3.5',
+                    'flex min-h-14 cursor-pointer items-center gap-3 rounded-input p-3.5',
                     'transition-colors duration-[120ms]',
-                    selectedMethod === method.id
-                      ? 'border-accent bg-accent/8'
-                      : 'border-line bg-surface-1 hover:border-line-strong',
+                    selectedMethod === method.id ? 'bg-accent/12' : 'bg-surface-1 hover:bg-surface-2',
                   )}
                 >
                   <input type="radio" value={method.id} className="sr-only" {...register('method_id')} />
-                  <span aria-hidden className="size-9 rounded-chip bg-line" />
+                  <span aria-hidden className="size-9 rounded-chip bg-surface-3" />
                   <span className="flex flex-1 flex-col">
                     <span className="text-sm font-semibold text-ink">{method.name}</span>
                     <span className="text-[11.5px] text-ink-mute">{method.description}</span>
@@ -169,10 +167,8 @@ export function DepositPage() {
                   <span
                     aria-hidden
                     className={cn(
-                      'size-5 rounded-full border',
-                      selectedMethod === method.id
-                        ? 'border-accent bg-accent'
-                        : 'border-line-strong',
+                      'size-5 rounded-full',
+                      selectedMethod === method.id ? 'bg-accent' : 'bg-surface-3',
                     )}
                   />
                 </label>
@@ -190,7 +186,7 @@ export function DepositPage() {
           <span className="label-mono text-ink-mute">2 · Amount</span>
 
           <Field label="Amount" htmlFor="amount" error={errors.amount?.message}>
-            <div className="flex min-h-15 items-center gap-2.5 rounded-input border border-line-strong bg-panel px-4">
+            <div className="flex min-h-15 items-center gap-2.5 rounded-input bg-panel px-4">
               <span className="font-mono text-xl text-ink-mute">{currencySymbol(currency)}</span>
               <input
                 id="amount"
@@ -213,10 +209,10 @@ export function DepositPage() {
                   type="button"
                   onClick={() => setValue('amount', label.replace(/,/g, ''), { shouldValidate: true })}
                   className={cn(
-                    'min-h-11 rounded-full border font-mono text-[12.5px] transition-colors duration-[120ms]',
+                    'min-h-11 rounded-chip font-mono text-[12.5px] transition-colors duration-[120ms] lg:min-h-8',
                     active
-                      ? 'border-accent bg-accent font-semibold text-on-accent'
-                      : 'border-line-strong bg-surface-2 text-ink-mute hover:text-ink',
+                      ? 'bg-accent font-semibold text-on-accent'
+                      : 'bg-inset text-ink-mute hover:bg-wash hover:text-ink-soft',
                   )}
                 >
                   {label}

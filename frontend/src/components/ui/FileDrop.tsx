@@ -26,14 +26,14 @@ export function FileDrop({
 
   if (value) {
     return (
-      <div className="flex items-center gap-3 rounded-input border border-line-strong bg-surface-1 p-3">
+      <div className="flex items-center gap-3 rounded-input bg-surface-1 p-3">
         <img
           src={URL.createObjectURL(value)}
           alt=""
           className="size-14 rounded-chip object-cover"
         />
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm text-ink">{value.name}</span>
+          <span className="truncate text-[13.5px] text-ink-soft">{value.name}</span>
           <span className="font-mono text-[11px] text-ink-mute">
             {Math.round(value.size / 1024)} KB
           </span>
@@ -42,7 +42,7 @@ export function FileDrop({
           type="button"
           aria-label="Remove upload"
           onClick={() => onChange(null)}
-          className="flex size-11 items-center justify-center rounded-input text-ink-mute hover:text-ink"
+          className="flex size-11 items-center justify-center rounded-input text-ink-mute hover:bg-wash hover:text-ink-soft"
         >
           <X aria-hidden size={16} strokeWidth={1.5} />
         </button>
@@ -66,12 +66,12 @@ export function FileDrop({
         }}
         className={cn(
           'flex min-h-33 cursor-pointer flex-col items-center justify-center gap-2 rounded-input',
-          'border border-dashed bg-surface-1 px-4 py-6 text-center transition-colors duration-[120ms]',
-          dragging ? 'border-accent bg-accent/6' : 'border-line-strong',
+          'px-4 py-6 text-center transition-colors duration-[120ms]',
+          dragging ? 'bg-accent/12' : 'bg-inset hover:bg-wash',
         )}
       >
         <UploadCloud aria-hidden size={22} strokeWidth={1.5} className="text-ink-mute" />
-        <span className="text-[13.5px] text-ink">{label}</span>
+        <span className="text-[13.5px] text-ink-soft">{label}</span>
         <span className="text-[11.5px] text-ink-mute">{hint}</span>
       </label>
       <input
@@ -83,7 +83,7 @@ export function FileDrop({
         onChange={(event) => onChange(event.target.files?.[0] ?? null)}
       />
       {error ? (
-        <p role="alert" className="text-[13px] text-danger">
+        <p role="alert" className="text-[12.5px] text-danger">
           {error}
         </p>
       ) : null}

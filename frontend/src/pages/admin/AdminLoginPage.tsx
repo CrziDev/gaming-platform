@@ -28,11 +28,11 @@ export function AdminLoginPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-base p-6">
-      <div className="w-full max-w-100 rounded-sheet border border-line bg-panel p-7">
+      <div className="w-full max-w-100 rounded-card bg-panel p-7">
         <header className="mb-6 flex items-center gap-3">
-          <span aria-hidden className="size-9 rounded-input border border-line-strong bg-line" />
+          <span aria-hidden className="size-9 rounded-input bg-surface-3" />
           <div className="flex flex-col">
-            <h1 className="font-display text-[17px] font-semibold">Operations console</h1>
+            <h1 className="text-[17px] font-semibold">Operations console</h1>
             <span className="label-mono text-ink-mute">Staff access only</span>
           </div>
         </header>

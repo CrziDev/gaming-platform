@@ -101,7 +101,7 @@ export function SearchSheet() {
         <button
           type="button"
           onClick={() => void showAll()}
-          className="flex min-h-11 items-center justify-center gap-1 border-t border-line pt-3 text-[12.5px] text-accent hover:underline"
+          className="flex min-h-11 items-center justify-center gap-1 pt-3 text-[12.5px] text-accent hover:underline"
         >
           {term.trim() === ''
             ? 'Browse all games'

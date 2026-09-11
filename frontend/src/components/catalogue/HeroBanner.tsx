@@ -20,7 +20,7 @@ export function HeroBanner({ featured }: { featured: Game | undefined }) {
   const minBet = formatMoney(money(featured.min_wager_minor, featured.currency))
 
   return (
-    <section className="relative isolate overflow-hidden rounded-sheet border border-line bg-panel">
+    <section className="relative isolate overflow-hidden rounded-card bg-panel">
       <GameArt seed={featured.art_seed} className="absolute inset-0 -z-10 size-full lg:hidden" />
       <div className="absolute inset-0 -z-10 bg-gradient-to-r from-base via-base/80 to-base/10 lg:hidden" />
 
@@ -28,13 +28,13 @@ export function HeroBanner({ featured }: { featured: Game | undefined }) {
         <div className="flex min-h-52 flex-col justify-center gap-3 p-5 sm:p-6 lg:min-h-[228px] lg:p-7">
           <div className="flex items-center gap-2.5">
             <span className="label-mono text-accent">Featured</span>
-            <span aria-hidden className="h-px w-6 bg-line-strong" />
+            <span aria-hidden className="h-px w-6 bg-surface-3-strong" />
             <span className="font-mono text-[10px] tracking-[0.14em] text-ink-mute uppercase">
               {featured.category_name}
             </span>
           </div>
 
-          <h1 className="max-w-[14ch] font-display text-[26px] leading-[1.05] font-semibold tracking-tight text-balance sm:text-[32px] lg:text-[36px]">
+          <h1 className="max-w-[14ch] text-[26px] leading-[1.05] font-semibold tracking-tight text-balance sm:text-[32px] lg:text-[36px]">
             {featured.name}
           </h1>
 

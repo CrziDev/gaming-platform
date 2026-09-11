@@ -7,7 +7,7 @@ import { Field, Input, Select } from '@/components/ui/Field'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { UnderlineTabs } from '@/components/ui/Tabs'
+import { ChipTabs } from '@/components/ui/Tabs'
 import { useAdminPaymentMethods, useStaff } from '@/features/admin'
 import { formatMoney, money } from '@/lib/money'
 
@@ -20,7 +20,7 @@ export function AdminSettingsPage() {
     <div className="flex flex-col gap-6">
       <PageHeading title="Settings" meta="Owner-only changes are marked. Everything here writes to the audit log." />
 
-      <UnderlineTabs
+      <ChipTabs
         items={[
           { id: 'methods' as const, label: 'Payment methods' },
           { id: 'staff' as const, label: 'Staff' },

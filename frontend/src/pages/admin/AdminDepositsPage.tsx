@@ -46,7 +46,7 @@ export function AdminDepositsPage() {
             <RecordCard
               title={row.username}
               meta={`${row.reference} · ${row.method_name}`}
-              leading={<span aria-hidden className="size-9 shrink-0 rounded-full bg-line" />}
+              leading={<span aria-hidden className="size-9 shrink-0 rounded-full bg-surface-3" />}
               value={
                 <span className="font-mono text-sm font-semibold tnum">
                   {formatMoney(money(row.amount_minor, row.currency), { decimals: 'trim' })}

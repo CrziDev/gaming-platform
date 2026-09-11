@@ -11,7 +11,7 @@ import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatCard } from '@/components/ui/StatCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { UnderlineTabs } from '@/components/ui/Tabs'
+import { ChipTabs } from '@/components/ui/Tabs'
 import {
   useAdminUser,
   useAdminUserWallets,
@@ -107,7 +107,7 @@ export function AdminUserDetailPage() {
 
       <div className="grid gap-6 wide:grid-cols-[minmax(0,1fr)_340px] wide:items-start">
         <section className="order-2 flex flex-col gap-4 wide:order-1">
-          <UnderlineTabs
+          <ChipTabs
             items={[
               { id: 'deposits' as const, label: 'Deposits' },
               { id: 'adjustments' as const, label: 'Adjustments' },
@@ -122,10 +122,10 @@ export function AdminUserDetailPage() {
         </section>
 
         <aside className="order-1 flex flex-col gap-5 wide:sticky wide:top-21 wide:order-2">
-          <section className="flex flex-col gap-4 rounded-card border border-line bg-panel p-5">
-            <h2 className="font-display text-[17px] font-semibold text-ink">Wallets</h2>
+          <section className="flex flex-col gap-4 rounded-card bg-panel p-5">
+            <h2 className="text-[17px] font-semibold text-ink">Wallets</h2>
             {wallets.map((wallet) => (
-              <div key={wallet.currency} className="flex flex-col gap-3 border-b border-line pb-4 last:border-0 last:pb-0">
+              <div key={wallet.currency} className="flex flex-col gap-3 pb-4 last:pb-0">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="label-mono text-ink-mute">{wallet.currency}</span>
                   <span className="font-mono text-xl font-semibold tnum">
@@ -148,8 +148,8 @@ export function AdminUserDetailPage() {
             ))}
           </section>
 
-          <section className="flex flex-col gap-3 rounded-card border border-line bg-panel p-5">
-            <h2 className="font-display text-[17px] font-semibold text-ink">Account</h2>
+          <section className="flex flex-col gap-3 rounded-card bg-panel p-5">
+            <h2 className="text-[17px] font-semibold text-ink">Account</h2>
             <dl className="flex flex-col gap-2 text-[13px]">
               <Row label="Account id">
                 <span className="font-mono">{accountReference}</span>
@@ -162,8 +162,8 @@ export function AdminUserDetailPage() {
             </dl>
           </section>
 
-          <section className="flex flex-col gap-2.5 rounded-card border border-danger/28 bg-danger/5 p-5">
-            <h2 className="font-display text-[15px] font-semibold text-ink">Account controls</h2>
+          <section className="flex flex-col gap-2.5 rounded-card bg-danger/5 p-5">
+            <h2 className="text-[15px] font-semibold text-ink">Account controls</h2>
             {user.status === 'closed' ? (
               <p className="text-[12.5px] leading-relaxed text-ink-mute">
                 This account is permanently closed. Its status cannot be changed.

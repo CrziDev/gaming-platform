@@ -19,7 +19,7 @@ export function Header() {
   const { open } = useAuthIntent()
 
   return (
-    <header className="sticky top-0 z-40 h-16 border-b border-line bg-base/95 backdrop-blur lg:h-14">
+    <header className="sticky top-0 z-40 h-16 bg-base/95 lg:h-14">
       <div className="flex h-full items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <IconButton
           label="Toggle navigation"
@@ -35,8 +35,8 @@ export function Header() {
         </IconButton>
 
         <Link to={paths.lobby} className="flex items-center gap-2.5">
-          <span aria-hidden className="size-7 rounded-[9px] bg-accent shadow-glow" />
-          <span className="hidden font-display text-[15px] font-semibold sm:inline">
+          <span aria-hidden className="size-7 rounded-[9px] bg-accent" />
+          <span className="hidden text-[15px] font-semibold sm:inline">
             Gaming Platform
           </span>
         </Link>

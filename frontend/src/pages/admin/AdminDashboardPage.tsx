@@ -74,7 +74,7 @@ export function AdminDashboardPage() {
       <div className="grid gap-5 wide:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] wide:items-start">
         <section className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-lg font-semibold text-ink">Deposit queue</h2>
+            <h2 className="text-lg font-semibold text-ink">Deposit queue</h2>
             <Link to={adminPaths.deposits} className="text-[13px] text-accent hover:underline">
               Open full queue
             </Link>
@@ -104,7 +104,7 @@ export function AdminDashboardPage() {
                       {formatDuration(row.created_at)}
                     </span>
                   }
-                  leading={<span aria-hidden className="size-8 shrink-0 rounded-full bg-line" />}
+                  leading={<span aria-hidden className="size-8 shrink-0 rounded-full bg-surface-3" />}
                   actions={
                     <>
                       <Button variant="secondary" size="sm" onClick={() => setReviewing(row)}>
@@ -128,18 +128,18 @@ export function AdminDashboardPage() {
         </section>
 
         <div className="flex flex-col gap-5">
-          <section className="flex flex-col gap-3.5 rounded-card border border-line bg-panel p-4">
-            <h2 className="font-display text-[17px] font-semibold text-ink">Needs attention</h2>
+          <section className="flex flex-col gap-3.5 rounded-card bg-panel p-4">
+            <h2 className="text-[17px] font-semibold text-ink">Needs attention</h2>
             <ul className="flex flex-col gap-2.5">
               {alertsQuery.data?.map((alert) => (
                 <li key={alert.id}>
                   <Link
                     to={alert.href}
                     className={cn(
-                      'flex min-h-11 items-center gap-3 rounded-input border px-3 text-[13px]',
-                      alert.tone === 'warning' && 'border-warning/35 bg-warning/6',
-                      alert.tone === 'danger' && 'border-danger/35 bg-danger/6',
-                      alert.tone === 'neutral' && 'border-line bg-surface-1',
+                      'flex min-h-11 items-center gap-3 rounded-input px-3 text-[13px]',
+                      alert.tone === 'warning' && 'bg-warning/10',
+                      alert.tone === 'danger' && 'bg-danger/10',
+                      alert.tone === 'neutral' && 'bg-surface-1',
                     )}
                   >
                     <span
@@ -147,7 +147,7 @@ export function AdminDashboardPage() {
                       className={cn(
                         'size-2 shrink-0 rounded-full',
                         alert.tone === 'warning' && 'bg-warning',
-                        alert.tone === 'danger' && 'bg-highlight',
+                        alert.tone === 'danger' && 'bg-danger',
                         alert.tone === 'neutral' && 'bg-ink-mute',
                       )}
                     />
@@ -163,9 +163,9 @@ export function AdminDashboardPage() {
             </p>
           </section>
 
-          <section className="flex flex-col gap-3.5 rounded-card border border-line bg-panel p-4">
+          <section className="flex flex-col gap-3.5 rounded-card bg-panel p-4">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="font-display text-[17px] font-semibold text-ink">Activity log</h2>
+              <h2 className="text-[17px] font-semibold text-ink">Activity log</h2>
               <Link to={adminPaths.audit} className="text-[12.5px] text-accent hover:underline">
                 All
               </Link>
@@ -199,7 +199,7 @@ function queueColumns(onReview: (deposit: AdminDeposit) => void): Column<AdminDe
       header: 'Player',
       cell: (row) => (
         <span className="flex items-center gap-2.5">
-          <span aria-hidden className="size-7 shrink-0 rounded-full bg-line" />
+          <span aria-hidden className="size-7 shrink-0 rounded-full bg-surface-3" />
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-[13.5px] font-semibold">{row.username}</span>
             {row.user_balance_minor === undefined ? null : (

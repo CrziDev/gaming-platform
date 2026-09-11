@@ -26,7 +26,7 @@ export function AdminRtpPage() {
         meta="Draft → Verified → Active → Retired. A value is not valid until the engine has verified it."
       />
 
-      <p className="flex items-start gap-3 rounded-card border border-danger/35 bg-danger/6 px-4 py-3.5 text-[13px] leading-relaxed text-ink-soft">
+      <p className="flex items-start gap-3 rounded-card bg-danger/6 px-4 py-3.5 text-[13px] leading-relaxed text-ink-soft">
         <AlertTriangle aria-hidden size={17} strokeWidth={1.5} className="mt-0.5 shrink-0 text-danger" />
         A profile at or above 100% is a negative-margin configuration. It requires a scheduled end time
         and a typed confirmation before it can go live.

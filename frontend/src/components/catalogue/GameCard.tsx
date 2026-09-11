@@ -17,8 +17,8 @@ export function GameCard({ game }: { game: Game }) {
           name={game.name}
           className="size-full transition-transform duration-[200ms] ease-standard group-hover:scale-[1.04] group-focus-visible:scale-[1.04]"
         />
-        <span className="absolute inset-0 flex items-center justify-center bg-[#06090f]/50 opacity-0 transition-opacity duration-[120ms] ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
-          <span className="rounded-full bg-accent px-5 py-2 font-display text-[13px] font-bold text-on-accent">
+        <span className="absolute inset-0 flex items-center justify-center bg-base/50 opacity-0 transition-opacity duration-[120ms] ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span className="rounded-full bg-accent px-5 py-2 text-[13px] font-semibold text-on-accent">
             Play
           </span>
         </span>
@@ -33,8 +33,8 @@ export function GameCard({ game }: { game: Game }) {
   )
 
   const className =
-    'group flex w-full flex-col overflow-hidden rounded-card border border-line bg-surface-2 text-left ' +
-    'transition-[border-color,box-shadow] duration-[120ms] ease-standard hover:border-accent hover:shadow-e1'
+    'group flex w-full flex-col overflow-hidden rounded-card bg-surface-2 text-left' +
+    'transition-[border-color,box-shadow] duration-[120ms] ease-standard  '
 
   if (!user) {
     return (

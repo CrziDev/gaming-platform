@@ -18,7 +18,7 @@ export function AdminShell() {
       <AdminTopBar onOpenDrawer={() => setDrawerOpen(true)} />
 
       <div className="flex">
-        <div className="sticky top-15 hidden h-[calc(100dvh-3.75rem)] w-57 shrink-0 border-r border-line bg-panel lg:block">
+        <div className="sticky top-15 hidden h-[calc(100dvh-3.75rem)] w-57 shrink-0 bg-panel lg:block">
           <AdminNavPanel />
         </div>
 
@@ -35,11 +35,11 @@ export function AdminShell() {
             type="button"
             aria-label="Close navigation"
             onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-[#06090f]/70"
+            className="absolute inset-0 bg-base/70"
           />
-          <div className="relative flex w-72 max-w-[85vw] flex-col border-r border-line bg-panel">
+          <div className="relative flex w-72 max-w-[85vw] flex-col bg-panel">
             <div className="flex items-center justify-between p-4">
-              <span className="font-display text-[15px] font-semibold">Console</span>
+              <span className="text-[15px] font-semibold">Console</span>
               <button
                 type="button"
                 aria-label="Close navigation"
@@ -61,23 +61,23 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   const { data: operator } = useSession()
 
   return (
-    <header className="sticky top-0 z-40 h-15 border-b border-line bg-panel">
+    <header className="sticky top-0 z-40 h-15 bg-panel">
       <div className="flex h-full items-center gap-3 px-3 sm:px-4">
         <IconButton label="Open navigation" onClick={onOpenDrawer} className="lg:hidden">
           <Menu aria-hidden size={18} strokeWidth={1.5} />
         </IconButton>
 
         <div className="flex items-center gap-2.5">
-          <span aria-hidden className="size-6.5 rounded-lg border border-line-strong bg-line" />
-          <span className="font-display text-[15px] font-semibold">Console</span>
-          <span className="hidden rounded-chip border border-line-strong px-1.5 py-0.5 font-mono text-[10px] tracking-[0.12em] text-ink-mute uppercase sm:inline">
+          <span aria-hidden className="size-6.5 rounded-lg bg-surface-3" />
+          <span className="text-[15px] font-semibold">Console</span>
+          <span className="hidden rounded-chip px-1.5 py-0.5 font-mono text-[10px] tracking-[0.12em] text-ink-mute uppercase sm:inline">
             Live
           </span>
         </div>
 
         <div className="flex-1" />
 
-        <label className="hidden min-w-70 items-center gap-2.5 rounded-input border border-line bg-surface-1 px-3 lg:flex">
+        <label className="hidden min-w-70 items-center gap-2.5 rounded-input bg-surface-1 px-3 lg:flex">
           <Search aria-hidden size={15} strokeWidth={1.5} className="text-ink-mute" />
           <input
             type="search"
@@ -89,7 +89,7 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
         {operator ? (
           <div className="flex items-center gap-2.5">
-            <span aria-hidden className="size-8 rounded-full border border-line-strong bg-line" />
+            <span aria-hidden className="size-8 rounded-full bg-surface-3" />
             <span className="hidden flex-col leading-tight sm:flex">
               <span className="text-[12.5px] font-semibold">{operator.display_name}</span>
               <span className="font-mono text-[10px] text-ink-mute">Operator</span>
@@ -147,7 +147,7 @@ function AdminNavPanel({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </ul>
 
-      <div className="mt-auto flex flex-col gap-0.5 border-t border-line pt-2.5">
+      <div className="mt-auto flex flex-col gap-0.5 pt-2.5">
         <NavLink
           to={adminPaths.settings}
           {...(onNavigate ? { onClick: onNavigate } : {})}

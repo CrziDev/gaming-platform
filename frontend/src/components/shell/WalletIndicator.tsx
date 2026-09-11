@@ -11,7 +11,7 @@ type WalletIndicatorProps = {
 
 export function WalletIndicator({ balance, compact = false }: WalletIndicatorProps) {
   return (
-    <div className="flex min-h-11 items-center gap-2 rounded-full border border-line-strong bg-surface-2 py-1 pr-1 pl-3.5 lg:min-h-9">
+    <div className="flex min-h-11 items-center gap-2 rounded-full bg-surface-2 py-1 pr-1 pl-3.5 lg:min-h-9">
       {compact ? null : (
         <span className="font-mono text-[10px] tracking-[0.1em] text-ink-mute">{balance.currency}</span>
       )}

@@ -6,7 +6,7 @@ import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
-import { UnderlineTabs } from '@/components/ui/Tabs'
+import { ChipTabs } from '@/components/ui/Tabs'
 import { paths } from '@/routes/paths'
 
 import { useSessionExpired } from './expiry'
@@ -66,7 +66,7 @@ export function AuthModal() {
       }
     >
       <div className="flex flex-col gap-5 lg:gap-4">
-        <UnderlineTabs
+        <ChipTabs
           items={tabs}
           value={intent.tab}
           onChange={(tab: AuthTab) => setTab(tab)}
@@ -134,7 +134,7 @@ function SignInForm({ mutation }: { mutation: ReturnType<typeof useLogin> }) {
       </Field>
 
       <label className="flex min-h-11 items-center gap-2.5 text-sm text-ink-mute lg:min-h-9">
-        <input type="checkbox" name="keep_signed_in" className="size-4 accent-[#3d8bff]" />
+        <input type="checkbox" name="keep_signed_in" className="size-4 accent-accent" />
         Keep me signed in
       </label>
 
@@ -202,7 +202,7 @@ function JoinForm({ mutation }: { mutation: ReturnType<typeof useRegister> }) {
       </Field>
 
       {currencies.length === 1 ? (
-        <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-input border border-line bg-surface-2/60 px-3.5 py-2">
+        <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-input bg-surface-2/60 px-3.5 py-2">
           <label htmlFor="join-currency" className="text-[13px] font-medium text-ink-mute">
             Account currency
           </label>
@@ -210,7 +210,7 @@ function JoinForm({ mutation }: { mutation: ReturnType<typeof useRegister> }) {
             <output id="join-currency" className="font-mono text-[13px] font-semibold text-ink">
               {currencies[0]?.label}
             </output>
-            <span className="font-mono text-[10px] tracking-[0.1em] text-ink-faint uppercase">
+            <span className="font-mono text-[10px] tracking-[0.1em] text-ink-mute uppercase">
               Permanent
             </span>
           </span>
@@ -236,7 +236,7 @@ function JoinForm({ mutation }: { mutation: ReturnType<typeof useRegister> }) {
       <label className="flex items-start gap-2.5 py-0.5 text-[13px] leading-relaxed text-ink-mute">
         <input
           type="checkbox"
-          className="mt-0.5 size-4 shrink-0 accent-[#3d8bff]"
+          className="mt-0.5 size-4 shrink-0 accent-accent"
           {...register('accepted_terms')}
         />
         I&rsquo;m 18 or older and accept the terms and privacy policy.

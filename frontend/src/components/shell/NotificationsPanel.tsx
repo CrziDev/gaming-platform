@@ -36,14 +36,14 @@ export function NotificationsPanel() {
       <IconButton label="Notifications" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <Bell aria-hidden size={18} strokeWidth={1.5} />
         {unread ? (
-          <span className="absolute top-2 right-2 size-2 rounded-full border-2 border-surface-2 bg-highlight" />
+          <span className="absolute top-1.5 right-1.5 size-[5px] rounded-full bg-danger" />
         ) : null}
       </IconButton>
 
       {open ? (
-        <div className="absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-card border border-line-strong bg-surface-1 shadow-e2">
-          <header className="flex items-center justify-between border-b border-line px-4 py-3">
-            <span className="font-display text-[15px] font-semibold">Notifications</span>
+        <div className="absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-card bg-surface-1">
+          <header className="flex items-center justify-between px-4 py-3">
+            <span className="text-[15px] font-semibold">Notifications</span>
             <button
               type="button"
               onClick={() => markRead.mutate()}
@@ -58,7 +58,7 @@ export function NotificationsPanel() {
               <li
                 key={notification.id}
                 className={cn(
-                  'flex gap-3 border-b border-line/60 px-4 py-3 last:border-b-0',
+                  'flex gap-3 px-4 py-3',
                   !notification.read && 'bg-accent/5',
                 )}
               >
@@ -99,7 +99,7 @@ export function NotificationsPanel() {
           <Link
             to={paths.history}
             onClick={() => setOpen(false)}
-            className="flex min-h-11 items-center justify-center gap-1 border-t border-line text-[12.5px] text-accent hover:underline"
+            className="flex min-h-11 items-center justify-center gap-1 text-[12.5px] text-accent hover:underline"
           >
             See all in History
             <ChevronRight aria-hidden size={14} strokeWidth={1.5} />

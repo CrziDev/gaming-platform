@@ -19,22 +19,22 @@ const presentation: Record<
     icon: Clock,
     heading: 'Awaiting approval',
     body: "We'll notify you the moment an admin reviews this. You can keep playing with your current balance.",
-    frame: 'border-warning/35 bg-warning/6',
-    ring: 'border-warning/35 bg-warning/14 text-warning',
+    frame: 'bg-warning/10',
+    ring: 'bg-warning/14 text-warning',
   },
   approved: {
     icon: Check,
     heading: 'Approved',
     body: 'The funds are in your wallet and the request has moved into your ledger as approved.',
-    frame: 'border-success/35 bg-success/6',
-    ring: 'border-success/35 bg-success/14 text-success',
+    frame: 'bg-success/10',
+    ring: 'bg-success/14 text-success',
   },
   rejected: {
     icon: X,
     heading: 'Rejected',
     body: 'No funds moved. The reason below comes from the operator who reviewed the request.',
-    frame: 'border-danger/35 bg-danger/6',
-    ring: 'border-danger/35 bg-danger/14 text-danger',
+    frame: 'bg-danger/10',
+    ring: 'bg-danger/14 text-danger',
   },
 }
 
@@ -43,7 +43,7 @@ export function DepositStatusPage() {
   const depositQuery = useDeposit(id)
 
   if (depositQuery.isPending) {
-    return <Skeleton className="mx-auto h-96 w-full max-w-md rounded-sheet" />
+    return <Skeleton className="mx-auto h-96 w-full max-w-md rounded-card" />
   }
 
   const deposit = depositQuery.data
@@ -70,32 +70,32 @@ export function DepositStatusPage() {
         <Link
           to={paths.wallet}
           aria-label="Back to wallet"
-          className="flex size-11 items-center justify-center rounded-input border border-line-strong bg-surface-2 text-ink-mute hover:text-ink"
+          className="flex size-11 items-center justify-center rounded-input bg-surface-2 text-ink-mute hover:text-ink"
         >
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
-        <h1 className="font-display text-lg font-semibold text-ink">Request {deposit.reference}</h1>
+        <h1 className="text-lg font-semibold text-ink">Request {deposit.reference}</h1>
       </header>
 
       <section
-        className={cn('flex flex-col items-center gap-3 rounded-sheet border p-6 text-center', state.frame)}
+        className={cn('flex flex-col items-center gap-3 rounded-card p-6 text-center', state.frame)}
       >
-        <span className={cn('flex size-14 items-center justify-center rounded-full border', state.ring)}>
+        <span className={cn('flex size-14 items-center justify-center rounded-full', state.ring)}>
           <Icon aria-hidden size={24} strokeWidth={1.5} />
         </span>
-        <h2 className="font-display text-xl font-semibold text-ink">{state.heading}</h2>
+        <h2 className="text-xl font-semibold text-ink">{state.heading}</h2>
         <span className="font-mono text-[30px] font-semibold tnum">
           {formatMoney(money(deposit.amount_minor, deposit.currency))}
         </span>
         <p className="max-w-[34ch] text-[13px] leading-relaxed text-ink-mute text-pretty">{state.body}</p>
         {deposit.reason ? (
-          <p className="rounded-input border border-line bg-base px-3.5 py-2.5 text-[13px] text-ink-soft">
+          <p className="rounded-input bg-base px-3.5 py-2.5 text-[13px] text-ink-soft">
             {deposit.reason}
           </p>
         ) : null}
       </section>
 
-      <dl className="flex flex-col gap-2.5 rounded-card border border-line bg-panel p-4 text-[13.5px]">
+      <dl className="flex flex-col gap-2.5 rounded-card bg-panel p-4 text-[13.5px]">
         <Row label="Method">{deposit.method_name}</Row>
         <Row label="Reference">
           <span className="font-mono">{deposit.reference}</span>

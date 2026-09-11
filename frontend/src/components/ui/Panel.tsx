@@ -13,14 +13,14 @@ type PanelProps = {
 
 export function Panel({ title, action, children, className, bodyClassName }: PanelProps) {
   return (
-    <section className={cn('rounded-card border border-line bg-surface-1', className)}>
+    <section className={cn('rounded-card bg-surface-1', className)}>
       {title ? (
-        <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
-          <h2 className="font-display text-[17px] font-semibold text-ink">{title}</h2>
+        <header className="flex items-center justify-between gap-3 px-4 pt-4 pb-1">
+          <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">{title}</h2>
           {action}
         </header>
       ) : null}
-      <div className={cn('p-5', bodyClassName)}>{children}</div>
+      <div className={cn('p-4', bodyClassName)}>{children}</div>
     </section>
   )
 }
@@ -42,29 +42,26 @@ export function CollapsiblePanel({
   const bodyId = useId()
 
   return (
-    <section className={cn('rounded-card border border-line bg-surface-1', className)}>
-      <div className="flex items-center gap-2 px-5">
+    <section className={cn('rounded-card bg-surface-1', className)}>
+      <div className="flex items-center gap-2 px-4">
         <button
           type="button"
           aria-expanded={open}
           aria-controls={bodyId}
           onClick={() => setOpen((current) => !current)}
-          className="flex min-h-12 flex-1 items-center justify-between gap-3 text-left"
+          className="flex min-h-11 flex-1 items-center justify-between gap-3 text-left"
         >
-          <span className="font-display text-[17px] font-semibold text-ink">{title}</span>
+          <span className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">{title}</span>
           <ChevronDown
             aria-hidden
-            size={18}
+            size={16}
             strokeWidth={1.5}
-            className={cn(
-              'text-ink-mute transition-transform duration-[200ms] ease-standard',
-              open && 'rotate-180',
-            )}
+            className={cn('text-ink-mute', open && 'rotate-180')}
           />
         </button>
         {action}
       </div>
-      <div id={bodyId} hidden={!open} className={cn('border-t border-line p-5', bodyClassName)}>
+      <div id={bodyId} hidden={!open} className={cn('px-4 pb-4', bodyClassName)}>
         {children}
       </div>
     </section>

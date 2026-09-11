@@ -32,24 +32,24 @@ export function RecordTable<T>({
 }: RecordTableProps<T>) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2.5 lg:hidden">
+      <div className="flex flex-col gap-0.5 lg:hidden">
         {rows.map((row) => (
           <div key={rowKey(row)}>{renderCard(row)}</div>
         ))}
       </div>
 
-      <div className="hidden overflow-hidden rounded-card border border-line lg:block">
-        <table className="w-full border-collapse text-left">
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="w-full border-separate border-spacing-y-0.5 text-left">
           <caption className="sr-only">{label}</caption>
           <thead>
-            <tr className="border-b border-line bg-surface-1">
+            <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   scope="col"
                   style={column.width ? { width: column.width } : undefined}
                   className={cn(
-                    'px-4 py-3 font-mono text-[10.5px] font-medium tracking-[0.12em] text-ink-mute uppercase',
+                    'label-mono px-3 pt-1 pb-2 font-medium text-ink-mute',
                     column.align === 'right' && 'text-right',
                     column.columnClass,
                   )}
@@ -65,15 +65,15 @@ export function RecordTable<T>({
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={cn(
-                  'border-b border-line/60 last:border-b-0',
-                  onRowClick && 'cursor-pointer transition-colors duration-[120ms] hover:bg-surface-1',
+                  'bg-surface-1',
+                  onRowClick && 'cursor-pointer transition-colors duration-[120ms] hover:bg-surface-2',
                 )}
               >
                 {columns.map((column) => (
                   <td
                     key={column.key}
                     className={cn(
-                      'px-4 py-3.5 align-middle text-sm text-ink',
+                      'px-3 py-3 align-middle text-[13px] text-ink-soft first:rounded-l-tile last:rounded-r-tile',
                       column.align === 'right' && 'text-right',
                       column.columnClass,
                     )}
@@ -118,8 +118,8 @@ export function RecordCard({
       <div className="flex items-center gap-3">
         {leading}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate text-sm font-semibold text-ink">{title}</span>
-          {meta ? <span className="font-mono text-[11.5px] text-ink-mute">{meta}</span> : null}
+          <span className="truncate text-[13px] font-medium text-ink-soft">{title}</span>
+          {meta ? <span className="font-mono text-[11px] text-ink-mute">{meta}</span> : null}
         </div>
         {value || aside ? (
           <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -128,12 +128,12 @@ export function RecordCard({
           </div>
         ) : null}
       </div>
-      {actions ? <div className="grid grid-cols-2 gap-2.5">{actions}</div> : null}
+      {actions ? <div className="grid grid-cols-2 gap-2">{actions}</div> : null}
     </>
   )
 
   const className = cn(
-    'flex w-full flex-col gap-3 rounded-card border border-line bg-surface-1 p-3.5 text-left',
+    'flex w-full flex-col gap-3 rounded-tile bg-surface-1 p-3 text-left',
     dimmed && 'opacity-70',
   )
 
@@ -152,7 +152,7 @@ export function RecordCard({
           onClick()
         }
       }}
-      className={cn(className, 'transition-colors duration-[120ms] hover:border-line-hover')}
+      className={cn(className, 'transition-colors duration-[120ms] hover:bg-surface-2')}
     >
       {content}
     </div>

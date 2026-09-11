@@ -33,7 +33,7 @@ export function GameArt({ seed, name, className }: GameArtProps) {
         style={{ backgroundImage: grain }}
       />
       {name ? (
-        <span className="absolute -right-[8%] -bottom-[12%] font-display text-[68cqmin] leading-none font-bold text-white/10 select-none">
+        <span className="absolute -right-[8%] -bottom-[12%] text-[68cqmin] leading-none font-semibold text-white/10 select-none">
           {name.charAt(0)}
         </span>
       ) : null}

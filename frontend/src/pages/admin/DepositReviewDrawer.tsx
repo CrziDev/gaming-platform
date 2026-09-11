@@ -93,7 +93,7 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
           href={adminDepositProofUrl(deposit.id)}
           target="_blank"
           rel="noreferrer"
-          className="flex h-48 items-center justify-center rounded-input border border-dashed border-line-strong font-mono text-[11px] text-accent hover:bg-accent/6"
+          className="flex h-48 items-center justify-center rounded-input font-mono text-[11px] text-accent hover:bg-accent/6"
         >
           Open proof of payment
         </a>
@@ -116,7 +116,7 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
         </dl>
 
         <Field label="Credit amount — must match the proof" htmlFor="credit-amount">
-          <div className="flex min-h-12 items-center gap-2.5 rounded-input border border-line-strong bg-base px-3.5">
+          <div className="flex min-h-12 items-center gap-2.5 rounded-input bg-base px-3.5">
             <span className="font-mono text-ink-mute">{currencySymbol(deposit.currency)}</span>
             <input
               id="credit-amount"

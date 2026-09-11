@@ -40,14 +40,14 @@ export function AccountMenu({ user }: { user: User }) {
         onClick={() => setOpen((value) => !value)}
         className="flex size-11 items-center justify-center lg:size-9"
       >
-        <span className="flex size-9 items-center justify-center rounded-full border border-line-strong bg-line font-mono text-[13px] font-semibold text-ink uppercase lg:size-8 lg:text-[12px]">
+        <span className="flex size-9 items-center justify-center rounded-full bg-surface-3 font-mono text-[13px] font-semibold text-ink uppercase lg:size-8 lg:text-[12px]">
           {user.display_name.slice(0, 2)}
         </span>
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-card border border-line-strong bg-surface-1 shadow-e2">
-          <div className="border-b border-line px-4 py-3">
+        <div className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-card bg-surface-1">
+          <div className="px-4 py-3">
             <p className="truncate text-sm font-semibold text-ink">{user.display_name}</p>
             <p className="truncate text-[12px] text-ink-mute">{user.email}</p>
           </div>
@@ -63,7 +63,7 @@ export function AccountMenu({ user }: { user: User }) {
             type="button"
             onClick={() => void signOut()}
             disabled={logoutMutation.isPending}
-            className="flex min-h-11 w-full items-center gap-2.5 border-t border-line px-4 text-[13.5px] text-ink-mute hover:text-ink"
+            className="flex min-h-11 w-full items-center gap-2.5 px-4 text-[13.5px] text-ink-mute hover:text-ink"
           >
             <LogOut aria-hidden size={16} strokeWidth={1.5} />
             {logoutMutation.isPending ? 'Signing out…' : 'Sign out'}

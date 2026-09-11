@@ -3,9 +3,9 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react
 import { cn } from '@/lib/cn'
 
 export const inputClass =
-  'w-full min-h-12 rounded-input border border-line-strong bg-base px-3.5 text-[15px] text-ink lg:min-h-10 lg:text-sm ' +
+  'w-full min-h-11 rounded-input bg-inset px-3 text-[13.5px] text-ink-soft lg:min-h-[34px] ' +
   'placeholder:text-ink-mute transition-colors duration-[120ms] ease-standard ' +
-  'focus:border-accent focus:outline-none disabled:text-ink-faint'
+  'focus:bg-wash disabled:text-ink-mute'
 
 type FieldProps = {
   label: string
@@ -20,15 +20,15 @@ export function Field({ label, htmlFor, error, hint, action, children }: FieldPr
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <label htmlFor={htmlFor} className="text-[13px] font-medium text-ink-mute">
+        <label htmlFor={htmlFor} className="text-[12.5px] font-medium text-ink-mute">
           {label}
         </label>
         {action}
       </div>
       {children}
-      {hint ? <p className="text-xs leading-relaxed text-ink-mute">{hint}</p> : null}
+      {hint ? <p className="text-[12px] leading-relaxed text-ink-mute">{hint}</p> : null}
       {error ? (
-        <p role="alert" className="text-[13px] text-danger">
+        <p role="alert" className="text-[12.5px] text-danger">
           {error}
         </p>
       ) : null}
@@ -48,7 +48,7 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
       </select>
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-ink-mute"
+        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-mute"
       >
         ⌄
       </span>

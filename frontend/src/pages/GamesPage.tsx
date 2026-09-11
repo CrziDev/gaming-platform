@@ -5,7 +5,7 @@ import { GameGrid, gridDensity } from '@/components/catalogue/GameGrid'
 import { Select } from '@/components/ui/Field'
 import { SkeletonGrid } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/States'
-import { UnderlineTabs, type TabItem } from '@/components/ui/Tabs'
+import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { categoryIcon } from '@/components/shell/nav'
 import { useCategories, useGames, type GameFilters } from '@/features/catalogue'
@@ -44,10 +44,10 @@ export function GamesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="font-display text-[22px] font-semibold tracking-tight text-ink">Games</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight text-ink">Games</h1>
 
       <div className="flex flex-col gap-4">
-        <UnderlineTabs
+        <ChipTabs
           items={tabs}
           value={category}
           onChange={(next) => update({ category: next })}
@@ -63,7 +63,7 @@ export function GamesPage() {
               <button
                 type="button"
                 onClick={() => update({ q: '' })}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-chip border border-line-strong bg-surface-2 px-2.5 text-[12.5px] text-ink"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-chip bg-surface-2 px-2.5 text-[12.5px] text-ink"
               >
                 <span className="text-ink-mute">Search</span>
                 {search}

@@ -10,7 +10,7 @@ import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/States'
 import { StatCard } from '@/components/ui/StatCard'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { UnderlineTabs } from '@/components/ui/Tabs'
+import { ChipTabs } from '@/components/ui/Tabs'
 import { useTransactions, useWalletSummary, type HistoryFilter, type HistoryKind } from '@/features/wallet'
 import { formatClock, formatDate, formatDateTime } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
@@ -33,7 +33,7 @@ export function HistoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-[22px] font-semibold tracking-tight text-ink">History</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight text-ink">History</h1>
 
         <div className="flex items-center gap-2.5">
           <Select
@@ -60,7 +60,7 @@ export function HistoryPage() {
         </div>
       </header>
 
-      <UnderlineTabs
+      <ChipTabs
         items={kindTabs}
         value={filter.kind}
         onChange={(kind: HistoryKind) => setFilter((current) => ({ ...current, kind, page: 1 }))}

@@ -38,7 +38,7 @@ export function BrowseGroup({ collapsed = false, onNavigate }: BrowseGroupProps)
   ]
 
   return (
-    <div className="flex flex-col gap-1 border-t border-line pt-3">
+    <div className="flex flex-col gap-1 pt-3">
       {collapsed ? null : (
         <button
           type="button"

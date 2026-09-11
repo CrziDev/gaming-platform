@@ -111,7 +111,7 @@ function AdjustForm({
     >
       <div className="flex flex-col gap-4">
         {crediting ? null : (
-          <p className="rounded-input border border-danger/35 bg-danger/8 px-3.5 py-3 text-[13px] leading-relaxed text-ink-soft">
+          <p className="rounded-input bg-danger/8 px-3.5 py-3 text-[13px] leading-relaxed text-ink-soft">
             This removes funds from a player&rsquo;s wallet. A debit cannot exceed the current balance —
             no negative balances. The player sees the entry in their History as an adjustment.
           </p>
@@ -125,7 +125,7 @@ function AdjustForm({
           }
           htmlFor="adjust-amount"
         >
-          <div className="flex min-h-12 items-center gap-2.5 rounded-input border border-line-strong bg-base px-3.5">
+          <div className="flex min-h-12 items-center gap-2.5 rounded-input bg-base px-3.5">
             <span className="font-mono text-ink-mute">{currencySymbol(wallet.currency)}</span>
             <input
               id="adjust-amount"
@@ -149,7 +149,7 @@ function AdjustForm({
           </Select>
         </Field>
 
-        <div className="flex items-baseline justify-between gap-4 rounded-input border border-line bg-surface-1 px-3.5 py-3 text-[13.5px]">
+        <div className="flex items-baseline justify-between gap-4 rounded-input bg-surface-1 px-3.5 py-3 text-[13.5px]">
           <span className="text-ink-mute">New balance</span>
           <span className="font-mono font-semibold tnum">{formatMoney(nextBalance)}</span>
         </div>

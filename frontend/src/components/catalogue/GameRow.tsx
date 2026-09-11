@@ -22,7 +22,7 @@ export function GameRow({ title, categorySlug, games }: GameRowProps) {
   return (
     <section className="flex flex-col gap-3">
       <header className="flex items-center justify-between gap-4">
-        <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold text-ink lg:text-[17px]">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold text-ink lg:text-[17px]">
           <CategoryIcon slug={categorySlug ?? ''} size={16} className="text-ink-mute" />
           {title}
           <span className="font-mono text-[11px] font-normal text-ink-mute">{games.length}</span>

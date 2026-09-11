@@ -17,9 +17,9 @@ type ToastContextValue = {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 const tones: Record<ToastTone, string> = {
-  info: 'border-line-strong bg-surface-2 text-ink',
-  success: 'border-success/35 bg-success/12 text-ink',
-  danger: 'border-danger/35 bg-danger/12 text-ink',
+  info: 'bg-surface-3 text-ink-soft',
+  success: 'bg-success/12 text-ink-soft',
+  danger: 'bg-danger/12 text-ink-soft',
 }
 
 let nextId = 0
@@ -48,7 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cn(
-              'pointer-events-auto w-full max-w-sm rounded-card border px-4 py-3 text-sm shadow-e2',
+              'pointer-events-auto w-full max-w-sm rounded-card px-4 py-3 text-[13px]',
               tones[toast.tone],
             )}
           >

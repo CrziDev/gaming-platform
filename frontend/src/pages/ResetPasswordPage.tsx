@@ -17,10 +17,10 @@ export function ResetPasswordPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-sheet border border-line bg-panel p-7">
+      <div className="w-full max-w-md rounded-card bg-panel p-7">
         <div className="mb-6 flex items-center gap-3">
-          <span aria-hidden className="size-7 rounded-[9px] bg-accent shadow-glow" />
-          <span className="font-display text-[15px] font-semibold">Gaming Platform</span>
+          <span aria-hidden className="size-7 rounded-[9px] bg-accent" />
+          <span className="text-[15px] font-semibold">Gaming Platform</span>
         </div>
 
         <form
@@ -32,7 +32,7 @@ export function ResetPasswordPage() {
           className="flex flex-col gap-5"
         >
           <div className="flex flex-col gap-2">
-            <h1 className="font-display text-xl font-semibold text-ink">Choose a new password</h1>
+            <h1 className="text-xl font-semibold text-ink">Choose a new password</h1>
             <p className="text-[13.5px] leading-relaxed text-ink-mute">
               Once it is saved you will be signed in and returned to the lobby.
             </p>

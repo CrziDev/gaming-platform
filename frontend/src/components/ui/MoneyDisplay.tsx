@@ -25,7 +25,7 @@ export function MoneyDisplay({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 font-mono font-semibold tnum',
+        'inline-flex items-center gap-1 font-mono font-medium tnum',
         toneClass(tone, direction),
         className,
       )}
@@ -37,8 +37,8 @@ export function MoneyDisplay({
 }
 
 function toneClass(tone: MoneyTone, direction: ReturnType<typeof moneyDirection>): string {
-  if (tone === 'neutral') return 'text-ink'
+  if (tone === 'neutral') return 'text-ink-soft'
   if (tone === 'danger') return 'text-danger'
-  if (tone === 'auto') return direction === 'credit' ? 'text-success' : 'text-ink'
+  if (tone === 'auto') return direction === 'credit' ? 'text-success' : 'text-ink-soft'
   return ''
 }

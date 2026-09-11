@@ -14,17 +14,17 @@ export function Sidebar() {
     <aside
       aria-label="Main navigation"
       className={cn(
-        'sticky top-14 hidden h-[calc(100dvh-3.5rem)] shrink-0 flex-col border-r border-line bg-panel lg:flex',
+        'sticky top-14 hidden h-[calc(100dvh-3.5rem)] shrink-0 flex-col bg-panel lg:flex',
         railCollapsed ? 'w-18' : 'w-70',
       )}
     >
-      <div className="border-b border-line p-3">
+      <div className="p-3">
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
           className={cn(
-            'flex min-h-11 w-full items-center gap-2.5 rounded-input border border-line bg-surface-1 text-ink-mute lg:min-h-10',
-            'transition-colors duration-[120ms] hover:border-line-strong hover:text-ink',
+            'flex min-h-11 w-full items-center gap-2.5 rounded-input bg-surface-1 text-ink-mute lg:min-h-10',
+            'transition-colors duration-[120ms] hover:text-ink',
             railCollapsed ? 'justify-center px-0' : 'px-3',
           )}
         >
@@ -34,7 +34,7 @@ export function Sidebar() {
           ) : (
             <>
               <span className="text-[13px]">Search games</span>
-              <kbd className="ml-auto rounded-chip border border-line px-1.5 py-0.5 font-mono text-[10.5px]">
+              <kbd className="ml-auto rounded-chip px-1.5 py-0.5 font-mono text-[10.5px]">
                 ⌘K
               </kbd>
             </>
@@ -47,7 +47,7 @@ export function Sidebar() {
         <BrowseGroup collapsed={railCollapsed} />
       </nav>
 
-      <div className="flex flex-col gap-0.5 border-t border-line p-3">
+      <div className="flex flex-col gap-0.5 p-3">
         <a
           href="https://support.example.com"
           target="_blank"
@@ -80,7 +80,7 @@ export function Sidebar() {
         </button>
 
         {railCollapsed ? null : (
-          <span className="px-3 pt-2 font-mono text-[10px] text-ink-faint">v1.0 · Phase 1</span>
+          <span className="px-3 pt-2 font-mono text-[10px] text-ink-mute">v1.0 · Phase 1</span>
         )}
       </div>
     </aside>

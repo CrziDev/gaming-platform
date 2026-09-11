@@ -1,61 +1,75 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-base: #0a0e15;
-  --color-panel: #0d121c;
-  --color-surface-1: #121826;
-  --color-surface-2: #1a2233;
-  --color-line: #232c3d;
-  --color-line-strong: #2f3a4e;
-  --color-line-hover: #48576f;
+  --color-base: #0b0f14;
+  --color-panel: #11161d;
+  --color-surface-1: #151b23;
+  --color-surface-2: #1b232c;
+  --color-surface-3: #252c36;
+  --color-banner: #16202a;
+  --color-wash: rgb(255 255 255 / 0.06);
+  --color-inset: rgb(255 255 255 / 0.045);
 
-  --color-ink: #edf1f8;
-  --color-ink-soft: #c6d2e2;
-  --color-ink-mute: #98a5bc;
-  --color-ink-faint: #6b7a93;
-  --color-on-accent: #06090f;
+  --color-ink: #f2f6fb;
+  --color-ink-soft: #e6ebf2;
+  --color-ink-mute: #8a99ad;
+  --color-on-accent: #07160e;
 
-  --color-accent: #3d8bff;
-  --color-accent-hi: #5c9eff;
-  --color-accent-press: #2b6fd6;
-  --color-highlight: #ff4e7a;
-  --color-success: #34d399;
+  --color-accent: #2fa96c;
+  --color-accent-hi: #37bd79;
+  --color-accent-ink: #3ec07d;
+  --color-gold: #caa04a;
+  --color-on-gold: #17120a;
+  --color-win: #e8c883;
+  --color-success: #3ec07d;
   --color-warning: #f5b23b;
-  --color-danger: #f0524d;
+  --color-danger: #e05a5a;
 
-  --font-display: 'Sora', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --radius-chip: 6px;
-  --radius-input: 10px;
-  --radius-card: 14px;
-  --radius-sheet: 20px;
-
-  --shadow-e1: 0 6px 20px rgb(0 0 0 / 0.35);
-  --shadow-e2: 0 18px 48px rgb(0 0 0 / 0.55);
-  --shadow-glow: 0 0 24px rgb(61 139 255 / 0.28);
+  --radius-chip: 8px;
+  --radius-input: 9px;
+  --radius-tile: 10px;
+  --radius-card: 12px;
 
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
 
+  --breakpoint-chat: 720px;
+  --breakpoint-rail: 760px;
   --breakpoint-wide: 1440px;
+
+  --container-chat: 720px;
+  --container-rail: 760px;
+  --container-rail-wide: 900px;
 }
 
 :root {
   color-scheme: dark;
 }
 
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 body {
   background-color: var(--color-base);
-  color: var(--color-ink);
+  color: var(--color-ink-soft);
   font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-accent-ink);
   outline-offset: 2px;
 }
 
@@ -65,17 +79,14 @@ body {
 
 @utility label-mono {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-@utility no-scrollbar {
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
+@utility tile-scrim {
+  background-image: linear-gradient(180deg, rgb(11 15 20 / 0), rgb(11 15 20 / 0.85));
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -84,7 +84,7 @@ export function AdminUsersPage() {
                   Joined {formatRelative(row.created_at)}
                 </span>
               }
-              leading={<span aria-hidden className="size-9 shrink-0 rounded-full bg-line" />}
+              leading={<span aria-hidden className="size-9 shrink-0 rounded-full bg-surface-3" />}
               onClick={() => void navigate(`/admin/users/${row.id}`)}
             />
           )}
@@ -131,7 +131,7 @@ const columns: Column<AdminUser>[] = [
     header: 'Player',
     cell: (row) => (
       <span className="flex items-center gap-2.5">
-        <span aria-hidden className="size-8 shrink-0 rounded-full bg-line" />
+        <span aria-hidden className="size-8 shrink-0 rounded-full bg-surface-3" />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[13.5px] font-semibold">{row.display_name}</span>
           <span className="truncate font-mono text-[11px] text-ink-mute">{accountReference(row)}</span>

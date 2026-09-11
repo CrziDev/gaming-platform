@@ -29,7 +29,7 @@ export function GameCarousel({ games, label }: { games: Game[]; label: string })
   return (
     <ul
       aria-label={label}
-      className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-1"
+      className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-1"
     >
       {games.map((game) => (
         <li key={game.id} className="w-[calc(50%-2rem)] shrink-0 snap-start sm:w-44 lg:w-40">

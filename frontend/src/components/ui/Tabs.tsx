@@ -17,43 +17,33 @@ type TabsProps<T extends string> = {
   className?: string
 }
 
-export function UnderlineTabs<T extends string>({
-  items,
-  value,
-  onChange,
-  label,
-  className,
-}: TabsProps<T>) {
+export function ChipTabs<T extends string>({ items, value, onChange, label, className }: TabsProps<T>) {
   return (
-    <div className={cn('border-b border-line', className)}>
-      <div role="tablist" aria-label={label} className="no-scrollbar flex gap-1 overflow-x-auto">
-        {items.map((item) => {
-          const active = item.id === value
-          const Icon = item.icon
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => onChange(item.id)}
-              className={cn(
-                'inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3.5 text-sm lg:min-h-10',
-                'transition-colors duration-[120ms] ease-standard',
-                active
-                  ? 'border-accent font-semibold text-accent'
-                  : 'border-transparent text-ink-mute hover:text-ink',
-              )}
-            >
-              {Icon ? <Icon aria-hidden size={16} strokeWidth={1.5} /> : null}
-              {item.label}
-              {item.count === undefined ? null : (
-                <span className="font-mono text-[11px] text-ink-faint">{item.count}</span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+    <div role="tablist" aria-label={label} className={cn('flex gap-1.5 overflow-x-auto', className)}>
+      {items.map((item) => {
+        const active = item.id === value
+        const Icon = item.icon
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(item.id)}
+            className={cn(
+              'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-chip px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-8',
+              'transition-colors duration-[120ms] ease-standard',
+              active ? 'bg-surface-3 text-ink-soft' : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
+            )}
+          >
+            {Icon ? <Icon aria-hidden size={15} strokeWidth={1.5} /> : null}
+            {item.label}
+            {item.count === undefined ? null : (
+              <span className="font-mono text-[11px] font-normal text-ink-mute">{item.count}</span>
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -69,10 +59,7 @@ export function SegmentedTrack<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className={cn(
-        'no-scrollbar inline-flex max-w-full gap-1 overflow-x-auto rounded-input border border-line bg-base p-1',
-        className,
-      )}
+      className={cn('inline-flex max-w-full gap-0.5 overflow-x-auto rounded-input bg-inset p-0.5', className)}
     >
       {items.map((item) => {
         const active = item.id === value
@@ -84,16 +71,14 @@ export function SegmentedTrack<T extends string>({
             aria-selected={active}
             onClick={() => onChange(item.id)}
             className={cn(
-              'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-chip px-3.5 text-[13px] lg:min-h-10',
+              'inline-flex min-h-10 shrink-0 items-center gap-2 rounded-[7px] px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-[26px]',
               'transition-colors duration-[120ms] ease-standard',
-              active
-                ? 'bg-surface-2 font-semibold text-ink shadow-e1'
-                : 'text-ink-mute hover:text-ink',
+              active ? 'bg-wash text-ink-soft' : 'text-ink-mute hover:text-ink-soft',
             )}
           >
             {item.label}
             {item.count === undefined ? null : (
-              <span className="font-mono text-[11px] text-ink-faint">{item.count}</span>
+              <span className="font-mono text-[11px] font-normal text-ink-mute">{item.count}</span>
             )}
           </button>
         )

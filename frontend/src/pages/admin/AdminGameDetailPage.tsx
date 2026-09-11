@@ -84,7 +84,7 @@ export function AdminGameDetailPage() {
           profiles.map((profile) => (
             <div
               key={profile.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-input border border-line bg-surface-1 px-3.5 py-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-input bg-surface-1 px-3.5 py-3"
             >
               <span className="flex items-center gap-3">
                 <span

@@ -18,15 +18,15 @@ export function ForgotPasswordPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-sheet border border-line bg-panel p-7">
+      <div className="w-full max-w-md rounded-card bg-panel p-7">
         <div className="mb-6 flex items-center gap-3">
-          <span aria-hidden className="size-7 rounded-[9px] bg-accent shadow-glow" />
-          <span className="font-display text-[15px] font-semibold">Gaming Platform</span>
+          <span aria-hidden className="size-7 rounded-[9px] bg-accent" />
+          <span className="text-[15px] font-semibold">Gaming Platform</span>
         </div>
 
         {sent ? (
           <div className="flex flex-col gap-4">
-            <h1 className="font-display text-xl font-semibold text-ink">Check your email</h1>
+            <h1 className="text-xl font-semibold text-ink">Check your email</h1>
             <p className="text-sm leading-relaxed text-ink-mute">
               If that address has an account, a reset link is on its way. The link expires in 30
               minutes.
@@ -45,7 +45,7 @@ export function ForgotPasswordPage() {
             className="flex flex-col gap-5"
           >
             <div className="flex flex-col gap-2">
-              <h1 className="font-display text-xl font-semibold text-ink">Forgot password</h1>
+              <h1 className="text-xl font-semibold text-ink">Forgot password</h1>
               <p className="text-[13.5px] leading-relaxed text-ink-mute">
                 Enter your email and we&rsquo;ll send a reset link.
               </p>
