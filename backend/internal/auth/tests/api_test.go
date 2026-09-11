@@ -546,6 +546,19 @@ func TestAdminUsersSupportsPagingSearchAndStatus(t *testing.T) {
 	if page.Total != 1 || page.Page != 1 || page.Size != 1 || page.Pages != 1 {
 		t.Fatalf("unexpected page metadata: %+v", page)
 	}
+
+	var suspendedID string
+	if err := db.QueryRow(`SELECT id::text FROM users WHERE email = 'suspended@example.com'`).Scan(&suspendedID); err != nil {
+		t.Fatalf("read suspended user id: %v", err)
+	}
+	status, body = send(t, adminClient, http.MethodGet,
+		base+"/api/admin/users?search="+suspendedID[:8], nil)
+	if status != http.StatusOK {
+		t.Fatalf("id search: want 200, got %d (%s)", status, body)
+	}
+	if err := json.Unmarshal(body, &page); err != nil || page.Total != 1 || len(page.Rows) != 1 || page.Rows[0].Email != "suspended@example.com" {
+		t.Fatalf("unexpected id search: page=%+v err=%v (%s)", page, err, body)
+	}
 }
 
 func TestAdminUsersRejectsInvalidPagingAndStatus(t *testing.T) {

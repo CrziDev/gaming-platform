@@ -7,21 +7,10 @@ import type {
   ConsoleAlert,
   DashboardSummary,
   RtpProfile,
+  Wallet,
 } from '@/api/types'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
-
-type AdminUserFixture = AdminUser & {
-  account_ref: string
-  currency: 'PHP' | 'USD'
-  balance_minor: number
-  staked_30d_minor: number
-  net_30d_minor: number
-  rounds_played: number
-  deposits_approved: number
-  last_active_at: string
-  verified: string
-}
 
 export const dashboardSummary: DashboardSummary = {
   pending_deposits: 7,
@@ -47,9 +36,10 @@ export const consoleAlerts: ConsoleAlert[] = [
 const firstNames = ['juan', 'ana', 'dee', 'kris', 'mia', 'leo', 'noel', 'rita', 'sam', 'tess']
 const lastNames = ['martinez', 'rivera', 'tan', 'severino', 'lopez', 'cruz', 'reyes', 'diaz', 'uy', 'go']
 
-function buildUsers(): AdminUserFixture[] {
+function buildUsers(): { users: AdminUser[]; wallets: Record<string, Wallet[]> } {
   const random = seeded(4182)
-  const records: AdminUserFixture[] = []
+  const users: AdminUser[] = []
+  const wallets: Record<string, Wallet[]> = {}
 
   for (let index = 0; index < 88; index += 1) {
     const first = firstNames[index % firstNames.length] as string
@@ -57,47 +47,41 @@ function buildUsers(): AdminUserFixture[] {
     const username = `${first[0]}${last}${index > 9 ? index : ''}`
     const suspended = index % 22 === 7
     const balance = suspended ? 0 : Math.floor(random() * 1400) * 1000
-    const staked = Math.floor(random() * 900) * 5_000
+    const id = `us-${(index + 1).toString().padStart(4, '0')}`
 
-    records.push({
-      id: `us-${(index + 1).toString().padStart(4, '0')}`,
-      account_ref: `PL-00${4182 + index}`,
+    users.push({
+      id,
       email: `${username}@example.com`,
       display_name: username,
       role: 'player',
       status: suspended ? 'suspended' : 'active',
       created_at: daysAgo(30 + index * 3),
-      currency: 'PHP',
-      balance_minor: balance,
-      staked_30d_minor: staked,
-      net_30d_minor: Math.floor(random() * 400_000) - 150_000,
-      rounds_played: Math.floor(random() * 600),
-      deposits_approved: Math.floor(random() * 12),
-      last_active_at: suspended ? daysAgo(27) : minutesAgo(Math.floor(random() * 4000) + 2),
-      verified: 'Email only',
     })
+    wallets[id] = [
+      { currency: 'PHP', balance_minor: balance },
+      { currency: 'USD', balance_minor: 0 },
+    ]
   }
 
-  records[0] = {
-    ...(records[0] as AdminUserFixture),
+  users[0] = {
+    ...(users[0] as AdminUser),
     id: 'us-0001',
-    account_ref: 'PL-004182',
     display_name: 'jmartinez',
     email: 'jmartinez@example.com',
     status: 'active',
-    balance_minor: 525_000,
-    staked_30d_minor: 4_210_000,
-    net_30d_minor: 186_000,
-    rounds_played: 418,
-    deposits_approved: 6,
-    last_active_at: minutesAgo(2),
     created_at: daysAgo(100),
   }
+  wallets['us-0001'] = [
+    { currency: 'PHP', balance_minor: 525_000 },
+    { currency: 'USD', balance_minor: 24_500 },
+  ]
 
-  return records
+  return { users, wallets }
 }
 
-export const adminUsers: AdminUserFixture[] = buildUsers()
+const userFixtures = buildUsers()
+export const adminUsers = userFixtures.users
+export const adminUserWallets = userFixtures.wallets
 
 export const adminDeposits: AdminDeposit[] = [
   {

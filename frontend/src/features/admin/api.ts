@@ -22,6 +22,7 @@ import {
   adjustments,
   adminDeposits,
   adminGames,
+  adminUserWallets,
   adminUsers,
   auditEntries,
   consoleAlerts,
@@ -132,10 +133,11 @@ export async function reviewDeposit(review: DepositReview): Promise<void> {
       deposit.amount_minor = review.amount_minor
     }
 
-    const user = adminUsers.find((candidate) => candidate.id === deposit.user_id)
-    if (user && review.action === 'approve') {
-      user.balance_minor += deposit.amount_minor
-      user.deposits_approved += 1
+    const wallet = adminUserWallets[deposit.user_id]?.find(
+      (candidate) => candidate.currency === deposit.currency,
+    )
+    if (wallet && review.action === 'approve') {
+      wallet.balance_minor += deposit.amount_minor
     }
 
     auditEntries.unshift({
@@ -204,7 +206,7 @@ export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUser>> {
         search === '' ||
         user.display_name.toLowerCase().includes(search) ||
         user.email.toLowerCase().includes(search) ||
-        user.account_ref.toLowerCase().includes(search)
+        user.id.toLowerCase().includes(search)
       return matchesStatus && matchesSearch
     })
     return paginate(matched, filter.page, ADMIN_PAGE_SIZE)
@@ -248,14 +250,7 @@ export async function fetchUserWallets(id: string): Promise<Wallet[]> {
   if (useRealAdminApi) {
     return api.get<Wallet[]>(`/admin/users/${id}/wallets`)
   }
-  return mockRequest(() => {
-    const account = adminUsers.find((user) => user.id === id)
-    if (!account) return []
-    return [
-      { currency: account.currency, balance_minor: account.balance_minor },
-      { currency: account.currency === 'PHP' ? 'USD' : 'PHP', balance_minor: 0 },
-    ]
-  })
+  return mockRequest(() => (adminUserWallets[id] ?? []).map((wallet) => ({ ...wallet })))
 }
 
 export async function fetchUserRounds(): Promise<Round[]> {
@@ -309,7 +304,7 @@ export type AdminAdjustment = {
   created_at: string
 }
 
-export async function adjustWallet(input: WalletAdjustment): Promise<AdminAdjustment | AdminUser> {
+export async function adjustWallet(input: WalletAdjustment): Promise<AdminAdjustment> {
   if (useRealAdminApi) {
     return api.post<AdminAdjustment>(`/admin/users/${input.user_id}/wallet-adjustments`, {
       direction: input.direction,
@@ -323,34 +318,51 @@ export async function adjustWallet(input: WalletAdjustment): Promise<AdminAdjust
     if (!user) {
       throw new Error(`user ${input.user_id} not found`)
     }
+    const wallet = adminUserWallets[user.id]?.find(
+      (candidate) => candidate.currency === input.currency,
+    )
+    if (!wallet) {
+      throw new Error(`${input.currency} wallet for user ${input.user_id} not found`)
+    }
 
     const signed = input.direction === 'credit' ? input.amount_minor : -input.amount_minor
-    if (user.balance_minor + signed < 0) {
+    if (wallet.balance_minor + signed < 0) {
       throw new Error('A debit cannot take a wallet below zero')
     }
 
-    user.balance_minor += signed
+    const balanceBefore = wallet.balance_minor
+    wallet.balance_minor += signed
 
-    adjustments.unshift({
+    const adjustment: Adjustment = {
       id: `adj-${Date.now()}`,
       user_id: user.id,
       amount_minor: signed,
-      currency: user.currency,
+      currency: input.currency,
       reason: input.reason,
       operator: 'R. Cruz',
       created_at: new Date().toISOString(),
-    })
+    }
+    adjustments.unshift(adjustment)
 
     auditEntries.unshift({
       id: `au-${Date.now()}`,
       created_at: new Date().toISOString(),
       operator: 'R. Cruz',
       action: input.direction === 'credit' ? 'wallet.credit' : 'wallet.debit',
-      entity: user.account_ref,
+      entity: user.id.slice(0, 8).toUpperCase(),
       detail: `${input.direction === 'credit' ? 'Credited' : 'Debited'} ${user.display_name} · ${input.reason}`,
     })
 
-    return user
+    return {
+      id: adjustment.id,
+      kind: 'adjustment',
+      amount_minor: adjustment.amount_minor,
+      currency: adjustment.currency,
+      balance_before: balanceBefore,
+      balance_after: wallet.balance_minor,
+      reason: adjustment.reason,
+      created_at: adjustment.created_at,
+    }
   }, 450)
 }
 
@@ -445,7 +457,7 @@ export async function setUserStatus(id: string, status: AccountStatus): Promise<
       created_at: new Date().toISOString(),
       operator: 'R. Cruz',
       action: status === 'suspended' ? 'user.suspend' : 'user.reinstate',
-      entity: user.account_ref,
+      entity: user.id.slice(0, 8).toUpperCase(),
       detail: `${status === 'suspended' ? 'Suspended' : 'Reinstated'} ${user.display_name}`,
     })
 

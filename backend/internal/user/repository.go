@@ -32,7 +32,8 @@ const (
 		WHERE ($1 = '' OR status = $1)
 		  AND ($2 = ''
 		    OR position(lower($2) in lower(email)) > 0
-		    OR position(lower($2) in lower(display_name)) > 0)`
+		    OR position(lower($2) in lower(display_name)) > 0
+		    OR position(lower($2) in lower(id::text)) > 0)`
 
 	listUsersSQL = `
 		SELECT id::text, email, display_name, role, status, created_at
@@ -40,7 +41,8 @@ const (
 		WHERE ($1 = '' OR status = $1)
 		  AND ($2 = ''
 		    OR position(lower($2) in lower(email)) > 0
-		    OR position(lower($2) in lower(display_name)) > 0)
+		    OR position(lower($2) in lower(display_name)) > 0
+		    OR position(lower($2) in lower(id::text)) > 0)
 		ORDER BY created_at DESC, email ASC
 		LIMIT $3 OFFSET $4`
 )
