@@ -12,7 +12,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 bg-panel pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="grid shrink-0 grid-cols-4 bg-panel pb-[env(safe-area-inset-bottom)] rail:hidden"
     >
       {playerNav.map((item) => {
         const Icon = item.icon
@@ -42,7 +42,7 @@ export function BottomNav() {
             to={item.to}
             end={item.end ?? false}
             className={({ isActive }) =>
-              cn(shape, isActive ? 'font-semibold text-accent' : 'text-ink-mute')
+              cn(shape, isActive ? 'font-medium text-ink-soft' : 'text-ink-mute')
             }
           >
             {body}

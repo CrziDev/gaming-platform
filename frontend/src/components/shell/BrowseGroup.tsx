@@ -7,13 +7,14 @@ import { useRemembered } from '@/lib/remembered'
 import { paths } from '@/routes/paths'
 
 import { CategoryIcon } from './CategoryIcon'
+import { railLabel, railRow, type RailMode } from './rail'
 
 type BrowseGroupProps = {
-  collapsed?: boolean
+  mode?: RailMode
   onNavigate?: () => void
 }
 
-export function BrowseGroup({ collapsed = false, onNavigate }: BrowseGroupProps) {
+export function BrowseGroup({ mode = 'expanded', onNavigate }: BrowseGroupProps) {
   const { data: categories } = useCategories()
   const [open, setOpen] = useRemembered('shell.browse-open', true)
 
@@ -21,72 +22,60 @@ export function BrowseGroup({ collapsed = false, onNavigate }: BrowseGroupProps)
     return null
   }
 
-  const total = categories.reduce((sum, category) => sum + category.game_count, 0)
-
-  const shape =
-    'flex min-h-11 items-center gap-3 rounded-input text-[13px] transition-colors duration-[120ms] lg:min-h-9'
+  const shape = cn(
+    'flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13.5px] transition-colors duration-[120ms] lg:min-h-9',
+    railRow[mode],
+  )
 
   const entries = [
-    { slug: '', name: 'All games', count: total, to: paths.games, end: true },
+    { slug: '', name: 'All games', to: paths.games, end: true },
     ...categories.map((category) => ({
       slug: category.slug,
       name: category.name,
-      count: category.game_count,
       to: `${paths.games}?category=${category.slug}`,
       end: false,
     })),
   ]
 
+  const showEntries = mode !== 'expanded' || open
+
   return (
-    <div className="flex flex-col gap-1 pt-3">
-      {collapsed ? null : (
+    <div className="flex flex-col gap-px">
+      {mode === 'expanded' ? (
         <button
           type="button"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
-          className="flex min-h-11 items-center gap-2 rounded-input px-3 text-ink-mute transition-colors duration-[120ms] hover:text-ink lg:min-h-9"
+          className="flex min-h-11 items-center gap-2 rounded-input px-2.75 text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft lg:min-h-9"
         >
           <span className="label-mono">Browse</span>
-          <ChevronDown
-            aria-hidden
-            size={14}
-            strokeWidth={1.5}
-            className={cn('ml-auto transition-transform duration-[120ms]', open && 'rotate-180')}
-          />
+          <ChevronDown aria-hidden size={14} strokeWidth={1.5} className={cn('ml-auto', open && 'rotate-180')} />
         </button>
-      )}
+      ) : null}
 
-      {collapsed || open
+      {showEntries
         ? entries.map((entry) => (
             <NavLink
               key={entry.to}
               to={entry.to}
               end={entry.end}
               {...(onNavigate ? { onClick: onNavigate } : {})}
-              {...(collapsed ? { title: entry.name } : {})}
+              {...(mode === 'expanded' ? {} : { title: entry.name })}
               className={({ isActive }) =>
                 cn(
                   shape,
-                  collapsed ? 'justify-center px-0' : 'px-3',
                   entry.end && isActive
-                    ? 'bg-accent/12 text-accent'
-                    : 'text-ink-mute hover:text-ink',
+                    ? 'bg-wash font-medium text-ink-soft'
+                    : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
                 )
               }
             >
               {entry.slug === '' ? (
-                <Layers aria-hidden size={16} strokeWidth={1.5} />
+                <Layers aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
               ) : (
-                <CategoryIcon slug={entry.slug} size={16} />
+                <CategoryIcon slug={entry.slug} size={16} className="shrink-0" />
               )}
-              {collapsed ? (
-                <span className="sr-only">{entry.name}</span>
-              ) : (
-                <>
-                  {entry.name}
-                  <span className="ml-auto font-mono text-[11px]">{entry.count}</span>
-                </>
-              )}
+              <span className={railLabel[mode]}>{entry.name}</span>
             </NavLink>
           ))
         : null}

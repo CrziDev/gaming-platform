@@ -1,31 +1,29 @@
-import { Plus } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { formatMoney, type Money } from '@/lib/money'
+import { currencySymbol, formatMoney, type Money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
-type WalletIndicatorProps = {
-  balance: Money
-  compact?: boolean
-}
+export function WalletIndicator({ balance }: { balance: Money }) {
+  const full = formatMoney(balance)
 
-export function WalletIndicator({ balance, compact = false }: WalletIndicatorProps) {
   return (
-    <div className="flex min-h-11 items-center gap-2 rounded-full bg-surface-2 py-1 pr-1 pl-3.5 lg:min-h-9">
-      {compact ? null : (
-        <span className="font-mono text-[10px] tracking-[0.1em] text-ink-mute">{balance.currency}</span>
-      )}
-      <span className="font-mono text-sm font-semibold tnum">
-        {formatMoney(balance, compact ? { decimals: 'trim' } : {})}
-      </span>
-      <Link
-        to={paths.deposit}
-        aria-label="Deposit"
-        title="Deposit"
-        className="relative flex size-8 items-center justify-center rounded-full bg-accent text-on-accent lg:size-7 transition-colors duration-[120ms] after:absolute after:-inset-1.5 after:content-[''] hover:bg-accent-hi"
+    <Link
+      to={paths.wallet}
+      aria-label={`Wallet balance ${full}`}
+      className="flex min-h-11 items-center gap-2 rounded-input bg-inset py-1 pr-2.5 pl-2 text-ink-soft transition-colors duration-[120ms] ease-standard hover:bg-wash lg:min-h-[34px]"
+    >
+      <span
+        aria-hidden
+        className="flex size-[19px] items-center justify-center rounded-full bg-gold text-[11px] font-semibold text-on-gold"
       >
-        <Plus aria-hidden size={16} strokeWidth={2} />
-      </Link>
-    </div>
+        {currencySymbol(balance.currency)}
+      </span>
+      <span aria-hidden className="font-mono text-[13.5px] font-medium tnum">
+        <span className="hidden sm:inline">{formatMoney(balance, { symbol: false })}</span>
+        <span className="sm:hidden">{formatMoney(balance, { symbol: false, decimals: 'trim' })}</span>
+      </span>
+      <ChevronDown aria-hidden size={12} strokeWidth={2.2} className="text-ink-mute" />
+    </Link>
   )
 }

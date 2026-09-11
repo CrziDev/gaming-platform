@@ -3,6 +3,7 @@ import { Outlet } from 'react-router'
 import { AuthModal } from '@/features/auth'
 
 import { BottomNav } from './BottomNav'
+import { ChatRail } from './ChatRail'
 import { Header } from './Header'
 import { MobileDrawer } from './MobileDrawer'
 import { SearchSheet } from './SearchSheet'
@@ -12,23 +13,25 @@ import { Sidebar } from './Sidebar'
 export function AppShell() {
   return (
     <ShellProvider>
-      <div className="min-h-dvh">
+      <div className="flex h-dvh flex-col overflow-hidden bg-base">
         <Header />
 
-        <div className="flex">
+        <div className="@container flex min-h-0 flex-1">
           <Sidebar />
-          <main className="min-w-0 flex-1 pb-24 lg:pb-0">
-            <div className="mx-auto w-full max-w-[1440px] px-4 py-5 sm:px-6 lg:px-8">
+          <main className="@container min-w-0 flex-1 overflow-y-auto px-3.5 pt-3.5 pb-8">
+            <div className="mx-auto w-full max-w-[1320px]">
               <Outlet />
             </div>
           </main>
+          <ChatRail />
         </div>
 
         <BottomNav />
-        <MobileDrawer />
-        <SearchSheet />
-        <AuthModal />
       </div>
+
+      <MobileDrawer />
+      <SearchSheet />
+      <AuthModal />
     </ShellProvider>
   )
 }

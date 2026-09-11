@@ -56,7 +56,7 @@ export function SearchSheet() {
             aria-hidden
             size={16}
             strokeWidth={1.5}
-            className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-mute"
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-mute"
           />
           <Input
             autoFocus
@@ -70,7 +70,7 @@ export function SearchSheet() {
             }}
             placeholder="Game name or category"
             aria-label="Search games"
-            className="pl-10"
+            className="pl-9"
           />
         </div>
 
@@ -81,12 +81,12 @@ export function SearchSheet() {
                 <button
                   type="button"
                   onClick={() => void open(game.slug)}
-                  className="flex min-h-14 w-full items-center gap-3 rounded-input px-2 text-left hover:bg-surface-2"
+                  className="flex min-h-14 w-full items-center gap-3 rounded-tile px-2 text-left transition-colors duration-[120ms] hover:bg-surface-1"
                 >
                   <GameArt seed={game.art_seed} className="size-10 rounded-chip" />
                   <span className="flex flex-col">
-                    <span className="text-sm font-semibold text-ink">{game.name}</span>
-                    <span className="font-mono text-[10.5px] tracking-[0.1em] text-ink-mute uppercase">
+                    <span className="text-[13px] font-medium text-ink-soft">{game.name}</span>
+                    <span className="label-mono text-ink-mute">
                       {game.category_name}
                     </span>
                   </span>
@@ -95,13 +95,13 @@ export function SearchSheet() {
             ))}
           </ul>
         ) : (
-          <p className="px-1 py-6 text-center text-sm text-ink-mute">No games match that search.</p>
+          <p className="px-1 py-6 text-center text-[13.5px] text-ink-mute">No games match that search.</p>
         )}
 
         <button
           type="button"
           onClick={() => void showAll()}
-          className="flex min-h-11 items-center justify-center gap-1 pt-3 text-[12.5px] text-accent hover:underline"
+          className="flex min-h-11 items-center justify-center gap-1 rounded-input text-[12.5px] font-medium text-accent-ink transition-colors duration-[120ms] hover:bg-wash lg:min-h-9"
         >
           {term.trim() === ''
             ? 'Browse all games'

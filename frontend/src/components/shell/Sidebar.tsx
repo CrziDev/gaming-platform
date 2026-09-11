@@ -1,87 +1,60 @@
-import { ExternalLink, Globe, LifeBuoy, Search } from 'lucide-react'
+import { Globe, LifeBuoy, Search } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
 
 import { BrowseGroup } from './BrowseGroup'
 import { NavList } from './NavList'
 import { playerNav } from './nav'
+import { railLabel, railMode, railRow, railWidth } from './rail'
 import { useShell } from './ShellContext'
 
 export function Sidebar() {
-  const { railCollapsed, setSearchOpen } = useShell()
+  const { rail, setSearchOpen } = useShell()
+  const mode = railMode(rail)
+
+  const footerRow = cn(
+    'flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13px] text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft lg:min-h-8',
+    railRow[mode],
+  )
 
   return (
     <aside
       aria-label="Main navigation"
       className={cn(
-        'sticky top-14 hidden h-[calc(100dvh-3.5rem)] shrink-0 flex-col bg-panel lg:flex',
-        railCollapsed ? 'w-18' : 'w-70',
+        'hidden shrink-0 flex-col gap-3 overflow-y-auto bg-panel px-2 py-3 @rail:flex',
+        railWidth[mode],
       )}
     >
-      <div className="p-3">
-        <button
-          type="button"
-          onClick={() => setSearchOpen(true)}
-          className={cn(
-            'flex min-h-11 w-full items-center gap-2.5 rounded-input bg-surface-1 text-ink-mute lg:min-h-10',
-            'transition-colors duration-[120ms] hover:text-ink',
-            railCollapsed ? 'justify-center px-0' : 'px-3',
-          )}
-        >
-          <Search aria-hidden size={16} strokeWidth={1.5} />
-          {railCollapsed ? (
-            <span className="sr-only">Search games</span>
-          ) : (
-            <>
-              <span className="text-[13px]">Search games</span>
-              <kbd className="ml-auto rounded-chip px-1.5 py-0.5 font-mono text-[10.5px]">
-                ⌘K
-              </kbd>
-            </>
-          )}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        className={cn(
+          'flex min-h-11 w-full items-center gap-2.5 rounded-input bg-inset px-2.5 text-[13px] text-ink-mute',
+          'transition-colors duration-[120ms] hover:bg-wash hover:text-ink-soft lg:min-h-[34px]',
+          railRow[mode],
+        )}
+      >
+        <Search aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
+        <span className={railLabel[mode]}>Search games</span>
+      </button>
 
-      <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
-        <NavList items={playerNav} collapsed={railCollapsed} />
-        <BrowseGroup collapsed={railCollapsed} />
+      <nav className="flex flex-col gap-3">
+        <NavList items={playerNav} mode={mode} />
+        <BrowseGroup mode={mode} />
       </nav>
 
-      <div className="flex flex-col gap-0.5 p-3">
-        <a
-          href="https://support.example.com"
-          target="_blank"
-          rel="noreferrer"
-          className={cn(
-            'flex min-h-11 items-center gap-3 rounded-input text-[13px] text-ink-mute hover:text-ink lg:min-h-9',
-            railCollapsed ? 'justify-center px-0' : 'px-3',
-          )}
-        >
-          <LifeBuoy aria-hidden size={16} strokeWidth={1.5} />
-          {railCollapsed ? (
-            <span className="sr-only">Support</span>
-          ) : (
-            <>
-              Support
-              <ExternalLink aria-hidden size={13} strokeWidth={1.5} className="ml-auto" />
-            </>
-          )}
+      <div className="flex-1" />
+
+      <div className="flex flex-col gap-px">
+        <a href="https://support.example.com" target="_blank" rel="noreferrer" className={footerRow}>
+          <LifeBuoy aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
+          <span className={railLabel[mode]}>Support</span>
         </a>
 
-        <button
-          type="button"
-          className={cn(
-            'flex min-h-11 items-center gap-3 rounded-input text-[13px] text-ink-mute hover:text-ink lg:min-h-9',
-            railCollapsed ? 'justify-center px-0' : 'px-3',
-          )}
-        >
-          <Globe aria-hidden size={16} strokeWidth={1.5} />
-          {railCollapsed ? <span className="sr-only">Language</span> : 'English'}
+        <button type="button" className={footerRow}>
+          <Globe aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
+          <span className={railLabel[mode]}>English</span>
         </button>
-
-        {railCollapsed ? null : (
-          <span className="px-3 pt-2 font-mono text-[10px] text-ink-mute">v1.0 · Phase 1</span>
-        )}
       </div>
     </aside>
   )

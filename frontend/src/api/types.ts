@@ -62,6 +62,19 @@ export type LobbyRow = {
   game_ids: string[]
 }
 
+export type ChatMessage = {
+  id: string
+  user: string
+  role: Role
+  text: string
+  created_at: string
+}
+
+export type ChatRoom = {
+  online: number
+  messages: ChatMessage[]
+}
+
 export type Wallet = {
   currency: Currency
   balance_minor: number
