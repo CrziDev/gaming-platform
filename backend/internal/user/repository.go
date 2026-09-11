@@ -21,10 +21,23 @@ const (
 		FROM users
 		WHERE email = $1`
 
+	countUsersSQL = `
+		SELECT count(*)
+		FROM users
+		WHERE ($1 = '' OR status = $1)
+		  AND ($2 = ''
+		    OR position(lower($2) in lower(email)) > 0
+		    OR position(lower($2) in lower(display_name)) > 0)`
+
 	listUsersSQL = `
 		SELECT id::text, email, display_name, role, status, created_at
 		FROM users
-		ORDER BY created_at DESC, email ASC`
+		WHERE ($1 = '' OR status = $1)
+		  AND ($2 = ''
+		    OR position(lower($2) in lower(email)) > 0
+		    OR position(lower($2) in lower(display_name)) > 0)
+		ORDER BY created_at DESC, email ASC
+		LIMIT $3 OFFSET $4`
 )
 
 var (
@@ -40,6 +53,13 @@ type User struct {
 	Role         string
 	Status       string
 	CreatedAt    time.Time
+}
+
+type ListFilter struct {
+	Page   int
+	Size   int
+	Search string
+	Status string
 }
 
 func Create(ctx context.Context, db *sql.DB, email, passwordHash, displayName string) (User, error) {
@@ -72,10 +92,16 @@ func FindByEmail(ctx context.Context, db *sql.DB, email string) (User, error) {
 	return account, nil
 }
 
-func List(ctx context.Context, db *sql.DB) ([]User, error) {
-	rows, err := db.QueryContext(ctx, listUsersSQL)
+func List(ctx context.Context, db *sql.DB, filter ListFilter) ([]User, int, error) {
+	var total int
+	if err := db.QueryRowContext(ctx, countUsersSQL, filter.Status, filter.Search).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("user: count list: %w", err)
+	}
+
+	offset := int64(filter.Page-1) * int64(filter.Size)
+	rows, err := db.QueryContext(ctx, listUsersSQL, filter.Status, filter.Search, filter.Size, offset)
 	if err != nil {
-		return nil, fmt.Errorf("user: list: %w", err)
+		return nil, 0, fmt.Errorf("user: list: %w", err)
 	}
 	defer rows.Close()
 
@@ -86,14 +112,14 @@ func List(ctx context.Context, db *sql.DB) ([]User, error) {
 			&account.ID, &account.Email, &account.DisplayName,
 			&account.Role, &account.Status, &account.CreatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("user: list row: %w", err)
+			return nil, 0, fmt.Errorf("user: list row: %w", err)
 		}
 		accounts = append(accounts, account)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("user: list rows: %w", err)
+		return nil, 0, fmt.Errorf("user: list rows: %w", err)
 	}
-	return accounts, nil
+	return accounts, total, nil
 }
 
 func isUniqueViolation(err error) bool {

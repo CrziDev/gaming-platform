@@ -62,7 +62,7 @@ mixing them presents as a session bug that is very hard to read.
 
 | Document | What it holds |
 | --- | --- |
-| `docs/phase-1-features.md` | the Phase 1 feature list |
-| `docs/backend-services/` | the platform services spec, and where they stand |
-| `docs/game-engine-integration/` | the engine and RTP spec — blocked on game source |
+| `docs/phase-1-features.md` | the master Phase 1 delivery checklist and status |
+| `docs/backend-services/SPEC.md` | the platform-services behavior and invariants |
+| `docs/game-engine-integration/SPEC.md` | the engine and RTP integration rules |
 | `docs/games/` | per-game source assessments |

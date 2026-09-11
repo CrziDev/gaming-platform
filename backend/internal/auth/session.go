@@ -70,22 +70,7 @@ func revokeSession(ctx context.Context, db *sql.DB, token string) error {
 }
 
 func (h *Handler) currentUser(w http.ResponseWriter, r *http.Request) (user.User, bool) {
-	cookie, err := r.Cookie(h.cfg.CookieName)
-	if err != nil || cookie.Value == "" {
-		writeError(w, http.StatusUnauthorized, "Authentication is required")
-		return user.User{}, false
-	}
-
-	account, err := findUserBySessionToken(r.Context(), h.db, cookie.Value)
-	if errors.Is(err, ErrNoSession) {
-		writeError(w, http.StatusUnauthorized, "Authentication is required")
-		return user.User{}, false
-	}
-	if err != nil {
-		h.internal(w, r, err)
-		return user.User{}, false
-	}
-	return account, true
+	return h.CurrentUser(w, r)
 }
 
 func (h *Handler) startSession(w http.ResponseWriter, r *http.Request, account user.User) bool {

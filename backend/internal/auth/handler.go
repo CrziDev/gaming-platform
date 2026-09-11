@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gaming-platform/backend/internal/httpx"
 	"github.com/gaming-platform/backend/internal/user"
 )
 
@@ -25,8 +26,6 @@ type Config struct {
 	CookieName      string
 	CookieSecure    bool
 	SessionTTL      time.Duration
-	AllowedOrigins  []string
-	MaxBodyBytes    int64
 	LoginsPerMinute int
 }
 
@@ -46,26 +45,17 @@ func NewHandler(db *sql.DB, logger *slog.Logger, cfg Config) *Handler {
 	}
 }
 
-func (h *Handler) Routes() http.Handler {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("POST /api/register", h.throttle(h.Register))
-	mux.HandleFunc("POST /api/login", h.throttle(h.Login))
-	mux.HandleFunc("POST /api/logout", h.Logout)
-	mux.HandleFunc("GET /api/me", h.Me)
-	mux.HandleFunc("GET /api/admin/users", h.AdminUsers)
-	mux.HandleFunc("/", h.notFound)
-
-	return h.logAndRecover(h.browserRules(h.limitBody(mux)))
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	h.throttle(h.register)(w, r)
 }
 
-func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Email       string `json:"email"`
 		Password    string `json:"password"`
 		DisplayName string `json:"display_name"`
 	}
-	if !readJSON(w, r, &body) {
+	if !httpx.ReadJSON(w, r, &body) {
 		return
 	}
 
@@ -73,7 +63,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	displayName := strings.TrimSpace(body.DisplayName)
 
 	if fields := validateRegistration(email, body.Password, displayName); len(fields) > 0 {
-		writeFieldErrors(w, "One or more fields are invalid", fields)
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", fields)
 		return
 	}
 
@@ -85,7 +75,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	account, err := user.Create(r.Context(), h.db, email, hash, displayName)
 	if errors.Is(err, user.ErrEmailTaken) {
-		writeJSON(w, http.StatusConflict, errorResponse{
+		httpx.WriteJSON(w, http.StatusConflict, httpx.ErrorResponse{
 			Error:  "That email address is already registered",
 			Fields: map[string]string{"email": "This email address is already registered"},
 		})
@@ -99,28 +89,32 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if !h.startSession(w, r, account) {
 		return
 	}
-	writeJSON(w, http.StatusCreated, newUserResponse(account))
+	httpx.WriteJSON(w, http.StatusCreated, newUserResponse(account))
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	h.throttle(h.login)(w, r)
+}
+
+func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	if !readJSON(w, r, &body) {
+	if !httpx.ReadJSON(w, r, &body) {
 		return
 	}
 
 	email := normalizeEmail(body.Email)
 	if email == "" || body.Password == "" {
-		writeError(w, http.StatusBadRequest, "Enter an email address and a password")
+		httpx.WriteError(w, http.StatusBadRequest, "Enter an email address and a password")
 		return
 	}
 
 	account, err := user.FindByEmail(r.Context(), h.db, email)
 	if errors.Is(err, user.ErrNoUser) {
 		spendVerificationTime(body.Password)
-		writeError(w, http.StatusUnauthorized, invalidCredentials)
+		httpx.WriteError(w, http.StatusUnauthorized, invalidCredentials)
 		return
 	}
 	if err != nil {
@@ -134,19 +128,19 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !matches {
-		writeError(w, http.StatusUnauthorized, invalidCredentials)
+		httpx.WriteError(w, http.StatusUnauthorized, invalidCredentials)
 		return
 	}
 
 	if account.Status != "active" {
-		writeError(w, http.StatusForbidden, "This account is not active")
+		httpx.WriteError(w, http.StatusForbidden, "This account is not active")
 		return
 	}
 
 	if !h.startSession(w, r, account) {
 		return
 	}
-	writeJSON(w, http.StatusOK, newUserResponse(account))
+	httpx.WriteJSON(w, http.StatusOK, newUserResponse(account))
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -162,11 +156,33 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
+	account, ok := h.CurrentUser(w, r)
 	if !ok {
 		return
 	}
-	writeJSON(w, http.StatusOK, newUserResponse(account))
+	httpx.WriteJSON(w, http.StatusOK, newUserResponse(account))
+}
+
+// CurrentUser authenticates the request and returns the active account. It is
+// exposed for handlers in other bounded contexts that need the same session
+// boundary without duplicating cookie and session logic.
+func (h *Handler) CurrentUser(w http.ResponseWriter, r *http.Request) (user.User, bool) {
+	cookie, err := r.Cookie(h.cfg.CookieName)
+	if err != nil || cookie.Value == "" {
+		httpx.WriteError(w, http.StatusUnauthorized, "Authentication is required")
+		return user.User{}, false
+	}
+
+	account, err := findUserBySessionToken(r.Context(), h.db, cookie.Value)
+	if errors.Is(err, ErrNoSession) {
+		httpx.WriteError(w, http.StatusUnauthorized, "Authentication is required")
+		return user.User{}, false
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return user.User{}, false
+	}
+	return account, true
 }
 
 func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request) {
@@ -175,11 +191,24 @@ func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if account.Role != "admin" {
-		writeError(w, http.StatusForbidden, "Administrator access is required")
+		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
 		return
 	}
 
-	accounts, err := user.List(r.Context(), h.db)
+	query, ok := httpx.ReadQuery(w, r)
+	if !ok {
+		return
+	}
+	if query.Status != "" && query.Status != "active" && query.Status != "suspended" && query.Status != "closed" {
+		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{
+			"status": "Status must be active, suspended, or closed",
+		})
+		return
+	}
+
+	accounts, total, err := user.List(r.Context(), h.db, user.ListFilter{
+		Page: query.Page, Size: query.Size, Search: query.Search, Status: query.Status,
+	})
 	if err != nil {
 		h.internal(w, r, err)
 		return
@@ -189,7 +218,7 @@ func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request) {
 	for _, listedAccount := range accounts {
 		response = append(response, newAdminUserResponse(listedAccount))
 	}
-	writeJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(response, total, query.Page, query.Size))
 }
 
 func validateRegistration(email, password, displayName string) map[string]string {

@@ -22,6 +22,13 @@ export type ApiErrorBody = {
   fields?: Record<string, string>
 }
 
+export type CurrencyMetadata = {
+  code: Currency
+  name: string
+  symbol: string
+  minor_units: number
+}
+
 export type Category = {
   slug: string
   name: string
@@ -208,4 +215,3 @@ export type DashboardSummary = {
   target_rtp_basis_points: number
   currency: Currency
 }
-

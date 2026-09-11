@@ -120,7 +120,7 @@ func TestValidateRegistration(t *testing.T) {
 
 			request := httptest.NewRequest(http.MethodPost, "/api/register", bytes.NewReader(body))
 			response := httptest.NewRecorder()
-			handler.Register(response, request)
+			handler.ServeHTTP(response, request)
 			if response.Code != http.StatusBadRequest {
 				t.Fatalf("want 400, got %d (%s)", response.Code, response.Body.Bytes())
 			}

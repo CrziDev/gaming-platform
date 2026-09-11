@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gaming-platform/backend/internal/auth"
+	"github.com/gaming-platform/backend/internal/app"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -73,9 +73,7 @@ func (errNoDatabaseURL) Error() string { return "neither TEST_DATABASE_URL nor D
 func newServer(t *testing.T, db *sql.DB) (string, *http.Client) {
 	t.Helper()
 
-	handler := newHandler(db)
-
-	server := httptest.NewServer(handler.Routes())
+	server := httptest.NewServer(newHandler(db))
 	t.Cleanup(server.Close)
 
 	jar, err := cookiejar.New(nil)
@@ -85,8 +83,8 @@ func newServer(t *testing.T, db *sql.DB) (string, *http.Client) {
 	return server.URL, &http.Client{Jar: jar}
 }
 
-func newHandler(db *sql.DB) *auth.Handler {
-	return auth.NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), auth.Config{
+func newHandler(db *sql.DB) http.Handler {
+	return app.New(db, slog.New(slog.NewTextHandler(io.Discard, nil)), app.Config{
 		CookieName:      "gp_session",
 		SessionTTL:      time.Hour,
 		AllowedOrigins:  []string{"http://localhost:5173"},
@@ -403,16 +401,26 @@ func TestAdminUsersListsRegisteredAccounts(t *testing.T) {
 		t.Fatalf("admin list: want 200, got %d (%s)", status, body)
 	}
 
-	var accounts []struct {
-		Email  string `json:"email"`
-		Role   string `json:"role"`
-		Status string `json:"status"`
+	var page struct {
+		Rows []struct {
+			Email  string `json:"email"`
+			Role   string `json:"role"`
+			Status string `json:"status"`
+		} `json:"rows"`
+		Total int `json:"total"`
+		Page  int `json:"page"`
+		Size  int `json:"size"`
+		Pages int `json:"pages"`
 	}
-	if err := json.Unmarshal(body, &accounts); err != nil {
+	if err := json.Unmarshal(body, &page); err != nil {
 		t.Fatalf("decode: %v (%s)", err, body)
 	}
+	accounts := page.Rows
 	if len(accounts) != 2 {
 		t.Fatalf("want 2 accounts, got %d (%s)", len(accounts), body)
+	}
+	if page.Total != 2 || page.Page != 1 || page.Size != 20 || page.Pages != 1 {
+		t.Fatalf("unexpected page metadata: %+v", page)
 	}
 
 	byEmail := make(map[string]struct {
@@ -433,6 +441,129 @@ func TestAdminUsersListsRegisteredAccounts(t *testing.T) {
 	}
 	if bytes.Contains(body, []byte("password")) || bytes.Contains(body, []byte("argon2")) {
 		t.Fatalf("the admin list exposed password data: %s", body)
+	}
+}
+
+func TestAdminUsersSupportsPagingSearchAndStatus(t *testing.T) {
+	db := requireDB(t)
+	base, adminClient := newServer(t, db)
+	register(t, adminClient, base)
+
+	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE email = $1`, testEmail); err != nil {
+		t.Fatalf("promote admin: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO users (email, password_hash, display_name, status) VALUES
+		('active@example.com', 'unused', 'Active Match', 'active'),
+		('suspended@example.com', 'unused', 'Suspended Match', 'suspended'),
+		('closed@example.com', 'unused', 'Closed Account', 'closed')`); err != nil {
+		t.Fatalf("insert users: %v", err)
+	}
+
+	status, body := send(t, adminClient, http.MethodGet,
+		base+"/api/admin/users?search=match&status=suspended&page=1&size=1", nil)
+	if status != http.StatusOK {
+		t.Fatalf("filtered list: want 200, got %d (%s)", status, body)
+	}
+
+	var page struct {
+		Rows []struct {
+			Email string `json:"email"`
+		} `json:"rows"`
+		Total int `json:"total"`
+		Page  int `json:"page"`
+		Size  int `json:"size"`
+		Pages int `json:"pages"`
+	}
+	if err := json.Unmarshal(body, &page); err != nil {
+		t.Fatalf("decode: %v (%s)", err, body)
+	}
+	if len(page.Rows) != 1 || page.Rows[0].Email != "suspended@example.com" {
+		t.Fatalf("unexpected filtered rows: %+v", page.Rows)
+	}
+	if page.Total != 1 || page.Page != 1 || page.Size != 1 || page.Pages != 1 {
+		t.Fatalf("unexpected page metadata: %+v", page)
+	}
+}
+
+func TestAdminUsersRejectsInvalidPagingAndStatus(t *testing.T) {
+	db := requireDB(t)
+	base, adminClient := newServer(t, db)
+	register(t, adminClient, base)
+
+	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE email = $1`, testEmail); err != nil {
+		t.Fatalf("promote admin: %v", err)
+	}
+
+	tests := []string{
+		"?page=0",
+		"?size=101",
+		"?status=unknown",
+	}
+	for _, query := range tests {
+		status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/users"+query, nil)
+		if status != http.StatusBadRequest {
+			t.Errorf("%s: want 400, got %d (%s)", query, status, body)
+		}
+	}
+}
+
+func TestCurrenciesListsEnabledMetadata(t *testing.T) {
+	db := requireDB(t)
+	base, client := newServer(t, db)
+
+	status, body := send(t, client, http.MethodGet, base+"/api/currencies", nil)
+	if status != http.StatusOK {
+		t.Fatalf("currencies: want 200, got %d (%s)", status, body)
+	}
+
+	var currencies []struct {
+		Code       string `json:"code"`
+		Name       string `json:"name"`
+		Symbol     string `json:"symbol"`
+		MinorUnits int    `json:"minor_units"`
+	}
+	if err := json.Unmarshal(body, &currencies); err != nil {
+		t.Fatalf("decode: %v (%s)", err, body)
+	}
+	if len(currencies) != 2 {
+		t.Fatalf("want PHP and USD, got %+v", currencies)
+	}
+	if currencies[0].Code != "PHP" || currencies[0].Name != "Philippine Peso" ||
+		currencies[0].Symbol != "₱" || currencies[0].MinorUnits != 2 {
+		t.Fatalf("unexpected PHP metadata: %+v", currencies[0])
+	}
+	if currencies[1].Code != "USD" || currencies[1].Name != "US Dollar" ||
+		currencies[1].Symbol != "$" || currencies[1].MinorUnits != 2 {
+		t.Fatalf("unexpected USD metadata: %+v", currencies[1])
+	}
+}
+
+func TestCurrenciesExcludesDisabledRows(t *testing.T) {
+	db := requireDB(t)
+	if _, err := db.Exec(`UPDATE currencies SET enabled = false WHERE code = 'USD'`); err != nil {
+		t.Fatalf("disable USD: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := db.Exec(`UPDATE currencies SET enabled = true WHERE code = 'USD'`); err != nil {
+			t.Errorf("restore USD: %v", err)
+		}
+	})
+
+	base, client := newServer(t, db)
+	status, body := send(t, client, http.MethodGet, base+"/api/currencies", nil)
+	if status != http.StatusOK {
+		t.Fatalf("currencies: want 200, got %d (%s)", status, body)
+	}
+
+	var currencies []struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(body, &currencies); err != nil {
+		t.Fatalf("decode: %v (%s)", err, body)
+	}
+	if len(currencies) != 1 || currencies[0].Code != "PHP" {
+		t.Fatalf("disabled USD was returned: %+v", currencies)
 	}
 }
 
@@ -628,8 +759,7 @@ func TestTheWebAppOriginIsAllowedWithCredentials(t *testing.T) {
 }
 
 func TestUnknownPathsReturnJSON(t *testing.T) {
-	db := requireDB(t)
-	base, client := newServer(t, db)
+	base, client := newServer(t, nil)
 
 	status, body := send(t, client, http.MethodGet, base+"/nope", nil)
 	if status != http.StatusNotFound {

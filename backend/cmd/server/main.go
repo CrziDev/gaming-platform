@@ -16,7 +16,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/gaming-platform/backend/internal/auth"
+	"github.com/gaming-platform/backend/internal/app"
 )
 
 func main() {
@@ -41,7 +41,7 @@ func run(logger *slog.Logger) error {
 	defer db.Close()
 	logger.Info("database connected")
 
-	cfg := auth.Config{
+	cfg := app.Config{
 		CookieName:      env("SESSION_COOKIE_NAME", "gp_session"),
 		CookieSecure:    env("SESSION_SECURE", "false") == "true",
 		SessionTTL:      time.Duration(envInt("SESSION_TTL_HOURS", 24)) * time.Hour,
@@ -55,12 +55,10 @@ func run(logger *slog.Logger) error {
 		slog.Duration("ttl", cfg.SessionTTL),
 		slog.Any("allowed_origins", cfg.AllowedOrigins))
 
-	handler := auth.NewHandler(db, logger, cfg)
-
 	port := envInt("APP_PORT", 8080)
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(port),
-		Handler:           handler.Routes(),
+		Handler:           app.New(db, logger, cfg),
 		ReadHeaderTimeout: 15 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,

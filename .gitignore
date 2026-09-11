@@ -24,4 +24,5 @@ npm-debug.log*
 *.swp
 
 # Local working docs
-/docs/
+/docs/*
+!/docs/frontend-pages.md
