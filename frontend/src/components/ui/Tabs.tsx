@@ -38,7 +38,7 @@ export function UnderlineTabs<T extends string>({
               aria-selected={active}
               onClick={() => onChange(item.id)}
               className={cn(
-                'inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3.5 text-sm',
+                'inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3.5 text-sm lg:min-h-10',
                 'transition-colors duration-[120ms] ease-standard',
                 active
                   ? 'border-accent font-semibold text-accent'
@@ -84,7 +84,7 @@ export function SegmentedTrack<T extends string>({
             aria-selected={active}
             onClick={() => onChange(item.id)}
             className={cn(
-              'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-chip px-3.5 text-[13px]',
+              'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-chip px-3.5 text-[13px] lg:min-h-10',
               'transition-colors duration-[120ms] ease-standard',
               active
                 ? 'bg-surface-2 font-semibold text-ink shadow-e1'

@@ -24,7 +24,7 @@ export function BrowseGroup({ collapsed = false, onNavigate }: BrowseGroupProps)
   const total = categories.reduce((sum, category) => sum + category.game_count, 0)
 
   const shape =
-    'flex min-h-11 items-center gap-3 rounded-input text-[13px] transition-colors duration-[120ms]'
+    'flex min-h-11 items-center gap-3 rounded-input text-[13px] transition-colors duration-[120ms] lg:min-h-9'
 
   const entries = [
     { slug: '', name: 'All games', count: total, to: paths.games, end: true },
@@ -44,7 +44,7 @@ export function BrowseGroup({ collapsed = false, onNavigate }: BrowseGroupProps)
           type="button"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
-          className="flex min-h-11 items-center gap-2 rounded-input px-3 text-ink-mute transition-colors duration-[120ms] hover:text-ink"
+          className="flex min-h-11 items-center gap-2 rounded-input px-3 text-ink-mute transition-colors duration-[120ms] hover:text-ink lg:min-h-9"
         >
           <span className="label-mono">Browse</span>
           <ChevronDown

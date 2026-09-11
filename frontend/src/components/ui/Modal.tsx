@@ -5,7 +5,7 @@ import { IconButton } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 
 const focusable =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export type ModalSize = 'sm' | 'md' | 'lg'
 
@@ -101,14 +101,14 @@ export function Modal({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          'relative flex max-h-[92dvh] w-full flex-col rounded-t-sheet border border-line-strong bg-surface-1',
+          'relative flex max-h-[calc(100dvh-1.5rem)] w-full flex-col rounded-t-sheet border border-line-strong bg-surface-1 sm:max-h-[calc(100dvh-3rem)]',
           'shadow-e2 sm:rounded-sheet',
           sizes[size],
         )}
       >
-        <header className="flex items-start gap-4 px-5 pt-5 pb-4">
+        <header className="flex items-start gap-4 px-5 pt-5 pb-4 lg:pt-4 lg:pb-3">
           <div className="flex flex-1 flex-col gap-1">
-            <h2 id={titleId} className="font-display text-xl font-semibold text-ink">
+            <h2 id={titleId} className="font-display text-xl font-semibold text-ink lg:text-lg">
               {title}
             </h2>
             {description ? (
@@ -124,7 +124,7 @@ export function Modal({
 
         <div className="flex-1 overflow-y-auto px-5 pb-5">{children}</div>
 
-        {footer ? <footer className="border-t border-line px-5 py-4">{footer}</footer> : null}
+        {footer ? <footer className="border-t border-line px-5 py-3.5">{footer}</footer> : null}
       </div>
     </div>
   )

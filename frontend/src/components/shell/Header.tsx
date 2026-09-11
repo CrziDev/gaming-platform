@@ -19,7 +19,7 @@ export function Header() {
   const { open } = useAuthIntent()
 
   return (
-    <header className="sticky top-0 z-40 h-16 border-b border-line bg-base/95 backdrop-blur">
+    <header className="sticky top-0 z-40 h-16 border-b border-line bg-base/95 backdrop-blur lg:h-14">
       <div className="flex h-full items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <IconButton
           label="Toggle navigation"

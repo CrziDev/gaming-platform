@@ -24,9 +24,9 @@ const variants: Record<ButtonVariant, string> = {
 }
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'min-h-11 px-4 text-[13px]',
-  md: 'min-h-12 px-5 text-sm',
-  lg: 'min-h-14 px-8 text-[16px] font-bold tracking-[0.01em]',
+  sm: 'min-h-11 px-4 text-[13px] lg:min-h-9 lg:px-3.5',
+  md: 'min-h-12 px-5 text-sm lg:min-h-10 lg:px-4',
+  lg: 'min-h-14 px-8 text-[16px] font-bold tracking-[0.01em] lg:min-h-12',
 }
 
 export function buttonStyles(
@@ -67,7 +67,7 @@ export function IconButton({ label, className, type = 'button', ...props }: Icon
       aria-label={label}
       title={label}
       className={cn(
-        'relative inline-flex size-11 shrink-0 items-center justify-center rounded-input',
+        'relative inline-flex size-11 shrink-0 items-center justify-center rounded-input lg:size-9',
         'border border-line-strong bg-surface-2 text-ink-mute',
         'transition-colors duration-[120ms] ease-standard hover:border-line-hover hover:text-ink',
         className,

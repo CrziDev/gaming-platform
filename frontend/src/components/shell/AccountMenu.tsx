@@ -38,9 +38,9 @@ export function AccountMenu({ user }: { user: User }) {
         aria-label="Account menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex size-11 items-center justify-center"
+        className="flex size-11 items-center justify-center lg:size-9"
       >
-        <span className="flex size-9 items-center justify-center rounded-full border border-line-strong bg-line font-mono text-[13px] font-semibold text-ink uppercase">
+        <span className="flex size-9 items-center justify-center rounded-full border border-line-strong bg-line font-mono text-[13px] font-semibold text-ink uppercase lg:size-8 lg:text-[12px]">
           {user.display_name.slice(0, 2)}
         </span>
       </button>

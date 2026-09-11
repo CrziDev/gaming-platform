@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 
+import { gridDensity } from '@/components/catalogue/GameGrid'
 import { GameRow } from '@/components/catalogue/GameRow'
 import { HeroBanner } from '@/components/catalogue/HeroBanner'
 import { ErrorState } from '@/components/ui/States'
@@ -19,11 +20,11 @@ export function LobbyPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-7 lg:gap-8">
       <HeroBanner featured={gamesQuery.data?.[0]} />
 
       {rowsQuery.isPending ? (
-        <SkeletonGrid count={4} className="grid-cols-2 lg:grid-cols-4" />
+        <SkeletonGrid count={4} className={gridDensity.lobby} />
       ) : (
         rowsQuery.data?.map((row) => (
           <GameRow
@@ -37,7 +38,7 @@ export function LobbyPage() {
 
       <Link
         to={paths.games}
-        className="flex items-center justify-between gap-4 rounded-card border border-line bg-surface-1 px-5 py-4 transition-colors duration-[120ms] hover:border-line-hover"
+        className="flex items-center justify-between gap-4 rounded-card border border-line bg-surface-1 px-5 py-3.5 transition-colors duration-[120ms] hover:border-line-hover lg:py-3"
       >
         <span className="flex flex-col gap-0.5">
           <span className="font-display text-[15px] font-semibold text-ink">Browse all games</span>

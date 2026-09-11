@@ -11,15 +11,19 @@ export function GameCard({ game }: { game: Game }) {
 
   const card = (
     <>
-      <div className="relative aspect-3/4 overflow-hidden">
-        <GameArt seed={game.art_seed} className="size-full" />
-        <span className="absolute inset-0 flex items-center justify-center bg-[#06090f]/62 opacity-0 transition-opacity duration-[120ms] ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
+      <div className="relative aspect-3/4 overflow-hidden lg:aspect-4/5">
+        <GameArt
+          seed={game.art_seed}
+          name={game.name}
+          className="size-full transition-transform duration-[200ms] ease-standard group-hover:scale-[1.04] group-focus-visible:scale-[1.04]"
+        />
+        <span className="absolute inset-0 flex items-center justify-center bg-[#06090f]/50 opacity-0 transition-opacity duration-[120ms] ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
           <span className="rounded-full bg-accent px-5 py-2 font-display text-[13px] font-bold text-on-accent">
             Play
           </span>
         </span>
       </div>
-      <div className="flex flex-col gap-0.5 px-3 py-2.5">
+      <div className="flex flex-col gap-0.5 px-3 py-2">
         <span className="truncate text-[13px] font-semibold text-ink">{game.name}</span>
         <span className="truncate font-mono text-[10px] tracking-[0.1em] text-ink-mute uppercase">
           {game.category_name}

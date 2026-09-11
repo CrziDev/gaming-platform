@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { errorBody, renderApp, stubFetchRoutes, userBody } from '@/test-utils'
@@ -26,8 +26,9 @@ describe('the public lobby', () => {
 
     renderApp('/')
 
-    expect(await screen.findByRole('button', { name: 'Join now' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
+    const header = within(await screen.findByRole('banner'))
+    expect(await header.findByRole('button', { name: 'Join now' })).toBeInTheDocument()
+    expect(header.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
   })
 
   it('opens the auth modal over the lobby for a /register deep link', async () => {

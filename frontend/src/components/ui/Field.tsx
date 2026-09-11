@@ -3,7 +3,7 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react
 import { cn } from '@/lib/cn'
 
 export const inputClass =
-  'w-full min-h-12 rounded-input border border-line-strong bg-base px-3.5 text-[15px] text-ink ' +
+  'w-full min-h-12 rounded-input border border-line-strong bg-base px-3.5 text-[15px] text-ink lg:min-h-10 lg:text-sm ' +
   'placeholder:text-ink-mute transition-colors duration-[120ms] ease-standard ' +
   'focus:border-accent focus:outline-none disabled:text-ink-faint'
 

@@ -8,7 +8,7 @@ export function SkeletonGrid({ count = 6, className }: { count?: number; classNa
   return (
     <div role="status" aria-label="Loading" className={cn('grid gap-4', className)}>
       {Array.from({ length: count }, (_, index) => (
-        <Skeleton key={index} className="aspect-3/4 rounded-card" />
+        <Skeleton key={index} className="aspect-3/4 rounded-card lg:aspect-4/5" />
       ))}
     </div>
   )

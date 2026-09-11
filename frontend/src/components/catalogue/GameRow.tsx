@@ -20,7 +20,7 @@ export function GameRow({ title, categorySlug, games }: GameRowProps) {
   const showLink = categorySlug !== null && games.length > 1
 
   return (
-    <section className="flex flex-col gap-2.5">
+    <section className="flex flex-col gap-3">
       <header className="flex items-center justify-between gap-4">
         <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold text-ink lg:text-[17px]">
           <CategoryIcon slug={categorySlug ?? ''} size={16} className="text-ink-mute" />
@@ -30,7 +30,7 @@ export function GameRow({ title, categorySlug, games }: GameRowProps) {
         {showLink ? (
           <Link
             to={`${paths.games}?category=${categorySlug}`}
-            className="inline-flex min-h-11 items-center gap-1 text-[13px] text-accent hover:underline"
+            className="inline-flex min-h-11 items-center gap-1 text-[13px] text-accent hover:underline lg:min-h-9"
           >
             See all
             <ChevronRight aria-hidden size={14} strokeWidth={1.5} />

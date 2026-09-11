@@ -14,7 +14,7 @@ export function Sidebar() {
     <aside
       aria-label="Main navigation"
       className={cn(
-        'sticky top-16 hidden h-[calc(100dvh-4rem)] shrink-0 flex-col border-r border-line bg-panel lg:flex',
+        'sticky top-14 hidden h-[calc(100dvh-3.5rem)] shrink-0 flex-col border-r border-line bg-panel lg:flex',
         railCollapsed ? 'w-18' : 'w-70',
       )}
     >
@@ -23,7 +23,7 @@ export function Sidebar() {
           type="button"
           onClick={() => setSearchOpen(true)}
           className={cn(
-            'flex min-h-11 w-full items-center gap-2.5 rounded-input border border-line bg-surface-1 text-ink-mute',
+            'flex min-h-11 w-full items-center gap-2.5 rounded-input border border-line bg-surface-1 text-ink-mute lg:min-h-10',
             'transition-colors duration-[120ms] hover:border-line-strong hover:text-ink',
             railCollapsed ? 'justify-center px-0' : 'px-3',
           )}
@@ -53,7 +53,7 @@ export function Sidebar() {
           target="_blank"
           rel="noreferrer"
           className={cn(
-            'flex min-h-11 items-center gap-3 rounded-input text-[13px] text-ink-mute hover:text-ink',
+            'flex min-h-11 items-center gap-3 rounded-input text-[13px] text-ink-mute hover:text-ink lg:min-h-9',
             railCollapsed ? 'justify-center px-0' : 'px-3',
           )}
         >
@@ -71,7 +71,7 @@ export function Sidebar() {
         <button
           type="button"
           className={cn(
-            'flex min-h-11 items-center gap-3 rounded-input text-[13px] text-ink-mute hover:text-ink',
+            'flex min-h-11 items-center gap-3 rounded-input text-[13px] text-ink-mute hover:text-ink lg:min-h-9',
             railCollapsed ? 'justify-center px-0' : 'px-3',
           )}
         >

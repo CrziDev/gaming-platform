@@ -1,6 +1,8 @@
 import { z } from 'zod'
 
-export const currencies = [{ code: 'PHP', label: 'PHP · ₱' }] as const
+export const currencies: ReadonlyArray<{ code: 'PHP'; label: string }> = [
+  { code: 'PHP', label: 'PHP · ₱' },
+]
 
 export const loginSchema = z.object({
   email: z.email('Enter a valid email address'),

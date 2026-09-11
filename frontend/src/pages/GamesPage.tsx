@@ -1,7 +1,7 @@
 import { Layers, X } from 'lucide-react'
 import { useSearchParams } from 'react-router'
 
-import { GameGrid } from '@/components/catalogue/GameGrid'
+import { GameGrid, gridDensity } from '@/components/catalogue/GameGrid'
 import { Select } from '@/components/ui/Field'
 import { SkeletonGrid } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/States'
@@ -88,7 +88,7 @@ export function GamesPage() {
       </div>
 
       {gamesQuery.isPending ? (
-        <SkeletonGrid count={6} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 wide:grid-cols-6" />
+        <SkeletonGrid count={6} className={gridDensity.catalogue} />
       ) : gamesQuery.data && gamesQuery.data.length > 0 ? (
         <GameGrid games={gamesQuery.data} density="catalogue" label="Game catalogue" />
       ) : (

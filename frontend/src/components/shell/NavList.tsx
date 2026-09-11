@@ -29,7 +29,7 @@ export function NavList({ items, collapsed = false, onNavigate }: NavListProps) 
         )
 
         const shape = cn(
-          'flex min-h-11 items-center gap-3 rounded-input text-[13px]',
+          'flex min-h-11 items-center gap-3 rounded-input text-[13px] lg:min-h-9',
           'transition-colors duration-[120ms] ease-standard',
           collapsed ? 'justify-center px-0' : 'px-3',
         )
