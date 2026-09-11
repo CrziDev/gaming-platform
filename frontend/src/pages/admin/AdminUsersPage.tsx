@@ -133,7 +133,7 @@ const columns: Column<AdminUser>[] = [
       <span className="flex items-center gap-2.5">
         <span aria-hidden className="size-8 shrink-0 rounded-full bg-surface-3" />
         <span className="flex min-w-0 flex-col">
-          <span className="truncate text-[13.5px] font-semibold">{row.display_name}</span>
+          <span className="truncate text-[13.5px] font-medium text-ink-soft">{row.display_name}</span>
           <span className="truncate font-mono text-[11px] text-ink-mute">{accountReference(row)}</span>
         </span>
       </span>

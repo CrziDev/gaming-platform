@@ -48,7 +48,7 @@ export function AdminDepositsPage() {
               meta={`${row.reference} · ${row.method_name}`}
               leading={<span aria-hidden className="size-9 shrink-0 rounded-full bg-surface-3" />}
               value={
-                <span className="font-mono text-sm font-semibold tnum">
+                <span className="font-mono text-sm font-medium tnum">
                   {formatMoney(money(row.amount_minor, row.currency), { decimals: 'trim' })}
                 </span>
               }
@@ -78,7 +78,7 @@ function columns(onReview: (deposit: AdminDeposit) => void): Column<AdminDeposit
     {
       key: 'player',
       header: 'Player',
-      cell: (row) => <span className="text-[13.5px] font-semibold">{row.username}</span>,
+      cell: (row) => <span className="text-[13.5px] font-medium text-ink-soft">{row.username}</span>,
     },
     {
       key: 'reference',
@@ -107,7 +107,7 @@ function columns(onReview: (deposit: AdminDeposit) => void): Column<AdminDeposit
       align: 'right',
       width: '140px',
       cell: (row) => (
-        <span className="font-mono text-sm font-semibold tnum">
+        <span className="font-mono text-sm font-medium tnum">
           {formatMoney(money(row.amount_minor, row.currency))}
         </span>
       ),

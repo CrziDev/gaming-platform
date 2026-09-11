@@ -26,7 +26,7 @@ export function AdminGameDetailPage() {
         title="Game not found"
         description="This game is not in the catalogue."
         action={
-          <Link to={adminPaths.games} className="text-accent hover:underline">
+          <Link to={adminPaths.games} className="text-accent-ink hover:text-accent-hi">
             Back to games
           </Link>
         }
@@ -39,12 +39,12 @@ export function AdminGameDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[13px] text-ink-mute">
-        <Link to={adminPaths.games} className="inline-flex min-h-11 items-center gap-1 hover:text-ink">
+        <Link to={adminPaths.games} className="inline-flex min-h-11 items-center gap-1 hover:text-ink-soft">
           <ChevronLeft aria-hidden size={15} strokeWidth={1.5} />
           Games
         </Link>
         <span aria-hidden>/</span>
-        <span className="text-ink">{game.name}</span>
+        <span className="text-ink-soft">{game.name}</span>
         <StatusBadge status={game.status} className="ml-2" />
       </nav>
 
@@ -90,8 +90,8 @@ export function AdminGameDetailPage() {
                 <span
                   className={
                     profile.basis_points >= 10_000
-                      ? 'font-mono text-lg font-semibold tnum text-danger'
-                      : 'font-mono text-lg font-semibold tnum'
+                      ? 'font-mono text-lg font-medium tnum text-danger'
+                      : 'font-mono text-lg font-medium tnum'
                   }
                 >
                   {formatPercent(profile.basis_points)}
@@ -104,7 +104,7 @@ export function AdminGameDetailPage() {
             </div>
           ))
         )}
-        <Link to={adminPaths.rtp} className="pt-1 text-[13px] text-accent hover:underline">
+        <Link to={adminPaths.rtp} className="pt-1 text-[13px] text-accent-ink hover:text-accent-hi">
           Open RTP profiles →
         </Link>
       </Panel>
@@ -116,7 +116,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex items-baseline justify-between gap-4 text-[13.5px]">
       <span className="text-ink-mute">{label}</span>
-      <span className="text-right text-ink">{children}</span>
+      <span className="text-right text-ink-soft">{children}</span>
     </div>
   )
 }

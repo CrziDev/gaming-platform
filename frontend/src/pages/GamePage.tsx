@@ -18,8 +18,6 @@ import { formatClockSeconds, formatMultiplier } from '@/lib/format'
 import { formatMoney, money, type Money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
-import { GameArt } from '@/components/catalogue/GameArt'
-
 const recentRounds = rounds.slice(0, 6)
 
 export function GamePage() {
@@ -61,7 +59,7 @@ export function GamePage() {
         title="Game unavailable"
         description="This game is not in the catalogue right now."
         action={
-          <Link to={paths.games} className="text-accent hover:underline">
+          <Link to={paths.games} className="text-accent-ink hover:text-accent-hi">
             Back to games
           </Link>
         }
@@ -77,7 +75,7 @@ export function GamePage() {
     <div className="flex flex-col gap-8">
       <nav aria-label="Breadcrumb" className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-ink-mute">
-          <Link to={paths.games} className="inline-flex min-h-11 items-center gap-1 hover:text-ink">
+          <Link to={paths.games} className="inline-flex min-h-11 items-center gap-1 hover:text-ink-soft">
             <ChevronLeft aria-hidden size={15} strokeWidth={1.5} />
             Games
           </Link>
@@ -133,16 +131,14 @@ function GameHost({ name, className, ref }: GameHostProps) {
       ref={ref}
       aria-label={`${name} game canvas`}
       className={cn(
-        'relative aspect-4/3 overflow-hidden rounded-card bg-panel wide:aspect-16/10',
+        'relative aspect-4/3 overflow-hidden rounded-card bg-surface-3 wide:aspect-16/10',
         '[&:fullscreen]:aspect-auto [&:fullscreen]:size-full [&:fullscreen]:rounded-none',
         className,
       )}
     >
-      <GameArt caption="game canvas" className="absolute inset-0 size-full" />
-      <div className="absolute inset-0 bg-base/45" />
 
       <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-base/70 px-2.5 py-1 font-mono text-[10.5px] tracking-[0.1em] text-ink-mute uppercase">
+        <span className="label-mono inline-flex items-center gap-1.5 rounded-chip bg-base/70 px-2.5 py-1.5 text-ink-mute">
           <ShieldCheck aria-hidden size={12} strokeWidth={1.5} />
           Fair game
         </span>
@@ -150,14 +146,14 @@ function GameHost({ name, className, ref }: GameHostProps) {
           <button
             type="button"
             aria-label="Sound"
-            className="flex size-11 items-center justify-center rounded-input bg-base/70 text-ink-mute hover:text-ink"
+            className="flex size-11 items-center justify-center rounded-input bg-base/70 text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft"
           >
             <Volume2 aria-hidden size={16} strokeWidth={1.5} />
           </button>
           <button
             type="button"
             aria-label="Game settings"
-            className="flex size-11 items-center justify-center rounded-input bg-base/70 text-ink-mute hover:text-ink"
+            className="flex size-11 items-center justify-center rounded-input bg-base/70 text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft"
           >
             <Settings aria-hidden size={16} strokeWidth={1.5} />
           </button>
@@ -165,10 +161,8 @@ function GameHost({ name, className, ref }: GameHostProps) {
       </div>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-        <span className="text-2xl font-semibold text-ink">{name}</span>
-        <span className="font-mono text-[11px] tracking-[0.14em] text-ink-soft uppercase">
-          GameHost · aspect-locked slot
-        </span>
+        <span className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{name}</span>
+        <span className="label-mono text-ink-mute">game canvas · aspect-locked slot</span>
       </div>
     </section>
   )
@@ -206,7 +200,7 @@ function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProp
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-4">
+    <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-3.5">
       <ChipTabs
         items={[
           { id: 'manual' as const, label: 'Manual' },
@@ -237,7 +231,7 @@ function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProp
           >
             −
           </Button>
-          <div className="flex min-h-12 flex-1 items-center justify-center rounded-input bg-base font-mono text-lg font-semibold tnum">
+          <div className="flex min-h-11 flex-1 items-center justify-center rounded-input bg-inset font-mono text-[17px] font-medium text-ink tnum">
             {formatMoney(money(stakeMinor, currency))}
           </div>
           <Button
@@ -268,7 +262,7 @@ function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProp
         </div>
       </div>
 
-      <div className="rounded-input p-3">
+      <div className="rounded-input bg-inset p-3">
         <p className="font-mono text-[10.5px] leading-relaxed text-ink-mute">
           Game parameter slot — rows, risk or lines come from the game manifest. Games that ship their
           own controls leave this panel empty.
@@ -298,11 +292,11 @@ function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProp
         <dl className="flex flex-col gap-2 text-[13.5px]">
           <div className="flex justify-between gap-4">
             <dt className="text-ink-mute">Stake</dt>
-            <dd className="font-mono font-semibold tnum">{formatMoney(money(stakeMinor, currency))}</dd>
+            <dd className="font-mono font-medium tnum">{formatMoney(money(stakeMinor, currency))}</dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-ink-mute">Balance</dt>
-            <dd className="font-mono font-semibold tnum">
+            <dd className="font-mono font-medium tnum">
               {balance ? formatMoney(balance) : '—'}
             </dd>
           </div>
@@ -317,7 +311,7 @@ function ActivityPanel() {
   const sessionMinor = recentRounds.reduce((total, round) => total + round.result_minor, 0)
 
   return (
-    <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-4">
+    <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-3.5">
       <ChipTabs
         items={[
           { id: 'activity' as const, label: 'My Activity' },
@@ -354,7 +348,7 @@ function ActivityPanel() {
             ))}
           </ul>
 
-          <div className="grid grid-cols-2 gap-3 pt-3">
+          <div className="grid grid-cols-2 gap-3 rounded-input bg-inset p-3">
             <div className="flex flex-col gap-1">
               <span className="label-mono text-ink-mute">Session</span>
               <MoneyDisplay
@@ -366,11 +360,11 @@ function ActivityPanel() {
             </div>
             <div className="flex flex-col gap-1">
               <span className="label-mono text-ink-mute">Rounds</span>
-              <span className="font-mono text-[15px] font-semibold tnum">{recentRounds.length}</span>
+              <span className="font-mono text-[15px] font-medium tnum">{recentRounds.length}</span>
             </div>
           </div>
 
-          <Link to={paths.history} className="text-[13px] text-accent hover:underline">
+          <Link to={paths.history} className="text-[13px] text-accent-ink hover:text-accent-hi">
             Full history →
           </Link>
         </>

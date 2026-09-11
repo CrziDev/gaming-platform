@@ -120,7 +120,7 @@ function SignInForm({ mutation }: { mutation: ReturnType<typeof useLogin> }) {
         htmlFor="signin-password"
         error={errors.password?.message}
         action={
-          <Link to={paths.forgotPassword} className="text-[13px] text-accent hover:underline">
+          <Link to={paths.forgotPassword} className="text-[13px] text-accent-ink hover:text-accent-hi">
             Forgot?
           </Link>
         }
@@ -202,15 +202,15 @@ function JoinForm({ mutation }: { mutation: ReturnType<typeof useRegister> }) {
       </Field>
 
       {currencies.length === 1 ? (
-        <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-input bg-surface-2/60 px-3.5 py-2">
+        <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-input bg-inset px-3 py-2">
           <label htmlFor="join-currency" className="text-[13px] font-medium text-ink-mute">
             Account currency
           </label>
           <span className="flex items-center gap-2">
-            <output id="join-currency" className="font-mono text-[13px] font-semibold text-ink">
+            <output id="join-currency" className="font-mono text-[13px] font-medium text-ink-soft">
               {currencies[0]?.label}
             </output>
-            <span className="font-mono text-[10px] tracking-[0.1em] text-ink-mute uppercase">
+            <span className="label-mono text-ink-mute">
               Permanent
             </span>
           </span>

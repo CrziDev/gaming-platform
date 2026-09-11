@@ -49,7 +49,7 @@ export function AdminRtpPage() {
               cell: (row) => (
                 <span
                   className={cn(
-                    'font-mono text-sm font-semibold tnum',
+                    'font-mono text-sm font-medium tnum',
                     row.basis_points >= NEGATIVE_MARGIN && 'text-danger',
                   )}
                 >
@@ -104,7 +104,7 @@ export function AdminRtpPage() {
               value={
                 <span
                   className={cn(
-                    'font-mono text-sm font-semibold tnum',
+                    'font-mono text-sm font-medium tnum',
                     row.basis_points >= NEGATIVE_MARGIN && 'text-danger',
                   )}
                 >

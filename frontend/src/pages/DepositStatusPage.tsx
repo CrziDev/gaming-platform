@@ -53,7 +53,7 @@ export function DepositStatusPage() {
         title="Request not found"
         description="This deposit request is no longer on your account."
         action={
-          <Link to={paths.wallet} className="text-accent hover:underline">
+          <Link to={paths.wallet} className="text-accent-ink hover:text-accent-hi">
             Back to wallet
           </Link>
         }
@@ -70,11 +70,11 @@ export function DepositStatusPage() {
         <Link
           to={paths.wallet}
           aria-label="Back to wallet"
-          className="flex size-11 items-center justify-center rounded-input bg-surface-2 text-ink-mute hover:text-ink"
+          className="flex size-11 items-center justify-center rounded-input bg-inset text-ink-mute hover:bg-wash hover:text-ink-soft"
         >
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
-        <h1 className="text-lg font-semibold text-ink">Request {deposit.reference}</h1>
+        <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Request {deposit.reference}</h1>
       </header>
 
       <section
@@ -83,19 +83,19 @@ export function DepositStatusPage() {
         <span className={cn('flex size-14 items-center justify-center rounded-full', state.ring)}>
           <Icon aria-hidden size={24} strokeWidth={1.5} />
         </span>
-        <h2 className="text-xl font-semibold text-ink">{state.heading}</h2>
-        <span className="font-mono text-[30px] font-semibold tnum">
+        <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{state.heading}</h2>
+        <span className="font-mono text-[28px] font-medium text-ink tnum">
           {formatMoney(money(deposit.amount_minor, deposit.currency))}
         </span>
         <p className="max-w-[34ch] text-[13px] leading-relaxed text-ink-mute text-pretty">{state.body}</p>
         {deposit.reason ? (
-          <p className="rounded-input bg-base px-3.5 py-2.5 text-[13px] text-ink-soft">
+          <p className="rounded-input bg-inset px-3.5 focus-within:bg-wash py-2.5 text-[13px] text-ink-soft">
             {deposit.reason}
           </p>
         ) : null}
       </section>
 
-      <dl className="flex flex-col gap-2.5 rounded-card bg-panel p-4 text-[13.5px]">
+      <dl className="flex flex-col gap-2.5 rounded-card bg-surface-1 p-4 text-[13.5px]">
         <Row label="Method">{deposit.method_name}</Row>
         <Row label="Reference">
           <span className="font-mono">{deposit.reference}</span>
@@ -130,7 +130,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex items-baseline justify-between gap-4">
       <dt className="text-ink-mute">{label}</dt>
-      <dd className="text-right text-ink">{children}</dd>
+      <dd className="text-right text-ink-soft">{children}</dd>
     </div>
   )
 }

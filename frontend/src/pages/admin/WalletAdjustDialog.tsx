@@ -125,7 +125,7 @@ function AdjustForm({
           }
           htmlFor="adjust-amount"
         >
-          <div className="flex min-h-12 items-center gap-2.5 rounded-input bg-base px-3.5">
+          <div className="flex min-h-12 items-center gap-2.5 rounded-input bg-inset px-3.5 focus-within:bg-wash">
             <span className="font-mono text-ink-mute">{currencySymbol(wallet.currency)}</span>
             <input
               id="adjust-amount"
@@ -133,7 +133,7 @@ function AdjustForm({
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="0.00"
-              className="min-w-0 flex-1 bg-transparent font-mono text-[17px] font-semibold tnum placeholder:text-ink-mute focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent font-mono text-[17px] font-medium tnum placeholder:text-ink-mute focus:outline-none"
             />
           </div>
         </Field>
@@ -151,7 +151,7 @@ function AdjustForm({
 
         <div className="flex items-baseline justify-between gap-4 rounded-input bg-surface-1 px-3.5 py-3 text-[13.5px]">
           <span className="text-ink-mute">New balance</span>
-          <span className="font-mono font-semibold tnum">{formatMoney(nextBalance)}</span>
+          <span className="font-mono font-medium tnum">{formatMoney(nextBalance)}</span>
         </div>
       </div>
     </Modal>

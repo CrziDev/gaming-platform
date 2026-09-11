@@ -61,7 +61,7 @@ export function AdminUserDetailPage() {
         title="Account not found"
         description="This account is no longer in the directory."
         action={
-          <Link to={adminPaths.users} className="text-accent hover:underline">
+          <Link to={adminPaths.users} className="text-accent-ink hover:text-accent-hi">
             Back to users
           </Link>
         }
@@ -76,12 +76,12 @@ export function AdminUserDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[13px] text-ink-mute">
-        <Link to={adminPaths.users} className="inline-flex min-h-11 items-center gap-1 hover:text-ink">
+        <Link to={adminPaths.users} className="inline-flex min-h-11 items-center gap-1 hover:text-ink-soft">
           <ChevronLeft aria-hidden size={15} strokeWidth={1.5} />
           Users
         </Link>
         <span aria-hidden>/</span>
-        <span className="font-mono text-ink">{accountReference}</span>
+        <span className="font-mono text-ink-soft">{accountReference}</span>
         <StatusBadge status={user.status} className="ml-2" />
       </nav>
 
@@ -122,13 +122,13 @@ export function AdminUserDetailPage() {
         </section>
 
         <aside className="order-1 flex flex-col gap-5 wide:sticky wide:top-21 wide:order-2">
-          <section className="flex flex-col gap-4 rounded-card bg-panel p-5">
-            <h2 className="text-[17px] font-semibold text-ink">Wallets</h2>
+          <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-5">
+            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Wallets</h2>
             {wallets.map((wallet) => (
               <div key={wallet.currency} className="flex flex-col gap-3 pb-4 last:pb-0">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="label-mono text-ink-mute">{wallet.currency}</span>
-                  <span className="font-mono text-xl font-semibold tnum">
+                  <span className="font-mono text-xl font-medium tnum">
                     {formatMoney(money(wallet.balance_minor, wallet.currency))}
                   </span>
                 </div>
@@ -148,8 +148,8 @@ export function AdminUserDetailPage() {
             ))}
           </section>
 
-          <section className="flex flex-col gap-3 rounded-card bg-panel p-5">
-            <h2 className="text-[17px] font-semibold text-ink">Account</h2>
+          <section className="flex flex-col gap-3 rounded-card bg-surface-1 p-5">
+            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Account</h2>
             <dl className="flex flex-col gap-2 text-[13px]">
               <Row label="Account id">
                 <span className="font-mono">{accountReference}</span>
@@ -163,7 +163,7 @@ export function AdminUserDetailPage() {
           </section>
 
           <section className="flex flex-col gap-2.5 rounded-card bg-danger/5 p-5">
-            <h2 className="text-[15px] font-semibold text-ink">Account controls</h2>
+            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Account controls</h2>
             {user.status === 'closed' ? (
               <p className="text-[12.5px] leading-relaxed text-ink-mute">
                 This account is permanently closed. Its status cannot be changed.
@@ -273,7 +273,7 @@ function DepositsTab({ userId }: { userId: string }) {
           align: 'right',
           width: '150px',
           cell: (row) => (
-            <span className="font-mono text-sm font-semibold tnum">
+            <span className="font-mono text-sm font-medium tnum">
               {formatMoney(money(row.amount_minor, row.currency))}
             </span>
           ),
@@ -284,7 +284,7 @@ function DepositsTab({ userId }: { userId: string }) {
           title={row.method_name}
           meta={`${row.reference} · ${formatRelative(row.created_at)}`}
           value={
-            <span className="font-mono text-sm font-semibold tnum">
+            <span className="font-mono text-sm font-medium tnum">
               {formatMoney(money(row.amount_minor, row.currency))}
             </span>
           }
@@ -373,7 +373,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex items-baseline justify-between gap-4">
       <dt className="text-ink-mute">{label}</dt>
-      <dd className="text-right text-ink">{children}</dd>
+      <dd className="text-right text-ink-soft">{children}</dd>
     </div>
   )
 }

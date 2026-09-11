@@ -18,20 +18,19 @@ export function ForgotPasswordPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-card bg-panel p-7">
-        <div className="mb-6 flex items-center gap-3">
-          <span aria-hidden className="size-7 rounded-[9px] bg-accent" />
-          <span className="text-[15px] font-semibold">Gaming Platform</span>
-        </div>
+      <div className="w-full max-w-md rounded-card bg-surface-1 p-6">
+        <Link to={paths.lobby} className="mb-6 inline-block text-[18px] font-semibold tracking-[-0.02em] text-ink">
+          HeziBet
+        </Link>
 
         {sent ? (
           <div className="flex flex-col gap-4">
-            <h1 className="text-xl font-semibold text-ink">Check your email</h1>
-            <p className="text-sm leading-relaxed text-ink-mute">
+            <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Check your email</h1>
+            <p className="text-[13.5px] leading-relaxed text-ink-mute text-pretty">
               If that address has an account, a reset link is on its way. The link expires in 30
               minutes.
             </p>
-            <Link to={paths.lobby} className="text-sm text-accent hover:underline">
+            <Link to={paths.lobby} className="text-[13px] text-accent-ink hover:text-accent-hi">
               Back to the lobby
             </Link>
           </div>
@@ -45,7 +44,7 @@ export function ForgotPasswordPage() {
             className="flex flex-col gap-5"
           >
             <div className="flex flex-col gap-2">
-              <h1 className="text-xl font-semibold text-ink">Forgot password</h1>
+              <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Forgot password</h1>
               <p className="text-[13.5px] leading-relaxed text-ink-mute">
                 Enter your email and we&rsquo;ll send a reset link.
               </p>
@@ -59,7 +58,7 @@ export function ForgotPasswordPage() {
               {isSubmitting ? 'Sending…' : 'Send reset link'}
             </Button>
 
-            <Link to={paths.lobby} className="text-center text-[13px] text-accent hover:underline">
+            <Link to={paths.lobby} className="text-center text-[13px] text-accent-ink hover:text-accent-hi">
               Back to the lobby
             </Link>
           </form>

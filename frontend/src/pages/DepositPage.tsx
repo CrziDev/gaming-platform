@@ -120,11 +120,11 @@ export function DepositPage() {
         <Link
           to={paths.wallet}
           aria-label="Back to wallet"
-          className="flex size-11 items-center justify-center rounded-input bg-surface-2 text-ink-mute hover:text-ink"
+          className="flex size-11 items-center justify-center rounded-input bg-inset text-ink-mute hover:bg-wash hover:text-ink-soft"
         >
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
-        <h1 className="text-xl font-semibold text-ink">Deposit</h1>
+        <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Deposit</h1>
         {walletQuery.data ? (
           <span className="ml-auto rounded-chip bg-inset px-2.5 py-1.5 font-mono text-[12.5px] font-medium tnum">
             {formatMoney(money(walletQuery.data.balance_minor, currency), { decimals: 'trim' })}
@@ -140,7 +140,7 @@ export function DepositPage() {
             <div className="flex items-center gap-3 rounded-input bg-surface-1 p-3.5">
               <span aria-hidden className="size-9 rounded-chip bg-surface-3" />
               <span className="flex flex-col">
-                <span className="text-sm font-semibold text-ink">{soleMethod.name}</span>
+                <span className="text-[13.5px] font-medium text-ink-soft">{soleMethod.name}</span>
                 <span className="text-[11.5px] text-ink-mute">{soleMethod.description}</span>
                 <span className="font-mono text-[11.5px] text-ink-soft">Pay to {soleMethod.pay_to}</span>
               </span>
@@ -160,7 +160,7 @@ export function DepositPage() {
                   <input type="radio" value={method.id} className="sr-only" {...register('method_id')} />
                   <span aria-hidden className="size-9 rounded-chip bg-surface-3" />
                   <span className="flex flex-1 flex-col">
-                    <span className="text-sm font-semibold text-ink">{method.name}</span>
+                    <span className="text-[13.5px] font-medium text-ink-soft">{method.name}</span>
                     <span className="text-[11.5px] text-ink-mute">{method.description}</span>
                     <span className="font-mono text-[11.5px] text-ink-soft">Pay to {method.pay_to}</span>
                   </span>
@@ -186,13 +186,13 @@ export function DepositPage() {
           <span className="label-mono text-ink-mute">2 · Amount</span>
 
           <Field label="Amount" htmlFor="amount" error={errors.amount?.message}>
-            <div className="flex min-h-15 items-center gap-2.5 rounded-input bg-panel px-4">
-              <span className="font-mono text-xl text-ink-mute">{currencySymbol(currency)}</span>
+            <div className="flex min-h-14 items-center gap-2.5 rounded-input bg-inset px-3.5 focus-within:bg-wash">
+              <span className="font-mono text-[20px] text-ink-mute">{currencySymbol(currency)}</span>
               <input
                 id="amount"
                 inputMode="decimal"
                 autoComplete="off"
-                className="min-w-0 flex-1 bg-transparent font-mono text-2xl font-semibold tnum focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent font-mono text-[22px] font-medium text-ink tnum focus:outline-none"
                 {...register('amount')}
               />
               <span className="font-mono text-[11px] text-ink-mute">{currency}</span>

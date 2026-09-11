@@ -33,7 +33,7 @@ export function AdminGamesPage() {
               header: 'Game',
               cell: (row) => (
                 <span className="flex flex-col">
-                  <span className="text-[13.5px] font-semibold">{row.name}</span>
+                  <span className="text-[13.5px] font-medium text-ink-soft">{row.name}</span>
                   <span className="font-mono text-[11px] text-ink-mute">{row.slug}</span>
                 </span>
               ),
@@ -63,8 +63,8 @@ export function AdminGamesPage() {
                 <span
                   className={
                     row.active_rtp_basis_points >= 10_000
-                      ? 'font-mono text-sm font-semibold tnum text-danger'
-                      : 'font-mono text-sm font-semibold tnum'
+                      ? 'font-mono text-sm font-medium tnum text-danger'
+                      : 'font-mono text-sm font-medium tnum'
                   }
                 >
                   {formatPercent(row.active_rtp_basis_points)}

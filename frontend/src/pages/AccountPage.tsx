@@ -23,7 +23,7 @@ export function AccountPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-[22px] font-semibold tracking-tight text-ink">Account</h1>
+      <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Account</h1>
 
       <Panel title="Profile" bodyClassName="flex flex-col gap-3 p-5">
         <Row label="Username">{user.display_name}</Row>
@@ -82,7 +82,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-3 text-sm">
       <span className="text-ink-mute">{label}</span>
-      <span className="text-right text-ink">{children}</span>
+      <span className="text-right text-ink-soft">{children}</span>
     </div>
   )
 }

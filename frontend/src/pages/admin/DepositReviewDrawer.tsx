@@ -93,14 +93,14 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
           href={adminDepositProofUrl(deposit.id)}
           target="_blank"
           rel="noreferrer"
-          className="flex h-48 items-center justify-center rounded-input font-mono text-[11px] text-accent hover:bg-accent/6"
+          className="flex h-48 items-center justify-center rounded-input font-mono text-[11px] text-accent-ink hover:bg-accent/6"
         >
           Open proof of payment
         </a>
 
         <dl className="flex flex-col gap-2.5 text-[13.5px]">
           <Row label="Amount claimed">
-            <span className="font-mono font-semibold tnum">
+            <span className="font-mono font-medium tnum">
               {formatMoney(money(deposit.amount_minor, deposit.currency))}
             </span>
           </Row>
@@ -116,14 +116,14 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
         </dl>
 
         <Field label="Credit amount — must match the proof" htmlFor="credit-amount">
-          <div className="flex min-h-12 items-center gap-2.5 rounded-input bg-base px-3.5">
+          <div className="flex min-h-12 items-center gap-2.5 rounded-input bg-inset px-3.5 focus-within:bg-wash">
             <span className="font-mono text-ink-mute">{currencySymbol(deposit.currency)}</span>
             <input
               id="credit-amount"
               inputMode="decimal"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              className="min-w-0 flex-1 bg-transparent font-mono text-[17px] font-semibold tnum focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent font-mono text-[17px] font-medium tnum focus:outline-none"
             />
           </div>
         </Field>
@@ -153,7 +153,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex items-baseline justify-between gap-4">
       <dt className="text-ink-mute">{label}</dt>
-      <dd className="text-right text-ink">{children}</dd>
+      <dd className="text-right text-ink-soft">{children}</dd>
     </div>
   )
 }

@@ -23,20 +23,20 @@ export function WalletPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-[22px] font-semibold tracking-tight text-ink">Wallet</h1>
+      <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Wallet</h1>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start">
         <div className="flex flex-col gap-6">
-          <section className="flex flex-col gap-5 rounded-card bg-panel p-6 sm:flex-row sm:items-end sm:justify-between">
+          <section className="flex flex-col gap-5 rounded-card bg-surface-1 p-5 sm:flex-row sm:items-end sm:justify-between">
             {walletQuery.data ? (
               <div className="flex flex-col gap-2">
                 <span className="label-mono text-ink-mute">
                   Available balance · {walletQuery.data.currency}
                 </span>
-                <span className="font-mono text-[36px] leading-none font-semibold tracking-tight tnum wide:text-[44px]">
+                <span className="font-mono text-[32px] leading-none font-medium tracking-[-0.02em] text-ink tnum wide:text-[40px]">
                   {formatMoney(money(walletQuery.data.balance_minor, walletQuery.data.currency))}
                 </span>
-                <span className="text-[13px] text-ink-mute">
+                <span className="text-[12.5px] text-ink-mute">
                   One wallet · currency fixed at registration
                 </span>
               </div>
@@ -49,16 +49,13 @@ export function WalletPage() {
                 <Plus aria-hidden size={17} strokeWidth={2} />
                 Deposit
               </Link>
-              <span className="text-center font-mono text-[10.5px] text-ink-mute">
-                slot grid · 1 of max 3
-              </span>
             </div>
           </section>
 
           <section className="flex flex-col gap-3">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-lg font-semibold text-ink">Recent activity</h2>
-              <Link to={paths.history} className="text-[13px] text-accent hover:underline">
+              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Recent activity</h2>
+              <Link to={paths.history} className="text-[12.5px] font-medium text-accent-ink hover:text-accent-hi">
                 Open full history
               </Link>
             </div>
@@ -97,15 +94,15 @@ export function WalletPage() {
         </div>
 
         {pending ? (
-          <section className="flex flex-col gap-4 rounded-card bg-panel p-5">
+          <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[17px] font-semibold text-ink">Open request</h2>
+              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Open request</h2>
               <StatusBadge status="Pending review" tone="warning" />
             </div>
 
-            <dl className="flex flex-col gap-2.5 text-[13.5px]">
+            <dl className="flex flex-col gap-2.5 text-[13px]">
               <Row label="Amount">
-                <span className="font-mono font-semibold tnum">
+                <span className="font-mono font-medium tnum">
                   {formatMoney(money(pending.amount_minor, pending.currency))}
                 </span>
               </Row>
@@ -131,7 +128,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex items-baseline justify-between gap-4">
       <dt className="text-ink-mute">{label}</dt>
-      <dd className="text-right text-ink">{children}</dd>
+      <dd className="text-right text-ink-soft">{children}</dd>
     </div>
   )
 }

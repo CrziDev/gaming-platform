@@ -17,7 +17,7 @@ fixtures; a page stays unchecked when even one of its visible data sources is fi
 
 ## Public and player pages
 
-- [ ] **Lobby** — `/`
+- [ ] **Lobby** — `/` (catalogue, big wins, promotions and the shell's live chat are all fixture-backed)
 - [ ] **Game catalogue** — `/games`
 - [x] **Sign in** — `/login` (opens the real sign-in flow)
 - [x] **Register** — `/register` (opens the real registration flow)

@@ -33,7 +33,7 @@ export function HistoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[22px] font-semibold tracking-tight text-ink">History</h1>
+        <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">History</h1>
 
         <div className="flex items-center gap-2.5">
           <Select

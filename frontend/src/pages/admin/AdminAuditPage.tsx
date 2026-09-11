@@ -50,13 +50,13 @@ export function AdminAuditPage() {
               key: 'operator',
               header: 'Operator',
               width: '140px',
-              cell: (row) => <span className="text-[13.5px] font-semibold">{row.operator}</span>,
+              cell: (row) => <span className="text-[13.5px] font-medium text-ink-soft">{row.operator}</span>,
             },
             {
               key: 'action',
               header: 'Action',
               width: '180px',
-              cell: (row) => <span className="font-mono text-[12.5px] text-accent">{row.action}</span>,
+              cell: (row) => <span className="font-mono text-[12.5px] text-accent-ink">{row.action}</span>,
             },
             {
               key: 'entity',

@@ -74,8 +74,8 @@ export function AdminDashboardPage() {
       <div className="grid gap-5 wide:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] wide:items-start">
         <section className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-lg font-semibold text-ink">Deposit queue</h2>
-            <Link to={adminPaths.deposits} className="text-[13px] text-accent hover:underline">
+            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Deposit queue</h2>
+            <Link to={adminPaths.deposits} className="text-[13px] text-accent-ink hover:text-accent-hi">
               Open full queue
             </Link>
           </div>
@@ -95,7 +95,7 @@ export function AdminDashboardPage() {
                   title={row.username}
                   meta={`${row.reference} · ${row.method_name}`}
                   value={
-                    <span className="font-mono text-[15px] font-semibold tnum">
+                    <span className="font-mono text-[15px] font-medium tnum">
                       {formatMoney(money(row.amount_minor, row.currency), { decimals: 'trim' })}
                     </span>
                   }
@@ -128,8 +128,8 @@ export function AdminDashboardPage() {
         </section>
 
         <div className="flex flex-col gap-5">
-          <section className="flex flex-col gap-3.5 rounded-card bg-panel p-4">
-            <h2 className="text-[17px] font-semibold text-ink">Needs attention</h2>
+          <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
+            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Needs attention</h2>
             <ul className="flex flex-col gap-2.5">
               {alertsQuery.data?.map((alert) => (
                 <li key={alert.id}>
@@ -151,8 +151,8 @@ export function AdminDashboardPage() {
                         alert.tone === 'neutral' && 'bg-ink-mute',
                       )}
                     />
-                    <span className="flex-1 text-ink">{alert.message}</span>
-                    <span className="text-[12px] text-accent">View</span>
+                    <span className="flex-1 text-ink-soft">{alert.message}</span>
+                    <span className="text-[12px] text-accent-ink">View</span>
                   </Link>
                 </li>
               ))}
@@ -163,10 +163,10 @@ export function AdminDashboardPage() {
             </p>
           </section>
 
-          <section className="flex flex-col gap-3.5 rounded-card bg-panel p-4">
+          <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-[17px] font-semibold text-ink">Activity log</h2>
-              <Link to={adminPaths.audit} className="text-[12.5px] text-accent hover:underline">
+              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Activity log</h2>
+              <Link to={adminPaths.audit} className="text-[12.5px] text-accent-ink hover:text-accent-hi">
                 All
               </Link>
             </div>
@@ -201,7 +201,7 @@ function queueColumns(onReview: (deposit: AdminDeposit) => void): Column<AdminDe
         <span className="flex items-center gap-2.5">
           <span aria-hidden className="size-7 shrink-0 rounded-full bg-surface-3" />
           <span className="flex min-w-0 flex-col">
-            <span className="truncate text-[13.5px] font-semibold">{row.username}</span>
+            <span className="truncate text-[13.5px] font-medium text-ink-soft">{row.username}</span>
             {row.user_balance_minor === undefined ? null : (
               <span className="font-mono text-[11px] text-ink-mute">
                 bal {formatMoney(money(row.user_balance_minor, row.currency), { decimals: 'trim' })}
@@ -217,7 +217,7 @@ function queueColumns(onReview: (deposit: AdminDeposit) => void): Column<AdminDe
       align: 'right',
       width: '120px',
       cell: (row) => (
-        <span className="font-mono text-sm font-semibold tnum">
+        <span className="font-mono text-sm font-medium tnum">
           {formatMoney(money(row.amount_minor, row.currency), { decimals: 'trim' })}
         </span>
       ),
