@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 
 import type { Game } from '@/api/types'
-import { GameArt } from '@/components/catalogue/GameArt'
 import { useAuthIntent, useSession } from '@/features/auth'
 import { paths } from '@/routes/paths'
 
@@ -11,30 +10,27 @@ export function GameCard({ game }: { game: Game }) {
 
   const card = (
     <>
-      <div className="relative aspect-3/4 overflow-hidden lg:aspect-4/5">
-        <GameArt
-          seed={game.art_seed}
-          name={game.name}
-          className="size-full transition-transform duration-[200ms] ease-standard group-hover:scale-[1.04] group-focus-visible:scale-[1.04]"
-        />
-        <span className="absolute inset-0 flex items-center justify-center bg-base/50 opacity-0 transition-opacity duration-[120ms] ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
-          <span className="rounded-full bg-accent px-5 py-2 text-[13px] font-semibold text-on-accent">
+      <span className="relative flex aspect-3/4 items-end overflow-hidden rounded-tile bg-surface-3">
+        <span
+          aria-hidden
+          className="label-mono absolute inset-x-0 bottom-[40%] text-center text-[9.5px] text-ink-mute"
+        >
+          game art
+        </span>
+        <span className="tile-scrim relative w-full truncate p-2 text-[12px] font-medium text-ink-soft">
+          {game.name}
+        </span>
+        <span className="absolute inset-0 flex items-center justify-center bg-base/60 opacity-0 transition-opacity duration-[120ms] ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span className="rounded-chip bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-on-accent">
             Play
           </span>
         </span>
-      </div>
-      <div className="flex flex-col gap-0.5 px-3 py-2">
-        <span className="truncate text-[13px] font-semibold text-ink">{game.name}</span>
-        <span className="truncate font-mono text-[10px] tracking-[0.1em] text-ink-mute uppercase">
-          {game.category_name}
-        </span>
-      </div>
+      </span>
+      <span className="truncate text-[11px] text-ink-mute">{game.provider}</span>
     </>
   )
 
-  const className =
-    'group flex w-full flex-col overflow-hidden rounded-card bg-surface-2 text-left' +
-    'transition-[border-color,box-shadow] duration-[120ms] ease-standard  '
+  const className = 'group flex w-full flex-col gap-1.5 text-left text-ink-soft'
 
   if (!user) {
     return (

@@ -107,12 +107,7 @@ export function GamePage() {
           />
         </div>
 
-        <GameHost
-          ref={hostRef}
-          name={game.name}
-          seed={game.art_seed}
-          className="order-1 wide:order-2"
-        />
+        <GameHost ref={hostRef} name={game.name} className="order-1 wide:order-2" />
 
         <div className="order-3">
           <ActivityPanel />
@@ -128,12 +123,11 @@ export function GamePage() {
 
 type GameHostProps = {
   name: string
-  seed: number
   className?: string
   ref?: RefObject<HTMLElement | null>
 }
 
-function GameHost({ name, seed, className, ref }: GameHostProps) {
+function GameHost({ name, className, ref }: GameHostProps) {
   return (
     <section
       ref={ref}
@@ -144,7 +138,7 @@ function GameHost({ name, seed, className, ref }: GameHostProps) {
         className,
       )}
     >
-      <GameArt seed={seed} className="absolute inset-0 size-full opacity-70" />
+      <GameArt caption="game canvas" className="absolute inset-0 size-full" />
       <div className="absolute inset-0 bg-base/45" />
 
       <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3">

@@ -62,6 +62,22 @@ export type LobbyRow = {
   game_ids: string[]
 }
 
+export type BigWin = {
+  id: string
+  username: string
+  game_slug: string
+  amount_minor: number
+  currency: Currency
+  created_at: string
+}
+
+export type Promotion = {
+  id: string
+  kicker: string
+  title: string
+  subtitle: string
+}
+
 export type ChatMessage = {
   id: string
   user: string

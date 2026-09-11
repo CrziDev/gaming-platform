@@ -1,6 +1,6 @@
 import { mockRequest } from '@/api/mock'
-import type { Category, Game, LobbyRow } from '@/api/types'
-import { categories, games, lobbyRows } from '@/mocks/games'
+import type { BigWin, Category, Game, LobbyRow, Promotion } from '@/api/types'
+import { bigWins, categories, games, lobbyRows, promotions } from '@/mocks/games'
 
 export type GameFilters = {
   category: string
@@ -14,6 +14,14 @@ export async function fetchCategories(): Promise<Category[]> {
 
 export async function fetchLobbyRows(signedIn: boolean): Promise<LobbyRow[]> {
   return mockRequest(() => lobbyRows(signedIn))
+}
+
+export async function fetchBigWins(): Promise<BigWin[]> {
+  return mockRequest(() => [...bigWins])
+}
+
+export async function fetchPromotions(): Promise<Promotion[]> {
+  return mockRequest(() => [...promotions])
 }
 
 export async function fetchGames(filters: GameFilters): Promise<Game[]> {

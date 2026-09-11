@@ -83,7 +83,7 @@ export function SearchSheet() {
                   onClick={() => void open(game.slug)}
                   className="flex min-h-14 w-full items-center gap-3 rounded-tile px-2 text-left transition-colors duration-[120ms] hover:bg-surface-1"
                 >
-                  <GameArt seed={game.art_seed} className="size-10 rounded-chip" />
+                  <GameArt className="size-10 rounded-chip" />
                   <span className="flex flex-col">
                     <span className="text-[13px] font-medium text-ink-soft">{game.name}</span>
                     <span className="label-mono text-ink-mute">

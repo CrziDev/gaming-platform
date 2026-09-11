@@ -2,7 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 
 import { games } from '@/mocks/games'
 
-import { fetchCategories, fetchGame, fetchGames, fetchLobbyRows, type GameFilters } from './api'
+import {
+  fetchBigWins,
+  fetchCategories,
+  fetchGame,
+  fetchGames,
+  fetchLobbyRows,
+  fetchPromotions,
+  type GameFilters,
+} from './api'
 
 export function useCategories() {
   return useQuery({ queryKey: ['categories'], queryFn: fetchCategories })
@@ -10,6 +18,14 @@ export function useCategories() {
 
 export function useLobbyRows(signedIn: boolean) {
   return useQuery({ queryKey: ['lobby', signedIn], queryFn: () => fetchLobbyRows(signedIn) })
+}
+
+export function useBigWins() {
+  return useQuery({ queryKey: ['big-wins'], queryFn: fetchBigWins })
+}
+
+export function usePromotions() {
+  return useQuery({ queryKey: ['promotions'], queryFn: fetchPromotions })
 }
 
 export function useGames(filters: GameFilters) {

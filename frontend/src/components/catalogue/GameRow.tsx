@@ -2,8 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 
 import type { Game } from '@/api/types'
-import { GameCarousel, GameGrid } from '@/components/catalogue/GameGrid'
-import { CategoryIcon } from '@/components/shell/CategoryIcon'
+import { GameGrid } from '@/components/catalogue/GameGrid'
 import { paths } from '@/routes/paths'
 
 type GameRowProps = {
@@ -21,28 +20,24 @@ export function GameRow({ title, categorySlug, games }: GameRowProps) {
 
   return (
     <section className="flex flex-col gap-3">
-      <header className="flex items-center justify-between gap-4">
-        <h2 className="flex items-center gap-2 text-[15px] font-semibold text-ink lg:text-[17px]">
-          <CategoryIcon slug={categorySlug ?? ''} size={16} className="text-ink-mute" />
-          {title}
-          <span className="font-mono text-[11px] font-normal text-ink-mute">{games.length}</span>
-        </h2>
-        {showLink ? (
-          <Link
-            to={`${paths.games}?category=${categorySlug}`}
-            className="inline-flex min-h-11 items-center gap-1 text-[13px] text-accent hover:underline lg:min-h-9"
-          >
-            See all
-            <ChevronRight aria-hidden size={14} strokeWidth={1.5} />
-          </Link>
-        ) : null}
+      <header className="flex items-center justify-between gap-3">
+        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">{title}</h2>
+        {showLink ? <SeeAll to={`${paths.games}?category=${categorySlug}`} /> : null}
       </header>
 
-      {games.length > 4 ? (
-        <GameCarousel games={games} label={title} />
-      ) : (
-        <GameGrid games={games} label={title} />
-      )}
+      <GameGrid games={games} label={title} />
     </section>
+  )
+}
+
+export function SeeAll({ to }: { to: string }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[12.5px] font-medium text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft lg:min-h-8"
+    >
+      See all
+      <ChevronRight aria-hidden size={13} strokeWidth={2} />
+    </Link>
   )
 }
