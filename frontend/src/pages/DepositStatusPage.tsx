@@ -1,13 +1,11 @@
 import { Check, ChevronLeft, Clock, X } from 'lucide-react'
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 
 import type { DepositStatus } from '@/api/types'
-import { Button, buttonStyles } from '@/components/ui/Button'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { buttonStyles } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/States'
-import { useCancelDeposit, useDeposit } from '@/features/wallet'
+import { useDeposit } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
@@ -43,9 +41,6 @@ const presentation: Record<
 export function DepositStatusPage() {
   const { id = '' } = useParams()
   const depositQuery = useDeposit(id)
-  const cancelDeposit = useCancelDeposit()
-  const navigate = useNavigate()
-  const [confirming, setConfirming] = useState(false)
 
   if (depositQuery.isPending) {
     return <Skeleton className="mx-auto h-96 w-full max-w-md rounded-sheet" />
@@ -107,11 +102,7 @@ export function DepositStatusPage() {
         </Row>
         <Row label="Submitted">{formatDateTime(deposit.created_at)}</Row>
         {deposit.reviewed_at ? <Row label="Reviewed">{formatDateTime(deposit.reviewed_at)}</Row> : null}
-        <Row label="Proof">
-          <button type="button" className="text-accent hover:underline">
-            View upload
-          </button>
-        </Row>
+        <Row label="Proof">Stored for administrator review</Row>
       </dl>
 
       <div className="flex flex-col gap-2">
@@ -126,27 +117,11 @@ export function DepositStatusPage() {
         )}
 
         {deposit.status === 'pending' ? (
-          <Button variant="ghost" fullWidth onClick={() => setConfirming(true)}>
-            Cancel request
-          </Button>
+          <p className="text-center text-[12.5px] leading-relaxed text-ink-mute">
+            Submitted requests cannot be cancelled. An administrator must approve or reject this request.
+          </p>
         ) : null}
       </div>
-
-      <ConfirmDialog
-        open={confirming}
-        title="Cancel this deposit request?"
-        description="The request is withdrawn and no funds move."
-        confirmLabel="Cancel request"
-        cancelLabel="Keep it open"
-        tone="destructive"
-        pending={cancelDeposit.isPending}
-        onClose={() => setConfirming(false)}
-        onConfirm={async () => {
-          await cancelDeposit.mutateAsync(deposit.id)
-          setConfirming(false)
-          await navigate(paths.wallet, { replace: true })
-        }}
-      />
     </div>
   )
 }

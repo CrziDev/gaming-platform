@@ -7,7 +7,7 @@ import (
 )
 
 const listEnabledSQL = `
-	SELECT code, name, symbol, minor_units
+	SELECT code, name, symbol, minor_units, deposit_min_minor, deposit_max_minor
 	FROM currencies
 	WHERE enabled = true
 	ORDER BY code ASC`
@@ -27,6 +27,8 @@ func ListEnabled(ctx context.Context, db *sql.DB) ([]Currency, error) {
 			&currency.Name,
 			&currency.Symbol,
 			&currency.MinorUnits,
+			&currency.DepositMinMinor,
+			&currency.DepositMaxMinor,
 		); err != nil {
 			return nil, fmt.Errorf("currency: list enabled row: %w", err)
 		}

@@ -1,14 +1,14 @@
-export { ADMIN_PAGE_SIZE, reasonOptions } from './api'
-export type { DepositReview, UserFilter, WalletAdjustment } from './api'
+export { ADMIN_PAGE_SIZE, adminDepositProofUrl, reasonOptions } from './api'
+export type { AdminTransactionFilter, DepositReview, UserFilter, WalletAdjustment } from './api'
 export {
   useAdjustWallet,
   useAdminGame,
   useAdminGames,
   useAdminPaymentMethods,
   useAdminRounds,
+  useAdminTransactions,
   useAdminUser,
   useAdminUsers,
-  useAllDeposits,
   useAuditEntries,
   useConsoleAlerts,
   useDashboard,

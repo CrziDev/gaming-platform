@@ -70,7 +70,9 @@ build-frontend: ## Build the production web bundle
 test: test-backend test-frontend ## Run every test suite
 
 test-backend: ## Run the Go tests
-	cd $(BACKEND_DIR) && go test -race ./...
+	# Packages share one PostgreSQL test database; serialize packages so one
+	# package's fixture cleanup cannot race another package's financial tests.
+	cd $(BACKEND_DIR) && go test -race -p 1 ./...
 
 test-frontend: ## Run the web tests
 	cd $(FRONTEND_DIR) && npm run test

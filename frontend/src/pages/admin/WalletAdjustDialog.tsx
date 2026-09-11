@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Field, Select } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { reasonOptions, useAdjustWallet } from '@/features/admin'
-import { formatMoney, money, parseMoneyInput } from '@/lib/money'
+import { currencySymbol, formatMoney, money, parseMoneyInput } from '@/lib/money'
 
 export type AdjustDirection = 'credit' | 'debit'
 
@@ -61,7 +61,13 @@ function AdjustForm({
       return
     }
 
-    await adjust.mutateAsync({ user_id: user.id, direction, amount_minor: amountMinor, reason })
+    await adjust.mutateAsync({
+      user_id: user.id,
+      currency: user.currency,
+      direction,
+      amount_minor: amountMinor,
+      reason,
+    })
     onClose()
   }
 
@@ -111,7 +117,7 @@ function AdjustForm({
           htmlFor="adjust-amount"
         >
           <div className="flex min-h-12 items-center gap-2.5 rounded-input border border-line-strong bg-base px-3.5">
-            <span className="font-mono text-ink-mute">₱</span>
+            <span className="font-mono text-ink-mute">{currencySymbol(user.currency)}</span>
             <input
               id="adjust-amount"
               inputMode="decimal"

@@ -199,10 +199,11 @@ function queueColumns(onReview: (deposit: AdminDeposit) => void): Column<AdminDe
           <span aria-hidden className="size-7 shrink-0 rounded-full bg-line" />
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-[13.5px] font-semibold">{row.username}</span>
-            <span className="font-mono text-[11px] text-ink-mute">
-              bal{' '}
-              {formatMoney(money(row.user_balance_minor, row.currency), { decimals: 'trim' })}
-            </span>
+            {row.user_balance_minor === undefined ? null : (
+              <span className="font-mono text-[11px] text-ink-mute">
+                bal {formatMoney(money(row.user_balance_minor, row.currency), { decimals: 'trim' })}
+              </span>
+            )}
           </span>
         </span>
       ),

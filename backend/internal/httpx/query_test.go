@@ -78,3 +78,16 @@ func TestNewPageKeepsAnEmptyResultOnPageOne(t *testing.T) {
 		t.Fatalf("unexpected empty page: %+v", page)
 	}
 }
+
+func TestIsUUIDAcceptsGeneratedIdentifiersOnly(t *testing.T) {
+	for _, value := range []string{"790ea15c-6c37-4af6-8b8d-65aab8f02f42", "01993c21-1c7a-7c01-8ca7-822b6cc5ee88"} {
+		if !httpx.IsUUID(value) {
+			t.Errorf("valid UUID %q was rejected", value)
+		}
+	}
+	for _, value := range []string{"", "not-a-uuid", "00000000-0000-0000-0000-000000000000"} {
+		if httpx.IsUUID(value) {
+			t.Errorf("invalid UUID %q was accepted", value)
+		}
+	}
+}

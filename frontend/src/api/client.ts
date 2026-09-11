@@ -29,13 +29,14 @@ type RequestOptions = {
   method?: string
   body?: unknown
   signal?: AbortSignal
+  headers?: Record<string, string>
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, signal } = options
+  const { method = 'GET', body, signal, headers: extraHeaders } = options
 
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) {
+  const headers: Record<string, string> = { Accept: 'application/json', ...extraHeaders }
+  if (body !== undefined && !(body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
   }
 
@@ -43,7 +44,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     method,
     headers,
     credentials: 'include',
-    body: body === undefined ? null : JSON.stringify(body),
+    body: body === undefined ? null : body instanceof FormData ? body : JSON.stringify(body),
     ...(signal ? { signal } : {}),
   })
 

@@ -10,14 +10,15 @@ import { SegmentedTrack } from '@/components/ui/Tabs'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { useTransactions, type HistoryKind } from '@/features/wallet'
+import { useAdminTransactions } from '@/features/admin'
+import type { HistoryKind } from '@/features/wallet'
 import { formatDateTime, formatRelative } from '@/lib/format'
 import { money } from '@/lib/money'
 
 export function AdminTransactionsPage() {
   const [kind, setKind] = useState<HistoryKind>('all')
   const [page, setPage] = useState(1)
-  const query = useTransactions({ kind, days: 90, page })
+  const query = useAdminTransactions({ kind, days: 90, page })
 
   const result = query.data
 

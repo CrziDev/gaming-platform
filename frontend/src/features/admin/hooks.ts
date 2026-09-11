@@ -7,8 +7,8 @@ import {
   fetchAdminGame,
   fetchAdminGames,
   fetchAdminPaymentMethods,
+  fetchAdminTransactions,
   fetchAdminRounds,
-  fetchAllDeposits,
   fetchAuditEntries,
   fetchConsoleAlerts,
   fetchDashboard,
@@ -40,10 +40,6 @@ export function useAuditEntries(limit?: number) {
 
 export function useDepositQueue() {
   return useQuery({ queryKey: ['admin', 'deposit-queue'], queryFn: fetchDepositQueue })
-}
-
-export function useAllDeposits() {
-  return useQuery({ queryKey: ['admin', 'deposits'], queryFn: fetchAllDeposits })
 }
 
 export function useReviewDeposit() {
@@ -88,6 +84,13 @@ export function useAdjustWallet() {
   return useMutation({
     mutationFn: adjustWallet,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+}
+
+export function useAdminTransactions(filter: Parameters<typeof fetchAdminTransactions>[0]) {
+  return useQuery({
+    queryKey: ['admin', 'transactions', filter],
+    queryFn: () => fetchAdminTransactions(filter),
   })
 }
 

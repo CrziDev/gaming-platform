@@ -3,7 +3,9 @@ package wallet
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"math"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -58,6 +60,7 @@ func createWalletTestUser(t *testing.T, db *sql.DB) string {
 		t.Fatalf("create test user: %v", err)
 	}
 	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE actor_user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM wallets WHERE user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM users WHERE id = ($1::text)::uuid`, id)
@@ -138,6 +141,130 @@ func TestMoveIsIdempotent(t *testing.T) {
 	item, err := Get(context.Background(), db, userID, "USD")
 	if err != nil || item.BalanceMinor != 500 {
 		t.Fatalf("wallet balance = %d, err = %v", item.BalanceMinor, err)
+	}
+}
+
+func TestConcurrentMovementsWithOneIdempotencyKeyCreateOneLedgerRow(t *testing.T) {
+	db := walletTestDB(t)
+	userID := createWalletTestUser(t, db)
+	if _, err := List(context.Background(), db, userID); err != nil {
+		t.Fatalf("provision wallets: %v", err)
+	}
+
+	start := make(chan struct{})
+	results := make(chan Transaction, 2)
+	errs := make(chan error, 2)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			movement, err := Move(context.Background(), db, userID, "PHP", "deposit", 500, "concurrent-key", "retry-safe credit")
+			results <- movement
+			errs <- err
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent movement: %v", err)
+		}
+	}
+	var firstID string
+	for movement := range results {
+		if firstID == "" {
+			firstID = movement.ID
+		}
+		if movement.ID != firstID || movement.BalanceAfter != 500 {
+			t.Fatalf("callers saw different movements: first=%q movement=%+v", firstID, movement)
+		}
+	}
+	var balance int64
+	var rows int
+	if err := db.QueryRow(`SELECT balance_minor FROM wallets WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, userID).Scan(&balance); err != nil {
+		t.Fatalf("read balance: %v", err)
+	}
+	if err := db.QueryRow(`SELECT count(*) FROM wallet_transactions WHERE user_id = ($1::text)::uuid AND idempotency_key = 'concurrent-key'`, userID).Scan(&rows); err != nil {
+		t.Fatalf("count movements: %v", err)
+	}
+	if balance != 500 || rows != 1 {
+		t.Fatalf("balance=%d rows=%d, want 500/1", balance, rows)
+	}
+}
+
+func TestMoveRejectsInsufficientFrozenAndOverflowWithoutLedgerWrites(t *testing.T) {
+	db := walletTestDB(t)
+	userID := createWalletTestUser(t, db)
+	if _, err := List(context.Background(), db, userID); err != nil {
+		t.Fatalf("provision wallets: %v", err)
+	}
+
+	if _, err := Move(context.Background(), db, userID, "PHP", "wager", -1, "insufficient-key", "insufficient"); !errors.Is(err, ErrInsufficientFunds) {
+		t.Fatalf("insufficient debit: want %v, got %v", ErrInsufficientFunds, err)
+	}
+	if _, err := db.Exec(`UPDATE wallets SET status = 'frozen' WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, userID); err != nil {
+		t.Fatalf("freeze wallet: %v", err)
+	}
+	if _, err := Move(context.Background(), db, userID, "PHP", "deposit", 1, "frozen-key", "frozen"); !errors.Is(err, ErrWalletFrozen) {
+		t.Fatalf("frozen wallet: want %v, got %v", ErrWalletFrozen, err)
+	}
+	if _, err := db.Exec(`UPDATE wallets SET status = 'active', balance_minor = $2 WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, userID, int64(math.MaxInt64)); err != nil {
+		t.Fatalf("prepare overflow balance: %v", err)
+	}
+	if _, err := Move(context.Background(), db, userID, "PHP", "deposit", 1, "overflow-key", "overflow"); !errors.Is(err, ErrAmountOverflow) {
+		t.Fatalf("overflow credit: want %v, got %v", ErrAmountOverflow, err)
+	}
+
+	var rows int
+	if err := db.QueryRow(`SELECT count(*) FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, userID).Scan(&rows); err != nil {
+		t.Fatalf("count ledger rows: %v", err)
+	}
+	if rows != 0 {
+		t.Fatalf("rejected movements wrote %d ledger rows", rows)
+	}
+}
+
+func TestValidateMovementCurrencyRejectsMismatch(t *testing.T) {
+	if err := validateMovementCurrency(Wallet{Currency: "PHP"}, "USD"); !errors.Is(err, ErrCurrencyMismatch) {
+		t.Fatalf("currency mismatch: want %v, got %v", ErrCurrencyMismatch, err)
+	}
+	if err := validateMovementCurrency(Wallet{Currency: "PHP"}, "PHP"); err != nil {
+		t.Fatalf("matching currency was rejected: %v", err)
+	}
+}
+
+func TestAdminAdjustmentWritesLedgerAndAuditAtomically(t *testing.T) {
+	db := walletTestDB(t)
+	userID := createWalletTestUser(t, db)
+	actorID := createWalletTestUser(t, db)
+
+	credit, err := Adjust(context.Background(), db, actorID, userID, "PHP", "credit", 1_250, "manual correction")
+	if err != nil {
+		t.Fatalf("admin credit: %v", err)
+	}
+	if credit.Kind != "adjustment" || credit.AmountMinor != 1_250 || credit.BalanceBefore != 0 || credit.BalanceAfter != 1_250 {
+		t.Fatalf("unexpected adjustment: %+v", credit)
+	}
+
+	var actor, action, detail string
+	if err := db.QueryRow(`SELECT actor_user_id::text, action, detail FROM audit_logs WHERE entity_id = $1 ORDER BY created_at DESC LIMIT 1`, credit.WalletID).Scan(&actor, &action, &detail); err != nil {
+		t.Fatalf("read audit entry: %v", err)
+	}
+	if actor != actorID || action != "wallet.credit" || detail != "manual correction" {
+		t.Fatalf("unexpected audit entry: actor=%q action=%q detail=%q", actor, action, detail)
+	}
+
+	debit, err := Adjust(context.Background(), db, actorID, userID, "PHP", "debit", 250, "reverse correction")
+	if err != nil {
+		t.Fatalf("admin debit: %v", err)
+	}
+	if debit.AmountMinor != -250 || debit.BalanceAfter != 1_000 {
+		t.Fatalf("unexpected debit: %+v", debit)
 	}
 }
 

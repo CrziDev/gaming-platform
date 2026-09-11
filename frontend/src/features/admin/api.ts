@@ -1,8 +1,11 @@
+import { api } from '@/api/client'
 import { mockRequest, paginate, type Page } from '@/api/mock'
+import { usingMockApi } from '@/api/mode'
 import type {
   AccountStatus,
   AdminDeposit,
   AdminGame,
+  AdminUser,
   AdminUserRecord,
   Adjustment,
   AuditEntry,
@@ -11,6 +14,7 @@ import type {
   PaymentMethod,
   Round,
   RtpProfile,
+  Transaction,
 } from '@/api/types'
 import {
   adjustmentReasons,
@@ -24,9 +28,15 @@ import {
   rtpProfiles,
   staffAccounts,
 } from '@/mocks/admin'
-import { paymentMethods, rounds } from '@/mocks/wallet'
+import { paymentMethods, rounds, transactions } from '@/mocks/wallet'
 
 export const ADMIN_PAGE_SIZE = 20
+const useRealAdminApi = !usingMockApi && import.meta.env.MODE !== 'test'
+
+export function adminDepositProofUrl(id: string): string {
+  const base = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'
+  return `${base}/admin/deposits/${encodeURIComponent(id)}/proof`
+}
 
 export type UserFilter = {
   status: 'all' | AccountStatus
@@ -53,13 +63,11 @@ function pendingQueue(): AdminDeposit[] {
 }
 
 export async function fetchDepositQueue(): Promise<AdminDeposit[]> {
+  if (useRealAdminApi) {
+    const page = await api.get<Page<BackendAdminDeposit>>('/admin/deposits?page=1&size=100')
+    return page.rows.map(toAdminDeposit)
+  }
   return mockRequest(pendingQueue)
-}
-
-export async function fetchAllDeposits(): Promise<AdminDeposit[]> {
-  return mockRequest(() =>
-    [...adminDeposits].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
-  )
 }
 
 export type DepositReview = {
@@ -69,7 +77,15 @@ export type DepositReview = {
   reason?: string | undefined
 }
 
-export async function reviewDeposit(review: DepositReview): Promise<AdminDeposit> {
+export async function reviewDeposit(review: DepositReview): Promise<void> {
+  if (useRealAdminApi) {
+    await api.post('/admin/deposits/' + review.id + '/review', {
+      action: review.action,
+      amount_minor: review.amount_minor,
+      reason: review.reason,
+    })
+    return
+  }
   return mockRequest(() => {
     const deposit = adminDeposits.find((candidate) => candidate.id === review.id)
     if (!deposit) {
@@ -101,11 +117,52 @@ export async function reviewDeposit(review: DepositReview): Promise<AdminDeposit
           : `Rejected ${deposit.reference} · reason: ${review.reason ?? 'not given'}`,
     })
 
-    return deposit
   }, 500)
 }
 
-export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUserRecord>> {
+type BackendAdminDeposit = {
+  id: string
+  user_id: string
+  user_email: string
+  display_name: string
+  method_id: string
+  method_name: string
+  amount_minor: number
+  currency: AdminUserRecord['currency']
+  reference: string
+  status: AdminDeposit['status']
+  created_at: string
+  reviewed_at: string | null
+  reason: string | null
+}
+
+function toAdminDeposit(row: BackendAdminDeposit): AdminDeposit {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    username: row.display_name || row.user_email,
+    reference: row.reference,
+    method_id: row.method_id,
+    method_name: row.method_name,
+    amount_minor: row.amount_minor,
+    currency: row.currency,
+    status: row.status,
+    created_at: row.created_at,
+    reviewed_at: row.reviewed_at,
+    reason: row.reason,
+  }
+}
+
+export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUser>> {
+  if (useRealAdminApi) {
+    const params = new URLSearchParams({
+      page: String(filter.page),
+      size: String(ADMIN_PAGE_SIZE),
+    })
+    if (filter.status !== 'all') params.set('status', filter.status)
+    if (filter.search.trim() !== '') params.set('search', filter.search.trim())
+    return api.get<Page<AdminUser>>(`/admin/users?${params.toString()}`)
+  }
   return mockRequest(() => {
     const search = filter.search.trim().toLowerCase()
     const matched = adminUsers.filter((user) => {
@@ -122,6 +179,19 @@ export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUserReco
 }
 
 export async function fetchUserCounts() {
+  if (useRealAdminApi) {
+    const fetchTotal = async (status?: AccountStatus) => {
+      const suffix = status ? `&status=${status}` : ''
+      const page = await api.get<Page<AdminUser>>(`/admin/users?page=1&size=1${suffix}`)
+      return page.total
+    }
+    const [all, active, suspended] = await Promise.all([
+      fetchTotal(),
+      fetchTotal('active'),
+      fetchTotal('suspended'),
+    ])
+    return { all, active, suspended }
+  }
   return mockRequest(() => ({
     all: adminUsers.length,
     active: adminUsers.filter((user) => user.status === 'active').length,
@@ -147,12 +217,32 @@ export async function fetchUserAdjustments(userId: string): Promise<Adjustment[]
 
 export type WalletAdjustment = {
   user_id: string
+  currency: AdminUserRecord['currency']
   direction: 'credit' | 'debit'
   amount_minor: number
   reason: string
 }
 
-export async function adjustWallet(input: WalletAdjustment): Promise<AdminUserRecord> {
+export type AdminAdjustment = {
+  id: string
+  kind: 'adjustment'
+  amount_minor: number
+  currency: AdminUserRecord['currency']
+  balance_before: number
+  balance_after: number
+  reason: string
+  created_at: string
+}
+
+export async function adjustWallet(input: WalletAdjustment): Promise<AdminAdjustment | AdminUserRecord> {
+  if (useRealAdminApi) {
+    return api.post<AdminAdjustment>(`/admin/users/${input.user_id}/wallet-adjustments`, {
+      direction: input.direction,
+      currency: input.currency,
+      amount_minor: input.amount_minor,
+      reason: input.reason,
+    })
+  }
   return mockRequest(() => {
     const user = adminUsers.find((candidate) => candidate.id === input.user_id)
     if (!user) {
@@ -187,6 +277,79 @@ export async function adjustWallet(input: WalletAdjustment): Promise<AdminUserRe
 
     return user
   }, 450)
+}
+
+export type AdminTransaction = Transaction & {
+  user_id: string
+  wallet_id: string
+}
+
+export type AdminTransactionFilter = {
+  kind: 'all' | 'deposit' | 'rounds' | 'adjustment'
+  days: 7 | 30 | 90
+  page: number
+}
+
+type BackendAdminTransaction = {
+  id: string
+  user_id: string
+  wallet_id: string
+  kind: Transaction['kind']
+  amount_minor: number
+  currency: AdminUserRecord['currency']
+  reason: string
+  created_at: string
+}
+
+type BackendAdminTransactionPage = {
+  rows: BackendAdminTransaction[]
+  total: number
+  page: number
+  size: number
+  pages: number
+}
+
+export async function fetchAdminTransactions(filter: AdminTransactionFilter): Promise<Page<AdminTransaction>> {
+  if (useRealAdminApi) {
+    const cutoff = new Date(Date.now() - filter.days * 86_400_000).toISOString()
+    const type = filter.kind === 'all' || filter.kind === 'rounds' ? '' : `&type=${filter.kind}`
+    const response = await api.get<BackendAdminTransactionPage>(
+      `/admin/transactions?page=1&size=100&from=${encodeURIComponent(cutoff)}${type}`,
+    )
+    const rows = response.rows
+      .map(toAdminTransaction)
+      .filter((transaction) => filter.kind !== 'rounds' || transaction.kind === 'wager' || transaction.kind === 'win')
+    return paginate(rows, filter.page, ADMIN_PAGE_SIZE)
+  }
+
+  return mockRequest(() => {
+    const cutoff = Date.now() - filter.days * 86_400_000
+    const rows = transactions
+      .filter((transaction) => Date.parse(transaction.created_at) >= cutoff)
+      .filter((transaction) => {
+        if (filter.kind === 'all') return true
+        if (filter.kind === 'rounds') return transaction.kind === 'wager' || transaction.kind === 'win'
+        return transaction.kind === filter.kind
+      })
+      .map((transaction) => ({ ...transaction, user_id: '', wallet_id: '' }))
+    return paginate(rows, filter.page, ADMIN_PAGE_SIZE)
+  })
+}
+
+function toAdminTransaction(row: BackendAdminTransaction): AdminTransaction {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    wallet_id: row.wallet_id,
+    kind: row.kind,
+    label: row.kind.charAt(0).toUpperCase() + row.kind.slice(1),
+    reference: row.id.slice(0, 8),
+    status: 'applied',
+    amount_minor: row.amount_minor,
+    currency: row.currency,
+    created_at: row.created_at,
+    round_id: null,
+  }
 }
 
 export async function setUserStatus(id: string, status: AccountStatus): Promise<AdminUserRecord> {

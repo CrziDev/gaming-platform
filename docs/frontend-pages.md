@@ -9,35 +9,35 @@ Source of truth: `frontend/src/routes/AppRoutes.tsx` and
 
 ## Current backend coverage
 
-As of 2026-09-11, the registration, login, logout, session, enabled-currency, and
-paginated admin-user APIs exist. No checkbox below is complete yet because non-test web
-builds still default to fixture mode, and the admin users feature still calls its fixture
-API directly. The currency endpoint has no standalone page to mark here.
+As of 2026-09-11, authentication, wallet and transaction history, manual deposits,
+paginated admin users, wallet adjustments, admin transactions, and deposit review use
+real APIs when `VITE_API_MOCK=false`. Remaining unchecked pages still depend partly or
+entirely on fixtures.
 
 ## Public and player pages
 
 - [ ] **Lobby** — `/`
 - [ ] **Game catalogue** — `/games`
-- [ ] **Sign in** — `/login` (opens the sign-in flow)
-- [ ] **Register** — `/register` (opens the registration flow)
+- [x] **Sign in** — `/login` (opens the real sign-in flow)
+- [x] **Register** — `/register` (opens the real registration flow)
 - [ ] **Forgot password** — `/forgot`
 - [ ] **Reset password** — `/reset`
 - [ ] **Game** — `/game/:slug` (authentication required)
-- [ ] **Wallet** — `/wallet` (authentication required)
-- [ ] **Deposit** — `/wallet/deposit` (authentication required)
-- [ ] **Deposit status** — `/wallet/deposit/:id` (authentication required)
+- [x] **Wallet** — `/wallet` (authentication required)
+- [x] **Deposit** — `/wallet/deposit` (real methods, limits, proof upload, and submission)
+- [x] **Deposit status** — `/wallet/deposit/:id` (real player-owned request; no cancellation)
 - [x] **Transaction history** — `/history` (authentication required; real wallet API in non-mock mode)
 - [ ] **Account** — `/account` (authentication required)
-- [ ] **Not found** — `*`
+- [x] **Not found** — `*` (tested application 404 state)
 
 ## Admin pages
 
-- [ ] **Admin sign in** — `/admin/login`
+- [x] **Admin sign in** — `/admin/login` (real shared session API and admin route guard)
 - [ ] **Dashboard** — `/admin`
-- [ ] **Deposits** — `/admin/deposits`
-- [ ] **Users** — `/admin/users`
+- [x] **Deposits** — `/admin/deposits` (real pending review queue and approve/reject actions)
+- [x] **Users** — `/admin/users` (real paging, search, and status filters)
 - [ ] **User details** — `/admin/users/:id`
-- [ ] **Transactions** — `/admin/transactions`
+- [x] **Transactions** — `/admin/transactions`
 - [ ] **Rounds** — `/admin/rounds`
 - [ ] **Games** — `/admin/games`
 - [ ] **Game details** — `/admin/games/:id`

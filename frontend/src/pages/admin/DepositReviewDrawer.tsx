@@ -4,9 +4,9 @@ import type { AdminDeposit } from '@/api/types'
 import { Button } from '@/components/ui/Button'
 import { Field, Select } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
-import { reasonOptions, useReviewDeposit } from '@/features/admin'
+import { adminDepositProofUrl, reasonOptions, useReviewDeposit } from '@/features/admin'
 import { formatDuration } from '@/lib/format'
-import { formatMoney, formatMoneyInput, money, parseMoneyInput } from '@/lib/money'
+import { currencySymbol, formatMoney, formatMoneyInput, money, parseMoneyInput } from '@/lib/money'
 
 type DepositReviewDrawerProps = {
   deposit: AdminDeposit | null
@@ -89,9 +89,14 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex h-48 items-center justify-center rounded-input border border-dashed border-line-strong font-mono text-[11px] text-ink-mute">
-          proof of payment · zoomable
-        </div>
+        <a
+          href={adminDepositProofUrl(deposit.id)}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-48 items-center justify-center rounded-input border border-dashed border-line-strong font-mono text-[11px] text-accent hover:bg-accent/6"
+        >
+          Open proof of payment
+        </a>
 
         <dl className="flex flex-col gap-2.5 text-[13.5px]">
           <Row label="Amount claimed">
@@ -103,14 +108,16 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
             <span className="font-mono">{deposit.reference}</span>
           </Row>
           <Row label="Method">{deposit.method_name}</Row>
-          <Row label="Player history">
-            {deposit.approved_count} approved · {deposit.rejected_count} rejected
-          </Row>
+          {deposit.approved_count !== undefined && deposit.rejected_count !== undefined ? (
+            <Row label="Player history">
+              {deposit.approved_count} approved · {deposit.rejected_count} rejected
+            </Row>
+          ) : null}
         </dl>
 
         <Field label="Credit amount — must match the proof" htmlFor="credit-amount">
           <div className="flex min-h-12 items-center gap-2.5 rounded-input border border-line-strong bg-base px-3.5">
-            <span className="font-mono text-ink-mute">₱</span>
+            <span className="font-mono text-ink-mute">{currencySymbol(deposit.currency)}</span>
             <input
               id="credit-amount"
               inputMode="decimal"

@@ -5,7 +5,6 @@ import type { Currency } from '@/lib/money'
 import { useActiveCurrency } from './activeCurrency'
 
 import {
-  cancelDeposit,
   fetchDeposit,
   fetchDepositLimits,
   fetchDeposits,
@@ -42,7 +41,11 @@ export function usePaymentMethods() {
 }
 
 export function useDepositLimits() {
-  return useQuery({ queryKey: ['deposit-limits'], queryFn: fetchDepositLimits })
+  const currency = useActiveCurrency()
+  return useQuery({
+    queryKey: ['deposit-limits', currency],
+    queryFn: () => fetchDepositLimits(currency),
+  })
 }
 
 export function useDeposits() {
@@ -58,18 +61,6 @@ export function useSubmitDeposit() {
 
   return useMutation({
     mutationFn: submitDeposit,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['deposits'] })
-      void queryClient.invalidateQueries({ queryKey: ['transactions'] })
-    },
-  })
-}
-
-export function useCancelDeposit() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: cancelDeposit,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['deposits'] })
       void queryClient.invalidateQueries({ queryKey: ['transactions'] })

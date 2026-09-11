@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ChevronLeft } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router'
 
@@ -8,40 +8,51 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ErrorState } from '@/components/ui/States'
 import { cn } from '@/lib/cn'
-import { depositSchema, type DepositInput } from '@/features/wallet/schemas'
+import {
+  createDepositSchema,
+  fallbackDepositLimits,
+  type DepositInput,
+} from '@/features/wallet/schemas'
 import { useToast } from '@/components/ui/Toast'
-import { useActiveWallet, usePaymentMethods, useSubmitDeposit } from '@/features/wallet'
-import { formatMoney, money, parseMoneyInput } from '@/lib/money'
+import { useActiveWallet, useDepositLimits, usePaymentMethods, useSubmitDeposit } from '@/features/wallet'
+import { currencySymbol, formatMoney, money, parseMoneyInput } from '@/lib/money'
 import { paths } from '@/routes/paths'
-
-const quickAmounts = [50_000, 100_000, 250_000, 500_000]
 
 export function DepositPage() {
   const methodsQuery = usePaymentMethods()
   const walletQuery = useActiveWallet()
+  const limitsQuery = useDepositLimits()
   const submitDeposit = useSubmitDeposit()
   const navigate = useNavigate()
   const toast = useToast()
   const [proof, setProof] = useState<File | null>(null)
   const [proofError, setProofError] = useState<string | undefined>(undefined)
+  const currency = walletQuery.data?.currency ?? fallbackDepositLimits.currency
+  const limits = limitsQuery.data ?? fallbackDepositLimits
+  const schema = useMemo(() => createDepositSchema(currency, limits), [currency, limits])
 
   const {
     control,
     register,
     handleSubmit,
+    setError,
     setValue,
     formState: { errors },
   } = useForm<DepositInput>({
-    resolver: zodResolver(depositSchema),
+    resolver: zodResolver(schema),
     defaultValues: { method_id: '', amount: '1000', reference: '' },
   })
 
   const methods = methodsQuery.data ?? []
   const selectedMethod = useWatch({ control, name: 'method_id' })
   const amount = useWatch({ control, name: 'amount' })
-  const currency = walletQuery.data?.currency ?? 'PHP'
   const soleMethod = methods.length === 1 ? methods[0] : undefined
+  const selectedMethodDetails = methods.find((method) => method.id === selectedMethod)
+  const quickAmounts = [50_000, 100_000, 250_000, 500_000].filter(
+    (value) => value >= limits.min_minor && value <= limits.max_minor,
+  )
 
   useEffect(() => {
     if (soleMethod && selectedMethod === '') {
@@ -50,6 +61,10 @@ export function DepositPage() {
   }, [soleMethod, selectedMethod, setValue])
 
   const onSubmit = handleSubmit(async (values) => {
+    if (selectedMethodDetails?.reference_required && values.reference.trim() === '') {
+      setError('reference', { message: 'Enter the reference from your payment app' })
+      return
+    }
     if (!proof) {
       setProofError('Upload a screenshot of your payment')
       return
@@ -61,6 +76,8 @@ export function DepositPage() {
       amount_minor: parseMoneyInput(values.amount, currency) ?? 0,
       reference: values.reference,
       currency,
+      proof,
+      idempotency_key: crypto.randomUUID(),
     })
 
     toast.push(
@@ -70,8 +87,22 @@ export function DepositPage() {
     await navigate(paths.depositStatus(created.id), { replace: true })
   })
 
-  if (methodsQuery.isPending) {
+  if (methodsQuery.isPending || walletQuery.isPending || limitsQuery.isPending) {
     return <Skeleton className="h-96 rounded-sheet" />
+  }
+
+  if (methodsQuery.isError || walletQuery.isError || limitsQuery.isError) {
+    return (
+      <ErrorState
+        title="Deposits unavailable"
+        message="Payment methods and limits could not be loaded. No request was created."
+        onRetry={() => {
+          void methodsQuery.refetch()
+          void walletQuery.refetch()
+          void limitsQuery.refetch()
+        }}
+      />
+    )
   }
 
   if (methods.length === 0) {
@@ -111,6 +142,7 @@ export function DepositPage() {
               <span className="flex flex-col">
                 <span className="text-sm font-semibold text-ink">{soleMethod.name}</span>
                 <span className="text-[11.5px] text-ink-mute">{soleMethod.description}</span>
+                <span className="font-mono text-[11.5px] text-ink-soft">Pay to {soleMethod.pay_to}</span>
               </span>
             </div>
           ) : (
@@ -132,6 +164,7 @@ export function DepositPage() {
                   <span className="flex flex-1 flex-col">
                     <span className="text-sm font-semibold text-ink">{method.name}</span>
                     <span className="text-[11.5px] text-ink-mute">{method.description}</span>
+                    <span className="font-mono text-[11.5px] text-ink-soft">Pay to {method.pay_to}</span>
                   </span>
                   <span
                     aria-hidden
@@ -158,7 +191,7 @@ export function DepositPage() {
 
           <Field label="Amount" htmlFor="amount" error={errors.amount?.message}>
             <div className="flex min-h-15 items-center gap-2.5 rounded-input border border-line-strong bg-panel px-4">
-              <span className="font-mono text-xl text-ink-mute">₱</span>
+              <span className="font-mono text-xl text-ink-mute">{currencySymbol(currency)}</span>
               <input
                 id="amount"
                 inputMode="decimal"
@@ -193,14 +226,19 @@ export function DepositPage() {
           </div>
 
           <p className="text-[12px] text-ink-mute">
-            Min {formatMoney(money(10_000, currency))} · max {formatMoney(money(5_000_000, currency))}{' '}
+            Min {formatMoney(money(limits.min_minor, currency))} · max{' '}
+            {formatMoney(money(limits.max_minor, currency))}{' '}
             per request.
           </p>
         </section>
 
         <section className="flex flex-col gap-3">
           <span className="label-mono text-ink-mute">3 · Reference number</span>
-          <Field label="Reference" htmlFor="reference" error={errors.reference?.message}>
+          <Field
+            label={`Reference${selectedMethodDetails?.reference_required ? '' : ' (optional)'}`}
+            htmlFor="reference"
+            error={errors.reference?.message}
+          >
             <Input
               id="reference"
               autoComplete="off"

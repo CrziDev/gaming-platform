@@ -2,10 +2,13 @@ package httpx
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`)
 
 const (
 	DefaultPageSize = 20
@@ -20,6 +23,7 @@ type Query struct {
 	Type     string
 	Currency string
 	GameID   string
+	UserID   string
 	From     *time.Time
 	To       *time.Time
 }
@@ -42,6 +46,7 @@ func ReadQuery(w http.ResponseWriter, r *http.Request) (Query, bool) {
 		Type:     strings.TrimSpace(values.Get("type")),
 		Currency: strings.ToUpper(strings.TrimSpace(values.Get("currency"))),
 		GameID:   strings.TrimSpace(values.Get("game_id")),
+		UserID:   strings.TrimSpace(values.Get("user_id")),
 	}
 
 	fields := make(map[string]string)
@@ -73,6 +78,10 @@ func NewPage[T any](rows []T, total, page, size int) Page[T] {
 		pages = 1
 	}
 	return Page[T]{Rows: rows, Total: total, Page: page, Size: size, Pages: pages}
+}
+
+func IsUUID(value string) bool {
+	return uuidPattern.MatchString(value)
 }
 
 func readPositiveInteger(value string, fallback int, message, field string, fields map[string]string) int {

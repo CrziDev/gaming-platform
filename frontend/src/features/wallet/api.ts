@@ -1,7 +1,8 @@
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import { mockRequest, paginate, type Page } from '@/api/mock'
 import { usingMockApi } from '@/api/mode'
 import type {
+  CurrencyMetadata,
   DepositRequest,
   Notification,
   PaymentMethod,
@@ -60,20 +61,58 @@ export async function fetchWallet(currency: Currency): Promise<Wallet> {
 }
 
 export async function fetchPaymentMethods(): Promise<PaymentMethod[]> {
+  if (useRealWalletApi) {
+    const methods = await api.get<Omit<PaymentMethod, 'enabled'>[]>('/payment-methods')
+    return methods.map((method) => ({ ...method, enabled: true }))
+  }
   return mockRequest(() => paymentMethods.filter((method) => method.enabled))
 }
 
-export async function fetchDepositLimits() {
-  return mockRequest(() => depositLimits)
+export type DepositLimits = {
+  currency: Currency
+  min_minor: number
+  max_minor: number
+}
+
+export async function fetchDepositLimits(currency: Currency): Promise<DepositLimits> {
+  if (useRealWalletApi) {
+    const currencies = await api.get<CurrencyMetadata[]>('/currencies')
+    const metadata = currencies.find((candidate) => candidate.code === currency)
+    if (!metadata) {
+      throw new Error(`Currency ${currency} is not enabled for deposits`)
+    }
+    return {
+      currency: metadata.code,
+      min_minor: metadata.deposit_min_minor,
+      max_minor: metadata.deposit_max_minor,
+    }
+  }
+  return mockRequest(() => ({
+    currency,
+    min_minor: depositLimits.min_minor,
+    max_minor: depositLimits.max_minor,
+  }))
 }
 
 export async function fetchDeposits(): Promise<DepositRequest[]> {
+  if (useRealWalletApi) {
+    const page = await api.get<Page<DepositRequest>>('/deposits?page=1&size=100')
+    return page.rows
+  }
   return mockRequest(() =>
     [...depositRequests].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
   )
 }
 
 export async function fetchDeposit(id: string): Promise<DepositRequest | null> {
+  if (useRealWalletApi) {
+    try {
+      return await api.get<DepositRequest>(`/deposits/${id}`)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null
+      throw error
+    }
+  }
   return mockRequest(() => depositRequests.find((request) => request.id === id) ?? null)
 }
 
@@ -84,9 +123,22 @@ export type NewDeposit = {
   // Which wallet the request funds. A player may hold several, and nothing
   // converts between them, so the currency is chosen here rather than inferred.
   currency: Currency
+  proof: File
+  idempotency_key: string
 }
 
 export async function submitDeposit(input: NewDeposit): Promise<DepositRequest> {
+  if (useRealWalletApi) {
+    const form = new FormData()
+    form.append('method_id', input.method_id)
+    form.append('amount_minor', String(input.amount_minor))
+    form.append('reference', input.reference)
+    form.append('currency', input.currency)
+    form.append('proof', input.proof)
+    return api.post<DepositRequest>('/deposits', form, {
+      headers: { 'Idempotency-Key': input.idempotency_key },
+    })
+  }
   return mockRequest(() => {
     const method = paymentMethods.find((candidate) => candidate.id === input.method_id)
     const reference = input.reference.trim()
@@ -118,19 +170,6 @@ export async function submitDeposit(input: NewDeposit): Promise<DepositRequest> 
 
     return created
   }, 600)
-}
-
-export async function cancelDeposit(id: string): Promise<void> {
-  return mockRequest(() => {
-    const index = depositRequests.findIndex((request) => request.id === id)
-    if (index >= 0) {
-      depositRequests.splice(index, 1)
-    }
-    const transactionIndex = transactions.findIndex((transaction) => transaction.id === `tx-${id}`)
-    if (transactionIndex >= 0) {
-      transactions.splice(transactionIndex, 1)
-    }
-  })
 }
 
 export async function fetchTransactions(filter: HistoryFilter): Promise<Page<Transaction>> {

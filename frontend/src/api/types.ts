@@ -27,6 +27,8 @@ export type CurrencyMetadata = {
   name: string
   symbol: string
   minor_units: number
+  deposit_min_minor: number
+  deposit_max_minor: number
 }
 
 export type Category = {
@@ -164,9 +166,9 @@ export type AuditEntry = {
 export type AdminDeposit = DepositRequest & {
   user_id: string
   username: string
-  user_balance_minor: number
-  approved_count: number
-  rejected_count: number
+  user_balance_minor?: number
+  approved_count?: number
+  rejected_count?: number
 }
 
 export type RtpStatus = 'draft' | 'verified' | 'active' | 'retired'

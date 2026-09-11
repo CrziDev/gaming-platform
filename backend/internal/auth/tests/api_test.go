@@ -6,12 +6,15 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -72,23 +75,40 @@ func (errNoDatabaseURL) Error() string { return "neither TEST_DATABASE_URL nor D
 
 func newServer(t *testing.T, db *sql.DB) (string, *http.Client) {
 	t.Helper()
+	base, client, _ := newServerWithProofDir(t, db)
+	return base, client
+}
 
-	server := httptest.NewServer(newHandler(db))
+func newServerWithProofDir(t *testing.T, db *sql.DB) (string, *http.Client, string) {
+	t.Helper()
+	proofDir := t.TempDir()
+
+	server := httptest.NewServer(newHandlerWithProofDir(db, proofDir))
 	t.Cleanup(server.Close)
 
+	return server.URL, clientWithCookies(t), proofDir
+}
+
+func clientWithCookies(t *testing.T) *http.Client {
+	t.Helper()
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		t.Fatalf("cookie jar: %v", err)
 	}
-	return server.URL, &http.Client{Jar: jar}
+	return &http.Client{Jar: jar}
 }
 
 func newHandler(db *sql.DB) http.Handler {
+	return newHandlerWithProofDir(db, "")
+}
+
+func newHandlerWithProofDir(db *sql.DB, proofDir string) http.Handler {
 	return app.New(db, slog.New(slog.NewTextHandler(io.Discard, nil)), app.Config{
 		CookieName:      "gp_session",
 		SessionTTL:      time.Hour,
 		AllowedOrigins:  []string{"http://localhost:5173"},
-		MaxBodyBytes:    1 << 20,
+		MaxBodyBytes:    6 << 20,
+		ProofDir:        proofDir,
 		LoginsPerMinute: 100,
 	})
 }
@@ -122,6 +142,48 @@ func send(t *testing.T, client *http.Client, method, url string, body any) (int,
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("read body: %v", err)
+	}
+	return resp.StatusCode, responseBody
+}
+
+func sendDeposit(t *testing.T, client *http.Client, url, methodID, currency, amount, reference, idempotencyKey, filename string, proof []byte) (int, []byte) {
+	t.Helper()
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	for key, value := range map[string]string{
+		"method_id": methodID, "currency": currency, "amount_minor": amount, "reference": reference,
+	} {
+		if err := writer.WriteField(key, value); err != nil {
+			t.Fatalf("write %s field: %v", key, err)
+		}
+	}
+	part, err := writer.CreateFormFile("proof", filename)
+	if err != nil {
+		t.Fatalf("create proof part: %v", err)
+	}
+	if _, err := part.Write(proof); err != nil {
+		t.Fatalf("write proof: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart body: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, &body)
+	if err != nil {
+		t.Fatalf("build deposit request: %v", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if idempotencyKey != "" {
+		req.Header.Set("Idempotency-Key", idempotencyKey)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("submit deposit: %v", err)
+	}
+	defer resp.Body.Close()
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read deposit response: %v", err)
 	}
 	return resp.StatusCode, responseBody
 }
@@ -508,6 +570,159 @@ func TestAdminUsersRejectsInvalidPagingAndStatus(t *testing.T) {
 	}
 }
 
+func TestAdminWalletAdjustmentAndTransactionHTTPFlow(t *testing.T) {
+	db := requireDB(t)
+	base, playerClient := newServer(t, db)
+	status, body := register(t, playerClient, base)
+	if status != http.StatusCreated {
+		t.Fatalf("register player: want 201, got %d (%s)", status, body)
+	}
+	var player struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &player); err != nil {
+		t.Fatalf("decode player: %v", err)
+	}
+
+	adjustment := map[string]any{
+		"direction": "credit", "currency": "PHP", "amount_minor": 15_000, "reason": "Verified manual credit",
+	}
+	if status, body := send(t, playerClient, http.MethodPost, base+"/api/admin/users/"+player.ID+"/wallet-adjustments", adjustment); status != http.StatusForbidden {
+		t.Fatalf("player adjustment: want 403, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/admin/transactions", nil); status != http.StatusForbidden {
+		t.Fatalf("player transaction list: want 403, got %d (%s)", status, body)
+	}
+
+	adminClient := clientWithCookies(t)
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/register", map[string]string{
+		"email": "wallet-admin@example.com", "password": testPassword, "display_name": "Wallet Admin",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("register future admin: want 201, got %d (%s)", status, body)
+	}
+	var admin struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &admin); err != nil {
+		t.Fatalf("decode admin: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE id = ($1::text)::uuid`, admin.ID); err != nil {
+		t.Fatalf("promote admin: %v", err)
+	}
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/users/not-a-uuid/wallet-adjustments", adjustment); status != http.StatusNotFound {
+		t.Fatalf("invalid adjustment target: want 404, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/users/"+player.ID+"/wallet-adjustments", adjustment)
+	if status != http.StatusCreated {
+		t.Fatalf("credit wallet: want 201, got %d (%s)", status, body)
+	}
+	var credit struct {
+		ID            string `json:"id"`
+		Kind          string `json:"kind"`
+		AmountMinor   int64  `json:"amount_minor"`
+		BalanceBefore int64  `json:"balance_before"`
+		BalanceAfter  int64  `json:"balance_after"`
+	}
+	if err := json.Unmarshal(body, &credit); err != nil {
+		t.Fatalf("decode credit: %v", err)
+	}
+	if credit.ID == "" || credit.Kind != "adjustment" || credit.AmountMinor != 15_000 || credit.BalanceBefore != 0 || credit.BalanceAfter != 15_000 {
+		t.Fatalf("unexpected credit: %+v", credit)
+	}
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/users/"+player.ID+"/wallet-adjustments", map[string]any{
+		"direction": "debit", "currency": "PHP", "amount_minor": 3_000, "reason": "Verified manual debit",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("debit wallet: want 201, got %d (%s)", status, body)
+	}
+	var debit struct {
+		ID            string `json:"id"`
+		AmountMinor   int64  `json:"amount_minor"`
+		BalanceBefore int64  `json:"balance_before"`
+		BalanceAfter  int64  `json:"balance_after"`
+	}
+	if err := json.Unmarshal(body, &debit); err != nil {
+		t.Fatalf("decode debit: %v", err)
+	}
+	if debit.ID == "" || debit.AmountMinor != -3_000 || debit.BalanceBefore != 15_000 || debit.BalanceAfter != 12_000 {
+		t.Fatalf("unexpected debit: %+v", debit)
+	}
+
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/users/"+player.ID+"/wallet-adjustments", map[string]any{
+		"direction": "debit", "currency": "PHP", "amount_minor": 20_000, "reason": "Too large",
+	})
+	if status != http.StatusConflict {
+		t.Fatalf("excessive debit: want 409, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/transactions?user_id="+player.ID+"&currency=PHP&type=adjustment&page=1&size=10", nil)
+	if status != http.StatusOK {
+		t.Fatalf("filtered transactions: want 200, got %d (%s)", status, body)
+	}
+	var page struct {
+		Rows []struct {
+			ID       string `json:"id"`
+			UserID   string `json:"user_id"`
+			WalletID string `json:"wallet_id"`
+			Currency string `json:"currency"`
+			Kind     string `json:"kind"`
+		} `json:"rows"`
+		Total int `json:"total"`
+		Page  int `json:"page"`
+		Size  int `json:"size"`
+	}
+	if err := json.Unmarshal(body, &page); err != nil {
+		t.Fatalf("decode transaction page: %v (%s)", err, body)
+	}
+	if page.Total != 2 || page.Page != 1 || page.Size != 10 || len(page.Rows) != 2 {
+		t.Fatalf("unexpected transaction page: %+v", page)
+	}
+	seen := map[string]bool{}
+	for _, row := range page.Rows {
+		seen[row.ID] = true
+		if row.UserID != player.ID || row.WalletID == "" || row.Currency != "PHP" || row.Kind != "adjustment" {
+			t.Fatalf("unexpected transaction row: %+v", row)
+		}
+	}
+	if !seen[credit.ID] || !seen[debit.ID] {
+		t.Fatalf("filtered page omitted an adjustment: seen=%v", seen)
+	}
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/transactions?user_id=not-a-uuid", nil); status != http.StatusBadRequest {
+		t.Fatalf("invalid transaction filter: want 400, got %d (%s)", status, body)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/wallets/PHP", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"balance_minor":12000`)) {
+		t.Fatalf("player wallet after adjustments: want balance 12000, got %d (%s)", status, body)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/wallets/PHP/transactions?page=1&size=10", nil)
+	if status != http.StatusOK {
+		t.Fatalf("player transactions after adjustments: want 200, got %d (%s)", status, body)
+	}
+	var playerPage struct {
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(body, &playerPage); err != nil || playerPage.Total != 2 {
+		t.Fatalf("player transaction page: total=%d err=%v (%s)", playerPage.Total, err, body)
+	}
+
+	var balance int64
+	var movements, audits int
+	if err := db.QueryRow(`SELECT balance_minor FROM wallets WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, player.ID).Scan(&balance); err != nil {
+		t.Fatalf("read adjusted balance: %v", err)
+	}
+	if err := db.QueryRow(`SELECT count(*) FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, player.ID).Scan(&movements); err != nil {
+		t.Fatalf("count adjustment movements: %v", err)
+	}
+	if err := db.QueryRow(`SELECT count(*) FROM audit_logs WHERE actor_user_id = ($1::text)::uuid AND entity_type = 'wallet'`, admin.ID).Scan(&audits); err != nil {
+		t.Fatalf("count adjustment audits: %v", err)
+	}
+	if balance != 12_000 || movements != 2 || audits != 2 {
+		t.Fatalf("balance=%d movements=%d audits=%d, want 12000/2/2", balance, movements, audits)
+	}
+}
+
 func TestCurrenciesListsEnabledMetadata(t *testing.T) {
 	db := requireDB(t)
 	base, client := newServer(t, db)
@@ -518,10 +733,12 @@ func TestCurrenciesListsEnabledMetadata(t *testing.T) {
 	}
 
 	var currencies []struct {
-		Code       string `json:"code"`
-		Name       string `json:"name"`
-		Symbol     string `json:"symbol"`
-		MinorUnits int    `json:"minor_units"`
+		Code            string `json:"code"`
+		Name            string `json:"name"`
+		Symbol          string `json:"symbol"`
+		MinorUnits      int    `json:"minor_units"`
+		DepositMinMinor int64  `json:"deposit_min_minor"`
+		DepositMaxMinor int64  `json:"deposit_max_minor"`
 	}
 	if err := json.Unmarshal(body, &currencies); err != nil {
 		t.Fatalf("decode: %v (%s)", err, body)
@@ -530,12 +747,345 @@ func TestCurrenciesListsEnabledMetadata(t *testing.T) {
 		t.Fatalf("want PHP and USD, got %+v", currencies)
 	}
 	if currencies[0].Code != "PHP" || currencies[0].Name != "Philippine Peso" ||
-		currencies[0].Symbol != "₱" || currencies[0].MinorUnits != 2 {
+		currencies[0].Symbol != "₱" || currencies[0].MinorUnits != 2 ||
+		currencies[0].DepositMinMinor <= 0 ||
+		currencies[0].DepositMaxMinor < currencies[0].DepositMinMinor {
 		t.Fatalf("unexpected PHP metadata: %+v", currencies[0])
 	}
 	if currencies[1].Code != "USD" || currencies[1].Name != "US Dollar" ||
-		currencies[1].Symbol != "$" || currencies[1].MinorUnits != 2 {
+		currencies[1].Symbol != "$" || currencies[1].MinorUnits != 2 ||
+		currencies[1].DepositMinMinor <= 0 ||
+		currencies[1].DepositMaxMinor < currencies[1].DepositMinMinor {
 		t.Fatalf("unexpected USD metadata: %+v", currencies[1])
+	}
+}
+
+func TestPaymentMethodsRequireASession(t *testing.T) {
+	db := requireDB(t)
+	base, client := newServer(t, db)
+
+	status, body := send(t, client, http.MethodGet, base+"/api/payment-methods", nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("anonymous: want 401, got %d (%s)", status, body)
+	}
+
+	register(t, client, base)
+	status, body = send(t, client, http.MethodGet, base+"/api/payment-methods", nil)
+	if status != http.StatusOK {
+		t.Fatalf("with a session: want 200, got %d (%s)", status, body)
+	}
+
+	var methods []struct {
+		ID                string `json:"id"`
+		Name              string `json:"name"`
+		PayTo             string `json:"pay_to"`
+		ReferenceRequired bool   `json:"reference_required"`
+	}
+	if err := json.Unmarshal(body, &methods); err != nil {
+		t.Fatalf("decode: %v (%s)", err, body)
+	}
+	if len(methods) == 0 || methods[0].ID == "" || methods[0].Name == "" || methods[0].PayTo == "" {
+		t.Fatalf("enabled payment methods are incomplete: %+v", methods)
+	}
+}
+
+func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
+	db := requireDB(t)
+	base, playerClient, proofDir := newServerWithProofDir(t, db)
+	status, body := register(t, playerClient, base)
+	if status != http.StatusCreated {
+		t.Fatalf("register player: want 201, got %d (%s)", status, body)
+	}
+	var player struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &player); err != nil {
+		t.Fatalf("decode player: %v", err)
+	}
+
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/payment-methods", nil)
+	if status != http.StatusOK {
+		t.Fatalf("payment methods: want 200, got %d (%s)", status, body)
+	}
+	var methods []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &methods); err != nil || len(methods) == 0 {
+		t.Fatalf("decode methods: methods=%+v err=%v", methods, err)
+	}
+
+	png := append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, 32)...)
+	status, body = sendDeposit(t, playerClient, base+"/api/deposits", methods[0].ID, "PHP", "10000", "payment-reference", "http-deposit-key", "untrusted-name.png", png)
+	if status != http.StatusCreated {
+		t.Fatalf("create deposit: want 201, got %d (%s)", status, body)
+	}
+	var created struct {
+		ID          string `json:"id"`
+		AmountMinor int64  `json:"amount_minor"`
+		Status      string `json:"status"`
+	}
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("decode deposit: %v (%s)", err, body)
+	}
+	if created.ID == "" || created.AmountMinor != 10_000 || created.Status != "pending" {
+		t.Fatalf("unexpected deposit: %+v", created)
+	}
+
+	status, body = sendDeposit(t, playerClient, base+"/api/deposits", methods[0].ID, "PHP", "20000", "changed-reference", "http-deposit-key", "second-name.png", png)
+	if status != http.StatusOK {
+		t.Fatalf("retry deposit: want 200, got %d (%s)", status, body)
+	}
+	var retried struct {
+		ID          string `json:"id"`
+		AmountMinor int64  `json:"amount_minor"`
+	}
+	if err := json.Unmarshal(body, &retried); err != nil {
+		t.Fatalf("decode retry: %v", err)
+	}
+	if retried.ID != created.ID || retried.AmountMinor != created.AmountMinor {
+		t.Fatalf("retry did not return original: created=%+v retried=%+v", created, retried)
+	}
+	proofs, err := os.ReadDir(proofDir)
+	if err != nil {
+		t.Fatalf("read proof directory: %v", err)
+	}
+	if len(proofs) != 1 || proofs[0].Name() == "untrusted-name.png" || filepath.Ext(proofs[0].Name()) != ".png" {
+		t.Fatalf("stored proofs=%v, want one server-named PNG", proofs)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/deposits?page=1&size=1", nil)
+	if status != http.StatusOK {
+		t.Fatalf("deposit list: want 200, got %d (%s)", status, body)
+	}
+	var depositPage struct {
+		Rows []struct {
+			ID string `json:"id"`
+		} `json:"rows"`
+		Total int `json:"total"`
+		Page  int `json:"page"`
+		Size  int `json:"size"`
+	}
+	if err := json.Unmarshal(body, &depositPage); err != nil {
+		t.Fatalf("decode deposit page: %v (%s)", err, body)
+	}
+	if depositPage.Total != 1 || depositPage.Page != 1 || depositPage.Size != 1 || len(depositPage.Rows) != 1 || depositPage.Rows[0].ID != created.ID {
+		t.Fatalf("unexpected deposit page: %+v", depositPage)
+	}
+
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/deposits/"+created.ID, nil); status != http.StatusOK {
+		t.Fatalf("owner read: want 200, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/deposits/not-a-uuid", nil); status != http.StatusNotFound {
+		t.Fatalf("invalid deposit id: want 404, got %d (%s)", status, body)
+	}
+
+	adminClient := clientWithCookies(t)
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/register", map[string]string{
+		"email": "deposit-admin@example.com", "password": testPassword, "display_name": "Deposit Admin",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("register future admin: want 201, got %d (%s)", status, body)
+	}
+	var admin struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &admin); err != nil {
+		t.Fatalf("decode admin: %v", err)
+	}
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/deposits/"+created.ID, nil); status != http.StatusNotFound {
+		t.Fatalf("other player read: want 404, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/deposits/"+created.ID+"/proof", nil); status != http.StatusForbidden {
+		t.Fatalf("player proof read: want 403, got %d (%s)", status, body)
+	}
+	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE id = ($1::text)::uuid`, admin.ID); err != nil {
+		t.Fatalf("promote admin: %v", err)
+	}
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/deposits?page=1&size=1", nil)
+	if status != http.StatusOK {
+		t.Fatalf("admin deposit queue: want 200, got %d (%s)", status, body)
+	}
+	var queuePage struct {
+		Rows []struct {
+			ID     string `json:"id"`
+			UserID string `json:"user_id"`
+		} `json:"rows"`
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(body, &queuePage); err != nil {
+		t.Fatalf("decode queue page: %v (%s)", err, body)
+	}
+	if queuePage.Total != 1 || len(queuePage.Rows) != 1 || queuePage.Rows[0].ID != created.ID || queuePage.Rows[0].UserID != player.ID {
+		t.Fatalf("unexpected queue page: %+v", queuePage)
+	}
+
+	request, err := http.NewRequest(http.MethodGet, base+"/api/admin/deposits/"+created.ID+"/proof", nil)
+	if err != nil {
+		t.Fatalf("build proof request: %v", err)
+	}
+	response, err := adminClient.Do(request)
+	if err != nil {
+		t.Fatalf("get proof: %v", err)
+	}
+	proofBody, readErr := io.ReadAll(response.Body)
+	response.Body.Close()
+	if readErr != nil {
+		t.Fatalf("read proof: %v", readErr)
+	}
+	if response.StatusCode != http.StatusOK || response.Header.Get("Content-Type") != "image/png" || !bytes.Equal(proofBody, png) {
+		t.Fatalf("proof response: status=%d type=%q body-match=%v", response.StatusCode, response.Header.Get("Content-Type"), bytes.Equal(proofBody, png))
+	}
+
+	if status, body := send(t, playerClient, http.MethodPost, base+"/api/admin/deposits/"+created.ID+"/review", map[string]any{"action": "approve"}); status != http.StatusForbidden {
+		t.Fatalf("player review: want 403, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/deposits/"+created.ID+"/review", map[string]any{"action": "approve", "amount_minor": 12_000}); status != http.StatusBadRequest {
+		t.Fatalf("edited approval without reason: want 400, got %d (%s)", status, body)
+	}
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/deposits/"+created.ID+"/review", map[string]any{"action": "approve", "amount_minor": 12_000, "reason": "Verified proof amount"})
+	if status != http.StatusOK {
+		t.Fatalf("approve deposit: want 200, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/deposits/"+created.ID+"/review", map[string]any{"action": "approve"}); status != http.StatusConflict || !bytes.Contains(body, []byte("DEPOSIT_ALREADY_REVIEWED")) {
+		t.Fatalf("second approval: want coded 409, got %d (%s)", status, body)
+	}
+
+	var balance int64
+	var movements, audits int
+	if err := db.QueryRow(`SELECT balance_minor FROM wallets WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, player.ID).Scan(&balance); err != nil {
+		t.Fatalf("read approved balance: %v", err)
+	}
+	if err := db.QueryRow(`SELECT count(*) FROM wallet_transactions WHERE reference_id = ($1::text)::uuid AND kind = 'deposit'`, created.ID).Scan(&movements); err != nil {
+		t.Fatalf("count deposit movements: %v", err)
+	}
+	if err := db.QueryRow(`SELECT count(*) FROM audit_logs WHERE entity_type = 'deposit_request' AND entity_id = $1`, created.ID).Scan(&audits); err != nil {
+		t.Fatalf("count deposit audits: %v", err)
+	}
+	if balance != 12_000 || movements != 1 || audits != 1 {
+		t.Fatalf("balance=%d movements=%d audits=%d, want 12000/1/1", balance, movements, audits)
+	}
+}
+
+func TestDepositHTTPRejectsNonImageProofWithoutPersistingIt(t *testing.T) {
+	db := requireDB(t)
+	base, client, proofDir := newServerWithProofDir(t, db)
+	if status, body := register(t, client, base); status != http.StatusCreated {
+		t.Fatalf("register: want 201, got %d (%s)", status, body)
+	}
+	status, body := send(t, client, http.MethodGet, base+"/api/payment-methods", nil)
+	if status != http.StatusOK {
+		t.Fatalf("payment methods: want 200, got %d (%s)", status, body)
+	}
+	var methods []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &methods); err != nil || len(methods) == 0 {
+		t.Fatalf("decode methods: methods=%+v err=%v", methods, err)
+	}
+	png := append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, 32)...)
+	status, body = sendDeposit(t, client, base+"/api/deposits", methods[0].ID, "PHP", "10000", "reference", "", "proof.png", png)
+	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"idempotency_key"`)) {
+		t.Fatalf("missing idempotency key: want field error, got %d (%s)", status, body)
+	}
+
+	status, body = sendDeposit(t, client, base+"/api/deposits", methods[0].ID, "PHP", "10000", "reference", "bad-proof-key", "pretend.png", []byte("this is not an image"))
+	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"proof"`)) {
+		t.Fatalf("invalid proof: want proof field error, got %d (%s)", status, body)
+	}
+	entries, err := os.ReadDir(proofDir)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("read proof directory: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("invalid proof left files behind: %v", entries)
+	}
+	var count int
+	if err := db.QueryRow(`SELECT count(*) FROM deposit_requests`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("deposit requests=%d err=%v, want zero", count, err)
+	}
+}
+
+func TestDepositHTTPRejectionPreservesReasonWithoutMovingMoney(t *testing.T) {
+	db := requireDB(t)
+	base, playerClient := newServer(t, db)
+	status, body := register(t, playerClient, base)
+	if status != http.StatusCreated {
+		t.Fatalf("register player: want 201, got %d (%s)", status, body)
+	}
+	var player struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &player); err != nil {
+		t.Fatalf("decode player: %v", err)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/payment-methods", nil)
+	if status != http.StatusOK {
+		t.Fatalf("payment methods: want 200, got %d (%s)", status, body)
+	}
+	var methods []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &methods); err != nil || len(methods) == 0 {
+		t.Fatalf("decode methods: methods=%+v err=%v", methods, err)
+	}
+	png := append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, 32)...)
+	status, body = sendDeposit(t, playerClient, base+"/api/deposits", methods[0].ID, "PHP", "10000", "rejected-reference", "reject-http-key", "proof.png", png)
+	if status != http.StatusCreated {
+		t.Fatalf("create deposit: want 201, got %d (%s)", status, body)
+	}
+	var request struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &request); err != nil {
+		t.Fatalf("decode request: %v", err)
+	}
+
+	adminClient := clientWithCookies(t)
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/register", map[string]string{
+		"email": "reject-admin@example.com", "password": testPassword, "display_name": "Reject Admin",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("register future admin: want 201, got %d (%s)", status, body)
+	}
+	var admin struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &admin); err != nil {
+		t.Fatalf("decode admin: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE id = ($1::text)::uuid`, admin.ID); err != nil {
+		t.Fatalf("promote admin: %v", err)
+	}
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/deposits/"+request.ID+"/review", map[string]any{"action": "reject", "reason": "Reference not found"}); status != http.StatusOK {
+		t.Fatalf("reject deposit: want 200, got %d (%s)", status, body)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/deposits/"+request.ID, nil)
+	if status != http.StatusOK {
+		t.Fatalf("read rejected deposit: want 200, got %d (%s)", status, body)
+	}
+	var rejected struct {
+		Status string  `json:"status"`
+		Reason *string `json:"reason"`
+	}
+	if err := json.Unmarshal(body, &rejected); err != nil {
+		t.Fatalf("decode rejected request: %v", err)
+	}
+	if rejected.Status != "rejected" || rejected.Reason == nil || *rejected.Reason != "Reference not found" {
+		t.Fatalf("unexpected rejected request: %+v", rejected)
+	}
+
+	var balance int64
+	var movements, audits int
+	if err := db.QueryRow(`SELECT balance_minor FROM wallets WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, player.ID).Scan(&balance); err != nil {
+		t.Fatalf("read wallet: %v", err)
+	}
+	if err := db.QueryRow(`SELECT count(*) FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, player.ID).Scan(&movements); err != nil {
+		t.Fatalf("count movements: %v", err)
+	}
+	if err := db.QueryRow(`SELECT count(*) FROM audit_logs WHERE actor_user_id = ($1::text)::uuid AND entity_id = $2`, admin.ID, request.ID).Scan(&audits); err != nil {
+		t.Fatalf("count audits: %v", err)
+	}
+	if balance != 0 || movements != 0 || audits != 1 {
+		t.Fatalf("balance=%d movements=%d audits=%d, want 0/0/1", balance, movements, audits)
 	}
 }
 

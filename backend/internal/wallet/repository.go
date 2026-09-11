@@ -3,9 +3,11 @@ package wallet
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -56,6 +58,47 @@ func ListTransactions(ctx context.Context, db *sql.DB, userID, currency string, 
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("wallet: transaction rows: %w", err)
+	}
+	return result, total, nil
+}
+
+type AdminTransactionFilter struct {
+	Page     int
+	Size     int
+	UserID   string
+	Currency string
+	Kind     string
+	From     *time.Time
+	To       *time.Time
+}
+
+func ListAdminTransactions(ctx context.Context, db *sql.DB, filter AdminTransactionFilter) ([]Transaction, int, error) {
+	args := []any{filter.UserID, filter.Currency, filter.Kind, filter.From, filter.To}
+	where := `WHERE (NULLIF($1, '')::uuid IS NULL OR user_id = NULLIF($1, '')::uuid)
+      AND ($2 = '' OR currency = $2)
+      AND ($3 = '' OR kind = $3)
+      AND ($4::timestamptz IS NULL OR created_at >= $4::timestamptz)
+      AND ($5::timestamptz IS NULL OR created_at <= $5::timestamptz)`
+	var total int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM wallet_transactions `+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("wallet: count admin transactions: %w", err)
+	}
+	args = append(args, filter.Size, (filter.Page-1)*filter.Size)
+	rows, err := db.QueryContext(ctx, `SELECT id::text, wallet_id::text, user_id::text, currency, kind, amount_minor, balance_before, balance_after, COALESCE(reason, ''), created_at FROM wallet_transactions `+where+` ORDER BY created_at DESC, id DESC LIMIT $6 OFFSET $7`, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("wallet: list admin transactions: %w", err)
+	}
+	defer rows.Close()
+	result := make([]Transaction, 0)
+	for rows.Next() {
+		var item Transaction
+		if err := rows.Scan(&item.ID, &item.WalletID, &item.UserID, &item.Currency, &item.Kind, &item.AmountMinor, &item.BalanceBefore, &item.BalanceAfter, &item.Reason, &item.CreatedAt); err != nil {
+			return nil, 0, fmt.Errorf("wallet: scan admin transaction: %w", err)
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("wallet: admin transaction rows: %w", err)
 	}
 	return result, total, nil
 }
@@ -123,6 +166,29 @@ func Get(ctx context.Context, db *sql.DB, userID, currency string) (Wallet, erro
 // Move atomically changes a wallet and appends its immutable ledger row.
 // amountMinor is signed: positive credits, negative debits.
 func Move(ctx context.Context, db *sql.DB, userID, currency, kind string, amountMinor int64, idempotencyKey, reason string) (Transaction, error) {
+	return move(ctx, db, userID, currency, kind, amountMinor, idempotencyKey, "", reason, false)
+}
+
+// Adjust atomically changes a user's wallet, records the acting administrator,
+// and appends the corresponding audit record.
+func Adjust(ctx context.Context, db *sql.DB, actorID, userID, currency, direction string, amountMinor int64, reason string) (Transaction, error) {
+	if amountMinor <= 0 {
+		return Transaction{}, errors.New("wallet: adjustment amount must be positive")
+	}
+	if strings.TrimSpace(reason) == "" {
+		return Transaction{}, errors.New("wallet: adjustment reason is required")
+	}
+	if direction != "credit" && direction != "debit" {
+		return Transaction{}, errors.New("wallet: adjustment direction is invalid")
+	}
+	if direction == "debit" {
+		amountMinor = -amountMinor
+	}
+	kind := "adjustment"
+	return move(ctx, db, userID, currency, kind, amountMinor, "", actorID, strings.TrimSpace(reason), true)
+}
+
+func move(ctx context.Context, db *sql.DB, userID, currency, kind string, amountMinor int64, idempotencyKey, actorID, reason string, audit bool) (Transaction, error) {
 	if amountMinor == 0 {
 		return Transaction{}, errors.New("wallet: amount must not be zero")
 	}
@@ -131,6 +197,11 @@ func Move(ctx context.Context, db *sql.DB, userID, currency, kind string, amount
 		return Transaction{}, fmt.Errorf("wallet: begin movement: %w", err)
 	}
 	defer tx.Rollback()
+	if audit {
+		if err := provision(ctx, tx, userID); err != nil {
+			return Transaction{}, err
+		}
+	}
 	var w Wallet
 	err = tx.QueryRowContext(ctx, `SELECT `+walletColumns+` FROM wallets WHERE user_id = ($1::text)::uuid AND currency = $2 FOR UPDATE`, userID, currency).Scan(&w.ID, &w.UserID, &w.Currency, &w.BalanceMinor, &w.Status, &w.CreatedAt, &w.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -138,6 +209,9 @@ func Move(ctx context.Context, db *sql.DB, userID, currency, kind string, amount
 	}
 	if err != nil {
 		return Transaction{}, fmt.Errorf("wallet: lock: %w", err)
+	}
+	if err := validateMovementCurrency(w, currency); err != nil {
+		return Transaction{}, err
 	}
 	if idempotencyKey != "" {
 		var existing Transaction
@@ -169,14 +243,32 @@ func Move(ctx context.Context, db *sql.DB, userID, currency, kind string, amount
 		return Transaction{}, fmt.Errorf("wallet: update balance: %w", err)
 	}
 	var result Transaction
-	err = tx.QueryRowContext(ctx, `INSERT INTO wallet_transactions (wallet_id, user_id, currency, kind, amount_minor, balance_before, balance_after, idempotency_key, reason) VALUES (($1::text)::uuid, ($2::text)::uuid, $3, $4, $5, $6, $7, NULLIF($8, ''), NULLIF($9, '')) RETURNING id::text, wallet_id::text, user_id::text, currency, kind, amount_minor, balance_before, balance_after, COALESCE(reason, ''), created_at`, w.ID, userID, currency, kind, amountMinor, w.BalanceMinor, after, idempotencyKey, reason).Scan(&result.ID, &result.WalletID, &result.UserID, &result.Currency, &result.Kind, &result.AmountMinor, &result.BalanceBefore, &result.BalanceAfter, &result.Reason, &result.CreatedAt)
+	actorValue := any(nil)
+	if actorID != "" {
+		actorValue = actorID
+	}
+	err = tx.QueryRowContext(ctx, `INSERT INTO wallet_transactions (wallet_id, user_id, currency, kind, amount_minor, balance_before, balance_after, idempotency_key, actor_user_id, reason) VALUES (($1::text)::uuid, ($2::text)::uuid, $3, $4, $5, $6, $7, NULLIF($8, ''), ($9::text)::uuid, NULLIF($10, '')) RETURNING id::text, wallet_id::text, user_id::text, currency, kind, amount_minor, balance_before, balance_after, COALESCE(reason, ''), created_at`, w.ID, userID, currency, kind, amountMinor, w.BalanceMinor, after, idempotencyKey, actorValue, reason).Scan(&result.ID, &result.WalletID, &result.UserID, &result.Currency, &result.Kind, &result.AmountMinor, &result.BalanceBefore, &result.BalanceAfter, &result.Reason, &result.CreatedAt)
 	if err != nil {
 		return Transaction{}, fmt.Errorf("wallet: insert movement: %w", err)
+	}
+	if audit {
+		before, _ := json.Marshal(map[string]any{"balance_minor": w.BalanceMinor, "status": w.Status})
+		afterData, _ := json.Marshal(map[string]any{"balance_minor": after, "status": w.Status})
+		if _, err := tx.ExecContext(ctx, `INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, detail, before_data, after_data) VALUES (($1::text)::uuid, $2, $3, ($4::text)::uuid, $5, $6::jsonb, $7::jsonb)`, actorID, "wallet."+map[bool]string{true: "credit", false: "debit"}[amountMinor > 0], "wallet", w.ID, reason, string(before), string(afterData)); err != nil {
+			return Transaction{}, fmt.Errorf("wallet: insert audit: %w", err)
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return Transaction{}, fmt.Errorf("wallet: commit movement: %w", err)
 	}
 	return result, nil
+}
+
+func validateMovementCurrency(wallet Wallet, movementCurrency string) error {
+	if wallet.Currency != movementCurrency {
+		return ErrCurrencyMismatch
+	}
+	return nil
 }
 
 func scanWallets(rows *sql.Rows) ([]Wallet, error) {
