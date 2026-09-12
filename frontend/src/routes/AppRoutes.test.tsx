@@ -39,6 +39,7 @@ describe('the public lobby', () => {
     expect(await screen.findByRole('dialog', { name: 'Join now' })).toBeInTheDocument()
     expect(screen.getByLabelText('Username')).toBeInTheDocument()
     expect(screen.queryByLabelText('Account currency')).not.toBeInTheDocument()
+    expect(screen.queryByText(/nothing converts/i)).not.toBeInTheDocument()
   })
 })
 

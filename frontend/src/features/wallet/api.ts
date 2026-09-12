@@ -92,17 +92,17 @@ export async function fetchDepositLimits(currency: Currency): Promise<DepositLim
   }
 }
 
-export async function fetchPendingDeposit(): Promise<DepositRequest | null> {
+export async function fetchPendingDeposits(): Promise<DepositRequest[]> {
   if (usingFixtures) {
-    return mockRequest(
-      () =>
-        [...depositRequests]
-          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
-          .find((request) => request.status === 'pending') ?? null,
+    return mockRequest(() =>
+      depositRequests
+        .filter((request) => request.status === 'pending')
+        .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+        .map((request) => ({ ...request })),
     )
   }
-  const page = await api.get<Page<DepositRequest>>('/deposits?status=pending&page=1&size=1')
-  return page.rows[0] ?? null
+  const page = await api.get<Page<DepositRequest>>('/deposits?status=pending&page=1&size=20')
+  return page.rows
 }
 
 export async function fetchDeposit(id: string): Promise<DepositRequest | null> {

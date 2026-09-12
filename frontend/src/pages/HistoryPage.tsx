@@ -4,13 +4,13 @@ import type { Transaction } from '@/api/types'
 import { Select } from '@/components/ui/Field'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { PageNav } from '@/components/ui/PageNav'
-import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
+import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
-import { useTransactions, type HistoryFilter, type HistoryKind } from '@/features/wallet'
-import { formatClock, formatDate, formatDateTime } from '@/lib/format'
+import { ledgerColumns, useTransactions, type HistoryFilter, type HistoryKind } from '@/features/wallet'
+import { formatClock, formatDate } from '@/lib/format'
 import { money } from '@/lib/money'
 
 const kindTabs = [
@@ -99,7 +99,7 @@ export function HistoryPage() {
           <div className="hidden lg:block">
             <RecordTable
               label="Transaction history"
-              columns={columns}
+              columns={ledgerColumns}
               rows={page.rows}
               rowKey={(row) => row.id}
               renderCard={() => null}
@@ -118,32 +118,6 @@ export function HistoryPage() {
     </div>
   )
 }
-
-const columns: Column<Transaction>[] = [
-  {
-    key: 'date',
-    header: 'Date',
-    width: '190px',
-    cell: (row) => <span className="font-mono text-[13px] text-ink-mute">{formatDateTime(row.created_at)}</span>,
-  },
-  { key: 'type', header: 'Type', cell: (row) => row.label },
-  {
-    key: 'reference',
-    header: 'Reference',
-    width: '140px',
-    cell: (row) => <span className="font-mono text-[13px] text-ink-mute">{row.reference}</span>,
-  },
-  { key: 'status', header: 'Status', width: '130px', cell: (row) => <StatusBadge status={row.status} /> },
-  {
-    key: 'amount',
-    header: 'Amount',
-    align: 'right',
-    width: '160px',
-    cell: (row) => (
-      <MoneyDisplay value={money(row.amount_minor, row.currency)} tone="auto" sign="always" />
-    ),
-  },
-]
 
 function groupByDay(rows: Transaction[]): [string, Transaction[]][] {
   const groups = new Map<string, Transaction[]>()

@@ -45,10 +45,6 @@ export function AccountPage() {
             </span>
           </Row>
         ))}
-        <p className="text-[13px] leading-relaxed text-ink-mute">
-          One wallet per currency. Deposits and history belong to the wallet they were made in, and
-          nothing converts between currencies anywhere in the platform.
-        </p>
       </Panel>
 
       <Panel title="Session" bodyClassName="flex flex-col items-start gap-3 p-5">

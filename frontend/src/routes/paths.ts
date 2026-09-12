@@ -9,6 +9,7 @@ export const paths = {
   wallet: '/wallet',
   deposit: '/wallet/deposit',
   depositStatus: (id: string) => `/wallet/deposit/${id}`,
+  cashOut: '/wallet/cash-out',
   history: '/history',
   account: '/account',
   login: '/login',

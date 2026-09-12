@@ -10,7 +10,7 @@ import {
   fetchDepositLimits,
   fetchNotifications,
   fetchPaymentMethods,
-  fetchPendingDeposit,
+  fetchPendingDeposits,
   fetchRecentRounds,
   fetchTransactions,
   fetchWallet,
@@ -54,8 +54,8 @@ export function useDepositLimits() {
   })
 }
 
-export function usePendingDeposit() {
-  return useQuery({ queryKey: ['deposits', 'pending'], queryFn: fetchPendingDeposit })
+export function usePendingDeposits() {
+  return useQuery({ queryKey: ['deposits', 'pending'], queryFn: fetchPendingDeposits })
 }
 
 export function useDeposit(id: string) {

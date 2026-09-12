@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { AppShell } from '@/components/shell/AppShell'
 import { AccountPage } from '@/pages/AccountPage'
+import { CashOutPage } from '@/pages/CashOutPage'
 import { DepositPage } from '@/pages/DepositPage'
 import { DepositStatusPage } from '@/pages/DepositStatusPage'
 import { FavoritesPage } from '@/pages/FavoritesPage'
@@ -74,6 +75,7 @@ export function AppRoutes() {
           <Route path={paths.wallet} element={<WalletPage />} />
           <Route path={paths.deposit} element={<DepositPage />} />
           <Route path="/wallet/deposit/:id" element={<DepositStatusPage />} />
+          <Route path={paths.cashOut} element={<CashOutPage />} />
           <Route path={paths.history} element={<HistoryPage />} />
           <Route path={paths.account} element={<AccountPage />} />
         </Route>

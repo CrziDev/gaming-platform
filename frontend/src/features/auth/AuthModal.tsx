@@ -187,10 +187,6 @@ function JoinForm({ mutation }: { mutation: ReturnType<typeof useRegister> }) {
         />
       </Field>
 
-      <p className="rounded-input bg-inset px-3 py-2 text-[12.5px] leading-relaxed text-ink-mute">
-        You get a wallet in each currency the platform supports. Nothing converts between them.
-      </p>
-
       <label className="flex items-start gap-2.5 py-0.5 text-[13px] leading-relaxed text-ink-mute">
         <input
           type="checkbox"

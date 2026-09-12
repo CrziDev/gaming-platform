@@ -48,6 +48,18 @@ export const depositLimits = {
 
 export const depositRequests: DepositRequest[] = [
   {
+    id: 'dep-8850',
+    reference: '8850',
+    method_id: 'method-a',
+    method_name: 'Method A',
+    amount_minor: 250_000,
+    currency: 'PHP',
+    status: 'pending',
+    created_at: minutesAgo(3),
+    reviewed_at: null,
+    reason: null,
+  },
+  {
     id: 'dep-8841',
     reference: '8841',
     method_id: 'method-a',

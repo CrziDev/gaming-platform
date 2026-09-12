@@ -21,6 +21,7 @@ const playerRoutes: [string, string][] = [
   ['/wallet', 'Wallet'],
   ['/wallet/deposit', 'Deposit'],
   ['/wallet/deposit/dep-8841', 'Request 8841'],
+  ['/wallet/cash-out', 'Cash out'],
   ['/history', 'History'],
   ['/account', 'Account'],
 ]
