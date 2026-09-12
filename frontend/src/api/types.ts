@@ -46,6 +46,7 @@ export type Game = {
   id: string
   slug: string
   name: string
+  description: string
   category_slug: string
   category_name: string
   provider: string
@@ -54,8 +55,9 @@ export type Game = {
   min_wager_minor: number
   max_wager_minor: number
   wager_step_minor: number
-  art_seed: number
+  thumbnail_url: string | null
   flags: GameFlag[]
+  created_at: string
 }
 
 export type LobbyRow = {
@@ -196,24 +198,31 @@ export type RtpStatus = 'draft' | 'verified' | 'active' | 'retired'
 export type RtpProfile = {
   id: string
   game_id: string
+  game_slug: string
   game_name: string
-  basis_points: number
+  name: string
+  version: number
+  target_basis_points: number
   status: RtpStatus
-  scheduled_end: string | null
-  operator: string
+  engine_config_ref: string
+  theoretical_basis_points: number | null
+  observed_basis_points: number | null
+  verified_at: string | null
+  effective_from: string | null
+  effective_until: string | null
+  created_by: string
+  created_by_display_name: string
   created_at: string
+  updated_at: string
 }
 
-export type AdminGame = {
-  id: string
-  slug: string
-  name: string
-  category_name: string
-  provider: string
-  status: GameStatus
-  integration: string
-  active_rtp_basis_points: number
+export type GameIntegration = 'unreviewed' | 'under_review' | 'supported' | 'integrated' | 'unsupported'
+
+export type AdminGame = Game & {
+  integration: GameIntegration
+  active_rtp_basis_points: number | null
   rounds_30d: number
+  updated_at: string
 }
 
 export type ConsoleAlert = {

@@ -6,24 +6,45 @@ import { buttonStyles } from '@/components/ui/Button'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
 import { Skeleton, SkeletonRows } from '@/components/ui/Skeleton'
-import { EmptyState } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { useActiveWallet, useDeposits, useTransactions } from '@/features/wallet'
+import { ChipTabs } from '@/components/ui/Tabs'
+import {
+  setActiveCurrency,
+  useActiveCurrency,
+  useActiveWallet,
+  usePendingDeposit,
+  useTransactions,
+  useWallets,
+} from '@/features/wallet'
 import { formatDateTime, formatRelative } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
 export function WalletPage() {
+  const currency = useActiveCurrency()
   const walletQuery = useActiveWallet()
-  const depositsQuery = useDeposits()
-  const historyQuery = useTransactions({ kind: 'all', days: 30, page: 1 })
+  const walletsQuery = useWallets()
+  const pendingQuery = usePendingDeposit()
+  const historyQuery = useTransactions({ kind: 'all', days: 30, page: 1, currency })
 
-  const pending = depositsQuery.data?.find((deposit) => deposit.status === 'pending')
+  const pending = pendingQuery.data ?? null
   const recent = historyQuery.data?.rows.slice(0, 5) ?? []
+  const held = walletsQuery.data ?? []
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Wallet</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Wallet</h1>
+        {held.length > 1 ? (
+          <ChipTabs
+            items={held.map((wallet) => ({ id: wallet.currency, label: wallet.currency }))}
+            value={currency}
+            onChange={setActiveCurrency}
+            label="Switch wallet"
+          />
+        ) : null}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start">
         <div className="flex flex-col gap-6">
@@ -37,9 +58,15 @@ export function WalletPage() {
                   {formatMoney(money(walletQuery.data.balance_minor, walletQuery.data.currency))}
                 </span>
                 <span className="text-[12.5px] text-ink-mute">
-                  One wallet · currency fixed at registration
+                  One wallet per currency · nothing converts between them
                 </span>
               </div>
+            ) : walletQuery.isError ? (
+              <ErrorState
+                title="Balance unavailable"
+                message="Your balance could not be loaded."
+                onRetry={() => void walletQuery.refetch()}
+              />
             ) : (
               <Skeleton className="h-20 w-64" />
             )}
@@ -62,6 +89,12 @@ export function WalletPage() {
 
             {historyQuery.isPending ? (
               <SkeletonRows count={4} />
+            ) : historyQuery.isError ? (
+              <ErrorState
+                title="Activity unavailable"
+                message="Recent movements could not be loaded. Your balance above is unaffected."
+                onRetry={() => void historyQuery.refetch()}
+              />
             ) : recent.length === 0 ? (
               <EmptyState
                 title="No activity yet"

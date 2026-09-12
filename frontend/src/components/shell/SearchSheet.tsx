@@ -6,6 +6,7 @@ import { GameArt } from '@/components/catalogue/GameArt'
 import { Input } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { useGames } from '@/features/catalogue'
+import { gameArtUrl } from '@/lib/gameArt'
 import { paths } from '@/routes/paths'
 
 import { useShell } from './ShellContext'
@@ -83,7 +84,7 @@ export function SearchSheet() {
                   onClick={() => void open(game.slug)}
                   className="flex min-h-14 w-full items-center gap-3 rounded-tile px-2 text-left transition-colors duration-[120ms] hover:bg-surface-1"
                 >
-                  <GameArt className="size-10 rounded-chip" />
+                  <GameArt src={gameArtUrl(game)} className="size-10 rounded-chip" />
                   <span className="flex flex-col">
                     <span className="text-[13px] font-medium text-ink-soft">{game.name}</span>
                     <span className="label-mono text-ink-mute">

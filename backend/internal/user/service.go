@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/gaming-platform/backend/internal/audit"
 )
 
 var (
@@ -68,12 +70,12 @@ func ChangeStatus(ctx context.Context, db *sql.DB, actorID, userID, status strin
 	if status == "suspended" {
 		detail = "Account suspended"
 	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, detail, before_data, after_data)
-		VALUES (($1::text)::uuid, $2, 'user', $3, $4,
-			jsonb_build_object('status', $5::text), jsonb_build_object('status', $6::text))`,
-		actorID, action, userID, detail, previousStatus, status); err != nil {
-		return User{}, fmt.Errorf("user: audit status change: %w", err)
+	if err := audit.Record(ctx, tx, audit.Change{
+		ActorID: actorID, Action: action, EntityType: "user", EntityID: account.ID, Detail: detail,
+		Before: map[string]string{"status": previousStatus},
+		After:  map[string]string{"status": status},
+	}); err != nil {
+		return User{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return User{}, fmt.Errorf("user: commit status change: %w", err)

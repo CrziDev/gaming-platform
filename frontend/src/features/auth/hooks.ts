@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
-import { adminLogin, fetchCurrentUser, login, logout, register } from './api'
+import {
+  adminLogin,
+  confirmPasswordReset,
+  fetchCurrentUser,
+  login,
+  logout,
+  register,
+  requestPasswordReset,
+} from './api'
 import { clearSessionExpired } from './expiry'
 
 export const sessionQueryKey = ['session'] as const
@@ -64,6 +72,14 @@ export function useLogout() {
       queryClient.setQueryData(sessionQueryKey, null)
     },
   })
+}
+
+export function useRequestPasswordReset() {
+  return useMutation({ mutationFn: requestPasswordReset })
+}
+
+export function useConfirmPasswordReset() {
+  return useMutation({ mutationFn: confirmPasswordReset })
 }
 
 // Anything fetched before the session changed was scoped to the old identity:

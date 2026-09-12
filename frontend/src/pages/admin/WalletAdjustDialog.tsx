@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { ApiError } from '@/api/client'
 import type { AdminUser, Wallet } from '@/api/types'
 import { Button } from '@/components/ui/Button'
 import { Field, Select } from '@/components/ui/Field'
@@ -52,9 +53,6 @@ function AdjustForm({
   const balance = money(wallet.balance_minor, wallet.currency)
   const amountMinor = parseMoneyInput(amount, wallet.currency)
   const valid = amountMinor !== null && amountMinor > 0
-  const nextBalance = valid
-    ? money(balance.amount_minor + (crediting ? amountMinor : -amountMinor), wallet.currency)
-    : balance
 
   const submit = async () => {
     if (!valid) {
@@ -70,14 +68,19 @@ function AdjustForm({
       return
     }
 
-    await adjust.mutateAsync({
-      user_id: user.id,
-      currency: wallet.currency,
-      direction,
-      amount_minor: amountMinor,
-      reason,
-    })
-    onClose()
+    setError(undefined)
+    try {
+      await adjust.mutateAsync({
+        user_id: user.id,
+        currency: wallet.currency,
+        direction,
+        amount_minor: amountMinor,
+        reason,
+      })
+      onClose()
+    } catch (failure) {
+      setError(describeAdjustmentFailure(failure))
+    }
   }
 
   return (
@@ -149,11 +152,30 @@ function AdjustForm({
           </Select>
         </Field>
 
-        <div className="flex items-baseline justify-between gap-4 rounded-input bg-surface-1 px-3.5 py-3 text-[13.5px]">
-          <span className="text-ink-mute">New balance</span>
-          <span className="font-mono font-medium tnum">{formatMoney(nextBalance)}</span>
-        </div>
+        <p className="text-[12.5px] leading-relaxed text-ink-mute">
+          The new balance is what the server reports after the movement commits; nothing here
+          predicts it.
+        </p>
       </div>
     </Modal>
   )
+}
+
+// Each contract code names one operator action; the wording is the client's,
+// the decision is the server's.
+function describeAdjustmentFailure(failure: unknown): string {
+  if (!(failure instanceof ApiError)) {
+    return 'The adjustment could not be sent. Check your connection and try again.'
+  }
+  switch (failure.code) {
+    case 'INSUFFICIENT_BALANCE':
+      return 'The wallet no longer holds enough for this debit. Refresh and check the balance.'
+    case 'WALLET_FROZEN':
+      return 'This wallet is frozen. Direct the player to support before moving money.'
+    case 'WALLET_CLOSED':
+      return 'This wallet is closed and cannot receive or release funds.'
+    case 'AMOUNT_OVERFLOW':
+      return 'That credit is too large to store safely. Enter a smaller amount.'
+  }
+  return Object.values(failure.fields)[0] ?? failure.message
 }

@@ -24,6 +24,10 @@ func browserRules(origins []string, next http.Handler) http.Handler {
 
 		origin := r.Header.Get("Origin")
 		if origin == "" {
+			if changesState(r.Method) {
+				httpx.WriteError(w, http.StatusForbidden, "This request must carry an Origin header")
+				return
+			}
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -96,6 +100,14 @@ func logAndRecover(logger *slog.Logger, next http.Handler) http.Handler {
 
 		next.ServeHTTP(recorder, r)
 	})
+}
+
+func changesState(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return false
+	}
+	return true
 }
 
 func ownOrigin(r *http.Request) string {

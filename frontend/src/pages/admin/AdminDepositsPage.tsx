@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { AdminDeposit } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
 import { Button } from '@/components/ui/Button'
+import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
@@ -14,10 +15,12 @@ import { formatMoney, money } from '@/lib/money'
 import { DepositReviewDrawer } from './DepositReviewDrawer'
 
 export function AdminDepositsPage() {
-  const depositsQuery = useDepositQueue()
+  const [page, setPage] = useState(1)
+  const depositsQuery = useDepositQueue(page)
   const [reviewing, setReviewing] = useState<AdminDeposit | null>(null)
 
-  const rows = depositsQuery.data ?? []
+  const result = depositsQuery.data
+  const rows = result?.rows ?? []
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,6 +68,18 @@ export function AdminDepositsPage() {
               }
             />
           )}
+          footer={
+            result ? (
+              <PageNav
+                page={result.page}
+                pages={result.pages}
+                size={result.size}
+                total={result.total}
+                onChange={setPage}
+                unit="pending"
+              />
+            ) : null
+          }
         />
       )}
 

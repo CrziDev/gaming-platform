@@ -6,26 +6,32 @@ import { PageHeading } from '@/components/admin/PageHeading'
 import { Button } from '@/components/ui/Button'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
-import { EmptyState } from '@/components/ui/States'
 import { StatCard } from '@/components/ui/StatCard'
+import { EmptyState, ErrorState } from '@/components/ui/States'
+import { SegmentedTrack } from '@/components/ui/Tabs'
 import { useAuditEntries, useConsoleAlerts, useDashboard, useDepositQueue } from '@/features/admin'
+import { useCurrencies } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatClock, formatCount, formatDuration, formatPercent } from '@/lib/format'
 import { formatDate } from '@/lib/format'
-import { formatMoney, money } from '@/lib/money'
+import { formatMoney, money, type Currency } from '@/lib/money'
 import { adminPaths } from '@/routes/paths'
 
 import { DepositReviewDrawer } from './DepositReviewDrawer'
 
 export function AdminDashboardPage() {
-  const summaryQuery = useDashboard()
-  const queueQuery = useDepositQueue()
+  const [currency, setCurrency] = useState<Currency>('PHP')
+  const currenciesQuery = useCurrencies()
+  const summaryQuery = useDashboard(currency)
+  const queueQuery = useDepositQueue(1, 6)
   const alertsQuery = useConsoleAlerts()
   const auditQuery = useAuditEntries(1, 4)
   const [reviewing, setReviewing] = useState<AdminDeposit | null>(null)
 
   const summary = summaryQuery.data
-  const queue = queueQuery.data ?? []
+  const queue = queueQuery.data?.rows ?? []
+  const currencies = currenciesQuery.data ?? []
+  const alerts = alertsQuery.data ?? []
   const pendingMeta = summary
     ? `${formatMoney(money(summary.pending_held_minor, summary.currency), { decimals: 'trim' })} held${summary.oldest_pending_at ? ` · oldest ${formatDuration(summary.oldest_pending_at)}` : ''}`
     : ''
@@ -34,10 +40,26 @@ export function AdminDashboardPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         title="Today"
-        meta={`${formatDate(new Date().toISOString())} · all figures in ${summary?.currency ?? 'PHP'}, account currency`}
+        meta={`${formatDate(new Date().toISOString())} · every figure below is ${currency} only; currencies are never summed`}
+        actions={
+          currencies.length > 1 ? (
+            <SegmentedTrack
+              items={currencies.map((entry) => ({ id: entry.code, label: entry.code }))}
+              value={currency}
+              onChange={setCurrency}
+              label="Dashboard currency"
+            />
+          ) : null
+        }
       />
 
-      {summary ? (
+      {summaryQuery.isError ? (
+        <ErrorState
+          title="Summary unavailable"
+          message={`The ${currency} summary could not be loaded.`}
+          onRetry={() => void summaryQuery.refetch()}
+        />
+      ) : summary ? (
         <div className="grid gap-3.5 sm:grid-cols-2 wide:grid-cols-4">
           <StatCard
             tone="warning"
@@ -82,13 +104,19 @@ export function AdminDashboardPage() {
 
           {queueQuery.isPending ? (
             <SkeletonRows count={4} />
+          ) : queueQuery.isError ? (
+            <ErrorState
+              title="Queue unavailable"
+              message="Pending requests could not be loaded."
+              onRetry={() => void queueQuery.refetch()}
+            />
           ) : queue.length === 0 ? (
             <EmptyState title="Queue is clear" description="No deposit is waiting on a human." />
           ) : (
             <RecordTable
               label="Pending deposit queue"
               columns={queueColumns(setReviewing)}
-              rows={queue.slice(0, 6)}
+              rows={queue}
               rowKey={(row) => row.id}
               renderCard={(row) => (
                 <RecordCard
@@ -128,40 +156,42 @@ export function AdminDashboardPage() {
         </section>
 
         <div className="flex flex-col gap-5">
-          <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
-            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Needs attention</h2>
-            <ul className="flex flex-col gap-2.5">
-              {alertsQuery.data?.map((alert) => (
-                <li key={alert.id}>
-                  <Link
-                    to={alert.href}
-                    className={cn(
-                      'flex min-h-11 items-center gap-3 rounded-input px-3 text-[13px]',
-                      alert.tone === 'warning' && 'bg-warning/10',
-                      alert.tone === 'danger' && 'bg-danger/10',
-                      alert.tone === 'neutral' && 'bg-surface-1',
-                    )}
-                  >
-                    <span
-                      aria-hidden
+          {alerts.length > 0 ? (
+            <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
+              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Needs attention</h2>
+              <ul className="flex flex-col gap-2.5">
+                {alerts.map((alert) => (
+                  <li key={alert.id}>
+                    <Link
+                      to={alert.href}
                       className={cn(
-                        'size-2 shrink-0 rounded-full',
-                        alert.tone === 'warning' && 'bg-warning',
-                        alert.tone === 'danger' && 'bg-danger',
-                        alert.tone === 'neutral' && 'bg-ink-mute',
+                        'flex min-h-11 items-center gap-3 rounded-input px-3 text-[13px]',
+                        alert.tone === 'warning' && 'bg-warning/10',
+                        alert.tone === 'danger' && 'bg-danger/10',
+                        alert.tone === 'neutral' && 'bg-surface-1',
                       )}
-                    />
-                    <span className="flex-1 text-ink-soft">{alert.message}</span>
-                    <span className="text-[12px] text-accent-ink">View</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <p className="text-[12px] leading-relaxed text-ink-mute">
-              Only states a human must resolve or has deliberately created. Nothing informational,
-              nothing that clears itself.
-            </p>
-          </section>
+                    >
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'size-2 shrink-0 rounded-full',
+                          alert.tone === 'warning' && 'bg-warning',
+                          alert.tone === 'danger' && 'bg-danger',
+                          alert.tone === 'neutral' && 'bg-ink-mute',
+                        )}
+                      />
+                      <span className="flex-1 text-ink-soft">{alert.message}</span>
+                      <span className="text-[12px] text-accent-ink">View</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[12px] leading-relaxed text-ink-mute">
+                Only states a human must resolve or has deliberately created. Nothing informational,
+                nothing that clears itself.
+              </p>
+            </section>
+          ) : null}
 
           <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
             <div className="flex items-baseline justify-between gap-3">

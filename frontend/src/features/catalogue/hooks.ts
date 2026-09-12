@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { games } from '@/mocks/games'
-
 import {
   fetchBigWins,
   fetchCategories,
   fetchFavorites,
   fetchGame,
   fetchGames,
+  fetchGamesByIds,
   fetchLobbyRows,
   fetchPromotions,
   toggleFavorite,
@@ -51,8 +50,6 @@ export function useToggleFavorite() {
   })
 }
 
-export function gamesByIds(ids: string[]) {
-  return ids
-    .map((id) => games.find((game) => game.id === id))
-    .filter((game): game is (typeof games)[number] => Boolean(game))
+export function useGamesByIds(ids: string[]) {
+  return useQuery({ queryKey: ['games', 'by-id', ids], queryFn: () => fetchGamesByIds(ids) })
 }

@@ -1,4 +1,4 @@
-import { ChevronLeft, Heart, Maximize2, Minimize2, Settings, ShieldCheck, Volume2 } from 'lucide-react'
+import { ChevronLeft, Heart, Maximize2, Minimize2, ShieldCheck } from 'lucide-react'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link, useParams } from 'react-router'
 
@@ -7,18 +7,15 @@ import { Button, IconButton } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { EmptyState } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { ChipTabs } from '@/components/ui/Tabs'
 import { useToast } from '@/components/ui/Toast'
 import { useFavorites, useGame, useGames, useToggleFavorite } from '@/features/catalogue'
-import { useWallet } from '@/features/wallet'
-import { rounds } from '@/mocks/wallet'
+import { useRecentRounds, useWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatClockSeconds, formatMultiplier } from '@/lib/format'
 import { formatMoney, money, type Money } from '@/lib/money'
 import { paths } from '@/routes/paths'
-
-const recentRounds = rounds.slice(0, 6)
 
 export function GamePage() {
   const { slug = '' } = useParams()
@@ -53,6 +50,10 @@ export function GamePage() {
 
   if (gameQuery.isPending) {
     return <Skeleton className="h-96 rounded-card" />
+  }
+
+  if (gameQuery.isError) {
+    return <ErrorState message={gameQuery.error.message} onRetry={() => void gameQuery.refetch()} />
   }
 
   if (!game) {
@@ -151,27 +152,11 @@ function GameHost({ name, className, ref }: GameHostProps) {
       )}
     >
 
-      <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3">
+      <div className="absolute inset-x-0 top-0 flex items-center p-3">
         <span className="label-mono inline-flex items-center gap-1.5 rounded-chip bg-base/70 px-2.5 py-1.5 text-ink-mute">
           <ShieldCheck aria-hidden size={12} strokeWidth={1.5} />
           Fair game
         </span>
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            aria-label="Sound"
-            className="flex size-11 items-center justify-center rounded-input bg-base/70 text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft"
-          >
-            <Volume2 aria-hidden size={16} strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            aria-label="Game settings"
-            className="flex size-11 items-center justify-center rounded-input bg-base/70 text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft"
-          >
-            <Settings aria-hidden size={16} strokeWidth={1.5} />
-          </button>
-        </div>
       </div>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
@@ -322,7 +307,8 @@ function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProp
 
 function ActivityPanel() {
   const [tab, setTab] = useState<'activity' | 'rules'>('activity')
-  const sessionMinor = recentRounds.reduce((total, round) => total + round.result_minor, 0)
+  const roundsQuery = useRecentRounds()
+  const recentRounds = roundsQuery.data ?? []
 
   return (
     <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-3.5">
@@ -338,6 +324,11 @@ function ActivityPanel() {
 
       {tab === 'activity' ? (
         <>
+          {recentRounds.length === 0 ? (
+            <p className="text-[13px] leading-relaxed text-ink-mute">
+              No rounds yet. Every settled round lands here and in your history.
+            </p>
+          ) : null}
           <ul className="flex flex-col gap-2.5">
             {recentRounds.map((round) => (
               <li key={round.id} className="flex items-center justify-between gap-3">
@@ -362,20 +353,9 @@ function ActivityPanel() {
             ))}
           </ul>
 
-          <div className="grid grid-cols-2 gap-3 rounded-input bg-inset p-3">
-            <div className="flex flex-col gap-1">
-              <span className="label-mono text-ink-mute">Session</span>
-              <MoneyDisplay
-                value={money(sessionMinor, 'PHP')}
-                tone="auto"
-                sign="always"
-                className="text-[15px]"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="label-mono text-ink-mute">Rounds</span>
-              <span className="font-mono text-[15px] font-medium tnum">{recentRounds.length}</span>
-            </div>
+          <div className="flex items-baseline justify-between rounded-input bg-inset p-3">
+            <span className="label-mono text-ink-mute">Rounds this session</span>
+            <span className="font-mono text-[15px] font-medium tnum">{recentRounds.length}</span>
           </div>
 
           <Link to={paths.history} className="text-[13px] text-accent-ink hover:text-accent-hi">

@@ -1,29 +1,36 @@
 import { AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 
+import { ApiError } from '@/api/client'
 import type { RtpProfile } from '@/api/types'
+import { ActiveRtp } from '@/components/admin/ActiveRtp'
 import { PageHeading } from '@/components/admin/PageHeading'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { useRtpProfiles } from '@/features/admin'
-import { cn } from '@/lib/cn'
+import { useActivateRtpProfile, useRtpProfiles } from '@/features/admin'
 import { formatDate, formatDateTime, formatPercent } from '@/lib/format'
+import { adminPaths } from '@/routes/paths'
+
+import { RtpProfileDialog } from './RtpProfileDialog'
 
 const NEGATIVE_MARGIN = 10_000
 
 export function AdminRtpPage() {
   const profilesQuery = useRtpProfiles()
   const [activating, setActivating] = useState<RtpProfile | null>(null)
+  const [editing, setEditing] = useState<RtpProfile | null>(null)
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
         title="RTP profiles"
-        meta="Draft → Verified → Active → Retired. A value is not valid until the engine has verified it."
+        meta="Draft → Verified → Active. A value is not valid until the engine has verified it; drafts are made from a game's page."
       />
 
       <p className="flex items-start gap-3 rounded-card bg-danger/6 px-4 py-3.5 text-[13px] leading-relaxed text-ink-soft">
@@ -34,42 +41,66 @@ export function AdminRtpPage() {
 
       {profilesQuery.isPending ? (
         <SkeletonRows count={5} />
+      ) : profilesQuery.isError ? (
+        <ErrorState
+          title="Profiles unavailable"
+          message="The RTP profiles could not be loaded."
+          onRetry={() => void profilesQuery.refetch()}
+        />
+      ) : profilesQuery.data.length === 0 ? (
+        <EmptyState
+          title="No RTP profiles"
+          description="Draft the first profile from a game's page. It records a target; the engine decides whether it is true."
+          action={
+            <Link to={adminPaths.games} className="text-accent-ink hover:text-accent-hi">
+              Open games
+            </Link>
+          }
+        />
       ) : (
         <RecordTable
           label="RTP profiles"
-          rows={profilesQuery.data ?? []}
+          rows={profilesQuery.data}
           rowKey={(row) => row.id}
           columns={[
-            { key: 'game', header: 'Game', cell: (row) => row.game_name },
             {
-              key: 'value',
-              header: 'Value',
-              align: 'right',
-              width: '120px',
+              key: 'game',
+              header: 'Game',
               cell: (row) => (
-                <span
-                  className={cn(
-                    'font-mono text-sm font-medium tnum',
-                    row.basis_points >= NEGATIVE_MARGIN && 'text-danger',
-                  )}
-                >
-                  {formatPercent(row.basis_points)}
+                <Link to={adminPaths.game(row.game_id)} className="hover:text-ink">
+                  {row.game_name}
+                </Link>
+              ),
+            },
+            {
+              key: 'profile',
+              header: 'Profile',
+              cell: (row) => (
+                <span className="text-[13px] text-ink-soft">
+                  {row.name} <span className="font-mono text-ink-mute">v{row.version}</span>
                 </span>
               ),
             },
             {
+              key: 'value',
+              header: 'Target',
+              align: 'right',
+              width: '110px',
+              cell: (row) => <ActiveRtp basisPoints={row.target_basis_points} />,
+            },
+            {
               key: 'status',
               header: 'Status',
-              width: '130px',
+              width: '120px',
               cell: (row) => <StatusBadge status={row.status} />,
             },
             {
               key: 'ends',
               header: 'Scheduled end',
-              width: '190px',
+              width: '180px',
               cell: (row) => (
                 <span className="text-[13px] text-ink-mute">
-                  {row.scheduled_end ? formatDateTime(row.scheduled_end) : '—'}
+                  {row.effective_until ? formatDateTime(row.effective_until) : '—'}
                 </span>
               ),
             },
@@ -78,7 +109,7 @@ export function AdminRtpPage() {
               header: 'Created by',
               cell: (row) => (
                 <span className="text-[13px] text-ink-mute">
-                  {row.operator} · {formatDate(row.created_at)}
+                  {row.created_by_display_name || 'System'} · {formatDate(row.created_at)}
                 </span>
               ),
             },
@@ -87,36 +118,20 @@ export function AdminRtpPage() {
               header: 'Action',
               align: 'right',
               width: '130px',
-              cell: (row) =>
-                row.status === 'verified' ? (
-                  <Button size="sm" onClick={() => setActivating(row)}>
-                    Activate
-                  </Button>
-                ) : (
-                  <span className="text-[12.5px] text-ink-mute">—</span>
-                ),
+              cell: (row) => <RowAction profile={row} onActivate={setActivating} onEdit={setEditing} />,
             },
           ]}
           renderCard={(row) => (
             <RecordCard
-              title={row.game_name}
-              meta={`${row.operator} · ${formatDate(row.created_at)}`}
-              value={
-                <span
-                  className={cn(
-                    'font-mono text-sm font-medium tnum',
-                    row.basis_points >= NEGATIVE_MARGIN && 'text-danger',
-                  )}
-                >
-                  {formatPercent(row.basis_points)}
-                </span>
-              }
+              title={`${row.game_name} · ${row.name} v${row.version}`}
+              meta={`${row.created_by_display_name || 'System'} · ${formatDate(row.created_at)}`}
+              value={<ActiveRtp basisPoints={row.target_basis_points} />}
               aside={<StatusBadge status={row.status} />}
               actions={
-                row.status === 'verified' ? (
-                  <Button size="sm" className="col-span-2" onClick={() => setActivating(row)}>
-                    Activate
-                  </Button>
+                row.status === 'verified' || row.status === 'draft' ? (
+                  <span className="col-span-2 flex">
+                    <RowAction profile={row} onActivate={setActivating} onEdit={setEditing} full />
+                  </span>
                 ) : undefined
               }
             />
@@ -125,21 +140,80 @@ export function AdminRtpPage() {
       )}
 
       <ActivateDialog profile={activating} onClose={() => setActivating(null)} />
+      {editing ? (
+        <RtpProfileDialog
+          open
+          game={{ id: editing.game_id, name: editing.game_name }}
+          profile={editing}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
     </div>
   )
 }
 
-function ActivateDialog({ profile, onClose }: { profile: RtpProfile | null; onClose: () => void }) {
-  const [typed, setTyped] = useState('')
-  const [endsAt, setEndsAt] = useState('')
+function RowAction({
+  profile,
+  onActivate,
+  onEdit,
+  full = false,
+}: {
+  profile: RtpProfile
+  onActivate: (profile: RtpProfile) => void
+  onEdit: (profile: RtpProfile) => void
+  full?: boolean
+}) {
+  const className = full ? 'flex-1' : undefined
+  if (profile.status === 'verified') {
+    return (
+      <Button size="sm" className={className} onClick={() => onActivate(profile)}>
+        Activate
+      </Button>
+    )
+  }
+  if (profile.status === 'draft') {
+    return (
+      <Button size="sm" variant="secondary" className={className} onClick={() => onEdit(profile)}>
+        Edit draft
+      </Button>
+    )
+  }
+  return <span className="text-[12.5px] text-ink-mute">—</span>
+}
 
+function ActivateDialog({ profile, onClose }: { profile: RtpProfile | null; onClose: () => void }) {
   if (!profile) {
     return null
   }
+  return <ActivateForm key={profile.id} profile={profile} onClose={onClose} />
+}
 
-  const negativeMargin = profile.basis_points >= NEGATIVE_MARGIN
-  const phrase = formatPercent(profile.basis_points)
+function ActivateForm({ profile, onClose }: { profile: RtpProfile; onClose: () => void }) {
+  const activate = useActivateRtpProfile()
+  const [typed, setTyped] = useState('')
+  const [endsAt, setEndsAt] = useState('')
+  const [error, setError] = useState<string | undefined>(undefined)
+
+  const negativeMargin = profile.target_basis_points >= NEGATIVE_MARGIN
+  const phrase = formatPercent(profile.target_basis_points)
   const ready = negativeMargin ? typed.trim() === phrase && endsAt !== '' : true
+
+  const submit = async () => {
+    setError(undefined)
+    // datetime-local carries no zone; the browser's local reading of it is
+    // what the operator meant, converted to UTC on the way out.
+    const until = endsAt === '' ? undefined : new Date(endsAt).toISOString()
+    try {
+      await activate.mutateAsync({ id: profile.id, schedule: until ? { effective_until: until } : {} })
+      onClose()
+    } catch (failure) {
+      if (failure instanceof ApiError) {
+        setError(failure.fields.effective_until ?? failure.message)
+        return
+      }
+      setError('The request could not be sent. Check your connection and try again.')
+    }
+  }
 
   return (
     <Modal
@@ -149,20 +223,27 @@ function ActivateDialog({ profile, onClose }: { profile: RtpProfile | null; onCl
       description={
         negativeMargin
           ? 'This profile pays out more than it takes in. It cannot run open-ended.'
-          : 'The engine has verified this profile. Activating retires the profile currently in force.'
+          : 'The engine has verified this profile. Activating replaces the profile currently in force, which stays verified and can be brought back.'
       }
       footer={
-        <div className="grid grid-cols-2 gap-2.5">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant={negativeMargin ? 'destructive' : 'primary'}
-            disabled={!ready}
-            onClick={onClose}
-          >
-            Activate {phrase}
-          </Button>
+        <div className="flex flex-col gap-3">
+          {error ? (
+            <p role="alert" className="text-[13px] text-danger">
+              {error}
+            </p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-2.5">
+            <Button variant="secondary" onClick={onClose} disabled={activate.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant={negativeMargin ? 'destructive' : 'primary'}
+              disabled={!ready || activate.isPending}
+              onClick={() => void submit()}
+            >
+              Activate {phrase}
+            </Button>
+          </div>
         </div>
       }
     >
@@ -191,10 +272,20 @@ function ActivateDialog({ profile, onClose }: { profile: RtpProfile | null; onCl
           </Field>
         </div>
       ) : (
-        <p className="text-[13.5px] leading-relaxed text-ink-soft">
-          The change takes effect on the next round. Rounds already in flight settle against the
-          profile they started under.
-        </p>
+        <div className="flex flex-col gap-4">
+          <p className="text-[13.5px] leading-relaxed text-ink-soft">
+            The change takes effect on the next round. Rounds already in flight settle against the
+            profile they started under.
+          </p>
+          <Field label="Scheduled end — optional" htmlFor="rtp-end" hint="Leave empty to run until replaced.">
+            <Input
+              id="rtp-end"
+              type="datetime-local"
+              value={endsAt}
+              onChange={(event) => setEndsAt(event.target.value)}
+            />
+          </Field>
+        </div>
       )}
     </Modal>
   )

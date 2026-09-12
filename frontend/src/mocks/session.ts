@@ -1,5 +1,4 @@
 import type { Role, User } from '@/api/types'
-import type { Currency } from '@/lib/money'
 
 let current: User | null = null
 
@@ -18,7 +17,7 @@ export function mockSignIn(email: string, role: Role): User {
   return current
 }
 
-export function mockSignUp(input: { display_name: string; email: string; currency: Currency }): User {
+export function mockSignUp(input: { display_name: string; email: string }): User {
   current = {
     id: 'us-new',
     email: input.email,

@@ -100,7 +100,6 @@ type RecordCardProps = {
   actions?: ReactNode
   leading?: ReactNode
   onClick?: () => void
-  dimmed?: boolean
 }
 
 export function RecordCard({
@@ -111,7 +110,6 @@ export function RecordCard({
   actions,
   leading,
   onClick,
-  dimmed = false,
 }: RecordCardProps) {
   const content = (
     <>
@@ -132,10 +130,7 @@ export function RecordCard({
     </>
   )
 
-  const className = cn(
-    'flex w-full flex-col gap-3 rounded-tile bg-surface-1 p-3 text-left',
-    dimmed && 'opacity-70',
-  )
+  const className = 'flex w-full flex-col gap-3 rounded-tile bg-surface-1 p-3 text-left'
 
   if (!onClick) {
     return <div className={className}>{content}</div>

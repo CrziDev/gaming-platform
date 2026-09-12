@@ -107,7 +107,8 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 }
 
 function AdminNavPanel({ onNavigate }: { onNavigate?: () => void }) {
-  const { data: queue } = useDepositQueue()
+  // The badge wants the count, not the rows; the smallest page still carries `total`.
+  const { data: queue } = useDepositQueue(1, 1)
   const logoutMutation = useLogout()
   const navigate = useNavigate()
 
@@ -124,7 +125,7 @@ function AdminNavPanel({ onNavigate }: { onNavigate?: () => void }) {
       <ul className="flex flex-col gap-px">
         {adminNav.map((item) => {
           const Icon = item.icon
-          const count = item.badge === 'deposits' ? queue?.length : undefined
+          const count = item.badge === 'deposits' ? queue?.total : undefined
 
           return (
             <li key={item.to}>

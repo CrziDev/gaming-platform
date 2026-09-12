@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
 import { useAdminPaymentMethods, useStaff } from '@/features/admin'
@@ -59,6 +60,11 @@ function MethodsTab() {
 
       {methodsQuery.isPending ? (
         <SkeletonRows count={2} />
+      ) : (methodsQuery.data ?? []).length === 0 ? (
+        <EmptyState
+          title="Managed by configuration"
+          description="Payment methods are seeded by deployment configuration in Phase 1. There is nothing to edit here yet."
+        />
       ) : (
         <RecordTable
           label="Payment methods"
@@ -124,6 +130,11 @@ function StaffTab() {
 
       {staffQuery.isPending ? (
         <SkeletonRows count={3} />
+      ) : (staffQuery.data ?? []).length === 0 ? (
+        <EmptyState
+          title="No staff directory"
+          description="The development administrator is provisioned by seed. Staff management is not part of this phase."
+        />
       ) : (
         <RecordTable
           label="Staff accounts"
@@ -210,12 +221,13 @@ function PlatformTab() {
         </Select>
       </Field>
       <Field
-        label="Registration currencies"
+        label="Enabled currencies"
         htmlFor="platform-currency"
-        hint="A player's currency is fixed at registration and never converted."
+        hint="Every player holds a wallet in each enabled currency. Nothing converts between them."
       >
         <Select id="platform-currency" defaultValue="PHP">
           <option value="PHP">PHP · ₱</option>
+          <option value="USD">USD · $</option>
         </Select>
       </Field>
       <div>

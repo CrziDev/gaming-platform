@@ -22,6 +22,9 @@ type Query struct {
 	Status   string
 	Type     string
 	Currency string
+	Category string
+	Sort     string
+	Flag     string
 	GameID   string
 	UserID   string
 	From     *time.Time
@@ -45,6 +48,9 @@ func ReadQuery(w http.ResponseWriter, r *http.Request) (Query, bool) {
 		Status:   strings.TrimSpace(values.Get("status")),
 		Type:     strings.TrimSpace(values.Get("type")),
 		Currency: strings.ToUpper(strings.TrimSpace(values.Get("currency"))),
+		Category: strings.TrimSpace(values.Get("category")),
+		Sort:     strings.TrimSpace(values.Get("sort")),
+		Flag:     strings.TrimSpace(values.Get("flag")),
 		GameID:   strings.TrimSpace(values.Get("game_id")),
 		UserID:   strings.TrimSpace(values.Get("user_id")),
 	}

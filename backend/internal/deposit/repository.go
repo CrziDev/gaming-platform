@@ -3,12 +3,13 @@ package deposit
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
+
+	"github.com/gaming-platform/backend/internal/audit"
+	"github.com/gaming-platform/backend/internal/wallet"
 )
 
 var (
@@ -21,7 +22,6 @@ var (
 	ErrApprovalReasonRequired  = errors.New("deposit: approval adjustment reason is required")
 	ErrAlreadyReviewed         = errors.New("deposit: request is already reviewed")
 	ErrWalletUnavailable       = errors.New("deposit: wallet is unavailable")
-	ErrInsufficientFunds       = errors.New("deposit: insufficient funds")
 	ErrAmountOverflow          = errors.New("deposit: amount overflow")
 )
 
@@ -80,12 +80,12 @@ func ListMethods(ctx context.Context, db *sql.DB) ([]PaymentMethod, error) {
 
 const requestColumns = `d.id::text, d.user_id::text, d.wallet_id::text, d.currency, d.method_id::text, p.name, d.amount_minor, COALESCE(d.reference, ''), d.status, d.reviewed_at, COALESCE(d.reason, ''), d.created_at`
 
-func List(ctx context.Context, db *sql.DB, userID string, page, size int) ([]Request, int, error) {
+func List(ctx context.Context, db *sql.DB, userID, status string, page, size int) ([]Request, int, error) {
 	var total int
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM deposit_requests WHERE user_id = ($1::text)::uuid`, userID).Scan(&total); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM deposit_requests WHERE user_id = ($1::text)::uuid AND ($2 = '' OR status = $2)`, userID, status).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("deposit: count requests: %w", err)
 	}
-	rows, err := db.QueryContext(ctx, `SELECT `+requestColumns+` FROM deposit_requests d JOIN payment_methods p ON p.id = d.method_id WHERE d.user_id = ($1::text)::uuid ORDER BY d.created_at DESC, d.id DESC LIMIT $2 OFFSET $3`, userID, size, (page-1)*size)
+	rows, err := db.QueryContext(ctx, `SELECT `+requestColumns+` FROM deposit_requests d JOIN payment_methods p ON p.id = d.method_id WHERE d.user_id = ($1::text)::uuid AND ($2 = '' OR d.status = $2) ORDER BY d.created_at DESC, d.id DESC LIMIT $3 OFFSET $4`, userID, status, size, (page-1)*size)
 	if err != nil {
 		return nil, 0, fmt.Errorf("deposit: list requests: %w", err)
 	}
@@ -215,10 +215,6 @@ func ListAdmin(ctx context.Context, db *sql.DB, filter AdminListFilter) ([]Admin
 	return result, total, nil
 }
 
-func ListPending(ctx context.Context, db *sql.DB, page, size int) ([]AdminRequest, int, error) {
-	return ListAdmin(ctx, db, AdminListFilter{Page: page, Size: size, Status: "pending"})
-}
-
 func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, amountMinor int64, reason string) (Request, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -255,34 +251,27 @@ func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, 
 			return Request{}, err
 		}
 	} else if action == "approve" {
-		var balance, minMinor, maxMinor int64
-		var walletStatus string
-		err := tx.QueryRowContext(ctx, `SELECT w.balance_minor, w.status, c.deposit_min_minor, c.deposit_max_minor FROM wallets w JOIN currencies c ON c.code = w.currency WHERE w.id = ($1::text)::uuid FOR UPDATE OF w`, item.WalletID).Scan(&balance, &walletStatus, &minMinor, &maxMinor)
-		if errors.Is(err, sql.ErrNoRows) {
-			return Request{}, ErrWalletUnavailable
-		}
-		if err != nil {
-			return Request{}, fmt.Errorf("deposit: lock wallet: %w", err)
-		}
-		if walletStatus != "active" {
-			return Request{}, ErrWalletUnavailable
+		var minMinor, maxMinor int64
+		if err := tx.QueryRowContext(ctx, `SELECT deposit_min_minor, deposit_max_minor FROM currencies WHERE code = $1`, item.Currency).Scan(&minMinor, &maxMinor); err != nil {
+			return Request{}, fmt.Errorf("deposit: read limits: %w", err)
 		}
 		if item.AmountMinor < minMinor || item.AmountMinor > maxMinor {
 			return Request{}, ErrAmountOutOfRange
 		}
-		if balance > math.MaxInt64-item.AmountMinor {
+		credit, err := wallet.MoveTx(ctx, tx, wallet.Movement{
+			UserID: item.UserID, Currency: item.Currency, Kind: "deposit", AmountMinor: item.AmountMinor,
+			IdempotencyKey: "deposit:" + requestID, ReferenceType: "deposit", ReferenceID: requestID,
+			ActorID: actorID, Reason: "deposit approval",
+		})
+		switch {
+		case errors.Is(err, wallet.ErrNotFound), errors.Is(err, wallet.ErrWalletFrozen), errors.Is(err, wallet.ErrWalletClosed):
+			return Request{}, ErrWalletUnavailable
+		case errors.Is(err, wallet.ErrAmountOverflow):
 			return Request{}, ErrAmountOverflow
+		case err != nil:
+			return Request{}, err
 		}
-		after := balance + item.AmountMinor
-		if _, err := tx.ExecContext(ctx, `UPDATE wallets SET balance_minor = $1, updated_at = now() WHERE id = ($2::text)::uuid`, after, item.WalletID); err != nil {
-			return Request{}, fmt.Errorf("deposit: credit wallet: %w", err)
-		}
-		var transactionID string
-		err = tx.QueryRowContext(ctx, `INSERT INTO wallet_transactions (wallet_id, user_id, currency, kind, amount_minor, balance_before, balance_after, reference_type, reference_id, idempotency_key, actor_user_id, reason) VALUES (($1::text)::uuid, ($2::text)::uuid, $3, 'deposit', $4, $5, $6, 'deposit', ($7::text)::uuid, $8, ($9::text)::uuid, 'deposit approval') RETURNING id::text`, item.WalletID, item.UserID, item.Currency, item.AmountMinor, balance, after, requestID, "deposit:"+requestID, actorID).Scan(&transactionID)
-		if err != nil {
-			return Request{}, fmt.Errorf("deposit: insert credit: %w", err)
-		}
-		if _, err := tx.ExecContext(ctx, `UPDATE deposit_requests SET status = 'approved', reviewed_by = ($1::text)::uuid, reviewed_at = now(), transaction_id = ($2::text)::uuid, amount_minor = $3, reason = NULLIF($4, ''), updated_at = now() WHERE id = ($5::text)::uuid`, actorID, transactionID, item.AmountMinor, reason, requestID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE deposit_requests SET status = 'approved', reviewed_by = ($1::text)::uuid, reviewed_at = now(), transaction_id = ($2::text)::uuid, amount_minor = $3, reason = NULLIF($4, ''), updated_at = now() WHERE id = ($5::text)::uuid`, actorID, credit.ID, item.AmountMinor, reason, requestID); err != nil {
 			return Request{}, fmt.Errorf("deposit: approve request: %w", err)
 		}
 		if err := writeAudit(ctx, tx, actorID, requestID, "deposit.approve", item.Status, "approved", originalAmount, item.AmountMinor, reason); err != nil {
@@ -298,10 +287,9 @@ func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, 
 }
 
 func writeAudit(ctx context.Context, tx *sql.Tx, actorID, entityID, action, beforeStatus, afterStatus string, beforeAmount, afterAmount int64, detail string) error {
-	beforeData, _ := json.Marshal(map[string]any{"status": beforeStatus, "amount_minor": beforeAmount})
-	afterData, _ := json.Marshal(map[string]any{"status": afterStatus, "amount_minor": afterAmount})
-	if _, err := tx.ExecContext(ctx, `INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, detail, before_data, after_data) VALUES (($1::text)::uuid, $2, 'deposit_request', $3, $4, $5::jsonb, $6::jsonb)`, actorID, action, entityID, detail, string(beforeData), string(afterData)); err != nil {
-		return fmt.Errorf("deposit: write audit: %w", err)
-	}
-	return nil
+	return audit.Record(ctx, tx, audit.Change{
+		ActorID: actorID, Action: action, EntityType: "deposit_request", EntityID: entityID, Detail: detail,
+		Before: map[string]any{"status": beforeStatus, "amount_minor": beforeAmount},
+		After:  map[string]any{"status": afterStatus, "amount_minor": afterAmount},
+	})
 }

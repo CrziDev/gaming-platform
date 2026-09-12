@@ -5,7 +5,7 @@ import type { ChatMessage } from '@/api/types'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuthIntent, useSession } from '@/features/auth'
-import { useChatRoom, useSendChatMessage } from '@/features/chat'
+import { chatAvailable, useChatRoom, useSendChatMessage } from '@/features/chat'
 import { cn } from '@/lib/cn'
 import { formatClock } from '@/lib/format'
 
@@ -13,9 +13,9 @@ import { useShell } from './ShellContext'
 
 export function ChatRail() {
   const { chatOpen, setChatOpen } = useShell()
-  const room = useChatRoom(chatOpen)
+  const room = useChatRoom(chatAvailable && chatOpen)
 
-  if (!chatOpen) {
+  if (!chatAvailable || !chatOpen) {
     return null
   }
 

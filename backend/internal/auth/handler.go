@@ -163,9 +163,6 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, newUserResponse(account))
 }
 
-// CurrentUser authenticates the request and returns the active account. It is
-// exposed for handlers in other bounded contexts that need the same session
-// boundary without duplicating cookie and session logic.
 func (h *Handler) CurrentUser(w http.ResponseWriter, r *http.Request) (user.User, bool) {
 	cookie, err := r.Cookie(h.cfg.CookieName)
 	if err != nil || cookie.Value == "" {

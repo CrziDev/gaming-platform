@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 
 import type { AdminUser } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
-import { Button } from '@/components/ui/Button'
+import { PageNav } from '@/components/ui/PageNav'
 import { Input } from '@/components/ui/Field'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
 import { SegmentedTrack } from '@/components/ui/Tabs'
@@ -75,7 +75,6 @@ export function AdminUsersPage() {
           rowKey={(row) => row.id}
           renderCard={(row) => (
             <RecordCard
-              dimmed={row.status === 'suspended'}
               title={row.display_name}
               meta={`${row.email} · ${accountReference(row)}`}
               aside={<StatusBadge status={row.status} />}
@@ -90,30 +89,13 @@ export function AdminUsersPage() {
           )}
           onRowClick={(row) => void navigate(`/admin/users/${row.id}`)}
           footer={
-            <nav className="flex items-center justify-between gap-3" aria-label="Pagination">
-              <span className="font-mono text-[12px] text-ink-mute">
-                {(page.page - 1) * page.size + 1}–{Math.min(page.page * page.size, page.total)} of{' '}
-                {page.total}
-              </span>
-              <div className="flex gap-1.5">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={page.page === 1}
-                  onClick={() => setFilter((current) => ({ ...current, page: current.page - 1 }))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={page.page >= page.pages}
-                  onClick={() => setFilter((current) => ({ ...current, page: current.page + 1 }))}
-                >
-                  Next
-                </Button>
-              </div>
-            </nav>
+            <PageNav
+              page={page.page}
+              pages={page.pages}
+              size={page.size}
+              total={page.total}
+              onChange={(next) => setFilter((current) => ({ ...current, page: next }))}
+            />
           }
         />
       )}

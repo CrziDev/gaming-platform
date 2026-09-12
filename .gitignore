@@ -8,6 +8,9 @@
 # Go
 /backend/bin/
 /backend/tmp/
+
+# Player-uploaded deposit proofs. Private data, never committed.
+/backend/storage/
 *.test
 *.out
 

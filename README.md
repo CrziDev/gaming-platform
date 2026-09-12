@@ -46,10 +46,17 @@ make tools        # pin golang-migrate into backend/bin
 make migrate-up
 make dev          # API on :8080, web on :5173
 
-make seed         # create or reset the local admin named by SEED_USER_* in .env
+make seed         # create or reset the local admin (SEED_USER_*), 18 demo players, and 27 games
 ```
 
 `make help` lists every target. Ports: web 5173, API 8080, PostgreSQL 5432.
+
+## Game art
+
+Drop a PNG, JPEG, or WebP named after the game's slug into `frontend/src/assets/games/`
+— `aurora-dice.png` — and the tile, search result, and lobby pick it up on the next
+build; a game without a file keeps the flat placeholder. Portrait `3 / 4` matches the
+tile. Art the server attaches through `thumbnail_url` takes precedence when it exists.
 
 Use `localhost` everywhere, never `127.0.0.1`. They are different cookie hosts, and
 mixing them presents as a session bug that is very hard to read.

@@ -2,21 +2,33 @@ import { Link } from 'react-router'
 
 import type { Game } from '@/api/types'
 import { useAuthIntent, useSession } from '@/features/auth'
+import { gameArtUrl } from '@/lib/gameArt'
 import { paths } from '@/routes/paths'
 
 export function GameCard({ game }: { game: Game }) {
   const { data: user } = useSession()
   const { open } = useAuthIntent()
+  const art = gameArtUrl(game)
 
   const card = (
     <>
       <span className="relative flex aspect-3/4 items-end overflow-hidden rounded-tile bg-surface-3">
-        <span
-          aria-hidden
-          className="label-mono absolute inset-x-0 bottom-[40%] text-center text-[9.5px] text-ink-mute"
-        >
-          game art
-        </span>
+        {art ? (
+          <img
+            src={art}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 size-full object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="label-mono absolute inset-x-0 bottom-[40%] text-center text-[9.5px] text-ink-mute"
+          >
+            game art
+          </span>
+        )}
         <span className="tile-scrim relative w-full truncate p-2 text-[12px] font-medium text-ink-soft">
           {game.name}
         </span>

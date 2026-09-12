@@ -5,15 +5,16 @@ import type { Currency } from '@/lib/money'
 import { useActiveCurrency } from './activeCurrency'
 
 import {
+  fetchCurrencies,
   fetchDeposit,
   fetchDepositLimits,
-  fetchDeposits,
   fetchNotifications,
   fetchPaymentMethods,
+  fetchPendingDeposit,
+  fetchRecentRounds,
   fetchTransactions,
   fetchWallet,
   fetchWallets,
-  fetchWalletSummary,
   markNotificationsRead,
   submitDeposit,
   type HistoryFilter,
@@ -21,19 +22,24 @@ import {
 
 export const walletQueryKey = ['wallets'] as const
 
+export function useCurrencies() {
+  return useQuery({ queryKey: ['currencies'], queryFn: fetchCurrencies })
+}
+
 export function useWallets() {
   return useQuery({ queryKey: walletQueryKey, queryFn: fetchWallets })
 }
 
-export function useWallet(currency: Currency) {
+export function useWallet(currency: Currency, enabled = true) {
   return useQuery({
     queryKey: [...walletQueryKey, currency],
     queryFn: () => fetchWallet(currency),
+    enabled,
   })
 }
 
-export function useActiveWallet() {
-  return useWallet(useActiveCurrency())
+export function useActiveWallet(enabled = true) {
+  return useWallet(useActiveCurrency(), enabled)
 }
 
 export function usePaymentMethods() {
@@ -48,8 +54,8 @@ export function useDepositLimits() {
   })
 }
 
-export function useDeposits() {
-  return useQuery({ queryKey: ['deposits'], queryFn: fetchDeposits })
+export function usePendingDeposit() {
+  return useQuery({ queryKey: ['deposits', 'pending'], queryFn: fetchPendingDeposit })
 }
 
 export function useDeposit(id: string) {
@@ -72,12 +78,12 @@ export function useTransactions(filter: HistoryFilter) {
   return useQuery({ queryKey: ['transactions', filter], queryFn: () => fetchTransactions(filter) })
 }
 
-export function useWalletSummary() {
-  return useQuery({ queryKey: ['wallet-summary'], queryFn: fetchWalletSummary })
+export function useRecentRounds() {
+  return useQuery({ queryKey: ['rounds', 'recent'], queryFn: fetchRecentRounds })
 }
 
-export function useNotifications() {
-  return useQuery({ queryKey: ['notifications'], queryFn: fetchNotifications })
+export function useNotifications(enabled = true) {
+  return useQuery({ queryKey: ['notifications'], queryFn: fetchNotifications, enabled })
 }
 
 export function useMarkNotificationsRead() {

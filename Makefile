@@ -128,7 +128,7 @@ db-reset: ## Roll every migration back, re-apply, and re-seed
 db-shell: ## Open a psql session against the development database
 	psql "$(DATABASE_URL)"
 
-seed: ## Create or reset the development admin account
+seed: ## Create or reset the development admin, demo players, and game catalogue
 	cd $(BACKEND_DIR) && go run ./cmd/seed
 
 ## --- Tooling ---------------------------------------------------------------

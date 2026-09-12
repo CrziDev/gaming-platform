@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router'
 import { GameGrid, gameGrid } from '@/components/catalogue/GameGrid'
 import { Select } from '@/components/ui/Field'
 import { SkeletonGrid } from '@/components/ui/Skeleton'
-import { EmptyState } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { categoryIcon } from '@/components/shell/nav'
@@ -96,7 +96,9 @@ export function GamesPage({ flag }: { flag?: GameFlag }) {
 
       {gamesQuery.isPending ? (
         <SkeletonGrid count={6} className={gameGrid} />
-      ) : gamesQuery.data && gamesQuery.data.length > 0 ? (
+      ) : gamesQuery.isError ? (
+        <ErrorState message={gamesQuery.error.message} onRetry={() => void gamesQuery.refetch()} />
+      ) : gamesQuery.data.length > 0 ? (
         <GameGrid games={gamesQuery.data} label={shelf?.title ?? 'Game catalogue'} />
       ) : (
         <EmptyState

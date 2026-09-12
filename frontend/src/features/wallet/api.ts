@@ -1,29 +1,25 @@
 import { api, ApiError } from '@/api/client'
 import { mockRequest, paginate, type Page } from '@/api/mock'
-import { usingMockApi } from '@/api/mode'
+import { usingFixtures } from '@/api/mode'
 import type {
   CurrencyMetadata,
   DepositRequest,
   Notification,
   PaymentMethod,
+  Round,
   Transaction,
   Wallet,
 } from '@/api/types'
 import type { Currency } from '@/lib/money'
 import {
-  depositLimits,
+  currencies,
   depositRequests,
   notifications,
   paymentMethods,
+  rounds,
   transactions,
   wallets,
-  walletSummary,
 } from '@/mocks/wallet'
-
-// Component tests intentionally use the fixture dataset unless they explicitly
-// exercise the transport layer. This keeps page tests deterministic while the
-// production build honors VITE_API_MOCK=false.
-const useRealWalletApi = !usingMockApi && import.meta.env.MODE !== 'test'
 
 export type HistoryKind = 'all' | 'deposit' | 'rounds' | 'adjustment'
 
@@ -31,6 +27,9 @@ export type HistoryFilter = {
   kind: HistoryKind
   days: 7 | 30 | 90
   page: number
+  // Narrows the ledger to one wallet. Absent, every wallet's movements are
+  // listed and each row carries its own currency.
+  currency?: Currency
 }
 
 function matchesKind(kind: HistoryKind, transaction: Transaction): boolean {
@@ -41,31 +40,38 @@ function matchesKind(kind: HistoryKind, transaction: Transaction): boolean {
 
 export const HISTORY_PAGE_SIZE = 20
 
-export async function fetchWallets(): Promise<Wallet[]> {
-  if (useRealWalletApi) {
-    return api.get<Wallet[]>('/wallets')
+export async function fetchCurrencies(): Promise<CurrencyMetadata[]> {
+  if (usingFixtures) {
+    return mockRequest(() => currencies.map((entry) => ({ ...entry })))
   }
-  return mockRequest(() => wallets.map((entry) => ({ ...entry })))
+  return api.get<CurrencyMetadata[]>('/currencies')
+}
+
+export async function fetchWallets(): Promise<Wallet[]> {
+  if (usingFixtures) {
+    return mockRequest(() => wallets.map((entry) => ({ ...entry })))
+  }
+  return api.get<Wallet[]>('/wallets')
 }
 
 export async function fetchWallet(currency: Currency): Promise<Wallet> {
-  if (useRealWalletApi) {
-    return api.get<Wallet>(`/wallets/${currency}`)
+  if (usingFixtures) {
+    return mockRequest(() => {
+      const held = wallets.find((entry) => entry.currency === currency)
+      // The server provisions a wallet on read, so an unfunded currency is a zero
+      // balance rather than a missing resource.
+      return held ? { ...held } : { currency, balance_minor: 0 }
+    })
   }
-  return mockRequest(() => {
-    const held = wallets.find((entry) => entry.currency === currency)
-    // The server provisions a wallet on read, so an unfunded currency is a zero
-    // balance rather than a missing resource.
-    return held ? { ...held } : { currency, balance_minor: 0 }
-  })
+  return api.get<Wallet>(`/wallets/${currency}`)
 }
 
 export async function fetchPaymentMethods(): Promise<PaymentMethod[]> {
-  if (useRealWalletApi) {
-    const methods = await api.get<Omit<PaymentMethod, 'enabled'>[]>('/payment-methods')
-    return methods.map((method) => ({ ...method, enabled: true }))
+  if (usingFixtures) {
+    return mockRequest(() => paymentMethods.filter((method) => method.enabled))
   }
-  return mockRequest(() => paymentMethods.filter((method) => method.enabled))
+  const methods = await api.get<Omit<PaymentMethod, 'enabled'>[]>('/payment-methods')
+  return methods.map((method) => ({ ...method, enabled: true }))
 }
 
 export type DepositLimits = {
@@ -75,45 +81,40 @@ export type DepositLimits = {
 }
 
 export async function fetchDepositLimits(currency: Currency): Promise<DepositLimits> {
-  if (useRealWalletApi) {
-    const currencies = await api.get<CurrencyMetadata[]>('/currencies')
-    const metadata = currencies.find((candidate) => candidate.code === currency)
-    if (!metadata) {
-      throw new Error(`Currency ${currency} is not enabled for deposits`)
-    }
-    return {
-      currency: metadata.code,
-      min_minor: metadata.deposit_min_minor,
-      max_minor: metadata.deposit_max_minor,
-    }
+  const metadata = (await fetchCurrencies()).find((candidate) => candidate.code === currency)
+  if (!metadata) {
+    throw new Error(`Currency ${currency} is not enabled for deposits`)
   }
-  return mockRequest(() => ({
-    currency,
-    min_minor: depositLimits.min_minor,
-    max_minor: depositLimits.max_minor,
-  }))
+  return {
+    currency: metadata.code,
+    min_minor: metadata.deposit_min_minor,
+    max_minor: metadata.deposit_max_minor,
+  }
 }
 
-export async function fetchDeposits(): Promise<DepositRequest[]> {
-  if (useRealWalletApi) {
-    const page = await api.get<Page<DepositRequest>>('/deposits?page=1&size=100')
-    return page.rows
+export async function fetchPendingDeposit(): Promise<DepositRequest | null> {
+  if (usingFixtures) {
+    return mockRequest(
+      () =>
+        [...depositRequests]
+          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+          .find((request) => request.status === 'pending') ?? null,
+    )
   }
-  return mockRequest(() =>
-    [...depositRequests].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
-  )
+  const page = await api.get<Page<DepositRequest>>('/deposits?status=pending&page=1&size=1')
+  return page.rows[0] ?? null
 }
 
 export async function fetchDeposit(id: string): Promise<DepositRequest | null> {
-  if (useRealWalletApi) {
-    try {
-      return await api.get<DepositRequest>(`/deposits/${id}`)
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 404) return null
-      throw error
-    }
+  if (usingFixtures) {
+    return mockRequest(() => depositRequests.find((request) => request.id === id) ?? null)
   }
-  return mockRequest(() => depositRequests.find((request) => request.id === id) ?? null)
+  try {
+    return await api.get<DepositRequest>(`/deposits/${id}`)
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
 }
 
 export type NewDeposit = {
@@ -128,89 +129,80 @@ export type NewDeposit = {
 }
 
 export async function submitDeposit(input: NewDeposit): Promise<DepositRequest> {
-  if (useRealWalletApi) {
-    const form = new FormData()
-    form.append('method_id', input.method_id)
-    form.append('amount_minor', String(input.amount_minor))
-    form.append('reference', input.reference)
-    form.append('currency', input.currency)
-    form.append('proof', input.proof)
-    return api.post<DepositRequest>('/deposits', form, {
-      headers: { 'Idempotency-Key': input.idempotency_key },
-    })
+  if (usingFixtures) {
+    return mockRequest(() => {
+      const method = paymentMethods.find((candidate) => candidate.id === input.method_id)
+      const reference = input.reference.trim()
+      const created: DepositRequest = {
+        id: `dep-${reference}`,
+        reference,
+        method_id: input.method_id,
+        method_name: method?.name ?? 'Method A',
+        amount_minor: input.amount_minor,
+        currency: input.currency,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        reviewed_at: null,
+        reason: null,
+      }
+
+      depositRequests.unshift(created)
+      transactions.unshift({
+        id: `tx-${created.id}`,
+        kind: 'deposit',
+        label: `Deposit · ${created.method_name}`,
+        reference: created.reference,
+        status: 'pending',
+        amount_minor: created.amount_minor,
+        currency: created.currency,
+        created_at: created.created_at,
+        round_id: null,
+      })
+
+      return created
+    }, 600)
   }
-  return mockRequest(() => {
-    const method = paymentMethods.find((candidate) => candidate.id === input.method_id)
-    const reference = input.reference.trim()
-    const created: DepositRequest = {
-      id: `dep-${reference}`,
-      reference,
-      method_id: input.method_id,
-      method_name: method?.name ?? 'Method A',
-      amount_minor: input.amount_minor,
-      currency: input.currency,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      reviewed_at: null,
-      reason: null,
-    }
 
-    depositRequests.unshift(created)
-    transactions.unshift({
-      id: `tx-${created.id}`,
-      kind: 'deposit',
-      label: `Deposit · ${created.method_name}`,
-      reference: created.reference,
-      status: 'pending',
-      amount_minor: created.amount_minor,
-      currency: created.currency,
-      created_at: created.created_at,
-      round_id: null,
-    })
-
-    return created
-  }, 600)
-}
-
-export async function fetchTransactions(filter: HistoryFilter): Promise<Page<Transaction>> {
-  if (useRealWalletApi) {
-    const cutoff = new Date(Date.now() - filter.days * 86_400_000).toISOString()
-    const response = await api.get<BackendTransactionPage>(
-      `/transactions?page=1&size=100&from=${encodeURIComponent(cutoff)}`,
-    )
-    const matched = response.rows
-      .map(toTransaction)
-      .filter((transaction) => matchesKind(filter.kind, transaction))
-    return paginate(matched, filter.page, HISTORY_PAGE_SIZE)
-  }
-  return mockRequest(() => {
-    const cutoff = Date.now() - filter.days * 86_400_000
-    const matched = transactions.filter((transaction) => {
-      const inRange = Date.parse(transaction.created_at) >= cutoff
-      return inRange && matchesKind(filter.kind, transaction)
-    })
-    return paginate(matched, filter.page, HISTORY_PAGE_SIZE)
+  const form = new FormData()
+  form.append('method_id', input.method_id)
+  form.append('amount_minor', String(input.amount_minor))
+  form.append('reference', input.reference)
+  form.append('currency', input.currency)
+  form.append('proof', input.proof)
+  return api.post<DepositRequest>('/deposits', form, {
+    headers: { 'Idempotency-Key': input.idempotency_key },
   })
 }
 
-export async function fetchWalletSummary() {
-  if (useRealWalletApi) {
-    const currency = 'PHP' as Currency
-    const history = await fetchTransactions({ kind: 'all', days: 30, page: 1 })
-    return {
-      currency,
-      deposited_30d_minor: history.rows
-        .filter((row) => row.kind === 'deposit')
-        .reduce((total, row) => total + row.amount_minor, 0),
-      staked_30d_minor: history.rows
-        .filter((row) => row.kind === 'wager')
-        .reduce((total, row) => total + Math.abs(row.amount_minor), 0),
-      returned_30d_minor: history.rows
-        .filter((row) => row.kind === 'win')
-        .reduce((total, row) => total + row.amount_minor, 0),
-    }
+export async function fetchTransactions(filter: HistoryFilter): Promise<Page<Transaction>> {
+  if (usingFixtures) {
+    return mockRequest(() => {
+      const cutoff = Date.now() - filter.days * 86_400_000
+      const matched = transactions.filter((transaction) => {
+        const inRange = Date.parse(transaction.created_at) >= cutoff
+        const inWallet = !filter.currency || transaction.currency === filter.currency
+        return inRange && inWallet && matchesKind(filter.kind, transaction)
+      })
+      return paginate(matched, filter.page, HISTORY_PAGE_SIZE)
+    })
   }
-  return mockRequest(() => walletSummary)
+
+  // Rounds are not a ledger kind the server can filter on, and no round has
+  // been played until the round APIs exist; the tab is honest about that.
+  if (filter.kind === 'rounds') {
+    return paginate<Transaction>([], 1, HISTORY_PAGE_SIZE)
+  }
+
+  const params = new URLSearchParams({
+    page: String(filter.page),
+    size: String(HISTORY_PAGE_SIZE),
+    from: new Date(Date.now() - filter.days * 86_400_000).toISOString(),
+  })
+  if (filter.kind !== 'all') params.set('type', filter.kind)
+  if (filter.currency) params.set('currency', filter.currency)
+
+  const response = await api.get<Page<BackendTransaction>>(`/transactions?${params.toString()}`)
+  return { ...response, rows: response.rows.map(toTransaction) }
 }
 
 type BackendTransaction = {
@@ -219,14 +211,6 @@ type BackendTransaction = {
   amount_minor: number
   currency: Currency
   created_at: string
-}
-
-type BackendTransactionPage = {
-  rows: BackendTransaction[]
-  total: number
-  page: number
-  size: number
-  pages: number
 }
 
 function toTransaction(row: BackendTransaction): Transaction {
@@ -243,11 +227,24 @@ function toTransaction(row: BackendTransaction): Transaction {
   }
 }
 
+export async function fetchRecentRounds(): Promise<Round[]> {
+  if (usingFixtures) {
+    return mockRequest(() => rounds.slice(0, 6))
+  }
+  return []
+}
+
 export async function fetchNotifications(): Promise<Notification[]> {
-  return mockRequest(() => [...notifications])
+  if (usingFixtures) {
+    return mockRequest(() => [...notifications])
+  }
+  return []
 }
 
 export async function markNotificationsRead(): Promise<void> {
+  if (!usingFixtures) {
+    return
+  }
   return mockRequest(() => {
     for (const notification of notifications) {
       notification.read = true

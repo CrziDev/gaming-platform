@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { PageHeading } from '@/components/admin/PageHeading'
-import { Button } from '@/components/ui/Button'
+import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
@@ -73,29 +73,14 @@ export function AdminAuditPage() {
             />
           )}
           footer={
-            <nav className="flex items-center justify-between gap-3" aria-label="Pagination">
-              <span className="font-mono text-[12px] text-ink-mute">
-                Page {result.page} of {result.pages} · {result.total} entries
-              </span>
-              <span className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={result.page <= 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={result.page >= result.pages}
-                  onClick={() => setPage((current) => current + 1)}
-                >
-                  Next
-                </Button>
-              </span>
-            </nav>
+            <PageNav
+              page={result.page}
+              pages={result.pages}
+              size={result.size}
+              total={result.total}
+              onChange={setPage}
+              unit="entries"
+            />
           }
         />
       )}

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,7 +72,10 @@ func (h *Handler) Methods(w http.ResponseWriter, r *http.Request) {
 	}
 	result := make([]methodResponse, 0, len(items))
 	for _, item := range items {
-		result = append(result, methodResponse{item.ID, item.Name, item.Description, item.PayTo, item.ReferenceRequired})
+		result = append(result, methodResponse{
+			ID: item.ID, Name: item.Name, Description: item.Description,
+			PayTo: item.PayTo, ReferenceRequired: item.ReferenceRequired,
+		})
 	}
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
@@ -85,7 +89,11 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	items, total, err := List(r.Context(), h.db, account.ID, query.Page, query.Size)
+	if query.Status != "" && query.Status != "pending" && query.Status != "approved" && query.Status != "rejected" {
+		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{"status": "Status must be pending, approved, or rejected"})
+		return
+	}
+	items, total, err := List(r.Context(), h.db, account.ID, query.Status, query.Page, query.Size)
 	if err != nil {
 		h.internal(w, r, err)
 		return
@@ -147,9 +155,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	body := struct {
 		MethodID, Reference, Currency string
 		AmountMinor                   int64
-	}{MethodID: strings.TrimSpace(r.FormValue("method_id")), Reference: strings.TrimSpace(r.FormValue("reference")), Currency: strings.ToUpper(strings.TrimSpace(r.FormValue("currency")))}
-	if _, err := fmt.Sscan(r.FormValue("amount_minor"), &body.AmountMinor); err != nil {
-		body.AmountMinor = 0
+	}{
+		MethodID:  strings.TrimSpace(r.FormValue("method_id")),
+		Reference: strings.TrimSpace(r.FormValue("reference")),
+		Currency:  strings.ToUpper(strings.TrimSpace(r.FormValue("currency"))),
+	}
+	if amount, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("amount_minor")), 10, 64); err == nil {
+		body.AmountMinor = amount
 	}
 	fields := map[string]string{}
 	if body.MethodID == "" {

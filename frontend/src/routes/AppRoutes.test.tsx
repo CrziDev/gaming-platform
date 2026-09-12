@@ -37,7 +37,8 @@ describe('the public lobby', () => {
     renderApp('/register')
 
     expect(await screen.findByRole('dialog', { name: 'Join now' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Account currency')).toBeInTheDocument()
+    expect(screen.getByLabelText('Username')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Account currency')).not.toBeInTheDocument()
   })
 })
 
@@ -68,7 +69,8 @@ describe('the operations console', () => {
     renderApp('/admin')
 
     expect(await screen.findByRole('heading', { name: 'Operations console' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Authenticator code')).toBeInTheDocument()
+    expect(screen.getByLabelText('Work email')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Authenticator code')).not.toBeInTheDocument()
   })
 
   it('refuses a signed-out visitor the same way', async () => {

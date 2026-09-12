@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 
 import { Button, IconButton, buttonStyles } from '@/components/ui/Button'
 import { useAuthIntent, useSession } from '@/features/auth'
+import { chatAvailable } from '@/features/chat'
 import { useActiveWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { money } from '@/lib/money'
@@ -16,7 +17,7 @@ import { WalletIndicator } from './WalletIndicator'
 
 export function Header() {
   const { data: user } = useSession()
-  const { data: wallet } = useActiveWallet()
+  const { data: wallet } = useActiveWallet(Boolean(user))
   const { toggleRail, setDrawerOpen, chatOpen, setChatOpen } = useShell()
   const { open } = useAuthIntent()
 
@@ -69,16 +70,18 @@ export function Header() {
       )}
 
       <div className="flex items-center gap-0.5 sm:ml-1">
-        <span className="hidden chat:contents">
-          <IconButton
-            label="Toggle chat"
-            aria-pressed={chatOpen}
-            onClick={() => setChatOpen(!chatOpen)}
-            className={cn(chatOpen && 'bg-wash text-ink-soft')}
-          >
-            <MessageCircle aria-hidden size={17} strokeWidth={1.6} />
-          </IconButton>
-        </span>
+        {chatAvailable ? (
+          <span className="hidden chat:contents">
+            <IconButton
+              label="Toggle chat"
+              aria-pressed={chatOpen}
+              onClick={() => setChatOpen(!chatOpen)}
+              className={cn(chatOpen && 'bg-wash text-ink-soft')}
+            >
+              <MessageCircle aria-hidden size={17} strokeWidth={1.6} />
+            </IconButton>
+          </span>
+        ) : null}
         {user ? (
           <>
             <NotificationsPanel />

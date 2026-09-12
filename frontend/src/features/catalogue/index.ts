@@ -4,18 +4,19 @@ export {
   fetchFavorites,
   fetchGame,
   fetchGames,
+  fetchGamesByIds,
   fetchLobbyRows,
   fetchPromotions,
   toggleFavorite,
 } from './api'
 export type { GameFilters } from './api'
 export {
-  gamesByIds,
   useBigWins,
   useCategories,
   useFavorites,
   useGame,
   useGames,
+  useGamesByIds,
   useLobbyRows,
   usePromotions,
   useToggleFavorite,

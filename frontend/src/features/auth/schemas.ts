@@ -1,9 +1,5 @@
 import { z } from 'zod'
 
-export const currencies: ReadonlyArray<{ code: 'PHP'; label: string }> = [
-  { code: 'PHP', label: 'PHP · ₱' },
-]
-
 export const loginSchema = z.object({
   email: z.email('Enter a valid email address'),
   password: z.string().min(1, 'Enter your password'),
@@ -21,14 +17,12 @@ export const registerSchema = z.object({
     .string()
     .min(12, 'Use at least 12 characters')
     .max(128, 'Use at most 128 characters'),
-  currency: z.literal('PHP'),
   accepted_terms: z.literal(true, { error: 'Confirm you are 18 or older and accept the terms' }),
 })
 
 export const adminLoginSchema = z.object({
   email: z.email('Enter your work email address'),
   password: z.string().min(1, 'Enter your password'),
-  authenticator_code: z.string().regex(/^\d{6}$/, 'Enter the six-digit code'),
 })
 
 export const forgotPasswordSchema = z.object({

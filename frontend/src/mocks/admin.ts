@@ -11,6 +11,7 @@ import type {
 } from '@/api/types'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
+import { games } from './games'
 
 export const dashboardSummary: DashboardSummary = {
   pending_deposits: 7,
@@ -277,93 +278,51 @@ export const auditEntries: AuditEntry[] = [
   },
 ]
 
-export const adminGames: AdminGame[] = [
-  {
-    id: 'gm-001',
-    slug: 'aurora-dice',
-    name: 'Aurora Dice',
-    category_name: 'Originals',
-    provider: 'In-house',
-    status: 'active',
-    integration: 'Native canvas',
-    active_rtp_basis_points: 10_200,
-    rounds_30d: 18_420,
-  },
-  {
-    id: 'gm-002',
-    slug: 'vault-break',
-    name: 'Vault Break',
-    category_name: 'Originals',
-    provider: 'In-house',
-    status: 'active',
-    integration: 'Native canvas',
-    active_rtp_basis_points: 9_400,
-    rounds_30d: 12_880,
-  },
-  {
-    id: 'gm-003',
-    slug: 'skyline-crash',
-    name: 'Skyline Crash',
-    category_name: 'Crash',
-    provider: 'In-house',
-    status: 'retired',
-    integration: 'iframe · provider handshake',
-    active_rtp_basis_points: 9_600,
-    rounds_30d: 6_140,
-  },
-]
+export const adminGames: AdminGame[] = games.map((game, index) => ({
+  ...game,
+  integration: index === 2 ? 'under_review' : 'supported',
+  active_rtp_basis_points: [10_200, 9_400, 9_600][index] ?? null,
+  rounds_30d: [18_420, 12_880, 6_140][index] ?? 0,
+  updated_at: game.created_at,
+}))
+
+const profile = (
+  id: string,
+  game: AdminGame,
+  name: string,
+  version: number,
+  target: number,
+  status: RtpProfile['status'],
+  operator: string,
+  created: string,
+  until: string | null = null,
+): RtpProfile => ({
+  id,
+  game_id: game.id,
+  game_slug: game.slug,
+  game_name: game.name,
+  name,
+  version,
+  target_basis_points: target,
+  status,
+  engine_config_ref: '',
+  theoretical_basis_points: status === 'draft' ? null : target,
+  observed_basis_points: status === 'draft' ? null : target,
+  verified_at: status === 'draft' ? null : created,
+  effective_from: null,
+  effective_until: until,
+  created_by: '',
+  created_by_display_name: operator,
+  created_at: created,
+  updated_at: created,
+})
 
 export const rtpProfiles: RtpProfile[] = [
-  {
-    id: 'rtp-1',
-    game_id: 'gm-001',
-    game_name: 'Aurora Dice',
-    basis_points: 10_200,
-    status: 'active',
-    scheduled_end: hoursAgo(-6),
-    operator: 'A. Reyes',
-    created_at: hoursAgo(3),
-  },
-  {
-    id: 'rtp-2',
-    game_id: 'gm-001',
-    game_name: 'Aurora Dice',
-    basis_points: 9_400,
-    status: 'verified',
-    scheduled_end: null,
-    operator: 'A. Reyes',
-    created_at: daysAgo(4),
-  },
-  {
-    id: 'rtp-3',
-    game_id: 'gm-002',
-    game_name: 'Vault Break',
-    basis_points: 9_400,
-    status: 'active',
-    scheduled_end: null,
-    operator: 'R. Cruz',
-    created_at: daysAgo(12),
-  },
-  {
-    id: 'rtp-4',
-    game_id: 'gm-003',
-    game_name: 'Skyline Crash',
-    basis_points: 9_600,
-    status: 'retired',
-    scheduled_end: null,
-    operator: 'R. Cruz',
-    created_at: daysAgo(40),
-  },
-  {
-    id: 'rtp-5',
-    game_id: 'gm-003',
-    game_name: 'Skyline Crash',
-    basis_points: 10_500,
-    status: 'draft',
-    scheduled_end: null,
-    operator: 'A. Reyes',
-    created_at: daysAgo(1),
-  },
+  profile('rtp-1', adminGames[0]!, 'Promo', 1, 10_200, 'active', 'A. Reyes', hoursAgo(3), hoursAgo(-6)),
+  profile('rtp-2', adminGames[0]!, 'Standard', 1, 9_400, 'verified', 'A. Reyes', daysAgo(4)),
+  profile('rtp-3', adminGames[1]!, 'Standard', 1, 9_400, 'active', 'R. Cruz', daysAgo(12)),
+  profile('rtp-4', adminGames[2]!, 'Standard', 1, 9_600, 'retired', 'R. Cruz', daysAgo(40)),
+  profile('rtp-5', adminGames[2]!, 'Standard', 2, 9_600, 'draft', 'R. Cruz', daysAgo(2)),
 ]
 
 export const staffAccounts = [

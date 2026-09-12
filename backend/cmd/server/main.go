@@ -46,7 +46,7 @@ func run(logger *slog.Logger) error {
 		CookieSecure:    env("SESSION_SECURE", "false") == "true",
 		SessionTTL:      time.Duration(envInt("SESSION_TTL_HOURS", 24)) * time.Hour,
 		AllowedOrigins:  strings.Split(env("CORS_ALLOWED_ORIGINS", "http://localhost:5173"), ","),
-		MaxBodyBytes:    int64(envInt("HTTP_MAX_BODY_BYTES", 1<<20)),
+		MaxBodyBytes:    int64(envInt("HTTP_MAX_BODY_BYTES", 6<<20)),
 		ProofDir:        env("PRIVATE_PROOF_DIR", "storage/private/deposit-proofs"),
 		LoginsPerMinute: envInt("LOGIN_ATTEMPTS_PER_MINUTE", 10),
 	}

@@ -1,8 +1,16 @@
-export { adminLogin, fetchCurrentUser, login, logout, register } from './api'
-export { useAdminLogin, useLogin, useLogout, useRegister, useSession, sessionQueryKey } from './hooks'
+export { adminLogin, describeResetFailure, fetchCurrentUser, login, logout, register } from './api'
+export {
+  useAdminLogin,
+  useConfirmPasswordReset,
+  useLogin,
+  useLogout,
+  useRegister,
+  useRequestPasswordReset,
+  useSession,
+  sessionQueryKey,
+} from './hooks'
 export {
   adminLoginSchema,
-  currencies,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,

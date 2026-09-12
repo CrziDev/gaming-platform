@@ -10,13 +10,14 @@ import { ErrorState } from '@/components/ui/States'
 import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import { useSession } from '@/features/auth'
 import {
-  gamesByIds,
   useBigWins,
   useCategories,
   useGames,
+  useGamesByIds,
   useLobbyRows,
   usePromotions,
 } from '@/features/catalogue'
+import type { LobbyRow as LobbyRowData } from '@/api/types'
 import { paths } from '@/routes/paths'
 
 export function LobbyPage() {
@@ -75,15 +76,18 @@ export function LobbyPage() {
       {rowsQuery.isPending ? (
         <SkeletonGrid count={4} className={gameGrid} />
       ) : (
-        rowsQuery.data?.map((row) => (
-          <GameRow
-            key={row.id}
-            title={row.title}
-            categorySlug={row.category_slug}
-            games={gamesByIds(row.game_ids)}
-          />
-        ))
+        rowsQuery.data?.map((row) => <LobbyRow key={row.id} row={row} />)
       )}
     </div>
   )
+}
+
+function LobbyRow({ row }: { row: LobbyRowData }) {
+  const gamesQuery = useGamesByIds(row.game_ids)
+  const games = gamesQuery.data ?? []
+
+  if (games.length === 0) {
+    return null
+  }
+  return <GameRow title={row.title} categorySlug={row.category_slug} games={games} />
 }

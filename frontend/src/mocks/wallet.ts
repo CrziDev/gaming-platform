@@ -1,4 +1,5 @@
 import type {
+  CurrencyMetadata,
   DepositRequest,
   Notification,
   PaymentMethod,
@@ -8,6 +9,11 @@ import type {
 } from '@/api/types'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
+
+export const currencies: CurrencyMetadata[] = [
+  { code: 'PHP', name: 'Philippine Peso', symbol: '₱', minor_units: 2, deposit_min_minor: 10_000, deposit_max_minor: 5_000_000 },
+  { code: 'USD', name: 'US Dollar', symbol: '$', minor_units: 2, deposit_min_minor: 10_000, deposit_max_minor: 5_000_000 },
+]
 
 export const wallets: Wallet[] = [
   { currency: 'PHP', balance_minor: 525_000 },
@@ -232,10 +238,3 @@ export const notifications: Notification[] = [
     read: true,
   },
 ]
-
-export const walletSummary = {
-  currency: 'PHP' as const,
-  deposited_30d_minor: 650_000,
-  staked_30d_minor: 324_000,
-  returned_30d_minor: 299_000,
-}

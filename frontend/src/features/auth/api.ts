@@ -1,6 +1,6 @@
 import { ApiError, api } from '@/api/client'
 import { mockRequest } from '@/api/mock'
-import { usingMockApi } from '@/api/mode'
+import { usingFixtures, usingMockApi } from '@/api/mode'
 import type { User } from '@/api/types'
 import { mockSession, mockSignIn, mockSignOut, mockSignUp } from '@/mocks/session'
 
@@ -62,4 +62,32 @@ export async function fetchCurrentUser(): Promise<User | null> {
     }
     throw error
   }
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  if (usingFixtures) {
+    await mockRequest(() => undefined, 400)
+    return
+  }
+  await api.post<void>('/password-reset', { email })
+}
+
+export async function confirmPasswordReset(input: { token: string; password: string }): Promise<void> {
+  if (usingFixtures) {
+    await mockRequest(() => undefined, 400)
+    return
+  }
+  await api.post<void>('/password-reset/confirm', { token: input.token, password: input.password })
+}
+
+// The reset endpoints are in the contract but not yet on the server; a 404 is
+// the server saying so, and the player should hear that rather than a promise.
+export function describeResetFailure(error: unknown): string {
+  if (error instanceof ApiError && error.status === 404) {
+    return 'Password reset is not available yet. Contact support to change your password.'
+  }
+  if (error instanceof ApiError) {
+    return error.message
+  }
+  return 'The request could not be sent. Check your connection and try again.'
 }

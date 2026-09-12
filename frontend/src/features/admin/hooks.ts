@@ -1,18 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { AccountStatus } from '@/api/types'
+import type { Currency } from '@/lib/money'
 
 import {
+  activateRtpProfile,
   adjustWallet,
+  createGame,
+  createRtpProfile,
   fetchAdminGame,
   fetchAdminGames,
   fetchAdminPaymentMethods,
   fetchAdminTransactions,
   fetchAdminRounds,
+  fetchAllCategories,
   fetchAuditEntries,
   fetchConsoleAlerts,
   fetchDashboard,
   fetchDepositQueue,
+  fetchGameRtpProfiles,
   fetchRtpProfiles,
   fetchStaff,
   fetchUser,
@@ -24,11 +30,20 @@ import {
   fetchUsers,
   reviewDeposit,
   setUserStatus,
+  updateGame,
+  updateRtpProfile,
+  type GameInput,
+  type GamePatch,
+  type RtpDraftInput,
+  type RtpSchedule,
   type UserFilter,
 } from './api'
 
-export function useDashboard() {
-  return useQuery({ queryKey: ['admin', 'dashboard'], queryFn: fetchDashboard })
+export function useDashboard(currency: Currency) {
+  return useQuery({
+    queryKey: ['admin', 'dashboard', currency],
+    queryFn: () => fetchDashboard(currency),
+  })
 }
 
 export function useConsoleAlerts() {
@@ -42,16 +57,21 @@ export function useAuditEntries(page = 1, size?: number) {
   })
 }
 
-export function useDepositQueue() {
-  return useQuery({ queryKey: ['admin', 'deposit-queue'], queryFn: fetchDepositQueue })
+export function useDepositQueue(page = 1, size?: number) {
+  return useQuery({
+    queryKey: ['admin', 'deposit-queue', page, size],
+    queryFn: () => fetchDepositQueue(page, size),
+  })
 }
 
 export function useReviewDeposit() {
   const queryClient = useQueryClient()
 
+  // Settled, not success: a review that lost the race to another operator
+  // still means the queue on screen is stale.
   return useMutation({
     mutationFn: reviewDeposit,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
 }
 
@@ -79,14 +99,17 @@ export function useUserRounds(id: string) {
   return useQuery({ queryKey: ['admin', 'user', id, 'rounds'], queryFn: fetchUserRounds })
 }
 
-export function useUserDeposits(id: string) {
-  return useQuery({ queryKey: ['admin', 'user', id, 'deposits'], queryFn: () => fetchUserDeposits(id) })
+export function useUserDeposits(id: string, page = 1) {
+  return useQuery({
+    queryKey: ['admin', 'user', id, 'deposits', page],
+    queryFn: () => fetchUserDeposits(id, page),
+  })
 }
 
-export function useUserAdjustments(id: string) {
+export function useUserAdjustments(id: string, page = 1) {
   return useQuery({
-    queryKey: ['admin', 'user', id, 'adjustments'],
-    queryFn: () => fetchUserAdjustments(id),
+    queryKey: ['admin', 'user', id, 'adjustments', page],
+    queryFn: () => fetchUserAdjustments(id, page),
   })
 }
 
@@ -123,12 +146,74 @@ export function useAdminGame(id: string) {
   return useQuery({ queryKey: ['admin', 'game', id], queryFn: () => fetchAdminGame(id) })
 }
 
+export function useAllCategories() {
+  return useQuery({ queryKey: ['admin', 'categories'], queryFn: fetchAllCategories })
+}
+
+// A game edit reaches the player catalogue too: the public lists, the single
+// game, and the category counts all read the same rows.
+function useInvalidateCatalogue() {
+  const queryClient = useQueryClient()
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin'] }),
+      queryClient.invalidateQueries({ queryKey: ['games'] }),
+      queryClient.invalidateQueries({ queryKey: ['game'] }),
+      queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    ])
+}
+
+export function useCreateGame() {
+  const invalidate = useInvalidateCatalogue()
+  return useMutation({ mutationFn: (input: GameInput) => createGame(input), onSuccess: invalidate })
+}
+
+export function useUpdateGame() {
+  const invalidate = useInvalidateCatalogue()
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: GamePatch }) => updateGame(id, patch),
+    onSuccess: invalidate,
+  })
+}
+
 export function useAdminRounds() {
   return useQuery({ queryKey: ['admin', 'rounds'], queryFn: fetchAdminRounds })
 }
 
 export function useRtpProfiles() {
   return useQuery({ queryKey: ['admin', 'rtp'], queryFn: fetchRtpProfiles })
+}
+
+export function useGameRtpProfiles(gameId: string) {
+  return useQuery({
+    queryKey: ['admin', 'rtp', 'game', gameId],
+    queryFn: () => fetchGameRtpProfiles(gameId),
+    enabled: gameId !== '',
+  })
+}
+
+export function useCreateRtpProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ gameId, input }: { gameId: string; input: RtpDraftInput }) => createRtpProfile(gameId, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+}
+
+export function useUpdateRtpProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<RtpDraftInput> }) => updateRtpProfile(id, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+}
+
+export function useActivateRtpProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, schedule }: { id: string; schedule: RtpSchedule }) => activateRtpProfile(id, schedule),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
 }
 
 export function useStaff() {

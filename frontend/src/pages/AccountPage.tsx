@@ -5,14 +5,15 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Panel } from '@/components/ui/Panel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useLogout, useSession } from '@/features/auth'
-import { useActiveWallet } from '@/features/wallet'
+import { useWallets } from '@/features/wallet'
 import { formatDate } from '@/lib/format'
+import { formatMoney, money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 import { useState } from 'react'
 
 export function AccountPage() {
   const { data: user } = useSession()
-  const { data: wallet } = useActiveWallet()
+  const walletsQuery = useWallets()
   const logoutMutation = useLogout()
   const navigate = useNavigate()
   const [confirming, setConfirming] = useState(false)
@@ -36,25 +37,25 @@ export function AccountPage() {
         </Row>
       </Panel>
 
-      <Panel title="Wallet" bodyClassName="flex flex-col gap-3 p-5">
-        <Row label="Currency">
-          {wallet?.currency ?? 'PHP'} — fixed at registration and permanent
-        </Row>
+      <Panel title="Wallets" bodyClassName="flex flex-col gap-3 p-5">
+        {walletsQuery.data?.map((wallet) => (
+          <Row key={wallet.currency} label={wallet.currency}>
+            <span className="font-mono font-medium tnum">
+              {formatMoney(money(wallet.balance_minor, wallet.currency))}
+            </span>
+          </Row>
+        ))}
         <p className="text-[13px] leading-relaxed text-ink-mute">
-          Your wallet, deposits and history all use this currency. There is no conversion anywhere in
-          the platform.
+          One wallet per currency. Deposits and history belong to the wallet they were made in, and
+          nothing converts between currencies anywhere in the platform.
         </p>
-      </Panel>
-
-      <Panel title="Security" bodyClassName="flex flex-col items-start gap-3 p-5">
-        <p className="text-[13px] leading-relaxed text-ink-mute">
-          Signing out ends this session everywhere it is open. Sessions are server-side and can be
-          revoked at any time.
-        </p>
-        <Button variant="secondary">Change password</Button>
       </Panel>
 
       <Panel title="Session" bodyClassName="flex flex-col items-start gap-3 p-5">
+        <p className="text-[13px] leading-relaxed text-ink-mute">
+          Signing out ends the session on this device. Sessions are held server-side and can be
+          revoked by support at any time.
+        </p>
         <Button variant="destructive" onClick={() => setConfirming(true)}>
           Sign out
         </Button>

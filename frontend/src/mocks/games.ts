@@ -1,6 +1,6 @@
 import type { BigWin, Category, Game, LobbyRow, Promotion } from '@/api/types'
 
-import { minutesAgo } from './clock'
+import { daysAgo, minutesAgo } from './clock'
 
 export const categories: Category[] = [
   { slug: 'originals', name: 'Originals', game_count: 2, available: true },
@@ -14,6 +14,7 @@ export const games: Game[] = [
     id: 'gm-001',
     slug: 'aurora-dice',
     name: 'Aurora Dice',
+    description: 'Roll over or under a target you choose and set your own odds.',
     category_slug: 'originals',
     category_name: 'Originals',
     provider: 'In-house',
@@ -22,13 +23,15 @@ export const games: Game[] = [
     min_wager_minor: 100,
     max_wager_minor: 5_000_00,
     wager_step_minor: 100,
-    art_seed: 214,
+    thumbnail_url: null,
+    created_at: daysAgo(120),
     flags: ['hot'],
   },
   {
     id: 'gm-002',
     slug: 'vault-break',
     name: 'Vault Break',
+    description: 'Crack the combination one dial at a time and stop before the alarm.',
     category_slug: 'originals',
     category_name: 'Originals',
     provider: 'In-house',
@@ -37,13 +40,15 @@ export const games: Game[] = [
     min_wager_minor: 100,
     max_wager_minor: 5_000_00,
     wager_step_minor: 100,
-    art_seed: 47,
+    thumbnail_url: null,
+    created_at: daysAgo(4),
     flags: ['hot', 'new'],
   },
   {
     id: 'gm-003',
     slug: 'skyline-crash',
     name: 'Skyline Crash',
+    description: 'The multiplier climbs until it crashes. Cash out first.',
     category_slug: 'crash',
     category_name: 'Crash',
     provider: 'In-house',
@@ -52,7 +57,8 @@ export const games: Game[] = [
     min_wager_minor: 100,
     max_wager_minor: 5_000_00,
     wager_step_minor: 100,
-    art_seed: 318,
+    thumbnail_url: null,
+    created_at: daysAgo(9),
     flags: ['new'],
   },
 ]

@@ -3,18 +3,37 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router'
 
+import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
-import { forgotPasswordSchema, type ForgotPasswordInput } from '@/features/auth'
+import {
+  describeResetFailure,
+  forgotPasswordSchema,
+  useRequestPasswordReset,
+  type ForgotPasswordInput,
+} from '@/features/auth'
 import { paths } from '@/routes/paths'
 
 export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
+  const request = useRequestPasswordReset()
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    setError,
+    formState: { errors },
   } = useForm<ForgotPasswordInput>({ resolver: zodResolver(forgotPasswordSchema) })
+
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await request.mutateAsync(values.email)
+      setSent(true)
+    } catch (error) {
+      if (error instanceof ApiError && error.fields.email) {
+        setError('email', { type: 'server', message: error.fields.email })
+      }
+    }
+  })
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
@@ -35,14 +54,7 @@ export function ForgotPasswordPage() {
             </Link>
           </div>
         ) : (
-          <form
-            onSubmit={handleSubmit(async () => {
-              await new Promise((resolve) => window.setTimeout(resolve, 400))
-              setSent(true)
-            })}
-            noValidate
-            className="flex flex-col gap-5"
-          >
+          <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Forgot password</h1>
               <p className="text-[13.5px] leading-relaxed text-ink-mute">
@@ -54,8 +66,14 @@ export function ForgotPasswordPage() {
               <Input id="forgot-email" type="email" autoComplete="email" {...register('email')} />
             </Field>
 
-            <Button type="submit" fullWidth disabled={isSubmitting}>
-              {isSubmitting ? 'Sending…' : 'Send reset link'}
+            {request.error ? (
+              <p role="alert" className="text-[13px] text-danger">
+                {describeResetFailure(request.error)}
+              </p>
+            ) : null}
+
+            <Button type="submit" fullWidth disabled={request.isPending}>
+              {request.isPending ? 'Sending…' : 'Send reset link'}
             </Button>
 
             <Link to={paths.lobby} className="text-center text-[13px] text-accent-ink hover:text-accent-hi">

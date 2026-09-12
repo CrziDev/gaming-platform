@@ -31,6 +31,12 @@ export function NotificationsPanel() {
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [open])
 
+  // No notification service exists yet: a bell with nothing behind it is a
+  // control implying a feature that does not exist.
+  if (notifications !== undefined && notifications.length === 0) {
+    return null
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <IconButton label="Notifications" aria-expanded={open} onClick={() => setOpen((v) => !v)}>

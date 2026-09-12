@@ -32,8 +32,8 @@ export function HeroBanner({ featured }: { featured: Game | undefined }) {
           </h1>
 
           <p className="max-w-[44ch] text-[13.5px] leading-normal text-ink-mute text-pretty">
-            One wallet, one currency, and a ledger that reconciles — every stake and every win lands
-            in your history the moment it settles.
+            A wallet in every currency you play, and a ledger that reconciles — every stake and
+            every win lands in your history the moment it settles.
           </p>
 
           <p className="flex flex-wrap items-center gap-x-2 font-mono text-[11px] text-ink-mute">

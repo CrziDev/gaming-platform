@@ -14,7 +14,7 @@ import (
 	"github.com/gaming-platform/backend/internal/auth"
 )
 
-const upsertUser = `
+const upsertAdmin = `
 	INSERT INTO users (email, password_hash, display_name, role)
 	VALUES ($1, $2, $3, 'admin')
 	ON CONFLICT (email) DO UPDATE
@@ -34,19 +34,24 @@ func main() {
 
 func run() error {
 	databaseURL := os.Getenv("DATABASE_URL")
-	email := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_USER_EMAIL")))
-	password := os.Getenv("SEED_USER_PASSWORD")
+	adminEmail := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_USER_EMAIL")))
+	adminPassword := os.Getenv("SEED_USER_PASSWORD")
 
 	if databaseURL == "" {
 		return errors.New("seed: DATABASE_URL is required")
 	}
-	if email == "" || password == "" {
+	if adminEmail == "" || adminPassword == "" {
 		return errors.New("seed: SEED_USER_EMAIL and SEED_USER_PASSWORD must be set")
 	}
 
-	displayName := os.Getenv("SEED_USER_DISPLAY_NAME")
-	if displayName == "" {
-		displayName = "Owner"
+	adminDisplayName := os.Getenv("SEED_USER_DISPLAY_NAME")
+	if adminDisplayName == "" {
+		adminDisplayName = "Owner"
+	}
+
+	playerPassword := os.Getenv("SEED_PLAYER_PASSWORD")
+	if playerPassword == "" {
+		playerPassword = adminPassword
 	}
 
 	db, err := sql.Open("pgx", databaseURL)
@@ -55,19 +60,49 @@ func run() error {
 	}
 	defer db.Close()
 
-	hash, err := auth.HashPassword(password)
-	if err != nil {
-		return fmt.Errorf("seed: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	var id string
-	if err := db.QueryRowContext(ctx, upsertUser, email, hash, displayName).Scan(&id); err != nil {
-		return fmt.Errorf("seed: upsert user: %w", err)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("seed: begin: %w", err)
+	}
+	defer tx.Rollback()
+
+	adminID, err := seedAdmin(ctx, tx, adminEmail, adminPassword, adminDisplayName)
+	if err != nil {
+		return err
 	}
 
-	fmt.Printf("seeded admin %s (%s)\n", email, id)
+	playerCount, err := seedPlayers(ctx, tx, adminEmail, playerPassword)
+	if err != nil {
+		return err
+	}
+
+	if err := seedCatalogue(ctx, tx); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("seed: commit: %w", err)
+	}
+
+	fmt.Printf("seeded admin %s (%s)\n", adminEmail, adminID)
+	fmt.Printf("seeded %d players\n", playerCount)
+	fmt.Printf("seeded %d categories and %d games\n", len(categories), len(games))
 	return nil
+}
+
+func seedAdmin(ctx context.Context, tx *sql.Tx, email, password, displayName string) (string, error) {
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return "", fmt.Errorf("seed: %w", err)
+	}
+
+	var id string
+	if err := tx.QueryRowContext(ctx, upsertAdmin, email, hash, displayName).Scan(&id); err != nil {
+		return "", fmt.Errorf("seed: upsert admin: %w", err)
+	}
+
+	return id, nil
 }

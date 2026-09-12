@@ -4,21 +4,33 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router'
 
+import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/States'
 import { cn } from '@/lib/cn'
+import { useToast } from '@/components/ui/Toast'
 import {
   createDepositSchema,
   fallbackDepositLimits,
+  useActiveWallet,
+  useDepositLimits,
+  usePaymentMethods,
+  useSubmitDeposit,
   type DepositInput,
-} from '@/features/wallet/schemas'
-import { useToast } from '@/components/ui/Toast'
-import { useActiveWallet, useDepositLimits, usePaymentMethods, useSubmitDeposit } from '@/features/wallet'
+} from '@/features/wallet'
 import { currencySymbol, formatMoney, money, parseMoneyInput } from '@/lib/money'
 import { paths } from '@/routes/paths'
+
+// The server names inputs by the wire field; the form names them by what the
+// player typed.
+const serverFields: Record<string, keyof DepositInput> = {
+  method_id: 'method_id',
+  amount_minor: 'amount',
+  reference: 'reference',
+}
 
 export function DepositPage() {
   const methodsQuery = usePaymentMethods()
@@ -29,6 +41,10 @@ export function DepositPage() {
   const toast = useToast()
   const [proof, setProof] = useState<File | null>(null)
   const [proofError, setProofError] = useState<string | undefined>(undefined)
+  const [submitError, setSubmitError] = useState<string | undefined>(undefined)
+  // One key per form, not per click: a retry after a dropped connection must
+  // find the original request on the server instead of creating a second one.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
   const currency = walletQuery.data?.currency ?? fallbackDepositLimits.currency
   const limits = limitsQuery.data ?? fallbackDepositLimits
   const schema = useMemo(() => createDepositSchema(currency, limits), [currency, limits])
@@ -70,15 +86,47 @@ export function DepositPage() {
       return
     }
     setProofError(undefined)
+    setSubmitError(undefined)
 
-    const created = await submitDeposit.mutateAsync({
-      method_id: values.method_id,
-      amount_minor: parseMoneyInput(values.amount, currency) ?? 0,
-      reference: values.reference,
-      currency,
-      proof,
-      idempotency_key: crypto.randomUUID(),
-    })
+    let created
+    try {
+      created = await submitDeposit.mutateAsync({
+        method_id: values.method_id,
+        amount_minor: parseMoneyInput(values.amount, currency) ?? 0,
+        reference: values.reference,
+        currency,
+        proof,
+        idempotency_key: idempotencyKey,
+      })
+    } catch (error) {
+      if (!(error instanceof ApiError)) {
+        setSubmitError('The request could not be sent. Check your connection and try again.')
+        return
+      }
+      // The server rejected this submission outright, so the next attempt is a
+      // new request and needs its own key.
+      setIdempotencyKey(crypto.randomUUID())
+      if (error.status === 413) {
+        setProofError('The screenshot is too large. Use an image under 5 MB.')
+        return
+      }
+      let placed = false
+      for (const [sent, field] of Object.entries(serverFields)) {
+        const message = error.fields[sent]
+        if (message) {
+          setError(field, { type: 'server', message })
+          placed = true
+        }
+      }
+      if (error.fields.proof) {
+        setProofError(error.fields.proof)
+        placed = true
+      }
+      if (!placed) {
+        setSubmitError(error.message)
+      }
+      return
+    }
 
     toast.push(
       `Request ${created.reference} sent for review. Funds appear once an admin approves.`,
@@ -260,6 +308,11 @@ export function DepositPage() {
         </section>
 
         <div className="flex flex-col gap-2.5">
+          {submitError ? (
+            <p role="alert" className="text-[13px] text-danger">
+              {submitError}
+            </p>
+          ) : null}
           <Button type="submit" fullWidth disabled={submitDeposit.isPending}>
             {submitDeposit.isPending ? 'Submitting…' : 'Submit request'}
           </Button>

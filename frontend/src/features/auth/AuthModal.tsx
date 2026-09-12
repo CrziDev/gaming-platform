@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router'
 
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/Button'
-import { Field, Input, Select } from '@/components/ui/Field'
+import { Field, Input } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { ChipTabs } from '@/components/ui/Tabs'
 import { paths } from '@/routes/paths'
@@ -12,13 +12,7 @@ import { paths } from '@/routes/paths'
 import { useSessionExpired } from './expiry'
 import { useAuthIntent, type AuthTab } from './intent'
 import { useLogin, useRegister } from './hooks'
-import {
-  currencies,
-  loginSchema,
-  registerSchema,
-  type LoginInput,
-  type RegisterInput,
-} from './schemas'
+import { loginSchema, registerSchema, type LoginInput, type RegisterInput } from './schemas'
 
 const tabs = [
   { id: 'signin' as const, label: 'Sign in' },
@@ -133,11 +127,6 @@ function SignInForm({ mutation }: { mutation: ReturnType<typeof useLogin> }) {
         />
       </Field>
 
-      <label className="flex min-h-11 items-center gap-2.5 text-sm text-ink-mute lg:min-h-9">
-        <input type="checkbox" name="keep_signed_in" className="size-4 accent-accent" />
-        Keep me signed in
-      </label>
-
       {mutation.error ? (
         <p role="alert" className="text-[13px] text-danger">
           {errorMessage(mutation.error)}
@@ -155,10 +144,7 @@ function JoinForm({ mutation }: { mutation: ReturnType<typeof useRegister> }) {
     handleSubmit,
     setError,
     formState: { errors },
-  } = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { currency: 'PHP' },
-  })
+  } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) })
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -201,37 +187,9 @@ function JoinForm({ mutation }: { mutation: ReturnType<typeof useRegister> }) {
         />
       </Field>
 
-      {currencies.length === 1 ? (
-        <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-input bg-inset px-3 py-2">
-          <label htmlFor="join-currency" className="text-[13px] font-medium text-ink-mute">
-            Account currency
-          </label>
-          <span className="flex items-center gap-2">
-            <output id="join-currency" className="font-mono text-[13px] font-medium text-ink-soft">
-              {currencies[0]?.label}
-            </output>
-            <span className="label-mono text-ink-mute">
-              Permanent
-            </span>
-          </span>
-          <input type="hidden" {...register('currency')} />
-        </div>
-      ) : (
-        <Field
-          label="Account currency"
-          htmlFor="join-currency"
-          error={errors.currency?.message}
-          hint="Permanent — your wallet, deposits and history all use this currency."
-        >
-          <Select id="join-currency" {...register('currency')}>
-            {currencies.map((currency) => (
-              <option key={currency.code} value={currency.code}>
-                {currency.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-      )}
+      <p className="rounded-input bg-inset px-3 py-2 text-[12.5px] leading-relaxed text-ink-mute">
+        You get a wallet in each currency the platform supports. Nothing converts between them.
+      </p>
 
       <label className="flex items-start gap-2.5 py-0.5 text-[13px] leading-relaxed text-ink-mute">
         <input

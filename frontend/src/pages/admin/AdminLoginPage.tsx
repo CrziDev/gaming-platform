@@ -48,22 +48,6 @@ export function AdminLoginPage() {
             />
           </Field>
 
-          <Field
-            label="Authenticator code"
-            htmlFor="admin-code"
-            error={errors.authenticator_code?.message}
-          >
-            <Input
-              id="admin-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="••••••"
-              className="font-mono text-lg tracking-[0.4em]"
-              {...register('authenticator_code')}
-            />
-          </Field>
-
           {loginMutation.error ? (
             <p role="alert" className="text-[13px] text-danger">
               {loginMutation.error.message}
@@ -75,8 +59,8 @@ export function AdminLoginPage() {
           </Button>
 
           <p className="text-[12px] leading-relaxed text-ink-mute">
-            No register link, no password self-reset, no &ldquo;remember me&rdquo;. Accounts are
-            provisioned by an owner; lockout after 5 attempts.
+            No register link, no password self-reset, no &ldquo;remember me&rdquo;. Staff accounts
+            are provisioned by an owner, and sign-in attempts are rate limited.
           </p>
         </form>
       </div>

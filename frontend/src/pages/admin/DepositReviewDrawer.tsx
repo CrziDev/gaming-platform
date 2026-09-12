@@ -1,7 +1,9 @@
 import { useState } from 'react'
 
+import { ApiError } from '@/api/client'
 import type { AdminDeposit } from '@/api/types'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
 import { Field, Select } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { adminDepositProofUrl, reasonOptions, useReviewDeposit } from '@/features/admin'
@@ -23,6 +25,7 @@ export function DepositReviewDrawer({ deposit, onClose }: DepositReviewDrawerPro
 
 function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () => void }) {
   const review = useReviewDeposit()
+  const toast = useToast()
   const [amount, setAmount] = useState(() =>
     formatMoneyInput(money(deposit.amount_minor, deposit.currency)),
   )
@@ -31,6 +34,29 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
 
   const creditMinor = parseMoneyInput(amount, deposit.currency)
   const edited = creditMinor !== deposit.amount_minor
+
+  // The contract's codes decide what the operator sees. An already-reviewed
+  // request closes the drawer because there is nothing left to decide; every
+  // other failure keeps it open with the server's reason.
+  const submit = async (input: Parameters<typeof review.mutateAsync>[0]) => {
+    setError(undefined)
+    try {
+      await review.mutateAsync(input)
+      onClose()
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.code === 'DEPOSIT_ALREADY_REVIEWED') {
+        toast.push('Another operator already reviewed this request. The queue has been refreshed.')
+        onClose()
+        return
+      }
+      if (failure instanceof ApiError) {
+        const field = Object.values(failure.fields)[0]
+        setError(field ?? failure.message)
+        return
+      }
+      setError('The review could not be sent. Check your connection and try again.')
+    }
+  }
 
   const approve = async () => {
     if (creditMinor === null || creditMinor <= 0) {
@@ -41,13 +67,12 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
       setError('An edited amount needs a note')
       return
     }
-    await review.mutateAsync({
+    await submit({
       id: deposit.id,
       action: 'approve',
       amount_minor: creditMinor,
       ...(edited ? { reason } : {}),
     })
-    onClose()
   }
 
   const reject = async () => {
@@ -55,8 +80,7 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
       setError('A rejection needs a reason — the player sees it verbatim')
       return
     }
-    await review.mutateAsync({ id: deposit.id, action: 'reject', reason })
-    onClose()
+    await submit({ id: deposit.id, action: 'reject', reason })
   }
 
   return (

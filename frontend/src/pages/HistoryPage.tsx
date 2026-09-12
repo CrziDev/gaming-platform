@@ -1,19 +1,17 @@
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Transaction } from '@/api/types'
-import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Field'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
+import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
-import { EmptyState } from '@/components/ui/States'
-import { StatCard } from '@/components/ui/StatCard'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
-import { useTransactions, useWalletSummary, type HistoryFilter, type HistoryKind } from '@/features/wallet'
+import { useTransactions, type HistoryFilter, type HistoryKind } from '@/features/wallet'
 import { formatClock, formatDate, formatDateTime } from '@/lib/format'
-import { formatMoney, money } from '@/lib/money'
+import { money } from '@/lib/money'
 
 const kindTabs = [
   { id: 'all' as const, label: 'All' },
@@ -25,7 +23,6 @@ const kindTabs = [
 export function HistoryPage() {
   const [filter, setFilter] = useState<HistoryFilter>({ kind: 'all', days: 30, page: 1 })
   const historyQuery = useTransactions(filter)
-  const summaryQuery = useWalletSummary()
 
   const page = historyQuery.data
   const grouped = groupByDay(page?.rows ?? [])
@@ -35,29 +32,22 @@ export function HistoryPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">History</h1>
 
-        <div className="flex items-center gap-2.5">
-          <Select
-            aria-label="Date range"
-            value={String(filter.days)}
-            onChange={(event) =>
-              setFilter((current) => ({
-                ...current,
-                days: Number(event.target.value) as HistoryFilter['days'],
-                page: 1,
-              }))
-            }
-            className="min-h-11 w-44"
-          >
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-          </Select>
-
-          <Button variant="secondary" size="sm" className="hidden lg:inline-flex">
-            <Download aria-hidden size={15} strokeWidth={1.5} />
-            Export CSV
-          </Button>
-        </div>
+        <Select
+          aria-label="Date range"
+          value={String(filter.days)}
+          onChange={(event) =>
+            setFilter((current) => ({
+              ...current,
+              days: Number(event.target.value) as HistoryFilter['days'],
+              page: 1,
+            }))
+          }
+          className="min-h-11 w-44"
+        >
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </Select>
       </header>
 
       <ChipTabs
@@ -67,25 +57,14 @@ export function HistoryPage() {
         label="Filter by type"
       />
 
-      {summaryQuery.data ? (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard
-            label={`Deposited · ${filter.days}d`}
-            value={formatMoney(money(summaryQuery.data.deposited_30d_minor, summaryQuery.data.currency))}
-          />
-          <StatCard
-            label={`Staked · ${filter.days}d`}
-            value={formatMoney(money(summaryQuery.data.staked_30d_minor, summaryQuery.data.currency))}
-          />
-          <StatCard
-            label={`Returned · ${filter.days}d`}
-            value={formatMoney(money(summaryQuery.data.returned_30d_minor, summaryQuery.data.currency))}
-          />
-        </div>
-      ) : null}
-
       {historyQuery.isPending ? (
         <SkeletonRows count={6} />
+      ) : historyQuery.isError ? (
+        <ErrorState
+          title="History unavailable"
+          message="Your ledger could not be loaded."
+          onRetry={() => void historyQuery.refetch()}
+        />
       ) : !page || page.rows.length === 0 ? (
         <EmptyState
           title="Nothing in this range"
@@ -127,48 +106,13 @@ export function HistoryPage() {
             />
           </div>
 
-          <nav className="flex items-center justify-between gap-3" aria-label="Pagination">
-            <span className="font-mono text-[12px] text-ink-mute">
-              {(page.page - 1) * page.size + 1}–{Math.min(page.page * page.size, page.total)} of{' '}
-              {page.total}
-            </span>
-
-            <div className="hidden items-center gap-1.5 lg:flex">
-              <Button
-                variant="secondary"
-                size="sm"
-                aria-label="Previous page"
-                disabled={page.page === 1}
-                onClick={() => setFilter((current) => ({ ...current, page: current.page - 1 }))}
-                className="size-11 px-0"
-              >
-                <ChevronLeft aria-hidden size={16} strokeWidth={1.5} />
-              </Button>
-              <span className="px-2 font-mono text-[13px] tnum">
-                {page.page} / {page.pages}
-              </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                aria-label="Next page"
-                disabled={page.page >= page.pages}
-                onClick={() => setFilter((current) => ({ ...current, page: current.page + 1 }))}
-                className="size-11 px-0"
-              >
-                <ChevronRight aria-hidden size={16} strokeWidth={1.5} />
-              </Button>
-            </div>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={page.page >= page.pages}
-              onClick={() => setFilter((current) => ({ ...current, page: current.page + 1 }))}
-              className="lg:hidden"
-            >
-              Load 20 more
-            </Button>
-          </nav>
+          <PageNav
+            page={page.page}
+            pages={page.pages}
+            size={page.size}
+            total={page.total}
+            onChange={(next) => setFilter((current) => ({ ...current, page: next }))}
+          />
         </>
       )}
     </div>

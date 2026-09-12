@@ -13,6 +13,9 @@ import (
 )
 
 type CurrentUser func(http.ResponseWriter, *http.Request) (user.User, bool)
+
+var ledgerKinds = map[string]bool{"deposit": true, "withdrawal": true, "wager": true, "win": true, "refund": true, "adjustment": true}
+
 type Handler struct {
 	db          *sql.DB
 	logger      *slog.Logger
@@ -60,7 +63,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	result := make([]walletResponse, 0, len(wallets))
 	for _, item := range wallets {
-		result = append(result, walletResponse{item.ID, item.Currency, item.BalanceMinor, item.Status})
+		result = append(result, walletResponse{ID: item.ID, Currency: item.Currency, BalanceMinor: item.BalanceMinor, Status: item.Status})
 	}
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
@@ -72,7 +75,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	code := strings.ToUpper(strings.TrimSpace(r.PathValue("currency")))
 	if len(code) != 3 {
-		httpx.WriteError(w, http.StatusBadRequest, "Currency must be a three-letter code")
+		httpx.WriteError(w, http.StatusNotFound, "Wallet not found")
 		return
 	}
 	item, err := Get(r.Context(), h.db, account.ID, code)
@@ -84,7 +87,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		h.internal(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, walletResponse{item.ID, item.Currency, item.BalanceMinor, item.Status})
+	httpx.WriteJSON(w, http.StatusOK, walletResponse{ID: item.ID, Currency: item.Currency, BalanceMinor: item.BalanceMinor, Status: item.Status})
 }
 
 func (h *Handler) AdminUserWallets(w http.ResponseWriter, r *http.Request) {
@@ -137,6 +140,10 @@ func (h *Handler) Transactions(w http.ResponseWriter, r *http.Request) {
 		}
 		query.Currency = pathCurrency
 	}
+	if query.Type != "" && !ledgerKinds[query.Type] {
+		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{"type": "Transaction type is invalid"})
+		return
+	}
 	if query.Currency != "" {
 		if _, err := Get(r.Context(), h.db, account.ID, query.Currency); errors.Is(err, ErrCurrencyDisabled) {
 			httpx.WriteError(w, http.StatusNotFound, "Wallet not found")
@@ -146,7 +153,7 @@ func (h *Handler) Transactions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	items, total, err := ListTransactions(r.Context(), h.db, account.ID, query.Currency, query.Page, query.Size)
+	items, total, err := ListTransactions(r.Context(), h.db, account.ID, TransactionFilter{Page: query.Page, Size: query.Size, Currency: query.Currency, Kind: query.Type, From: query.From, To: query.To})
 	if err != nil {
 		h.internal(w, r, err)
 		return
@@ -168,7 +175,14 @@ func (h *Handler) AdminAdjust(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !httpx.IsUUID(r.PathValue("id")) {
-		httpx.WriteError(w, http.StatusNotFound, "Wallet not found")
+		httpx.WriteError(w, http.StatusNotFound, "Account not found")
+		return
+	}
+	if _, err := user.FindByID(r.Context(), h.db, r.PathValue("id")); errors.Is(err, user.ErrNoUser) {
+		httpx.WriteError(w, http.StatusNotFound, "Account not found")
+		return
+	} else if err != nil {
+		h.internal(w, r, err)
 		return
 	}
 
@@ -253,8 +267,7 @@ func (h *Handler) AdminTransactions(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{"user_id": "User ID must be a valid UUID"})
 		return
 	}
-	validKinds := map[string]bool{"deposit": true, "withdrawal": true, "wager": true, "win": true, "refund": true, "adjustment": true}
-	if query.Type != "" && !validKinds[query.Type] {
+	if query.Type != "" && !ledgerKinds[query.Type] {
 		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{"type": "Transaction type is invalid"})
 		return
 	}

@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -28,6 +29,7 @@ const (
 	testEmail    = "owner@example.com"
 	testPassword = "a-development-password"
 	testName     = "Owner"
+	webOrigin    = "http://localhost:5173"
 )
 
 var (
@@ -106,7 +108,7 @@ func newHandlerWithProofDir(db *sql.DB, proofDir string) http.Handler {
 	return app.New(db, slog.New(slog.NewTextHandler(io.Discard, nil)), app.Config{
 		CookieName:      "gp_session",
 		SessionTTL:      time.Hour,
-		AllowedOrigins:  []string{"http://localhost:5173"},
+		AllowedOrigins:  []string{webOrigin},
 		MaxBodyBytes:    6 << 20,
 		ProofDir:        proofDir,
 		LoginsPerMinute: 100,
@@ -129,6 +131,7 @@ func send(t *testing.T, client *http.Client, method, url string, body any) (int,
 	if err != nil {
 		t.Fatalf("build request: %v", err)
 	}
+	req.Header.Set("Origin", webOrigin)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -172,6 +175,7 @@ func sendDeposit(t *testing.T, client *http.Client, url, methodID, currency, amo
 	if err != nil {
 		t.Fatalf("build deposit request: %v", err)
 	}
+	req.Header.Set("Origin", webOrigin)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	if idempotencyKey != "" {
 		req.Header.Set("Idempotency-Key", idempotencyKey)
@@ -325,7 +329,13 @@ func TestLoginSetsAnHttpOnlySessionCookie(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode body: %v", err)
 	}
-	resp, err := http.Post(base+"/api/login", "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, base+"/api/login", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("build login request: %v", err)
+	}
+	req.Header.Set("Origin", webOrigin)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -846,6 +856,12 @@ func TestAdminWalletAdjustmentAndTransactionHTTPFlow(t *testing.T) {
 	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/users/not-a-uuid/wallet-adjustments", adjustment); status != http.StatusNotFound {
 		t.Fatalf("invalid adjustment target: want 404, got %d (%s)", status, body)
 	}
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/users/790ea15c-6c37-4af6-8b8d-65aab8f02f42/wallet-adjustments", adjustment); status != http.StatusNotFound {
+		t.Fatalf("unknown adjustment target: want 404, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/wallets/PH", nil); status != http.StatusNotFound {
+		t.Fatalf("malformed wallet currency: want 404, got %d (%s)", status, body)
+	}
 
 	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/users/"+player.ID+"/wallet-adjustments", adjustment)
 	if status != http.StatusCreated {
@@ -938,6 +954,47 @@ func TestAdminWalletAdjustmentAndTransactionHTTPFlow(t *testing.T) {
 	}
 	if err := json.Unmarshal(body, &playerPage); err != nil || playerPage.Total != 2 {
 		t.Fatalf("player transaction page: total=%d err=%v (%s)", playerPage.Total, err, body)
+	}
+
+	playerTotal := func(t *testing.T, query string) int {
+		t.Helper()
+		status, body := send(t, playerClient, http.MethodGet, base+"/api/transactions?"+query, nil)
+		if status != http.StatusOK {
+			t.Fatalf("player transactions %q: want 200, got %d (%s)", query, status, body)
+		}
+		var page struct {
+			Total int `json:"total"`
+		}
+		if err := json.Unmarshal(body, &page); err != nil {
+			t.Fatalf("decode player transactions %q: %v (%s)", query, err, body)
+		}
+		return page.Total
+	}
+	future := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+	past := time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
+	if got := playerTotal(t, "type=adjustment"); got != 2 {
+		t.Fatalf("player type=adjustment: want 2, got %d", got)
+	}
+	if got := playerTotal(t, "type=deposit"); got != 0 {
+		t.Fatalf("player type=deposit: want 0, got %d", got)
+	}
+	if got := playerTotal(t, "from="+past); got != 2 {
+		t.Fatalf("player from=past: want 2, got %d", got)
+	}
+	if got := playerTotal(t, "from="+future); got != 0 {
+		t.Fatalf("player from=future: want 0, got %d", got)
+	}
+	if got := playerTotal(t, "to="+past); got != 0 {
+		t.Fatalf("player to=past: want 0, got %d", got)
+	}
+	if got := playerTotal(t, "currency=USD"); got != 0 {
+		t.Fatalf("player currency=USD: want 0, got %d", got)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/transactions?type=bonus", nil); status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"type"`)) {
+		t.Fatalf("player invalid type filter: want 400 with a type field error, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/transactions?from=yesterday", nil); status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"from"`)) {
+		t.Fatalf("player invalid from filter: want 400 with a from field error, got %d (%s)", status, body)
 	}
 
 	var balance int64
@@ -1102,6 +1159,15 @@ func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	}
 	if depositPage.Total != 1 || depositPage.Page != 1 || depositPage.Size != 1 || len(depositPage.Rows) != 1 || depositPage.Rows[0].ID != created.ID {
 		t.Fatalf("unexpected deposit page: %+v", depositPage)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/deposits?status=approved", nil); status != http.StatusOK || !strings.Contains(string(body), `"total":0`) {
+		t.Fatalf("approved filter on a pending request: want an empty page, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/deposits?status=pending", nil); status != http.StatusOK || !strings.Contains(string(body), created.ID) {
+		t.Fatalf("pending filter: want the request, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/deposits?status=cancelled", nil); status != http.StatusBadRequest {
+		t.Fatalf("unknown status filter: want 400, got %d (%s)", status, body)
 	}
 
 	if status, body := send(t, playerClient, http.MethodGet, base+"/api/deposits/"+created.ID, nil); status != http.StatusOK {
@@ -1530,6 +1596,43 @@ func TestAStateChangeFromAnotherOriginIsRefused(t *testing.T) {
 	}
 }
 
+func TestAStateChangeWithoutAnOriginIsRefused(t *testing.T) {
+	db := requireDB(t)
+	base, client := newServer(t, db)
+	register(t, client, base)
+
+	req, err := http.NewRequest(http.MethodPost, base+"/api/logout", nil)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("logout without Origin: want 403, got %d", resp.StatusCode)
+	}
+	if status, _ := send(t, client, http.MethodGet, base+"/api/me", nil); status != http.StatusOK {
+		t.Fatal("the refused request ended the session anyway")
+	}
+
+	read, err := http.NewRequest(http.MethodGet, base+"/api/me", nil)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	resp, err = client.Do(read)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("read without Origin: want 200, got %d", resp.StatusCode)
+	}
+}
+
 func TestTheWebAppOriginIsAllowedWithCredentials(t *testing.T) {
 	db := requireDB(t)
 	base, client := newServer(t, db)
@@ -1584,4 +1687,604 @@ func sessionCookie(t *testing.T, client *http.Client, base string) *http.Cookie 
 	}
 	t.Fatal("no session cookie was set")
 	return nil
+}
+
+type catalogueGame struct {
+	ID           string   `json:"id"`
+	Slug         string   `json:"slug"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	CategorySlug string   `json:"category_slug"`
+	CategoryName string   `json:"category_name"`
+	Provider     string   `json:"provider"`
+	Status       string   `json:"status"`
+	Currency     string   `json:"currency"`
+	MinWager     int64    `json:"min_wager_minor"`
+	MaxWager     int64    `json:"max_wager_minor"`
+	WagerStep    int64    `json:"wager_step_minor"`
+	ThumbnailURL *string  `json:"thumbnail_url"`
+	Flags        []string `json:"flags"`
+	CreatedAt    string   `json:"created_at"`
+}
+
+type cataloguePage struct {
+	Rows  []catalogueGame `json:"rows"`
+	Total int             `json:"total"`
+	Page  int             `json:"page"`
+	Size  int             `json:"size"`
+	Pages int             `json:"pages"`
+}
+
+func seedCatalogueFixture(t *testing.T, db *sql.DB) (categoryA, categoryB, suffix string) {
+	t.Helper()
+	suffix = strconv.FormatInt(time.Now().UnixNano(), 36)
+	categoryA = "test-cat-a-" + suffix
+	categoryB = "test-cat-b-" + suffix
+
+	for _, category := range []struct {
+		slug, name string
+		sortOrder  int
+	}{
+		{categoryA, "Test Category A " + suffix, 9001},
+		{categoryB, "Test Category B " + suffix, 9002},
+	} {
+		if _, err := db.Exec(`INSERT INTO game_categories (slug, name, sort_order) VALUES ($1, $2, $3)`, category.slug, category.name, category.sortOrder); err != nil {
+			t.Fatalf("insert category %s: %v", category.slug, err)
+		}
+	}
+
+	insertGame := `INSERT INTO games (slug, name, description, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor, thumbnail_path, created_at)
+	               VALUES ($1, $2, $3, $4, $5, $6, 'supported', 'PHP', 100, 500000, 100, $7, $8)`
+	for _, item := range []struct {
+		slug, name, category, status string
+		thumbnail                    *string
+		createdAt                    time.Time
+	}{
+		{"test-a-zebra-" + suffix, "Zebra Test " + suffix, categoryA, "active", ptr("https://example.test/zebra.png"), time.Now()},
+		{"test-a-alpha-" + suffix, "Alpha Test " + suffix, categoryA, "active", nil, time.Now().Add(-60 * 24 * time.Hour)},
+		{"test-a-draft-" + suffix, "Draft Test " + suffix, categoryA, "draft", nil, time.Now()},
+		{"test-a-maint-" + suffix, "Maintenance Test " + suffix, categoryA, "maintenance", nil, time.Now()},
+		{"test-a-retired-" + suffix, "Retired Test " + suffix, categoryA, "retired", nil, time.Now()},
+		{"test-b-draft-" + suffix, "Hidden Test " + suffix, categoryB, "draft", nil, time.Now()},
+	} {
+		if _, err := db.Exec(insertGame, item.slug, item.name, "Description of "+item.name, item.category, "Test Studio "+suffix, item.status, item.thumbnail, item.createdAt); err != nil {
+			t.Fatalf("insert game %s: %v", item.slug, err)
+		}
+	}
+
+	t.Cleanup(func() {
+		if _, err := db.Exec(`DELETE FROM games WHERE category_slug IN ($1, $2)`, categoryA, categoryB); err != nil {
+			t.Errorf("delete catalogue fixture games: %v", err)
+		}
+		if _, err := db.Exec(`DELETE FROM game_categories WHERE slug IN ($1, $2)`, categoryA, categoryB); err != nil {
+			t.Errorf("delete catalogue fixture categories: %v", err)
+		}
+	})
+	return categoryA, categoryB, suffix
+}
+
+func ptr(value string) *string { return &value }
+
+func fetchCatalogue(t *testing.T, client *http.Client, url string) cataloguePage {
+	t.Helper()
+	status, body := send(t, client, http.MethodGet, url, nil)
+	if status != http.StatusOK {
+		t.Fatalf("GET %s: want 200, got %d (%s)", url, status, body)
+	}
+	var page cataloguePage
+	if err := json.Unmarshal(body, &page); err != nil {
+		t.Fatalf("decode %s: %v (%s)", url, err, body)
+	}
+	return page
+}
+
+func TestCatalogueServesOnlyActiveGamesWithFiltersAndCategories(t *testing.T) {
+	db := requireDB(t)
+	categoryA, categoryB, suffix := seedCatalogueFixture(t, db)
+	base, client := newServer(t, db)
+
+	page := fetchCatalogue(t, client, base+"/api/games?category="+categoryA+"&size=100")
+	if page.Total != 2 || len(page.Rows) != 2 || page.Pages != 1 {
+		t.Fatalf("active games in category: want 2, got total=%d rows=%d pages=%d", page.Total, len(page.Rows), page.Pages)
+	}
+	if page.Rows[0].Name != "Alpha Test "+suffix || page.Rows[1].Name != "Zebra Test "+suffix {
+		t.Fatalf("default sort should be by name: %q, %q", page.Rows[0].Name, page.Rows[1].Name)
+	}
+	for _, row := range page.Rows {
+		if row.Status != "active" || row.CategoryName != "Test Category A "+suffix || row.Currency != "PHP" || row.MinWager != 100 || row.MaxWager != 500_000 || row.WagerStep != 100 {
+			t.Fatalf("unexpected catalogue row: %+v", row)
+		}
+		if row.ID == "" || row.CreatedAt == "" || row.Description == "" {
+			t.Fatalf("catalogue row is missing identity fields: %+v", row)
+		}
+	}
+	alpha, zebra := page.Rows[0], page.Rows[1]
+	if len(alpha.Flags) != 0 || len(zebra.Flags) != 1 || zebra.Flags[0] != "new" {
+		t.Fatalf("flags: alpha=%v zebra=%v, want alpha none and zebra new", alpha.Flags, zebra.Flags)
+	}
+	if alpha.ThumbnailURL != nil || zebra.ThumbnailURL == nil || *zebra.ThumbnailURL != "https://example.test/zebra.png" {
+		t.Fatalf("thumbnail: alpha=%v zebra=%v", alpha.ThumbnailURL, zebra.ThumbnailURL)
+	}
+
+	page = fetchCatalogue(t, client, base+"/api/games?category="+categoryA+"&sort=newest")
+	if len(page.Rows) != 2 || page.Rows[0].Slug != zebra.Slug {
+		t.Fatalf("sort=newest should list the newest game first: %+v", page.Rows)
+	}
+
+	page = fetchCatalogue(t, client, base+"/api/games?category="+categoryA+"&flag=new")
+	if page.Total != 1 || len(page.Rows) != 1 || page.Rows[0].Slug != zebra.Slug {
+		t.Fatalf("flag=new: want only the recent game, got %+v", page.Rows)
+	}
+
+	page = fetchCatalogue(t, client, base+"/api/games?category="+categoryA+"&size=1&page=2")
+	if page.Total != 2 || page.Pages != 2 || page.Page != 2 || page.Size != 1 || len(page.Rows) != 1 || page.Rows[0].Slug != zebra.Slug {
+		t.Fatalf("second page of one: got total=%d pages=%d page=%d rows=%+v", page.Total, page.Pages, page.Page, page.Rows)
+	}
+
+	page = fetchCatalogue(t, client, base+"/api/games?search=ZEBRA+test+"+suffix)
+	if page.Total != 1 || page.Rows[0].Slug != zebra.Slug {
+		t.Fatalf("search by name: want the zebra game, got %+v", page.Rows)
+	}
+	page = fetchCatalogue(t, client, base+"/api/games?search=test+studio+"+suffix)
+	if page.Total != 2 {
+		t.Fatalf("search by provider: want 2 active games, got %d", page.Total)
+	}
+	page = fetchCatalogue(t, client, base+"/api/games?search=draft+test+"+suffix)
+	if page.Total != 0 {
+		t.Fatalf("search must not surface a draft game, got %d", page.Total)
+	}
+
+	page = fetchCatalogue(t, client, base+"/api/games?category="+categoryB)
+	if page.Total != 0 || page.Rows == nil || len(page.Rows) != 0 || page.Pages != 1 {
+		t.Fatalf("category without active games: want an empty page, got %+v", page)
+	}
+	page = fetchCatalogue(t, client, base+"/api/games?category=no-such-category-"+suffix)
+	if page.Total != 0 || len(page.Rows) != 0 {
+		t.Fatalf("unknown category: want an empty page, got %+v", page)
+	}
+
+	status, body := send(t, client, http.MethodGet, base+"/api/games/"+zebra.Slug, nil)
+	if status != http.StatusOK {
+		t.Fatalf("get active game: want 200, got %d (%s)", status, body)
+	}
+	var single catalogueGame
+	if err := json.Unmarshal(body, &single); err != nil {
+		t.Fatalf("decode game: %v (%s)", err, body)
+	}
+	if single.ID != zebra.ID || single.CategorySlug != categoryA || single.CategoryName != "Test Category A "+suffix || len(single.Flags) != 1 {
+		t.Fatalf("unexpected game body: %+v", single)
+	}
+	for _, slug := range []string{"test-a-draft-" + suffix, "test-a-maint-" + suffix, "test-a-retired-" + suffix, "test-b-draft-" + suffix, "no-such-game-" + suffix} {
+		if status, body := send(t, client, http.MethodGet, base+"/api/games/"+slug, nil); status != http.StatusNotFound || !bytes.Contains(body, []byte(`"error"`)) {
+			t.Fatalf("get %s: want 404 with an error body, got %d (%s)", slug, status, body)
+		}
+	}
+
+	status, body = send(t, client, http.MethodGet, base+"/api/categories", nil)
+	if status != http.StatusOK {
+		t.Fatalf("categories: want 200, got %d (%s)", status, body)
+	}
+	var categories []struct {
+		Slug      string `json:"slug"`
+		Name      string `json:"name"`
+		GameCount int    `json:"game_count"`
+		Available bool   `json:"available"`
+	}
+	if err := json.Unmarshal(body, &categories); err != nil {
+		t.Fatalf("decode categories: %v (%s)", err, body)
+	}
+	indexA, indexB := -1, -1
+	for index, category := range categories {
+		switch category.Slug {
+		case categoryA:
+			indexA = index
+			if category.GameCount != 2 || !category.Available || category.Name != "Test Category A "+suffix {
+				t.Fatalf("category A: want 2 active games and available, got %+v", category)
+			}
+		case categoryB:
+			indexB = index
+			if category.GameCount != 0 || category.Available {
+				t.Fatalf("category B: want no active games and unavailable, got %+v", category)
+			}
+		}
+	}
+	if indexA == -1 || indexB == -1 || indexA > indexB {
+		t.Fatalf("categories must both be listed in sort order: a=%d b=%d (%s)", indexA, indexB, body)
+	}
+}
+
+// registerAdmin signs a fresh account in on its own client and promotes it, so
+// a test can act as an operator beside the default player registration.
+func registerAdmin(t *testing.T, db *sql.DB, base, email string) (*http.Client, string) {
+	t.Helper()
+	client := clientWithCookies(t)
+	status, body := send(t, client, http.MethodPost, base+"/api/register", map[string]string{
+		"email": email, "password": testPassword, "display_name": "Operator",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("register admin %s: want 201, got %d (%s)", email, status, body)
+	}
+	var account struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &account); err != nil {
+		t.Fatalf("decode admin: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE users SET role = 'admin' WHERE id = ($1::text)::uuid`, account.ID); err != nil {
+		t.Fatalf("promote admin: %v", err)
+	}
+	return client, account.ID
+}
+
+type adminGameBody struct {
+	catalogueGame
+	Integration          string `json:"integration"`
+	ActiveRTPBasisPoints *int   `json:"active_rtp_basis_points"`
+	Rounds30d            int    `json:"rounds_30d"`
+	UpdatedAt            string `json:"updated_at"`
+}
+
+func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
+	db := requireDB(t)
+	categoryA, _, suffix := seedCatalogueFixture(t, db)
+	base, playerClient := newServer(t, db)
+	if status, body := register(t, playerClient, base); status != http.StatusCreated {
+		t.Fatalf("register player: want 201, got %d (%s)", status, body)
+	}
+	adminClient, adminID := registerAdmin(t, db, base, "games-admin-"+suffix+"@example.com")
+
+	newGame := map[string]any{
+		"slug": "test-created-" + suffix, "name": "Created Test " + suffix, "description": "Made by the admin API",
+		"category_slug": categoryA, "provider": "Test Studio " + suffix, "currency": "PHP",
+		"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100,
+	}
+	if status, body := send(t, clientWithCookies(t), http.MethodPost, base+"/api/admin/games", newGame); status != http.StatusUnauthorized {
+		t.Fatalf("anonymous create: want 401, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodPost, base+"/api/admin/games", newGame); status != http.StatusForbidden {
+		t.Fatalf("player create: want 403, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/admin/games", nil); status != http.StatusForbidden {
+		t.Fatalf("player list: want 403, got %d (%s)", status, body)
+	}
+
+	rejects := map[string]struct {
+		change map[string]any
+		field  string
+	}{
+		"bad slug":            {map[string]any{"slug": "Bad Slug"}, "slug"},
+		"missing name":        {map[string]any{"name": " "}, "name"},
+		"unknown category":    {map[string]any{"category_slug": "no-such-category-" + suffix}, "category_slug"},
+		"disabled currency":   {map[string]any{"currency": "EUR"}, "currency"},
+		"fractional units":    {map[string]any{"min_wager_minor": 150, "wager_step_minor": 50}, "wager_step_minor"},
+		"max below min":       {map[string]any{"max_wager_minor": 50}, "max_wager_minor"},
+		"max off the step":    {map[string]any{"max_wager_minor": 10_050, "wager_step_minor": 100}, "max_wager_minor"},
+		"zero step":           {map[string]any{"wager_step_minor": 0}, "wager_step_minor"},
+		"unknown status":      {map[string]any{"status": "live"}, "status"},
+		"unknown body field":  {map[string]any{"integration": "integrated"}, ""},
+		"fractional min only": {map[string]any{"min_wager_minor": 120, "max_wager_minor": 10_020}, "wager_step_minor"},
+	}
+	for name, tc := range rejects {
+		t.Run("create rejects "+name, func(t *testing.T) {
+			body := map[string]any{}
+			for key, value := range newGame {
+				body[key] = value
+			}
+			for key, value := range tc.change {
+				body[key] = value
+			}
+			status, response := send(t, adminClient, http.MethodPost, base+"/api/admin/games", body)
+			if status != http.StatusBadRequest {
+				t.Fatalf("want 400, got %d (%s)", status, response)
+			}
+			if tc.field != "" && !bytes.Contains(response, []byte(`"`+tc.field+`"`)) {
+				t.Fatalf("field %s missing from %s", tc.field, response)
+			}
+		})
+	}
+
+	status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/games", newGame)
+	if status != http.StatusCreated {
+		t.Fatalf("create game: want 201, got %d (%s)", status, body)
+	}
+	var created adminGameBody
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("decode created: %v (%s)", err, body)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'game' AND entity_id = $1`, created.ID)
+	})
+	if created.ID == "" || created.Status != "draft" || created.Integration != "unreviewed" || created.CategoryName != "Test Category A "+suffix || created.ActiveRTPBasisPoints != nil || created.Rounds30d != 0 {
+		t.Fatalf("unexpected created game: %+v", created)
+	}
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/games", newGame); status != http.StatusConflict || !bytes.Contains(body, []byte(`"slug"`)) {
+		t.Fatalf("duplicate slug: want 409 naming slug, got %d (%s)", status, body)
+	}
+
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/games/"+created.Slug, nil); status != http.StatusNotFound {
+		t.Fatalf("draft game must be hidden from the catalogue: want 404, got %d (%s)", status, body)
+	}
+
+	page := fetchAdminGames(t, adminClient, base+"/api/admin/games?category="+categoryA+"&size=100")
+	if page.Total != 6 {
+		t.Fatalf("admin list in category: want every status (5 fixtures plus the created game), got %d", page.Total)
+	}
+	page = fetchAdminGames(t, adminClient, base+"/api/admin/games?category="+categoryA+"&status=draft")
+	if page.Total != 2 {
+		t.Fatalf("admin list status=draft: want 2, got %d", page.Total)
+	}
+	page = fetchAdminGames(t, adminClient, base+"/api/admin/games?search="+created.Slug)
+	if page.Total != 1 || page.Rows[0].ID != created.ID {
+		t.Fatalf("admin search by slug: want the created game, got %+v", page.Rows)
+	}
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/games?status=live", nil); status != http.StatusBadRequest {
+		t.Fatalf("admin list bad status: want 400, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/games/"+created.ID, nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(created.Slug)) {
+		t.Fatalf("admin get: want 200 with the game, got %d (%s)", status, body)
+	}
+	for _, id := range []string{"not-a-uuid", "00000000-0000-4000-8000-000000000000"} {
+		if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/games/"+id, nil); status != http.StatusNotFound {
+			t.Fatalf("admin get %s: want 404, got %d (%s)", id, status, body)
+		}
+		if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+id, map[string]any{"name": "x"}); status != http.StatusNotFound {
+			t.Fatalf("admin patch %s: want 404, got %d (%s)", id, status, body)
+		}
+	}
+
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"max_wager_minor": 10_050})
+	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"max_wager_minor"`)) {
+		t.Fatalf("patch off-step max: want 400, got %d (%s)", status, body)
+	}
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"slug": "renamed"})
+	if status != http.StatusBadRequest {
+		t.Fatalf("patch slug must be refused as an unknown field: want 400, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"name": "Renamed Test " + suffix, "max_wager_minor": 20_000})
+	if status != http.StatusOK {
+		t.Fatalf("patch metadata: want 200, got %d (%s)", status, body)
+	}
+	var edited adminGameBody
+	if err := json.Unmarshal(body, &edited); err != nil {
+		t.Fatalf("decode edited: %v (%s)", err, body)
+	}
+	if edited.Name != "Renamed Test "+suffix || edited.MaxWager != 20_000 || edited.Status != "draft" || edited.MinWager != 100 {
+		t.Fatalf("unexpected edited game: %+v", edited)
+	}
+
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"status": "active"})
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"status":"active"`)) {
+		t.Fatalf("activate game: want 200 active, got %d (%s)", status, body)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/games/"+created.Slug, nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"name":"Renamed Test `+suffix+`"`)) {
+		t.Fatalf("activated game must reach the catalogue: got %d (%s)", status, body)
+	}
+
+	var actions []string
+	rows, err := db.Query(`SELECT action FROM audit_logs WHERE entity_type = 'game' AND entity_id = $1 AND actor_user_id = ($2::text)::uuid ORDER BY created_at ASC`, created.ID, adminID)
+	if err != nil {
+		t.Fatalf("query audit: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var action string
+		if err := rows.Scan(&action); err != nil {
+			t.Fatalf("scan audit: %v", err)
+		}
+		actions = append(actions, action)
+	}
+	if strings.Join(actions, ",") != "game.create,game.update,game.status_change" {
+		t.Fatalf("audit actions: want create, update, status_change; got %v", actions)
+	}
+}
+
+func fetchAdminGames(t *testing.T, client *http.Client, url string) struct {
+	Rows  []adminGameBody `json:"rows"`
+	Total int             `json:"total"`
+} {
+	t.Helper()
+	status, body := send(t, client, http.MethodGet, url, nil)
+	if status != http.StatusOK {
+		t.Fatalf("GET %s: want 200, got %d (%s)", url, status, body)
+	}
+	var page struct {
+		Rows  []adminGameBody `json:"rows"`
+		Total int             `json:"total"`
+	}
+	if err := json.Unmarshal(body, &page); err != nil {
+		t.Fatalf("decode %s: %v (%s)", url, err, body)
+	}
+	return page
+}
+
+type rtpProfileBody struct {
+	ID                string  `json:"id"`
+	GameID            string  `json:"game_id"`
+	GameName          string  `json:"game_name"`
+	Name              string  `json:"name"`
+	Version           int     `json:"version"`
+	TargetBasisPoints int     `json:"target_basis_points"`
+	Status            string  `json:"status"`
+	EngineConfigRef   string  `json:"engine_config_ref"`
+	EffectiveFrom     *string `json:"effective_from"`
+	EffectiveUntil    *string `json:"effective_until"`
+	CreatedBy         string  `json:"created_by"`
+	CreatedByName     string  `json:"created_by_display_name"`
+}
+
+func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
+	db := requireDB(t)
+	_, _, suffix := seedCatalogueFixture(t, db)
+	base, playerClient := newServer(t, db)
+	if status, body := register(t, playerClient, base); status != http.StatusCreated {
+		t.Fatalf("register player: want 201, got %d (%s)", status, body)
+	}
+	adminClient, adminID := registerAdmin(t, db, base, "rtp-admin-"+suffix+"@example.com")
+
+	var gameID string
+	if err := db.QueryRow(`SELECT id::text FROM games WHERE slug = $1`, "test-a-zebra-"+suffix).Scan(&gameID); err != nil {
+		t.Fatalf("find fixture game: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'rtp_profile' AND entity_id IN (SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid)`, gameID)
+		_, _ = db.Exec(`DELETE FROM rtp_profiles WHERE game_id = ($1::text)::uuid`, gameID)
+	})
+	profilesPath := base + "/api/admin/games/" + gameID + "/rtp-profiles"
+	draft := map[string]any{"name": "Standard", "version": 1, "target_basis_points": 9600, "engine_config_ref": "cfg-" + suffix}
+
+	if status, body := send(t, playerClient, http.MethodPost, profilesPath, draft); status != http.StatusForbidden {
+		t.Fatalf("player draft: want 403, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/admin/rtp-profiles", nil); status != http.StatusForbidden {
+		t.Fatalf("player list: want 403, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/games/00000000-0000-4000-8000-000000000000/rtp-profiles", draft); status != http.StatusNotFound {
+		t.Fatalf("draft for unknown game: want 404, got %d (%s)", status, body)
+	}
+	for name, tc := range map[string]struct {
+		change map[string]any
+		field  string
+	}{
+		"unsupported target": {map[string]any{"target_basis_points": 9700}, "target_basis_points"},
+		"zero version":       {map[string]any{"version": 0}, "version"},
+		"blank name":         {map[string]any{"name": ""}, "name"},
+		"status in body":     {map[string]any{"status": "verified"}, ""},
+	} {
+		t.Run("draft rejects "+name, func(t *testing.T) {
+			body := map[string]any{}
+			for key, value := range draft {
+				body[key] = value
+			}
+			for key, value := range tc.change {
+				body[key] = value
+			}
+			status, response := send(t, adminClient, http.MethodPost, profilesPath, body)
+			if status != http.StatusBadRequest {
+				t.Fatalf("want 400, got %d (%s)", status, response)
+			}
+			if tc.field != "" && !bytes.Contains(response, []byte(`"`+tc.field+`"`)) {
+				t.Fatalf("field %s missing from %s", tc.field, response)
+			}
+		})
+	}
+
+	status, body := send(t, adminClient, http.MethodPost, profilesPath, draft)
+	if status != http.StatusCreated {
+		t.Fatalf("create draft: want 201, got %d (%s)", status, body)
+	}
+	var created rtpProfileBody
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("decode draft: %v (%s)", err, body)
+	}
+	if created.Status != "draft" || created.GameID != gameID || created.GameName != "Zebra Test "+suffix || created.CreatedBy != adminID || created.CreatedByName != "Operator" || created.EngineConfigRef != "cfg-"+suffix {
+		t.Fatalf("unexpected draft: %+v", created)
+	}
+	if status, body := send(t, adminClient, http.MethodPost, profilesPath, draft); status != http.StatusConflict || !bytes.Contains(body, []byte(`"version"`)) {
+		t.Fatalf("duplicate name and version: want 409 naming version, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 9400, "version": 2})
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"target_basis_points":9400`)) || !bytes.Contains(body, []byte(`"version":2`)) {
+		t.Fatalf("edit draft: want 200 with the new target, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 9999}); status != http.StatusBadRequest {
+		t.Fatalf("edit draft to unsupported target: want 400, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+created.ID+"/activate", nil)
+	if status != http.StatusConflict || !bytes.Contains(body, []byte(`"code":"RTP_PROFILE_NOT_VERIFIED"`)) {
+		t.Fatalf("activate draft: want 409 RTP_PROFILE_NOT_VERIFIED, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/00000000-0000-4000-8000-000000000000/activate", nil); status != http.StatusNotFound {
+		t.Fatalf("activate unknown: want 404, got %d (%s)", status, body)
+	}
+
+	// Nothing in the platform can verify a profile; only the engine work does.
+	// The rows below stand in for that evidence so the activation path itself is
+	// exercised: the game lock, the swap of the profile in force, and the audit.
+	var verifiedID, promoID string
+	if err := db.QueryRow(`INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, observed_basis_points, verified_at, created_by)
+		VALUES (($1::text)::uuid, 'Verified', 1, 9600, 'verified', 9598, now(), ($2::text)::uuid) RETURNING id::text`, gameID, adminID).Scan(&verifiedID); err != nil {
+		t.Fatalf("insert verified profile: %v", err)
+	}
+	if err := db.QueryRow(`INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, observed_basis_points, verified_at, created_by)
+		VALUES (($1::text)::uuid, 'Promo', 1, 10200, 'verified', 10190, now(), ($2::text)::uuid) RETURNING id::text`, gameID, adminID).Scan(&promoID); err != nil {
+		t.Fatalf("insert promo profile: %v", err)
+	}
+	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+verifiedID, map[string]any{"name": "Edited"}); status != http.StatusBadRequest {
+		t.Fatalf("edit verified profile: want 400, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+verifiedID+"/activate", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"status":"active"`)) {
+		t.Fatalf("activate verified: want 200 active, got %d (%s)", status, body)
+	}
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/games/"+gameID, nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"active_rtp_basis_points":9600`)) {
+		t.Fatalf("game should report the active profile: got %d (%s)", status, body)
+	}
+
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", nil); status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"effective_until"`)) {
+		t.Fatalf("activate negative margin without an end: want 400 naming effective_until, got %d (%s)", status, body)
+	}
+	until := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_from": until, "effective_until": until}); status != http.StatusBadRequest {
+		t.Fatalf("activate with an end not after the start: want 400, got %d (%s)", status, body)
+	}
+	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_until": until})
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"effective_until":"`+until+`"`)) {
+		t.Fatalf("activate promo with an end: want 200 with the schedule, got %d (%s)", status, body)
+	}
+
+	var previous, active int
+	if err := db.QueryRow(`SELECT count(*) FILTER (WHERE id = ($1::text)::uuid AND status = 'verified'), count(*) FILTER (WHERE status = 'active') FROM rtp_profiles WHERE game_id = ($2::text)::uuid`, verifiedID, gameID).Scan(&previous, &active); err != nil {
+		t.Fatalf("count profiles: %v", err)
+	}
+	if previous != 1 || active != 1 {
+		t.Fatalf("after replacing the active profile: previous back to verified=%d active=%d, want 1/1", previous, active)
+	}
+
+	status, body = send(t, adminClient, http.MethodGet, profilesPath, nil)
+	if status != http.StatusOK {
+		t.Fatalf("list for game: want 200, got %d (%s)", status, body)
+	}
+	var forGame []rtpProfileBody
+	if err := json.Unmarshal(body, &forGame); err != nil || len(forGame) != 3 {
+		t.Fatalf("list for game: want 3 profiles, got %d err=%v (%s)", len(forGame), err, body)
+	}
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/rtp-profiles?game_id="+gameID+"&status=active", nil)
+	if status != http.StatusOK {
+		t.Fatalf("global list: want 200, got %d (%s)", status, body)
+	}
+	var global struct {
+		Rows  []rtpProfileBody `json:"rows"`
+		Total int              `json:"total"`
+	}
+	if err := json.Unmarshal(body, &global); err != nil || global.Total != 1 || global.Rows[0].ID != promoID {
+		t.Fatalf("global list filtered to the active profile: got total=%d err=%v (%s)", global.Total, err, body)
+	}
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/rtp-profiles?game_id=nope", nil); status != http.StatusBadRequest {
+		t.Fatalf("global list bad game_id: want 400, got %d (%s)", status, body)
+	}
+
+	var actions []string
+	rows, err := db.Query(`SELECT action FROM audit_logs WHERE entity_type = 'rtp_profile' AND actor_user_id = ($1::text)::uuid ORDER BY created_at ASC`, adminID)
+	if err != nil {
+		t.Fatalf("query audit: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var action string
+		if err := rows.Scan(&action); err != nil {
+			t.Fatalf("scan audit: %v", err)
+		}
+		actions = append(actions, action)
+	}
+	if strings.Join(actions, ",") != "rtp_profile.create,rtp_profile.update,rtp_profile.activate,rtp_profile.activate" {
+		t.Fatalf("audit actions: got %v", actions)
+	}
 }

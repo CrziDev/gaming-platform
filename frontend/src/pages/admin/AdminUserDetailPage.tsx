@@ -6,6 +6,7 @@ import type { Wallet } from '@/api/types'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
+import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
@@ -227,7 +228,9 @@ export function AdminUserDetailPage() {
 }
 
 function DepositsTab({ userId }: { userId: string }) {
-  const depositsQuery = useUserDeposits(userId)
+  const [page, setPage] = useState(1)
+  const depositsQuery = useUserDeposits(userId, page)
+  const result = depositsQuery.data
 
   if (depositsQuery.isPending) {
     return <SkeletonRows count={4} />
@@ -243,14 +246,14 @@ function DepositsTab({ userId }: { userId: string }) {
     )
   }
 
-  if ((depositsQuery.data ?? []).length === 0) {
+  if (!result || result.rows.length === 0) {
     return <EmptyState title="No deposits" description="This account has never submitted a request." />
   }
 
   return (
     <RecordTable
       label="Deposits"
-      rows={depositsQuery.data ?? []}
+      rows={result.rows}
       rowKey={(row) => row.id}
       columns={[
         {
@@ -291,12 +294,23 @@ function DepositsTab({ userId }: { userId: string }) {
           aside={<StatusBadge status={row.status} />}
         />
       )}
+      footer={
+        <PageNav
+          page={result.page}
+          pages={result.pages}
+          size={result.size}
+          total={result.total}
+          onChange={setPage}
+        />
+      }
     />
   )
 }
 
 function AdjustmentsTab({ userId }: { userId: string }) {
-  const adjustmentsQuery = useUserAdjustments(userId)
+  const [page, setPage] = useState(1)
+  const adjustmentsQuery = useUserAdjustments(userId, page)
+  const result = adjustmentsQuery.data
 
   if (adjustmentsQuery.isPending) {
     return <SkeletonRows count={3} />
@@ -312,7 +326,7 @@ function AdjustmentsTab({ userId }: { userId: string }) {
     )
   }
 
-  if ((adjustmentsQuery.data ?? []).length === 0) {
+  if (!result || result.rows.length === 0) {
     return (
       <EmptyState
         title="No adjustments"
@@ -325,7 +339,7 @@ function AdjustmentsTab({ userId }: { userId: string }) {
     <>
       <RecordTable
         label="Adjustments"
-        rows={adjustmentsQuery.data ?? []}
+        rows={result.rows}
         rowKey={(row) => row.id}
         columns={[
           {
@@ -361,6 +375,15 @@ function AdjustmentsTab({ userId }: { userId: string }) {
             }
           />
         )}
+        footer={
+          <PageNav
+            page={result.page}
+            pages={result.pages}
+            size={result.size}
+            total={result.total}
+            onChange={setPage}
+          />
+        }
       />
       <p className="font-mono text-[10.5px] text-ink-mute">
         Append-only. No edit, no delete — this is the audit trail.

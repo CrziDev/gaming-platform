@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router'
 import type { DepositStatus } from '@/api/types'
 import { buttonStyles } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { EmptyState } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { useDeposit } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/format'
@@ -44,6 +44,16 @@ export function DepositStatusPage() {
 
   if (depositQuery.isPending) {
     return <Skeleton className="mx-auto h-96 w-full max-w-md rounded-card" />
+  }
+
+  if (depositQuery.isError) {
+    return (
+      <ErrorState
+        title="Request unavailable"
+        message="This deposit request could not be loaded. It has not changed."
+        onRetry={() => void depositQuery.refetch()}
+      />
+    )
   }
 
   const deposit = depositQuery.data

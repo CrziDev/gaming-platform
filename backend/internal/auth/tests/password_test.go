@@ -119,6 +119,7 @@ func TestValidateRegistration(t *testing.T) {
 			}
 
 			request := httptest.NewRequest(http.MethodPost, "/api/register", bytes.NewReader(body))
+			request.Header.Set("Origin", webOrigin)
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, request)
 			if response.Code != http.StatusBadRequest {
