@@ -40,6 +40,8 @@ export type Category = {
 
 export type GameStatus = 'draft' | 'active' | 'maintenance' | 'retired'
 
+export type GameFlag = 'hot' | 'new'
+
 export type Game = {
   id: string
   slug: string
@@ -53,6 +55,7 @@ export type Game = {
   max_wager_minor: number
   wager_step_minor: number
   art_seed: number
+  flags: GameFlag[]
 }
 
 export type LobbyRow = {

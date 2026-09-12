@@ -1,12 +1,13 @@
 import {
   Dices,
+  Flame,
   Gamepad2,
-  Home,
+  Gift,
+  Heart,
   Layers,
   Radio,
-  Receipt,
+  Star,
   TrendingUp,
-  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -21,10 +22,11 @@ export type NavItem = {
 }
 
 export const playerNav: NavItem[] = [
-  { to: paths.lobby, label: 'Home', icon: Home, end: true },
-  { to: paths.games, label: 'Games', icon: Gamepad2 },
-  { to: paths.wallet, label: 'Wallet', icon: Wallet, requiresAuth: true },
-  { to: paths.history, label: 'History', icon: Receipt, requiresAuth: true },
+  { to: paths.games, label: 'Games', icon: Gamepad2, end: true },
+  { to: paths.hotGames, label: 'Hot', icon: Flame },
+  { to: paths.newGames, label: 'New', icon: Star },
+  { to: paths.favorites, label: 'Favorites', icon: Heart, requiresAuth: true },
+  { to: paths.promotions, label: 'Promotions', icon: Gift },
 ]
 
 const categoryIcons: Record<string, LucideIcon> = {

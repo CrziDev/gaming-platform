@@ -1,14 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { games } from '@/mocks/games'
 
 import {
   fetchBigWins,
   fetchCategories,
+  fetchFavorites,
   fetchGame,
   fetchGames,
   fetchLobbyRows,
   fetchPromotions,
+  toggleFavorite,
   type GameFilters,
 } from './api'
 
@@ -34,6 +36,19 @@ export function useGames(filters: GameFilters) {
 
 export function useGame(slug: string) {
   return useQuery({ queryKey: ['game', slug], queryFn: () => fetchGame(slug) })
+}
+
+export function useFavorites(enabled: boolean) {
+  return useQuery({ queryKey: ['favorites'], queryFn: fetchFavorites, enabled })
+}
+
+export function useToggleFavorite() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: toggleFavorite,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
+  })
 }
 
 export function gamesByIds(ids: string[]) {

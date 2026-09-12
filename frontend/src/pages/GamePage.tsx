@@ -1,16 +1,16 @@
-import { ChevronLeft, Maximize2, Minimize2, Settings, ShieldCheck, Volume2 } from 'lucide-react'
+import { ChevronLeft, Heart, Maximize2, Minimize2, Settings, ShieldCheck, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { GameRow } from '@/components/catalogue/GameRow'
-import { Button } from '@/components/ui/Button'
+import { Button, IconButton } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/States'
 import { ChipTabs } from '@/components/ui/Tabs'
 import { useToast } from '@/components/ui/Toast'
-import { useGame, useGames } from '@/features/catalogue'
+import { useFavorites, useGame, useGames, useToggleFavorite } from '@/features/catalogue'
 import { useWallet } from '@/features/wallet'
 import { rounds } from '@/mocks/wallet'
 import { cn } from '@/lib/cn'
@@ -28,6 +28,8 @@ export function GamePage() {
   // controls is that wallet's — never whichever one the header happens to show.
   const { data: wallet } = useWallet(game?.currency ?? 'PHP')
   const catalogue = useGames({ category: 'all', search: '', sort: 'name' })
+  const favorites = useFavorites(true)
+  const toggleFavorite = useToggleFavorite()
   const hostRef = useRef<HTMLElement>(null)
   const [fullscreen, setFullscreen] = useState(false)
 
@@ -70,6 +72,7 @@ export function GamePage() {
   const related = (catalogue.data ?? []).filter(
     (entry) => entry.category_slug === game.category_slug && entry.id !== game.id,
   )
+  const favorite = favorites.data?.some((entry) => entry.id === game.id) ?? false
 
   return (
     <div className="flex flex-col gap-8">
@@ -85,14 +88,25 @@ export function GamePage() {
           <span className="truncate text-ink">{game.name}</span>
         </div>
 
-        <Button variant="ghost" size="sm" onClick={() => void toggleFullscreen()}>
-          {fullscreen ? (
-            <Minimize2 aria-hidden size={15} strokeWidth={1.5} />
-          ) : (
-            <Maximize2 aria-hidden size={15} strokeWidth={1.5} />
-          )}
-          <span className="hidden sm:inline">{fullscreen ? 'Exit full screen' : 'Full screen'}</span>
-        </Button>
+        <div className="flex items-center gap-1">
+          <IconButton
+            label={favorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-pressed={favorite}
+            disabled={toggleFavorite.isPending}
+            onClick={() => toggleFavorite.mutate(game.id)}
+            className={cn(favorite && 'text-accent-ink')}
+          >
+            <Heart aria-hidden size={16} strokeWidth={1.6} fill={favorite ? 'currentColor' : 'none'} />
+          </IconButton>
+          <Button variant="ghost" size="sm" onClick={() => void toggleFullscreen()}>
+            {fullscreen ? (
+              <Minimize2 aria-hidden size={15} strokeWidth={1.5} />
+            ) : (
+              <Maximize2 aria-hidden size={15} strokeWidth={1.5} />
+            )}
+            <span className="hidden sm:inline">{fullscreen ? 'Exit full screen' : 'Full screen'}</span>
+          </Button>
+        </div>
       </nav>
 
       <div className="grid gap-5 wide:grid-cols-[300px_minmax(0,1fr)_300px] wide:items-start">

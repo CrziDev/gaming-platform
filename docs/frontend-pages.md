@@ -19,6 +19,10 @@ fixtures; a page stays unchecked when even one of its visible data sources is fi
 
 - [ ] **Lobby** — `/` (catalogue, big wins, promotions and the shell's live chat are all fixture-backed)
 - [ ] **Game catalogue** — `/games`
+- [ ] **Hot games** — `/games/hot` (fixture flag)
+- [ ] **New games** — `/games/new` (fixture flag)
+- [ ] **Favorites** — `/favorites` (authentication required; fixture-backed toggle)
+- [ ] **Promotions** — `/promotions` (fixture-backed)
 - [x] **Sign in** — `/login` (opens the real sign-in flow)
 - [x] **Register** — `/register` (opens the real registration flow)
 - [ ] **Forgot password** — `/forgot`
@@ -48,6 +52,6 @@ fixtures; a page stays unchecked when even one of its visible data sources is fi
 
 ## Coverage
 
-- Public and player routes: 13
+- Public and player routes: 17
 - Admin routes: 12
-- Total frontend routes: 25
+- Total frontend routes: 29

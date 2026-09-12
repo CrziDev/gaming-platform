@@ -1,11 +1,12 @@
 import { mockRequest } from '@/api/mock'
-import type { BigWin, Category, Game, LobbyRow, Promotion } from '@/api/types'
-import { bigWins, categories, games, lobbyRows, promotions } from '@/mocks/games'
+import type { BigWin, Category, Game, GameFlag, LobbyRow, Promotion } from '@/api/types'
+import { bigWins, categories, favoriteIds, games, lobbyRows, promotions } from '@/mocks/games'
 
 export type GameFilters = {
   category: string
   search: string
   sort: 'name' | 'newest'
+  flag?: GameFlag
 }
 
 export async function fetchCategories(): Promise<Category[]> {
@@ -24,6 +25,21 @@ export async function fetchPromotions(): Promise<Promotion[]> {
   return mockRequest(() => [...promotions])
 }
 
+export async function fetchFavorites(): Promise<Game[]> {
+  return mockRequest(() => games.filter((game) => favoriteIds.has(game.id)))
+}
+
+export async function toggleFavorite(gameId: string): Promise<{ favorite: boolean }> {
+  return mockRequest(() => {
+    if (favoriteIds.has(gameId)) {
+      favoriteIds.delete(gameId)
+      return { favorite: false }
+    }
+    favoriteIds.add(gameId)
+    return { favorite: true }
+  })
+}
+
 export async function fetchGames(filters: GameFilters): Promise<Game[]> {
   return mockRequest(() => {
     const search = filters.search.trim().toLowerCase()
@@ -34,7 +50,8 @@ export async function fetchGames(filters: GameFilters): Promise<Game[]> {
         search === '' ||
         game.name.toLowerCase().includes(search) ||
         game.category_name.toLowerCase().includes(search)
-      return inCategory && matchesSearch
+      const flagged = filters.flag === undefined || game.flags.includes(filters.flag)
+      return inCategory && matchesSearch && flagged
     })
 
     return filters.sort === 'name'

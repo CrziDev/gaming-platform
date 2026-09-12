@@ -96,19 +96,44 @@ describe('the top bar for a player', () => {
 })
 
 describe('the navigation rail', () => {
-  it('lists the player routes without counts or badges', async () => {
+  it('lists Games, Hot, New, Favorites and Promotions in that order with nothing else', async () => {
     stubFetchRoutes({ 'GET /me': guest })
 
     renderApp('/')
 
     const rail = await screen.findByRole('complementary', { name: 'Main navigation' })
-    expect(within(rail).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(within(rail).getByRole('link', { name: 'Games' })).toHaveAttribute('href', '/games')
-    expect(within(rail).getByRole('button', { name: 'Wallet' })).toBeInTheDocument()
-    expect(within(rail).getByRole('button', { name: 'History' })).toBeInTheDocument()
+    const items = within(rail).getAllByRole('listitem').map((item) => item.textContent?.trim())
+    expect(items).toEqual(['Games', 'Hot', 'New', 'Favorites', 'Promotions'])
 
-    const originals = await within(rail).findByRole('link', { name: 'Originals' })
-    expect(originals).toHaveAttribute('href', '/games?category=originals')
-    expect(originals).not.toHaveTextContent(/\d/)
+    expect(within(rail).getByRole('link', { name: 'Games' })).toHaveAttribute('href', '/games')
+    expect(within(rail).getByRole('link', { name: 'Hot' })).toHaveAttribute('href', '/games/hot')
+    expect(within(rail).getByRole('link', { name: 'New' })).toHaveAttribute('href', '/games/new')
+    expect(within(rail).getByRole('link', { name: 'Promotions' })).toHaveAttribute('href', '/promotions')
+    expect(within(rail).getByRole('button', { name: 'Favorites' })).toBeInTheDocument()
+    expect(within(rail).getByRole('button', { name: 'Search games' })).toBeInTheDocument()
+  })
+
+  it('asks a guest to sign in before opening Favorites', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': guest })
+
+    renderApp('/')
+
+    const rail = await screen.findByRole('complementary', { name: 'Main navigation' })
+    await user.click(within(rail).getByRole('button', { name: 'Favorites' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Sign in' })).toBeInTheDocument()
+  })
+
+  it('keeps Wallet and History reachable from the account menu', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': player })
+
+    renderApp('/')
+
+    await user.click(await screen.findByRole('button', { name: 'Account menu' }))
+
+    expect(screen.getByRole('link', { name: 'Wallet' })).toHaveAttribute('href', '/wallet')
+    expect(screen.getByRole('link', { name: 'History' })).toHaveAttribute('href', '/history')
   })
 })

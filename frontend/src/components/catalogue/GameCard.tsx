@@ -20,6 +20,18 @@ export function GameCard({ game }: { game: Game }) {
         <span className="tile-scrim relative w-full truncate p-2 text-[12px] font-medium text-ink-soft">
           {game.name}
         </span>
+        {game.flags.length > 0 ? (
+          <span className="absolute top-1.5 left-1.5 flex gap-1">
+            {game.flags.map((flag) => (
+              <span
+                key={flag}
+                className="label-mono rounded-[5px] bg-base/70 px-1.5 py-0.5 text-[8.5px] text-ink-soft"
+              >
+                {flag}
+              </span>
+            ))}
+          </span>
+        ) : null}
         <span className="absolute inset-0 flex items-center justify-center bg-base/60 opacity-0 transition-opacity duration-[120ms] ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
           <span className="rounded-chip bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-on-accent">
             Play

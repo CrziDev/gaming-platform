@@ -23,6 +23,7 @@ export const games: Game[] = [
     max_wager_minor: 5_000_00,
     wager_step_minor: 100,
     art_seed: 214,
+    flags: ['hot'],
   },
   {
     id: 'gm-002',
@@ -37,6 +38,7 @@ export const games: Game[] = [
     max_wager_minor: 5_000_00,
     wager_step_minor: 100,
     art_seed: 47,
+    flags: ['hot', 'new'],
   },
   {
     id: 'gm-003',
@@ -51,10 +53,13 @@ export const games: Game[] = [
     max_wager_minor: 5_000_00,
     wager_step_minor: 100,
     art_seed: 318,
+    flags: ['new'],
   },
 ]
 
 export const recentlyPlayedIds = ['gm-002', 'gm-003']
+
+export const favoriteIds = new Set<string>(['gm-001'])
 
 export function lobbyRows(signedIn: boolean): LobbyRow[] {
   if (!signedIn || recentlyPlayedIds.length === 0) {

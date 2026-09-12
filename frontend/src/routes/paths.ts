@@ -1,7 +1,11 @@
 export const paths = {
   lobby: '/',
   games: '/games',
+  hotGames: '/games/hot',
+  newGames: '/games/new',
   game: (slug: string) => `/game/${slug}`,
+  favorites: '/favorites',
+  promotions: '/promotions',
   wallet: '/wallet',
   deposit: '/wallet/deposit',
   depositStatus: (id: string) => `/wallet/deposit/${id}`,

@@ -4,7 +4,6 @@ import { Link } from 'react-router'
 
 import { paths } from '@/routes/paths'
 
-import { BrowseGroup } from './BrowseGroup'
 import { NavList } from './NavList'
 import { playerNav } from './nav'
 import { useShell } from './ShellContext'
@@ -67,9 +66,8 @@ export function MobileDrawer() {
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-3 overflow-y-auto px-2">
+        <nav className="flex-1 overflow-y-auto px-2">
           <NavList items={playerNav} onNavigate={close} />
-          <BrowseGroup onNavigate={close} />
         </nav>
 
         <div className="flex flex-col gap-px p-2">

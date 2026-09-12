@@ -8,17 +8,24 @@ import { EmptyState } from '@/components/ui/States'
 import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { categoryIcon } from '@/components/shell/nav'
+import type { GameFlag } from '@/api/types'
 import { useCategories, useGames, type GameFilters } from '@/features/catalogue'
 
-export function GamesPage() {
+const shelves: Record<GameFlag, { title: string; empty: string }> = {
+  hot: { title: 'Hot games', empty: 'Nothing is trending right now. The full catalogue is one tap away.' },
+  new: { title: 'New games', empty: 'No new releases this week. The full catalogue is one tap away.' },
+}
+
+export function GamesPage({ flag }: { flag?: GameFlag }) {
   const [params, setParams] = useSearchParams()
 
   const category = params.get('category') ?? 'all'
   const search = params.get('q') ?? ''
   const sort = (params.get('sort') as GameFilters['sort']) ?? 'name'
+  const shelf = flag ? shelves[flag] : undefined
 
   const categoriesQuery = useCategories()
-  const gamesQuery = useGames({ category, search, sort })
+  const gamesQuery = useGames({ category, search, sort, ...(flag ? { flag } : {}) })
 
   const tabs: TabItem<string>[] = [
     { id: 'all', label: 'All', icon: Layers },
@@ -44,7 +51,7 @@ export function GamesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Games</h1>
+      <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{shelf?.title ?? 'Games'}</h1>
 
       <div className="flex flex-col gap-4">
         <ChipTabs
@@ -90,11 +97,11 @@ export function GamesPage() {
       {gamesQuery.isPending ? (
         <SkeletonGrid count={6} className={gameGrid} />
       ) : gamesQuery.data && gamesQuery.data.length > 0 ? (
-        <GameGrid games={gamesQuery.data} label="Game catalogue" />
+        <GameGrid games={gamesQuery.data} label={shelf?.title ?? 'Game catalogue'} />
       ) : (
         <EmptyState
           title="No games match"
-          description="Nothing here yet. Clear the filters to see the full catalogue."
+          description={shelf?.empty ?? 'Nothing here yet. Clear the filters to see the full catalogue.'}
           action={
             <Button variant="secondary" size="sm" onClick={() => setParams(new URLSearchParams())}>
               Clear filters

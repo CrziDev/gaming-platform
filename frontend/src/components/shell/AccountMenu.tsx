@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, User as UserIcon } from 'lucide-react'
+import { ChevronDown, LogOut, Receipt, User as UserIcon, Wallet } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
@@ -61,6 +61,14 @@ export function AccountMenu({ user }: { user: User }) {
             <p className="truncate text-[13px] font-medium text-ink-soft">{user.display_name}</p>
             <p className="truncate text-[12px] text-ink-mute">{user.email}</p>
           </div>
+          <Link to={paths.wallet} onClick={() => setOpen(false)} className={itemClass}>
+            <Wallet aria-hidden size={16} strokeWidth={1.5} />
+            Wallet
+          </Link>
+          <Link to={paths.history} onClick={() => setOpen(false)} className={itemClass}>
+            <Receipt aria-hidden size={16} strokeWidth={1.5} />
+            History
+          </Link>
           <Link to={paths.account} onClick={() => setOpen(false)} className={itemClass}>
             <UserIcon aria-hidden size={16} strokeWidth={1.5} />
             Account

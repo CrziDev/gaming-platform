@@ -5,12 +5,14 @@ import { AppShell } from '@/components/shell/AppShell'
 import { AccountPage } from '@/pages/AccountPage'
 import { DepositPage } from '@/pages/DepositPage'
 import { DepositStatusPage } from '@/pages/DepositStatusPage'
+import { FavoritesPage } from '@/pages/FavoritesPage'
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
 import { GamePage } from '@/pages/GamePage'
 import { GamesPage } from '@/pages/GamesPage'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { LobbyPage } from '@/pages/LobbyPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { PromotionsPage } from '@/pages/PromotionsPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { WalletPage } from '@/pages/WalletPage'
 import { AdminAuditPage } from '@/pages/admin/AdminAuditPage'
@@ -60,11 +62,15 @@ export function AppRoutes() {
       <Route element={<AppShell />}>
         <Route index element={<LobbyPage />} />
         <Route path={paths.games} element={<GamesPage />} />
+        <Route path={paths.hotGames} element={<GamesPage flag="hot" />} />
+        <Route path={paths.newGames} element={<GamesPage flag="new" />} />
+        <Route path={paths.promotions} element={<PromotionsPage />} />
         <Route path={paths.login} element={<AuthDeepLink tab="signin" />} />
         <Route path={paths.register} element={<AuthDeepLink tab="join" />} />
 
         <Route element={<RequireAuth />}>
           <Route path="/game/:slug" element={<GamePage />} />
+          <Route path={paths.favorites} element={<FavoritesPage />} />
           <Route path={paths.wallet} element={<WalletPage />} />
           <Route path={paths.deposit} element={<DepositPage />} />
           <Route path="/wallet/deposit/:id" element={<DepositStatusPage />} />

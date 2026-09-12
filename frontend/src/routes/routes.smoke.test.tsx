@@ -13,6 +13,10 @@ const admin = { status: 200, body: userBody({ role: 'admin', display_name: 'R. C
 const playerRoutes: [string, string][] = [
   ['/', 'Featured'],
   ['/games', 'Games'],
+  ['/games/hot', 'Hot games'],
+  ['/games/new', 'New games'],
+  ['/favorites', 'Favorites'],
+  ['/promotions', 'Promotions'],
   ['/game/aurora-dice', 'Aurora Dice'],
   ['/wallet', 'Wallet'],
   ['/wallet/deposit', 'Deposit'],

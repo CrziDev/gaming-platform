@@ -12,7 +12,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="grid shrink-0 grid-cols-4 bg-panel pb-[env(safe-area-inset-bottom)] rail:hidden"
+      className="grid shrink-0 grid-cols-5 bg-panel pb-[env(safe-area-inset-bottom)] rail:hidden"
     >
       {playerNav.map((item) => {
         const Icon = item.icon
@@ -20,8 +20,8 @@ export function BottomNav() {
 
         const body = (
           <>
-            <Icon aria-hidden size={20} strokeWidth={1.5} />
-            <span className="text-[10.5px]">{item.label}</span>
+            <Icon aria-hidden size={19} strokeWidth={1.5} />
+            <span className="text-[10px]">{item.label}</span>
           </>
         )
 

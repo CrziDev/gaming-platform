@@ -2,7 +2,6 @@ import { Globe, LifeBuoy, Search } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
 
-import { BrowseGroup } from './BrowseGroup'
 import { NavList } from './NavList'
 import { playerNav } from './nav'
 import { railLabel, railMode, railRow, railWidth } from './rail'
@@ -38,9 +37,8 @@ export function Sidebar() {
         <span className={railLabel[mode]}>Search games</span>
       </button>
 
-      <nav className="flex flex-col gap-3">
+      <nav>
         <NavList items={playerNav} mode={mode} />
-        <BrowseGroup mode={mode} />
       </nav>
 
       <div className="flex-1" />
