@@ -31,7 +31,7 @@ PSQL := psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1
         test test-backend test-frontend lint lint-backend lint-frontend \
         fmt fmt-backend fmt-frontend tools seed clean \
         migrate-up migrate-down migrate-down-all migrate-create migrate-version migrate-force \
-        db-shell db-reset
+        db-shell db-reset publish
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -130,6 +130,26 @@ db-shell: ## Open a psql session against the development database
 
 seed: ## Create or reset the development admin, demo players, and game catalogue
 	cd $(BACKEND_DIR) && go run ./cmd/seed
+
+## --- Publishing ------------------------------------------------------------
+
+# Day-to-day commits land on the work branch, Markdown included. Publishing merges
+# work into master minus the local Markdown, pushes, and returns to work. A conflict
+# outside those paths stops on master for a manual resolution.
+LOCAL_MD := CLAUDE.md .claude docs ':(exclude)docs/frontend-pages.md'
+
+publish: ## Merge work into master without the local Markdown, push, and return to work
+	@test "$$(git branch --show-current)" = work || { echo "publish: switch to the work branch first"; exit 1; }
+	@git diff --quiet && git diff --cached --quiet || { echo "publish: commit or stash your changes first"; exit 1; }
+	@git switch -q master
+	@git merge --no-ff --no-commit work >/dev/null 2>&1 || true
+	@git rm -r -q -f --ignore-unmatch $(LOCAL_MD)
+	@if git diff --name-only --diff-filter=U | grep -q .; then \
+		echo "publish: conflicts on master need a manual resolution, then: git commit && git push && git switch work"; \
+		git status --short; exit 1; fi
+	@git commit -q -m "Merge branch 'work'"
+	git push
+	@git switch -q work
 
 ## --- Tooling ---------------------------------------------------------------
 

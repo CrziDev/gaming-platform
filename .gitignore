@@ -25,7 +25,3 @@ npm-debug.log*
 .DS_Store
 .idea/
 *.swp
-
-# Local working docs
-/docs/*
-!/docs/frontend-pages.md
