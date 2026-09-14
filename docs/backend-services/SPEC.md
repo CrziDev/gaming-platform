@@ -32,8 +32,10 @@ There is no `internal/admin`. An operator crediting a wallet is wallet code behi
 guard, and an operator listing rounds is round code behind the same guard; splitting by
 audience would put the same table in two packages.
 
-`internal/round` does not exist yet: the `game_rounds` table does, and no Go package
-reads or writes it until the round service lands.
+`internal/round` owns the internal round lifecycle. Opening, settlement, cancellation, and
+failure are implemented with wallet-first locking, exact wager validation, an active-profile
+snapshot, retry-safe movements, settle-at-most-once, and compensating refunds; the read
+handlers remain to be built.
 
 ## 3. Invariants
 
@@ -550,6 +552,11 @@ UPDATE game_rounds
 
 Zero rows affected means the round was already settled — `ROUND_ALREADY_SETTLED`, and the
 client shows the settled result rather than retrying.
+
+Cancellation and failure are terminal alternatives for an open round. Each credits one
+`refund` movement equal to the original stake and changes the status in the same
+transaction. Repeating the same cancel or fail operation returns the stored round without
+another refund; attempting a different terminal transition is rejected.
 
 The wallet row is locked before any row that references it. `game_rounds` has a foreign
 key to `wallets`, so inserting a round makes PostgreSQL hold a `KEY SHARE` lock on the

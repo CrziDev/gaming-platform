@@ -48,19 +48,21 @@ never shows a fabricated win, promotion, or alert.
 - [ ] Complete game source is available for the first title.
 - [ ] Any game engine or real-money game integration is complete.
 
-## Start here next: round records
+## Start here next: round read APIs
 
-Round persistence is platform work and the last engine-gate prerequisite the platform
-itself owns. It must not expose a player-controlled settle operation or invent an
-outcome while no engine exists; an internal deterministic test adapter exercises it.
+The internal money-moving lifecycle is complete without exposing a player-controlled
+settle operation or inventing an outcome. The remaining round work is the player and
+operator read surface.
 
-- [ ] Implement internal open, settle, cancel, and fail operations with the wallet lock,
-  the unique round key, and settle-at-most-once (§8).
+- [x] Implement internal open with the wallet lock and unique round key (§8).
+- [x] Implement internal settle, cancel, and fail operations with settle-at-most-once
+  and compensating refunds (§8).
 - [ ] Add `GET /api/rounds`, `GET /api/rounds/{id}`, and `GET /api/admin/rounds`.
 - [ ] Wire the History rounds tab, `/admin/rounds`, and the game page's recent rounds,
   and add a rounds section to the user detail page (the admin adapter carries an
   unused `fetchUserRounds`; no page reads it).
-- [ ] Cover the required round tests in §8.
+- [x] Cover the required round lifecycle tests in §8; read-route tests remain with the
+  read APIs.
 
 Deferred by decision on 2026-09-12: password reset and change (`POST /api/password-reset`,
 `/password-reset/confirm`, `/password`). The `password_reset_tokens` table exists and
@@ -324,7 +326,7 @@ These features do not require an engine.
 - [x] Require whole-unit wager bounds for Phase 1 games (enforced on create and edit;
   the seed now uses whole units too).
 - [x] Audit game creation and status changes.
-- [ ] Reject a wager when its game is not active.
+- [x] Reject a wager when its game is not active.
 - [ ] Replace fixture art with reviewed game thumbnails when assets arrive (the tile
   renders `frontend/src/assets/games/<slug>.png` or `thumbnail_url` when present).
 - [ ] Keep the real game launch disabled until its integration passes the engine gate
@@ -336,18 +338,19 @@ These features do not require an engine.
 Round persistence is platform work and can be implemented now. It must not expose a
 player-controlled settle operation or invent an outcome while no engine exists.
 
-- [ ] Implement internal open, settle, cancel, and fail operations.
-- [ ] Lock the wallet before inserting a round that references it.
-- [ ] Bind a round to its user, game, wallet, currency, and active RTP profile.
-- [ ] Validate the wager against game minimum, maximum, and exact step.
-- [ ] Debit the wager and create the open round in one transaction.
-- [ ] Use a unique round key to prevent duplicate bets.
-- [ ] Credit a positive win and settle the round in one transaction.
-- [ ] Record a zero win without creating a zero-value movement.
-- [ ] Permit settlement only from the open state.
-- [ ] Enforce one settlement with a conditional update and database constraints.
-- [ ] Implement a compensating refund for cancelled or failed rounds.
-- [ ] Ensure concurrent round starts on one wallet do not deadlock.
+- [x] Implement internal open.
+- [x] Implement internal settle, cancel, and fail operations.
+- [x] Lock the wallet before inserting a round that references it.
+- [x] Bind a round to its user, game, wallet, currency, and active RTP profile.
+- [x] Validate the wager against game minimum, maximum, and exact step.
+- [x] Debit the wager and create the open round in one transaction.
+- [x] Use a unique round key to prevent duplicate bets.
+- [x] Credit a positive win and settle the round in one transaction.
+- [x] Record a zero win without creating a zero-value movement.
+- [x] Permit settlement only from the open state.
+- [x] Enforce one settlement with a conditional update and database constraints.
+- [x] Implement a compensating refund for cancelled or failed rounds.
+- [x] Ensure concurrent round starts on one wallet do not deadlock.
 - [ ] List a player's rounds with pagination.
 - [ ] Return one player-owned round without leaking another player's record.
 - [ ] Return filtered, paginated round history to administrators.
@@ -356,12 +359,12 @@ player-controlled settle operation or invent an outcome while no engine exists.
 
 ### Required round tests
 
-- [ ] Duplicate open requests return one round and deduct one wager.
-- [ ] Concurrent starts on one wallet do not deadlock or overspend.
-- [ ] Concurrent settlements credit at most once.
-- [ ] A second settlement returns `ROUND_ALREADY_SETTLED`.
-- [ ] Cancellation/refund is idempotent.
-- [ ] A profile change does not alter an already-open round.
+- [x] Duplicate open requests return one round and deduct one wager.
+- [x] Concurrent starts on one wallet do not deadlock or overspend.
+- [x] Concurrent settlements credit at most once.
+- [x] A second settlement returns `ROUND_ALREADY_SETTLED`.
+- [x] Cancellation/refund is idempotent.
+- [x] A profile change does not alter an already-open round.
 
 ## 9. RTP metadata and administration
 
@@ -569,7 +572,7 @@ starts:
 - [ ] Round opening and settlement enforce settle-at-most-once.
 - [x] RTP profile metadata enforces at most one active profile per game.
 - [ ] The generic game host and secured `postMessage` bridge are ready.
-- [ ] Whole-unit wager steps are enforced by game configuration and round validation
+- [x] Whole-unit wager steps are enforced by game configuration and round validation
   (game configuration enforces them; round validation follows with §8).
 
 ### Source intake and assessment, per game

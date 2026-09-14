@@ -113,8 +113,9 @@ A player-scoped read answers `404` for a resource that exists but belongs to som
 else. An id in a path is input, never a fact about who is asking.
 
 Planned, not yet routed: `GET /api/rounds` (`200` + a page of own rounds · `401`) and
-`GET /api/rounds/{id}` (`200` + the round · `401` · `404`). Rounds have a table and no
-service yet.
+`GET /api/rounds/{id}` (`200` + the round · `401` · `404`). Internal round opening is
+implemented together with settle-at-most-once and idempotent cancel/fail refunds; these
+read routes remain.
 
 The catalogue is public and shows only `active` games; a `draft`, `maintenance`, or
 `retired` game is `404` by slug and absent from every list. `search` matches the game
