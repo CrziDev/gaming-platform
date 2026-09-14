@@ -12,12 +12,9 @@ import (
 	"github.com/gaming-platform/backend/internal/user"
 )
 
-type CurrentUser func(http.ResponseWriter, *http.Request) (user.User, bool)
-
 type Handler struct {
-	db          *sql.DB
-	logger      *slog.Logger
-	currentUser CurrentUser
+	db     *sql.DB
+	logger *slog.Logger
 }
 
 type response struct {
@@ -35,19 +32,11 @@ type response struct {
 	Currency                string  `json:"currency"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger, currentUser CurrentUser) *Handler {
-	return &Handler{db: db, logger: logger, currentUser: currentUser}
+func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
+	return &Handler{db: db, logger: logger}
 }
 
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request, _ user.User) {
 	currency := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("currency")))
 	if currency == "" {
 		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{"currency": "Currency is required"})

@@ -21,13 +21,10 @@ import (
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
-type CurrentUser func(http.ResponseWriter, *http.Request) (user.User, bool)
-
 type Handler struct {
-	db          *sql.DB
-	logger      *slog.Logger
-	currentUser CurrentUser
-	proofDir    string
+	db       *sql.DB
+	logger   *slog.Logger
+	proofDir string
 }
 
 type methodResponse struct {
@@ -58,14 +55,11 @@ type adminRequestResponse struct {
 	DisplayName string `json:"display_name"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger, currentUser CurrentUser, proofDir string) *Handler {
-	return &Handler{db: db, logger: logger, currentUser: currentUser, proofDir: proofDir}
+func NewHandler(db *sql.DB, logger *slog.Logger, proofDir string) *Handler {
+	return &Handler{db: db, logger: logger, proofDir: proofDir}
 }
 
-func (h *Handler) Methods(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.currentUser(w, r); !ok {
-		return
-	}
+func (h *Handler) Methods(w http.ResponseWriter, r *http.Request, _ user.User) {
 	items, err := ListMethods(r.Context(), h.db)
 	if err != nil {
 		h.internal(w, r, err)
@@ -81,11 +75,7 @@ func (h *Handler) Methods(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
-func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) List(w http.ResponseWriter, r *http.Request, account user.User) {
 	query, ok := httpx.ReadQuery(w, r)
 	if !ok {
 		return
@@ -106,11 +96,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))
 }
 
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request, account user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Deposit request not found")
 		return
@@ -127,11 +113,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, newRequestResponse(item))
 }
 
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request, account user.User) {
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if idempotencyKey == "" || utf8.RuneCountInString(idempotencyKey) > 200 {
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"idempotency_key": "A valid Idempotency-Key header is required"})
@@ -277,15 +259,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, status, newRequestResponse(item))
 }
 
-func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request, _ user.User) {
 	query, ok := httpx.ReadQuery(w, r)
 	if !ok {
 		return
@@ -319,15 +293,7 @@ func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))
 }
 
-func (h *Handler) AdminReview(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) AdminReview(w http.ResponseWriter, r *http.Request, actor user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Deposit request not found")
 		return
@@ -354,7 +320,7 @@ func (h *Handler) AdminReview(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"reason": "A rejection reason is required"})
 		return
 	}
-	item, err := Review(r.Context(), h.db, account.ID, r.PathValue("id"), body.Action, body.AmountMinor, body.Reason)
+	item, err := Review(r.Context(), h.db, actor.ID, r.PathValue("id"), body.Action, body.AmountMinor, body.Reason)
 	if errors.Is(err, ErrNotFound) {
 		httpx.WriteError(w, http.StatusNotFound, "Deposit request not found")
 		return
@@ -386,15 +352,7 @@ func (h *Handler) AdminReview(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, newRequestResponse(item))
 }
 
-func (h *Handler) AdminProof(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) AdminProof(w http.ResponseWriter, r *http.Request, _ user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Proof not found")
 		return

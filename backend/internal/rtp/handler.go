@@ -19,12 +19,9 @@ const (
 	maxConfigRefLength = 200
 )
 
-type CurrentUser func(http.ResponseWriter, *http.Request) (user.User, bool)
-
 type Handler struct {
-	db          *sql.DB
-	logger      *slog.Logger
-	currentUser CurrentUser
+	db     *sql.DB
+	logger *slog.Logger
 }
 
 type response struct {
@@ -67,14 +64,11 @@ type activateBody struct {
 	EffectiveUntil string `json:"effective_until"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger, currentUser CurrentUser) *Handler {
-	return &Handler{db: db, logger: logger, currentUser: currentUser}
+func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
+	return &Handler{db: db, logger: logger}
 }
 
-func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.admin(w, r); !ok {
-		return
-	}
+func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request, _ user.User) {
 	query, ok := httpx.ReadQuery(w, r)
 	if !ok {
 		return
@@ -98,10 +92,7 @@ func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(newResponses(profiles), total, query.Page, query.Size))
 }
 
-func (h *Handler) AdminListForGame(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.admin(w, r); !ok {
-		return
-	}
+func (h *Handler) AdminListForGame(w http.ResponseWriter, r *http.Request, _ user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Game not found")
 		return
@@ -121,11 +112,7 @@ func (h *Handler) AdminListForGame(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, newResponses(profiles))
 }
 
-func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.admin(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request, actor user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Game not found")
 		return
@@ -169,11 +156,7 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, newResponse(created))
 }
 
-func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.admin(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request, actor user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Profile not found")
 		return
@@ -229,11 +212,7 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, newResponse(updated))
 }
 
-func (h *Handler) AdminActivate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.admin(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) AdminActivate(w http.ResponseWriter, r *http.Request, actor user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Profile not found")
 		return
@@ -275,18 +254,6 @@ func (h *Handler) AdminActivate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, newResponse(activated))
-}
-
-func (h *Handler) admin(w http.ResponseWriter, r *http.Request) (user.User, bool) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return user.User{}, false
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return user.User{}, false
-	}
-	return account, true
 }
 
 func readTime(value, field string, fields map[string]string) *time.Time {

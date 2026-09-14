@@ -12,14 +12,11 @@ import (
 	"github.com/gaming-platform/backend/internal/user"
 )
 
-type CurrentUser func(http.ResponseWriter, *http.Request) (user.User, bool)
-
 var ledgerKinds = map[string]bool{"deposit": true, "withdrawal": true, "wager": true, "win": true, "refund": true, "adjustment": true}
 
 type Handler struct {
-	db          *sql.DB
-	logger      *slog.Logger
-	currentUser CurrentUser
+	db     *sql.DB
+	logger *slog.Logger
 }
 
 type walletResponse struct {
@@ -47,15 +44,11 @@ type adminTransactionResponse struct {
 	Reason           string `json:"reason,omitempty"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger, currentUser CurrentUser) *Handler {
-	return &Handler{db: db, logger: logger, currentUser: currentUser}
+func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
+	return &Handler{db: db, logger: logger}
 }
 
-func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) List(w http.ResponseWriter, r *http.Request, account user.User) {
 	wallets, err := List(r.Context(), h.db, account.ID)
 	if err != nil {
 		h.internal(w, r, err)
@@ -68,11 +61,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request, account user.User) {
 	code := strings.ToUpper(strings.TrimSpace(r.PathValue("currency")))
 	if len(code) != 3 {
 		httpx.WriteError(w, http.StatusNotFound, "Wallet not found")
@@ -90,15 +79,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, walletResponse{ID: item.ID, Currency: item.Currency, BalanceMinor: item.BalanceMinor, Status: item.Status})
 }
 
-func (h *Handler) AdminUserWallets(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) AdminUserWallets(w http.ResponseWriter, r *http.Request, _ user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Account not found")
 		return
@@ -123,11 +104,7 @@ func (h *Handler) AdminUserWallets(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
-func (h *Handler) Transactions(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) Transactions(w http.ResponseWriter, r *http.Request, account user.User) {
 	query, ok := httpx.ReadQuery(w, r)
 	if !ok {
 		return
@@ -165,15 +142,7 @@ func (h *Handler) Transactions(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))
 }
 
-func (h *Handler) AdminAdjust(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if actor.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) AdminAdjust(w http.ResponseWriter, r *http.Request, actor user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Account not found")
 		return
@@ -250,15 +219,7 @@ func (h *Handler) AdminAdjust(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) AdminTransactions(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) AdminTransactions(w http.ResponseWriter, r *http.Request, _ user.User) {
 	query, ok := httpx.ReadQuery(w, r)
 	if !ok {
 		return

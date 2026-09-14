@@ -8,14 +8,10 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/gaming-platform/backend/internal/user"
 )
 
 func newTestHandler() *Handler {
-	return NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), func(http.ResponseWriter, *http.Request) (user.User, bool) {
-		return user.User{Role: "admin"}, true
-	})
+	return NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 func TestListRejectsInvalidFiltersBeforeTouchingTheDatabase(t *testing.T) {
