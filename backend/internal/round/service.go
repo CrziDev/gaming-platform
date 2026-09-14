@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gaming-platform/backend/internal/money"
+	"github.com/gaming-platform/backend/internal/rtp"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
@@ -67,6 +69,9 @@ func Open(ctx context.Context, db *sql.DB, in OpenInput) (Round, error) {
 	}
 	if !validWager(config, in.StakeMinor) {
 		return Round{}, ErrInvalidWager
+	}
+	if _, err := rtp.RevertExpiredForGameTx(ctx, tx, in.GameID, time.Now().UTC()); err != nil {
+		return Round{}, fmt.Errorf("round: reconcile RTP profile: %w", err)
 	}
 	profileID, err := activeProfileID(ctx, tx, in.GameID)
 	if err != nil {

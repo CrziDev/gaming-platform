@@ -376,11 +376,11 @@ Metadata can be built now; verified mathematical behavior cannot.
 - [x] Preserve verified profiles as immutable versions.
 - [x] Show the currently active profile.
 - [x] Model an optional activation start and end time.
-- [ ] Implement automatic reversion to the verified default profile (the window is
-  stored and a replaced profile returns to `verified`; nothing yet acts when
-  `effective_until` passes).
-- [ ] Record profile creation, editing, scheduling, activation, and reversion in the
-  audit log (all but reversion are recorded).
+- [x] Implement automatic reversion to the verified default profile (an open-ended
+  activation establishes the default; the background reconciler and round-open path
+  both enforce `effective_until`).
+- [x] Record profile creation, editing, scheduling, activation, and reversion in the
+  audit log (automatic reversion uses the system actor).
 - [x] Refuse activation of every unverified profile with
   `RTP_PROFILE_NOT_VERIFIED`.
 - [x] Provide no platform operation that can mark a profile verified without engine
@@ -551,7 +551,8 @@ arrives. Its final message set must still be reviewed against the first real tit
   with one wager and at most one win movement.
 - [ ] A failed test round follows the compensating refund path.
 - [ ] Every operator mutation produces its required audit entry (wallet, deposit,
-  account status, game, and RTP profile mutations do; rounds and reversion remain).
+  account status, game, and RTP profile mutations and automatic RTP reversion do;
+  round lifecycle audit entries remain).
 
 ## 16. Blocked until complete game source arrives
 

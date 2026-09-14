@@ -679,6 +679,7 @@ export async function createRtpProfile(gameId: string, input: RtpDraftInput): Pr
         verified_at: null,
         effective_from: null,
         effective_until: null,
+        is_default: false,
         created_by: '',
         created_by_display_name: 'R. Cruz',
         created_at: now,
@@ -727,6 +728,17 @@ export async function activateRtpProfile(id: string, schedule: RtpSchedule): Pro
           'RTP_PROFILE_NOT_VERIFIED',
         )
       }
+      const until = schedule.effective_until ?? null
+      const fallback = rtpProfiles.find(
+        (candidate) => candidate.game_id === profile.game_id && candidate.is_default,
+      )
+      if (until && (!fallback || fallback.id === profile.id)) {
+        throw new ApiError(
+          409,
+          'Activate an open-ended verified default profile before scheduling a temporary profile',
+          'RTP_DEFAULT_REQUIRED',
+        )
+      }
       for (const other of rtpProfiles) {
         if (other.game_id === profile.game_id && other.status === 'active' && other.id !== id) {
           other.status = 'verified'
@@ -736,7 +748,12 @@ export async function activateRtpProfile(id: string, schedule: RtpSchedule): Pro
       }
       profile.status = 'active'
       profile.effective_from = schedule.effective_from ?? null
-      profile.effective_until = schedule.effective_until ?? null
+      profile.effective_until = until
+      if (!until) {
+        for (const other of rtpProfiles) {
+          if (other.game_id === profile.game_id) other.is_default = other.id === profile.id
+        }
+      }
       const game = adminGames.find((candidate) => candidate.id === profile.game_id)
       if (game) game.active_rtp_basis_points = profile.target_basis_points
       return { ...profile }

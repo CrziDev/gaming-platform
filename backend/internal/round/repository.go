@@ -133,7 +133,7 @@ func lockGame(ctx context.Context, tx *sql.Tx, gameID string) (gameConfig, error
 		SELECT id::text, status, currency, min_wager_minor, max_wager_minor, wager_step_minor
 		FROM games
 		WHERE id = ($1::text)::uuid
-		FOR SHARE`, gameID).Scan(
+	FOR UPDATE`, gameID).Scan(
 		&config.ID, &config.Status, &config.Currency,
 		&config.MinWagerMinor, &config.MaxWagerMinor, &config.WagerStepMinor,
 	)

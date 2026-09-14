@@ -86,6 +86,7 @@ func createRoundFixture(t *testing.T, db *sql.DB, balanceMinor int64) roundFixtu
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM game_rounds WHERE game_id = ($1::text)::uuid`, fixture.GameID)
 		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, fixture.UserID)
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_id IN (SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid)`, fixture.GameID)
 		_, _ = db.Exec(`DELETE FROM rtp_profiles WHERE game_id = ($1::text)::uuid`, fixture.GameID)
 		_, _ = db.Exec(`DELETE FROM games WHERE id = ($1::text)::uuid`, fixture.GameID)
 		_, _ = db.Exec(`DELETE FROM wallets WHERE user_id = ($1::text)::uuid`, fixture.UserID)
@@ -355,6 +356,42 @@ func TestOpenSnapshotsActiveProfile(t *testing.T) {
 	}
 	if storedProfileID != fixture.ProfileID || storedProfileID == replacementID {
 		t.Fatalf("round profile = %q, want original %q", storedProfileID, fixture.ProfileID)
+	}
+}
+
+func TestOpenRevertsAnExpiredProfileBeforeBindingTheRound(t *testing.T) {
+	db := openRoundTestDB(t)
+	fixture := createRoundFixture(t, db, 1_000)
+	var defaultID string
+	if err := db.QueryRow(`
+		INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, engine_config_ref, observed_basis_points, verified_at)
+		VALUES (($1::text)::uuid, 'Default', 2, 9400, 'verified', 'test:default', 9400, now())
+		RETURNING id::text`, fixture.GameID).Scan(&defaultID); err != nil {
+		t.Fatalf("create default profile: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE games SET default_rtp_profile_id = ($2::text)::uuid WHERE id = ($1::text)::uuid`, fixture.GameID, defaultID); err != nil {
+		t.Fatalf("set default profile: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE rtp_profiles SET effective_until = now() - interval '1 minute' WHERE id = ($1::text)::uuid`, fixture.ProfileID); err != nil {
+		t.Fatalf("expire active profile: %v", err)
+	}
+
+	opened, err := Open(context.Background(), db, OpenInput{
+		RoundKey: "expired-profile-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
+	})
+	if err != nil {
+		t.Fatalf("open round: %v", err)
+	}
+	if opened.RTPProfileID != defaultID {
+		t.Fatalf("round profile = %q, want restored default %q", opened.RTPProfileID, defaultID)
+	}
+
+	var activeID string
+	if err := db.QueryRow(`SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid AND status = 'active'`, fixture.GameID).Scan(&activeID); err != nil {
+		t.Fatalf("read active profile: %v", err)
+	}
+	if activeID != defaultID {
+		t.Fatalf("active profile = %q, want %q", activeID, defaultID)
 	}
 }
 

@@ -92,7 +92,12 @@ export function AdminRtpPage() {
               key: 'status',
               header: 'Status',
               width: '120px',
-              cell: (row) => <StatusBadge status={row.status} />,
+              cell: (row) => (
+                <span className="flex flex-col items-start gap-1">
+                  <StatusBadge status={row.status} />
+                  {row.is_default ? <span className="text-[11px] text-ink-mute">Default</span> : null}
+                </span>
+              ),
             },
             {
               key: 'ends',
@@ -126,7 +131,12 @@ export function AdminRtpPage() {
               title={`${row.game_name} · ${row.name} v${row.version}`}
               meta={`${row.created_by_display_name || 'System'} · ${formatDate(row.created_at)}`}
               value={<ActiveRtp basisPoints={row.target_basis_points} />}
-              aside={<StatusBadge status={row.status} />}
+              aside={
+                <span className="flex flex-col items-end gap-1">
+                  <StatusBadge status={row.status} />
+                  {row.is_default ? <span className="text-[11px] text-ink-mute">Default</span> : null}
+                </span>
+              }
               actions={
                 row.status === 'verified' || row.status === 'draft' ? (
                   <span className="col-span-2 flex">
@@ -222,7 +232,7 @@ function ActivateForm({ profile, onClose }: { profile: RtpProfile; onClose: () =
       title={`Activate ${phrase} on ${profile.game_name}`}
       description={
         negativeMargin
-          ? 'This profile pays out more than it takes in. It cannot run open-ended.'
+          ? 'This profile pays out more than it takes in. It cannot run open-ended and returns to the verified default automatically.'
           : 'The engine has verified this profile. Activating replaces the profile currently in force, which stays verified and can be brought back.'
       }
       footer={
@@ -276,6 +286,10 @@ function ActivateForm({ profile, onClose }: { profile: RtpProfile; onClose: () =
           <p className="text-[13.5px] leading-relaxed text-ink-soft">
             The change takes effect on the next round. Rounds already in flight settle against the
             profile they started under.
+          </p>
+          <p className="text-[13px] leading-relaxed text-ink-mute">
+            An open-ended activation becomes the verified default. A scheduled activation returns
+            to that default automatically when it ends.
           </p>
           <Field label="Scheduled end — optional" htmlFor="rtp-end" hint="Leave empty to run until replaced.">
             <Input

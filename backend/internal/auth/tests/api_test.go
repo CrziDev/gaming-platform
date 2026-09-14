@@ -2149,6 +2149,7 @@ type rtpProfileBody struct {
 	EngineConfigRef   string  `json:"engine_config_ref"`
 	EffectiveFrom     *string `json:"effective_from"`
 	EffectiveUntil    *string `json:"effective_until"`
+	IsDefault         bool    `json:"is_default"`
 	CreatedBy         string  `json:"created_by"`
 	CreatedByName     string  `json:"created_by_display_name"`
 }
@@ -2255,10 +2256,18 @@ func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
 	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+verifiedID, map[string]any{"name": "Edited"}); status != http.StatusBadRequest {
 		t.Fatalf("edit verified profile: want 400, got %d (%s)", status, body)
 	}
+	until := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
+	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_until": until}); status != http.StatusConflict || !bytes.Contains(body, []byte(`"code":"RTP_DEFAULT_REQUIRED"`)) {
+		t.Fatalf("activate timed profile without default: want 409 RTP_DEFAULT_REQUIRED, got %d (%s)", status, body)
+	}
 
 	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+verifiedID+"/activate", nil)
 	if status != http.StatusOK || !bytes.Contains(body, []byte(`"status":"active"`)) {
 		t.Fatalf("activate verified: want 200 active, got %d (%s)", status, body)
+	}
+	var activeDefault rtpProfileBody
+	if err := json.Unmarshal(body, &activeDefault); err != nil || !activeDefault.IsDefault {
+		t.Fatalf("open-ended activation should establish the default: err=%v (%s)", err, body)
 	}
 	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/games/"+gameID, nil)
 	if status != http.StatusOK || !bytes.Contains(body, []byte(`"active_rtp_basis_points":9600`)) {
@@ -2268,13 +2277,16 @@ func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
 	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", nil); status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"effective_until"`)) {
 		t.Fatalf("activate negative margin without an end: want 400 naming effective_until, got %d (%s)", status, body)
 	}
-	until := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
 	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_from": until, "effective_until": until}); status != http.StatusBadRequest {
 		t.Fatalf("activate with an end not after the start: want 400, got %d (%s)", status, body)
 	}
 	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_until": until})
 	if status != http.StatusOK || !bytes.Contains(body, []byte(`"effective_until":"`+until+`"`)) {
 		t.Fatalf("activate promo with an end: want 200 with the schedule, got %d (%s)", status, body)
+	}
+	var activePromotion rtpProfileBody
+	if err := json.Unmarshal(body, &activePromotion); err != nil || activePromotion.IsDefault {
+		t.Fatalf("timed activation should not replace the default: err=%v (%s)", err, body)
 	}
 
 	var previous, active int

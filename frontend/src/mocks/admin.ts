@@ -296,6 +296,7 @@ const profile = (
   operator: string,
   created: string,
   until: string | null = null,
+  isDefault = status === 'active' && until === null,
 ): RtpProfile => ({
   id,
   game_id: game.id,
@@ -311,6 +312,7 @@ const profile = (
   verified_at: status === 'draft' ? null : created,
   effective_from: null,
   effective_until: until,
+  is_default: isDefault,
   created_by: '',
   created_by_display_name: operator,
   created_at: created,
@@ -319,7 +321,7 @@ const profile = (
 
 export const rtpProfiles: RtpProfile[] = [
   profile('rtp-1', adminGames[0]!, 'Promo', 1, 10_200, 'active', 'A. Reyes', hoursAgo(3), hoursAgo(-6)),
-  profile('rtp-2', adminGames[0]!, 'Standard', 1, 9_400, 'verified', 'A. Reyes', daysAgo(4)),
+  profile('rtp-2', adminGames[0]!, 'Standard', 1, 9_400, 'verified', 'A. Reyes', daysAgo(4), null, true),
   profile('rtp-3', adminGames[1]!, 'Standard', 1, 9_400, 'active', 'R. Cruz', daysAgo(12)),
   profile('rtp-4', adminGames[2]!, 'Standard', 1, 9_600, 'retired', 'R. Cruz', daysAgo(40)),
   profile('rtp-5', adminGames[2]!, 'Standard', 2, 9_600, 'draft', 'R. Cruz', daysAgo(2)),

@@ -591,7 +591,10 @@ implement it.
 a gap. The activation path itself is real and tested against rows inserted as if verified:
 it takes the game row lock first so two operators queue instead of deadlocking, moves the
 profile previously in force back to `verified` so it stays a version to revert to, and
-refuses a target at or above 100% without an end time. Nothing in this package can set `verified`: verification means an engine
+refuses a target at or above 100% without an end time. An open-ended activation becomes
+the game's default. A timed activation requires a different verified default; a
+database-backed reconciler restores it at expiry, and round opening performs the same
+reconciliation inside its transaction before binding a profile. Nothing in this package can set `verified`: verification means an engine
 implements the profile and a simulation measured the result, which is §12 of
 `../game-engine-integration/SPEC.md`.
 
@@ -671,6 +674,7 @@ ErrDuplicateRequest     409 DUPLICATE_REQUEST
 ErrUnsupportedCurrency  409 UNSUPPORTED_CURRENCY
 ErrGameUnavailable      409 GAME_UNAVAILABLE
 ErrProfileNotVerified   409 RTP_PROFILE_NOT_VERIFIED
+ErrDefaultRequired      409 RTP_DEFAULT_REQUIRED
 ```
 
 A `400`, `401`, `403`, `404`, `413`, `429`, or `500` carries no code. Adding a code is a

@@ -221,6 +221,7 @@ export type RtpProfile = {
   verified_at: string | null
   effective_from: string | null
   effective_until: string | null
+  is_default: boolean
   created_by: string
   created_by_display_name: string
   created_at: string

@@ -23,6 +23,7 @@ const profileColumns = `
 	p.name, p.version, p.target_basis_points, p.status, COALESCE(p.engine_config_ref, ''),
 	p.theoretical_basis_points, p.observed_basis_points, p.verified_at,
 	p.effective_from, p.effective_until,
+	COALESCE(g.default_rtp_profile_id = p.id, false),
 	COALESCE(p.created_by::text, ''), COALESCE(u.display_name, ''),
 	p.created_at, p.updated_at`
 
@@ -56,6 +57,16 @@ const (
 	FOR UPDATE OF p`
 
 	lockGameSQL = `SELECT id FROM games WHERE id = ($1::text)::uuid FOR UPDATE`
+
+	selectDefaultForGameSQL = `SELECT COALESCE(default_rtp_profile_id::text, '') FROM games WHERE id = ($1::text)::uuid`
+
+	setDefaultForGameSQL = `UPDATE games SET default_rtp_profile_id = NULLIF($2, '')::uuid, updated_at = now() WHERE id = ($1::text)::uuid`
+
+	listExpiredGameIDsSQL = `
+	SELECT game_id::text
+	FROM rtp_profiles
+	WHERE status = 'active' AND effective_until <= $1
+	ORDER BY effective_until, game_id`
 
 	insertSQL = `
 	INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, engine_config_ref, created_by)
@@ -139,6 +150,42 @@ func lockGame(ctx context.Context, tx *sql.Tx, gameID string) error {
 	return nil
 }
 
+func defaultForGame(ctx context.Context, tx *sql.Tx, gameID string) (string, error) {
+	var id string
+	if err := tx.QueryRowContext(ctx, selectDefaultForGameSQL, gameID).Scan(&id); err != nil {
+		return "", fmt.Errorf("rtp: read default profile: %w", err)
+	}
+	return id, nil
+}
+
+func setDefaultForGame(ctx context.Context, tx *sql.Tx, gameID, profileID string) error {
+	if _, err := tx.ExecContext(ctx, setDefaultForGameSQL, gameID, profileID); err != nil {
+		return fmt.Errorf("rtp: set default profile: %w", err)
+	}
+	return nil
+}
+
+func expiredGameIDs(ctx context.Context, db *sql.DB, now time.Time) ([]string, error) {
+	rows, err := db.QueryContext(ctx, listExpiredGameIDsSQL, now)
+	if err != nil {
+		return nil, fmt.Errorf("rtp: list expired profiles: %w", err)
+	}
+	defer rows.Close()
+
+	ids := make([]string, 0)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("rtp: scan expired profile game: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rtp: expired profile rows: %w", err)
+	}
+	return ids, nil
+}
+
 func activeForGame(ctx context.Context, tx *sql.Tx, gameID string) (Profile, bool, error) {
 	item, err := scanProfile(tx.QueryRowContext(ctx, selectActiveForGameSQL, gameID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -208,6 +255,7 @@ func scanProfile(row scanner) (Profile, error) {
 		&item.Name, &item.Version, &item.TargetBasisPoints, &item.Status, &item.EngineConfigRef,
 		&theoretical, &observed, &verifiedAt,
 		&from, &until,
+		&item.IsDefault,
 		&item.CreatedBy, &item.CreatedByDisplayName,
 		&item.CreatedAt, &item.UpdatedAt,
 	)

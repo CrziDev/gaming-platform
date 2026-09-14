@@ -43,6 +43,7 @@ in the handler at the same time. A client never matches on `error` text.
 | `UNSUPPORTED_CURRENCY` | 409 | Refuse the currency, do not retry |
 | `GAME_UNAVAILABLE` | 409 | Return to the catalogue |
 | `RTP_PROFILE_NOT_VERIFIED` | 409 | Refuse activation, explain why |
+| `RTP_DEFAULT_REQUIRED` | 409 | Require an open-ended verified default before a temporary activation |
 | `DEPOSIT_ALREADY_REVIEWED` | 409 | Refresh the queue; another review already won |
 | `DEPOSIT_APPROVAL_FAILED` | 409 | Keep the request pending and report that its wallet cannot be credited |
 | `SELF_STATUS_CHANGE` | 409 | Refuse an administrator changing their own status |
@@ -169,7 +170,7 @@ session. Those two are omitted from the failure column.
 | `POST` | `/api/admin/games/{id}/rtp-profiles` | `201` + the draft profile | `400` · `404` · `409` name and version taken |
 | `GET` | `/api/admin/rtp-profiles` | `200` + a page of profiles across games; accepts `game_id`, `status` | `400` invalid filter |
 | `PATCH` | `/api/admin/rtp-profiles/{id}` | `200` + the profile; drafts only | `400` · `404` · `409` name and version taken |
-| `POST` | `/api/admin/rtp-profiles/{id}/activate` | `200` + the profile; accepts `effective_from` and `effective_until` | `400` · `404` · `409` `RTP_PROFILE_NOT_VERIFIED` |
+| `POST` | `/api/admin/rtp-profiles/{id}/activate` | `200` + the profile; accepts `effective_from` and `effective_until` | `400` · `404` · `409` `RTP_PROFILE_NOT_VERIFIED` / `RTP_DEFAULT_REQUIRED` |
 | `GET` | `/api/admin/audit-logs` | `200` + a page of entries; accepts `user_id` (the actor), `type` (the action), `from`, `to` | `400` invalid filter |
 | `GET` | `/api/admin/dashboard?currency=PHP` | `200` + the summary for that currency | `400` missing or unknown currency |
 
@@ -186,14 +187,17 @@ status moved.
 A profile body carries `game_id`, `game_slug`, `game_name`, `name`, `version`,
 `target_basis_points`, `status`, `engine_config_ref`, the nullable
 `theoretical_basis_points`, `observed_basis_points`, `verified_at`, `effective_from`,
-and `effective_until`, plus `created_by`, `created_by_display_name`, and timestamps.
+and `effective_until`, plus `is_default`, `created_by`, `created_by_display_name`, and timestamps.
 A draft takes `name`, `version`, `target_basis_points` from the Phase 1 set (`9200`,
 `9400`, `9600`, `10000`, `10200`, `10500`), and an optional `engine_config_ref`. Only a
 draft can be patched. Activation moves the profile previously in force back to
 `verified`, and a target at or above `10000` refuses to activate without
-`effective_until`. Nothing on these routes can mark a profile verified. Audited as
+`effective_until`. An open-ended activation becomes the game's default. A timed
+activation requires a different verified default and automatically returns to it at
+expiry. Nothing on these routes can mark a profile verified. Audited as
 `rtp_profile.create`, `rtp_profile.update`, `rtp_profile.activate`, and
-`rtp_profile.schedule` when the active profile's window changes.
+`rtp_profile.schedule` when the active profile's window changes, with automatic expiry
+recorded as `rtp_profile.revert` under the system actor.
 
 An admin round body adds `user_id`, `user_email`, `display_name`, and `wallet_id` to the
 player round resource.
