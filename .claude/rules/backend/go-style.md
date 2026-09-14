@@ -14,8 +14,9 @@ makes an invariant easier to verify.
   read with no decisions to make may go from its handler straight to a repository
   function and needs no `service.go`. A file named for its subject rather than its role —
   `session.go`, `password.go`, `guard.go` — is right where the subject is the point.
-- `internal/app` owns the route table and the server lifecycle. `cmd/server` is `main`
-  and nothing else. `internal/httpx` owns the response envelope and paging, because the
+- `internal/app` owns the route table, the configuration read from the environment,
+  and the server lifecycle. `cmd/server` is `main` and nothing else: it builds the
+  logger, handles the process signals, and calls `app.Run`. `internal/httpx` owns the response envelope and paging, because the
   shape in `api.md` is one contract and belongs in one place.
 - SQL stays with the package that owns the operation. Wallet balance changes, their
   matching ledger inserts, and the ledger reads behind the transaction-list endpoints all
@@ -41,9 +42,7 @@ makes an invariant easier to verify.
 - Session rows belong to the account: `internal/user` holds the `auth_sessions` SQL
   (create, find by token hash, revoke one, revoke all on suspension). `internal/auth`
   owns what is actually authentication — token generation and hashing, the cookie,
-  passwords, the guards — and calls `user` for the rows. Not there yet: create, find,
-  and revoke-one live in `internal/auth/session.go`, and only revoke-all on suspension
-  is in `internal/user`; the move is tracked in `docs/phase-1-features.md` §2.
+  passwords, the guards — and calls `user` for the rows with the token already hashed.
 - Repository and service are file roles, not object hierarchies. Functions normally take
   `*sql.DB` or `*sql.Tx` directly. Avoid layers that only forward, generic repositories,
   and factories that only call constructors; a narrow interface is appropriate when the

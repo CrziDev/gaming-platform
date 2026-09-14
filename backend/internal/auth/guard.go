@@ -44,8 +44,8 @@ func (h *Handler) currentUser(w http.ResponseWriter, r *http.Request) (user.User
 		return user.User{}, false
 	}
 
-	account, err := findUserBySessionToken(r.Context(), h.db, cookie.Value)
-	if errors.Is(err, ErrNoSession) {
+	account, err := user.FindBySessionHash(r.Context(), h.db, hashSessionToken(cookie.Value))
+	if errors.Is(err, user.ErrNoSession) {
 		httpx.WriteError(w, http.StatusUnauthorized, "Authentication is required")
 		return user.User{}, false
 	}

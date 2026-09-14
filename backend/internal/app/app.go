@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/gaming-platform/backend/internal/audit"
 	"github.com/gaming-platform/backend/internal/auth"
@@ -17,16 +16,6 @@ import (
 	"github.com/gaming-platform/backend/internal/user"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
-
-type Config struct {
-	CookieName      string
-	CookieSecure    bool
-	SessionTTL      time.Duration
-	AllowedOrigins  []string
-	MaxBodyBytes    int64
-	ProofDir        string
-	LoginsPerMinute int
-}
 
 func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	authHandler := auth.NewHandler(db, logger, auth.Config{

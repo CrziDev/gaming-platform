@@ -57,8 +57,8 @@ func ChangeStatus(ctx context.Context, db *sql.DB, actorID, userID, status strin
 		return User{}, fmt.Errorf("user: update status: %w", err)
 	}
 	if status == "suspended" {
-		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET revoked_at = now() WHERE user_id = ($1::text)::uuid AND revoked_at IS NULL`, userID); err != nil {
-			return User{}, fmt.Errorf("user: revoke suspended sessions: %w", err)
+		if err := revokeSessionsTx(ctx, tx, userID); err != nil {
+			return User{}, err
 		}
 	}
 

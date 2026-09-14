@@ -187,9 +187,9 @@ decision must update the API contract, frontend types, and implementation togeth
   and date filters.
 - [x] Enforce a default page size of 20 and maximum of 100.
 - [x] Add `GET /api/currencies` for enabled currency metadata.
-- [ ] Move database and HTTP server lifecycle ownership from `cmd/server` to
-  `internal/app`, leaving the command as `main` only.
-- [ ] Move the `auth_sessions` SQL (create, find by token hash, revoke one) from
+- [x] Move database and HTTP server lifecycle ownership from `cmd/server` to
+  `internal/app`, leaving the command as `main` only (`app.ConfigFromEnv`, `app.Run`).
+- [x] Move the `auth_sessions` SQL (create, find by token hash, revoke one) from
   `internal/auth/session.go` into `internal/user` beside the revoke-all on suspension,
   so the session rows sit with the account as `go-style.md` describes.
 

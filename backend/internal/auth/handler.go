@@ -98,7 +98,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		h.internal(w, r, err)
 		return
 	}
-	if err := insertSession(r.Context(), tx, account.ID, token, expiresAt); err != nil {
+	if err := user.CreateSessionTx(r.Context(), tx, account.ID, hashSessionToken(token), expiresAt); err != nil {
 		h.internal(w, r, err)
 		return
 	}
@@ -163,7 +163,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie(h.cfg.CookieName); err == nil && cookie.Value != "" {
-		if err := revokeSession(r.Context(), h.db, cookie.Value); err != nil {
+		if err := user.RevokeSession(r.Context(), h.db, hashSessionToken(cookie.Value)); err != nil {
 			h.internal(w, r, err)
 			return
 		}
