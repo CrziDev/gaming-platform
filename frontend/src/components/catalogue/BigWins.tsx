@@ -16,7 +16,7 @@ export function BigWins({ wins }: { wins: BigWin[] }) {
         <Trophy aria-hidden size={15} strokeWidth={1.6} className="text-ink-mute" />
         Big wins
       </h2>
-      <ul aria-label="Big wins" className="-mx-3.5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-3.5">
+      <ul aria-label="Big wins" tabIndex={0} className="scrollbar-hidden -mx-3.5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-3.5">
         {wins.map((win) => {
           const amount = money(win.amount_minor, win.currency)
           return (

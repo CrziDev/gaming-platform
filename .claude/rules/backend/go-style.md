@@ -1,8 +1,9 @@
 # Go conventions
 
 Derived from <https://go.dev/doc/effective_go>. The guiding constraint is that someone
-still learning Go can read this codebase end to end: prefer the standard library, prefer
-explicit code, prefer one more line over one more abstraction.
+still learning Go can read this codebase end to end: prefer the standard library and
+explicit code, while using a small abstraction when it removes a real source of drift or
+makes an invariant easier to verify.
 
 ## Package layout
 
@@ -21,10 +22,10 @@ explicit code, prefer one more line over one more abstraction.
   belong to `internal/wallet`, because the balance and its ledger are one invariant.
   A package that needs a wallet movement inside its transaction calls a wallet function
   with the `*sql.Tx` rather than writing wallet or ledger tables itself.
-- A service function is required when a use case changes money, coordinates more than one
-  write, owns a database transaction, takes a row lock, enforces idempotency or a state
-  transition, or records an audit entry. The service owns those decisions and the
-  transaction boundary; a handler never implements them.
+- Use a service function when it makes a multi-write transaction, money invariant,
+  idempotency rule, state transition, or audit operation easier to follow and test. The
+  use case owns its transaction boundary, but file names and layer count follow the
+  simplest clear implementation rather than a mandatory template.
 - Keep each path from route to response short enough to follow in one sitting. A simple
   read is `route → handler → repository function → response`; a use case with
   decisions is `route → handler → service function → repository functions →
@@ -39,18 +40,18 @@ explicit code, prefer one more line over one more abstraction.
   (create, find by token hash, revoke one, revoke all on suspension). `internal/auth`
   owns what is actually authentication — token generation and hashing, the cookie,
   passwords, the guards — and calls `user` for the rows.
-- Repository and service are file roles, not object hierarchies. Functions take `*sql.DB`
-  or `*sql.Tx` directly: no layer that only forwards, no generic repository, no interface
-  with one implementation, no dependency-injection container, no factories that only call
-  constructors.
-- No package named for a grab-bag — `util`, `helpers`, `common`. A small package named for
-  one subject is right when three or more packages need the same thing: `internal/httpx`
-  for the response shape, `internal/dbx` for driver-error inspection and the row-scanning
-  interfaces, `internal/testdb` for the test database. Two packages needing a four-line
-  helper copy it; a third moves it.
-- Declare an interface in the package that consumes it, and only when something is
-  actually substituted. The `*sql.DB`/`*sql.Tx` and `*sql.Row`/`*sql.Rows` pairs are the
-  standing substitutions, and their interfaces live in `internal/dbx`.
+- Repository and service are file roles, not object hierarchies. Functions normally take
+  `*sql.DB` or `*sql.Tx` directly. Avoid layers that only forward, generic repositories,
+  and factories that only call constructors; a narrow interface is appropriate when the
+  consuming code truly supports multiple implementations or needs a controlled test seam.
+- No package named for a grab-bag — `util`, `helpers`, `common`. Extract a small package
+  named for one subject when doing so makes an invariant single-sourced or prevents
+  duplicated behavior from drifting. Package count is evidence, not a fixed threshold;
+  tiny local helpers may still be clearer when their behavior is intentionally local.
+- Declare an interface in the package that consumes it and only when something is
+  actually substituted. Small local interfaces for the shared `*sql.DB`/`*sql.Tx`
+  method set are acceptable; centralize them only when several packages need the same
+  contract.
 
 ## Formatting
 
@@ -120,7 +121,9 @@ a function, not to restate a signature.
 
 - `make` allocates and initializes slices, maps, and channels only, returning `T`.
   `new(T)` returns zeroed storage as `*T`.
-- Design types so the **zero value is usable** without further initialization.
+- Prefer a useful zero value when it is natural. Types that require resources, validated
+  configuration, or mandatory invariants should use a constructor and may deliberately
+  reject an uninitialized zero value.
 - Label composite literal fields: `Config{Port: port, Name: name}`. Missing fields take
   their zero values, and order stops mattering.
 - Returning the address of a local is fine and idiomatic.

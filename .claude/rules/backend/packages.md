@@ -1,9 +1,10 @@
 # Dependencies
 
-The standard library is the default, not the fallback. A third-party package is added
-only when the standard library cannot meet the need safely — and "safely" is the whole
-test: the dependency must be a correctness or security primitive that is dangerous to
-hand-roll. Convenience, terseness, and familiarity are not reasons.
+The standard library is the default, not a hard lock. Add a focused, maintained
+third-party package when it materially improves correctness, security, interoperability,
+or long-term maintenance after comparing the standard-library implementation. Mere
+familiarity is not enough, but avoiding a dependency is not valuable when it leaves a
+larger bespoke subsystem to maintain.
 
 ## Reach for these first
 
@@ -21,22 +22,23 @@ are all covered above. None of them justifies a framework.
 | `github.com/jackc/pgx/v5` | PostgreSQL wire protocol driver. `database/sql` defines the interface but ships no driver. |
 | `golang.org/x/crypto` | Argon2id. A password hash written by hand is a security bug waiting to happen. |
 
-pgx is used **through `database/sql`**, not through pgx's own API. The standard interface
-is the one worth knowing, and the driver stays swappable.
+Use pgx through `database/sql` by default. A package may use pgx's native API when a
+PostgreSQL-specific feature or measurable performance need justifies it; keep one access
+style within that package and document the reason.
 
 `golang-migrate` is a pinned binary installed into `backend/bin` by `make tools`, not a
 library import. Tools and dependencies are judged separately.
 
 ## Adding one
 
-Before adding a package, write down the standard-library approach and why it fails. If
-the answer is "more code", the answer is more code. If it is "I would be implementing a
-cryptographic primitive, a wire protocol, or a parser for a specification I do not
-control", the dependency is justified.
+Before adding a package, write down the standard-library approach and the tradeoff. A
+dependency is justified when its focused, reviewed implementation carries less risk and
+maintenance cost than the code it replaces; security primitives, wire protocols, and
+external specifications are especially strong cases.
 
 A new dependency is pinned to an exact version, appears in `backend/go.mod` as a direct
 require, and arrives in the same change as the code that needs it.
 
 The frontend follows the same bar against `frontend/package.json`. React, the router,
-TanStack Query, React Hook Form, Zod and Tailwind are the settled set; anything beyond
-them needs the same written justification.
+TanStack Query, React Hook Form, Zod and Tailwind are the current set; additions need the
+same concrete justification rather than a permanent ban.

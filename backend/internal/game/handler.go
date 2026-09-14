@@ -8,8 +8,10 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/money"
 	"github.com/gaming-platform/backend/internal/user"
 )
 
@@ -276,13 +278,13 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]string{}
 	if body.Name != nil {
 		patch.Name = trimmed(*body.Name)
-		if *patch.Name == "" || len(*patch.Name) > maxNameLength {
+		if *patch.Name == "" || utf8.RuneCountInString(*patch.Name) > maxNameLength {
 			fields["name"] = "Name must be between 1 and 120 characters"
 		}
 	}
 	if body.Description != nil {
 		patch.Description = trimmed(*body.Description)
-		if len(*patch.Description) > maxDescriptionLength {
+		if utf8.RuneCountInString(*patch.Description) > maxDescriptionLength {
 			fields["description"] = "Description must be at most 1000 characters"
 		}
 	}
@@ -294,7 +296,7 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.Provider != nil {
 		patch.Provider = trimmed(*body.Provider)
-		if *patch.Provider == "" || len(*patch.Provider) > maxProviderLength {
+		if *patch.Provider == "" || utf8.RuneCountInString(*patch.Provider) > maxProviderLength {
 			fields["provider"] = "Provider must be between 1 and 80 characters"
 		}
 	}
@@ -313,8 +315,8 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for name, value := range map[string]*int64{"min_wager_minor": patch.MinWagerMinor, "max_wager_minor": patch.MaxWagerMinor, "wager_step_minor": patch.WagerStepMinor} {
-		if value != nil && *value <= 0 {
-			fields[name] = "Must be greater than zero"
+		if value != nil {
+			validateWagerValue(fields, name, *value)
 		}
 	}
 	if len(fields) > 0 {
@@ -368,16 +370,16 @@ func (h *Handler) admin(w http.ResponseWriter, r *http.Request) (user.User, bool
 }
 
 func validateText(fields map[string]string, name, description, categorySlug, provider, currency string) {
-	if name == "" || len(name) > maxNameLength {
+	if name == "" || utf8.RuneCountInString(name) > maxNameLength {
 		fields["name"] = "Name must be between 1 and 120 characters"
 	}
-	if len(description) > maxDescriptionLength {
+	if utf8.RuneCountInString(description) > maxDescriptionLength {
 		fields["description"] = "Description must be at most 1000 characters"
 	}
 	if !isSlug(categorySlug) {
 		fields["category_slug"] = "Category must be a slug of lower-case letters, digits, and hyphens"
 	}
-	if provider == "" || len(provider) > maxProviderLength {
+	if provider == "" || utf8.RuneCountInString(provider) > maxProviderLength {
 		fields["provider"] = "Provider must be between 1 and 80 characters"
 	}
 	if len(currency) != 3 {
@@ -386,14 +388,20 @@ func validateText(fields map[string]string, name, description, categorySlug, pro
 }
 
 func validateWagers(fields map[string]string, minimum, maximum, step int64) {
-	if minimum <= 0 {
-		fields["min_wager_minor"] = "Must be greater than zero"
+	for name, value := range map[string]int64{
+		"min_wager_minor":  minimum,
+		"max_wager_minor":  maximum,
+		"wager_step_minor": step,
+	} {
+		validateWagerValue(fields, name, value)
 	}
-	if maximum <= 0 {
-		fields["max_wager_minor"] = "Must be greater than zero"
-	}
-	if step <= 0 {
-		fields["wager_step_minor"] = "Must be greater than zero"
+}
+
+func validateWagerValue(fields map[string]string, name string, value int64) {
+	if value <= 0 {
+		fields[name] = "Must be greater than zero"
+	} else if value > money.MaxSafeMinor {
+		fields[name] = "Must not exceed the maximum exact JSON integer"
 	}
 }
 

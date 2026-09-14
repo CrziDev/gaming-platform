@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/gaming-platform/backend/internal/testdb"
 )
 
 var (
@@ -21,21 +21,7 @@ var (
 func dashboardTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	dashboardDBOnce.Do(func() {
-		url := os.Getenv("TEST_DATABASE_URL")
-		if url == "" {
-			url = os.Getenv("DATABASE_URL")
-		}
-		if url == "" {
-			dashboardDBErr = errors.New("no test database URL")
-			return
-		}
-		dashboardDB, dashboardDBErr = sql.Open("pgx", url)
-		if dashboardDBErr != nil {
-			return
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		dashboardDBErr = dashboardDB.PingContext(ctx)
+		dashboardDB, dashboardDBErr = testdb.Open()
 	})
 	if dashboardDBErr != nil {
 		if os.Getenv("REQUIRE_TEST_DATABASE") != "" {

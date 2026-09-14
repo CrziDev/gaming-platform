@@ -39,7 +39,9 @@ removed.
    text, link, or live dot. Gold is reserved for the currency mark and win amounts.
    Status tints (`success`, `warning`, `danger`) exist only for state a person must act
    on — pending, rejected, credit — and never as decoration.
-6. **Scrollbars hidden** app-wide. Overflow is discovered by dragging, not by a track.
+6. Keep chrome visually quiet, but preserve a visible scrollbar when content can overflow
+   and dragging is not obvious or accessible. Hide a track only on deliberate touch-first
+   carousels that remain keyboard-scrollable and expose another overflow cue.
 7. **Two typefaces, no display font.** IBM Plex Sans for everything; IBM Plex Mono for
    numbers, timestamps, and uppercase micro-labels only.
 8. **Max weight 600.** No 700 anywhere.

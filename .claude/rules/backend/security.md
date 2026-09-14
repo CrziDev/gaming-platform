@@ -4,11 +4,13 @@ A violation here is a financial or security bug, not a style issue.
 
 ## Money
 
-Money is `int64` minor units plus an ISO currency code. Never a float — not in Go, not in
-JavaScript, not in SQL. PHP 100.00 is `10000`. This is stated before any money exists
-because the first wallet change must not be the one that decides it. The rule covers
-every amount that is or feeds a balance; a statistic derived from amounts is an integer
-in basis points, never a float, but it is not money and needs no arbitrary precision.
+Money is `int64` minor units plus an ISO currency code in Go and SQL. Never store or
+calculate an authoritative amount as a fractional major-unit float. JavaScript may hold
+minor units in `number` only inside its exact integer range (`±9007199254740991`). PHP
+100.00 is `10000`. This is stated before any money exists because the first wallet change
+must not be the one that decides it. The rule covers every amount that is or feeds a
+balance; a statistic derived from amounts is an integer in basis points, but it is not
+money and needs no arbitrary precision.
 
 ## Sessions
 
@@ -59,15 +61,16 @@ boundary.
 
 Tests accompany every change touching money, auth, or permissions.
 
-Database-backed tests read `TEST_DATABASE_URL`, falling back to `DATABASE_URL`, and skip
-when PostgreSQL is unreachable. CI sets `REQUIRE_TEST_DATABASE=1` so a skip there is a
-failure instead — a silent skip must never hide an auth bug.
+Database-backed tests read only an explicit `TEST_DATABASE_URL`; they never fall back to
+`DATABASE_URL`. Its database name must end in `_test`. Tests skip when it is absent or
+unreachable unless `REQUIRE_TEST_DATABASE=1`; `make test` and CI set that flag so a skip
+cannot hide a backend failure.
 
-Because of that fallback, `make test` must be safe to run against a developer's own
-database. A test creates its rows under a marker it owns — the HTTP suite's accounts are
-`@suite.test`, a package's fixtures carry a run-unique address — and removes only those
-rows, reporting a cleanup that fails. Nothing truncates a table, and no assertion counts
-a table it did not fill.
+Prefer run-unique fixtures and scoped cleanup when they improve isolation. A suite-level
+reset such as `TRUNCATE ... CASCADE` is allowed only after the shared test helper has
+verified the explicit `_test` database name, and database packages remain serialized
+when they share that database. Assertions either own the rows they count or reset the
+dedicated test database first.
 
 Auth tests drive a real `httptest` server with an `http.Client` that keeps cookies, so
 cookie attributes, replay, and revocation are exercised the way a browser exercises them.

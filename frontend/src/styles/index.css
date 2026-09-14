@@ -48,11 +48,11 @@
   color-scheme: dark;
 }
 
-* {
+.scrollbar-hidden {
   scrollbar-width: none;
 }
 
-*::-webkit-scrollbar {
+.scrollbar-hidden::-webkit-scrollbar {
   width: 0;
   height: 0;
 }

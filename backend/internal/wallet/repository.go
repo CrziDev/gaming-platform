@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
 	"github.com/gaming-platform/backend/internal/audit"
+	"github.com/gaming-platform/backend/internal/money"
 )
 
 var (
@@ -296,14 +296,17 @@ func MoveTx(ctx context.Context, tx *sql.Tx, m Movement) (Transaction, error) {
 	if w.Status == "closed" {
 		return Transaction{}, ErrWalletClosed
 	}
-	if m.AmountMinor > 0 && w.BalanceMinor > math.MaxInt64-m.AmountMinor {
+	if !money.IsSafeMinor(w.BalanceMinor) || !money.IsSafeMinor(m.AmountMinor) {
 		return Transaction{}, ErrAmountOverflow
 	}
-	if m.AmountMinor == math.MinInt64 || (m.AmountMinor < 0 && w.BalanceMinor < -m.AmountMinor) {
+	if m.AmountMinor < 0 && w.BalanceMinor < -m.AmountMinor {
 		return Transaction{}, ErrInsufficientFunds
 	}
 
 	after := w.BalanceMinor + m.AmountMinor
+	if !money.IsSafeMinor(after) {
+		return Transaction{}, ErrAmountOverflow
+	}
 	if _, err := tx.ExecContext(ctx, `UPDATE wallets SET balance_minor = $1, updated_at = now() WHERE id = ($2::text)::uuid`, after, w.ID); err != nil {
 		return Transaction{}, fmt.Errorf("wallet: update balance: %w", err)
 	}

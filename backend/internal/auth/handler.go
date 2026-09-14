@@ -8,6 +8,7 @@ import (
 	"net/mail"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/httpx"
 	"github.com/gaming-platform/backend/internal/user"
@@ -73,7 +74,19 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := user.Create(r.Context(), h.db, email, hash, displayName)
+	token, expiresAt, err := h.prepareSession()
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	tx, err := h.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	defer tx.Rollback()
+
+	account, err := user.CreateTx(r.Context(), tx, email, hash, displayName)
 	if errors.Is(err, user.ErrEmailTaken) {
 		httpx.WriteJSON(w, http.StatusConflict, httpx.ErrorResponse{
 			Error:  "That email address is already registered",
@@ -85,10 +98,15 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		h.internal(w, r, err)
 		return
 	}
-
-	if !h.startSession(w, r, account) {
+	if err := insertSession(r.Context(), tx, account.ID, token, expiresAt); err != nil {
+		h.internal(w, r, err)
 		return
 	}
+	if err := tx.Commit(); err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	h.setSessionCookie(w, token, expiresAt)
 	httpx.WriteJSON(w, http.StatusCreated, newUserResponse(account))
 }
 
@@ -296,23 +314,23 @@ func validateRegistration(email, password, displayName string) map[string]string
 	switch {
 	case email == "":
 		fields["email"] = "Enter an email address"
-	case len(email) > maxEmailLength:
+	case utf8.RuneCountInString(email) > maxEmailLength:
 		fields["email"] = "That email address is too long"
 	case !isEmailAddress(email):
 		fields["email"] = "Enter a valid email address"
 	}
 
 	switch {
-	case len(password) < minPasswordLength:
+	case utf8.RuneCountInString(password) < minPasswordLength:
 		fields["password"] = "Use at least 12 characters"
-	case len(password) > maxPasswordLength:
+	case utf8.RuneCountInString(password) > maxPasswordLength:
 		fields["password"] = "Use at most 128 characters"
 	}
 
 	switch {
 	case displayName == "":
 		fields["display_name"] = "Enter a display name"
-	case len(displayName) > maxDisplayNameLength:
+	case utf8.RuneCountInString(displayName) > maxDisplayNameLength:
 		fields["display_name"] = "Use at most 80 characters"
 	}
 

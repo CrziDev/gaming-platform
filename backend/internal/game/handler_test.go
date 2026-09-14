@@ -82,3 +82,24 @@ func TestFlagsMarkAGameNewForThirtyDays(t *testing.T) {
 		t.Fatalf("a 31-day-old game should carry no flags, got %v", flags)
 	}
 }
+
+func TestValidateTextCountsUnicodeCharacters(t *testing.T) {
+	fields := map[string]string{}
+	validateText(fields, strings.Repeat("界", maxNameLength), "", "slots", strings.Repeat("界", maxProviderLength), "PHP")
+	if len(fields) != 0 {
+		t.Fatalf("valid character counts were rejected: %v", fields)
+	}
+
+	validateText(fields, strings.Repeat("界", maxNameLength+1), "", "slots", "Provider", "PHP")
+	if _, rejected := fields["name"]; !rejected {
+		t.Fatal("overlong Unicode name was accepted")
+	}
+}
+
+func TestValidateWagersRejectsUnsafeJSONIntegers(t *testing.T) {
+	fields := map[string]string{}
+	validateWagers(fields, 100, 1<<53, 100)
+	if _, rejected := fields["max_wager_minor"]; !rejected {
+		t.Fatal("wager outside JavaScript's exact integer range was accepted")
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/game"
 	"github.com/gaming-platform/backend/internal/httpx"
@@ -135,7 +136,7 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	in := DraftInput{Name: strings.TrimSpace(body.Name), Version: body.Version, TargetBasisPoints: body.TargetBasisPoints, EngineConfigRef: strings.TrimSpace(body.EngineConfigRef)}
 	fields := map[string]string{}
-	if in.Name == "" || len(in.Name) > maxNameLength {
+	if in.Name == "" || utf8.RuneCountInString(in.Name) > maxNameLength {
 		fields["name"] = "Name must be between 1 and 80 characters"
 	}
 	if in.Version < 1 {
@@ -144,7 +145,7 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request) {
 	if !Targets[in.TargetBasisPoints] {
 		fields["target_basis_points"] = "Target must be one of 9200, 9400, 9600, 10000, 10200, or 10500"
 	}
-	if len(in.EngineConfigRef) > maxConfigRefLength {
+	if utf8.RuneCountInString(in.EngineConfigRef) > maxConfigRefLength {
 		fields["engine_config_ref"] = "Engine configuration reference must be at most 200 characters"
 	}
 	if len(fields) > 0 {
@@ -186,7 +187,7 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request) {
 	if body.Name != nil {
 		name := strings.TrimSpace(*body.Name)
 		patch.Name = &name
-		if name == "" || len(name) > maxNameLength {
+		if name == "" || utf8.RuneCountInString(name) > maxNameLength {
 			fields["name"] = "Name must be between 1 and 80 characters"
 		}
 	}
@@ -199,7 +200,7 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request) {
 	if body.EngineConfigRef != nil {
 		ref := strings.TrimSpace(*body.EngineConfigRef)
 		patch.EngineConfigRef = &ref
-		if len(ref) > maxConfigRefLength {
+		if utf8.RuneCountInString(ref) > maxConfigRefLength {
 			fields["engine_config_ref"] = "Engine configuration reference must be at most 200 characters"
 		}
 	}

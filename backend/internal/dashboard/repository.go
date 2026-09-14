@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/gaming-platform/backend/internal/money"
 )
 
 var ErrCurrencyUnavailable = errors.New("currency is unavailable")
@@ -57,6 +59,9 @@ func Get(ctx context.Context, db *sql.DB, currency string) (Summary, error) {
 	if oldestPendingAt.Valid {
 		result.OldestPendingAt = &oldestPendingAt.Time
 	}
+	if !money.IsSafeMinor(result.PendingHeldMinor) || !money.IsSafeMinor(result.ApprovedTodayMinor) {
+		return Summary{}, errors.New("dashboard: deposit totals exceed the exact JSON integer range")
+	}
 	err = db.QueryRowContext(ctx, `
 		SELECT COALESCE(sum(abs(amount_minor)) FILTER (WHERE kind = 'wager'), 0),
 			COALESCE(sum(amount_minor) FILTER (WHERE kind = 'win'), 0),
@@ -68,6 +73,9 @@ func Get(ctx context.Context, db *sql.DB, currency string) (Summary, error) {
 		&result.RoundsToday, &result.TargetRTPBasisPoints)
 	if err != nil {
 		return Summary{}, fmt.Errorf("dashboard: activity summary: %w", err)
+	}
+	if !money.IsSafeMinor(result.StakedTodayMinor) || !money.IsSafeMinor(result.ReturnedTodayMinor) {
+		return Summary{}, errors.New("dashboard: activity totals exceed the exact JSON integer range")
 	}
 	if result.StakedTodayMinor > 0 {
 		returned := big.NewInt(result.ReturnedTodayMinor)

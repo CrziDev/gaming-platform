@@ -9,10 +9,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 
+	"github.com/gaming-platform/backend/internal/testdb"
 	"github.com/gaming-platform/backend/internal/wallet"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var (
@@ -24,21 +23,7 @@ var (
 func depositTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	depositDBOnce.Do(func() {
-		url := os.Getenv("TEST_DATABASE_URL")
-		if url == "" {
-			url = os.Getenv("DATABASE_URL")
-		}
-		if url == "" {
-			depositDBErr = errors.New("no test database URL")
-			return
-		}
-		depositDB, depositDBErr = sql.Open("pgx", url)
-		if depositDBErr != nil {
-			return
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		depositDBErr = depositDB.PingContext(ctx)
+		depositDB, depositDBErr = testdb.Open()
 	})
 	if depositDBErr != nil {
 		if os.Getenv("REQUIRE_TEST_DATABASE") != "" {
@@ -72,9 +57,12 @@ func createDepositUser(t *testing.T, db *sql.DB) string {
 func enabledMethodID(t *testing.T, db *sql.DB) string {
 	t.Helper()
 	var id string
-	if err := db.QueryRow(`SELECT id::text FROM payment_methods WHERE enabled = true ORDER BY sort_order, id LIMIT 1`).Scan(&id); err != nil {
-		t.Fatalf("find enabled payment method: %v", err)
+	if err := db.QueryRow(`UPDATE payment_methods SET enabled = true, updated_at = now() WHERE name = 'GCash' AND pay_to = 'To be supplied' RETURNING id::text`).Scan(&id); err != nil {
+		t.Fatalf("enable test payment method: %v", err)
 	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`UPDATE payment_methods SET enabled = false, updated_at = now() WHERE id = ($1::text)::uuid`, id)
+	})
 	return id
 }
 
@@ -114,6 +102,20 @@ func TestCreateIsIdempotentAndPlayerScoped(t *testing.T) {
 	}
 	if _, err := Get(context.Background(), db, otherUserID, first.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("another player read the request: %v", err)
+	}
+}
+
+func TestProofPathPreservesDatabaseErrors(t *testing.T) {
+	db := depositTestDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := ProofPath(ctx, db, "00000000-0000-4000-8000-000000000000")
+	if errors.Is(err, ErrNotFound) {
+		t.Fatalf("cancelled query was reported as not found: %v", err)
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("want context cancellation, got %v", err)
 	}
 }
 

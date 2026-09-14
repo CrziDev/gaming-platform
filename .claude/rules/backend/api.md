@@ -136,8 +136,9 @@ is accepted; the client filename and declared MIME type are not trusted. A retry
 the original request and does not retain the redundant uploaded file.
 
 Payment methods are migration/configuration-managed in Phase 1. There is no operator
-payment-method mutation endpoint; deployment configuration must replace seeded
-destination placeholders before deposits are enabled in production.
+payment-method mutation endpoint. Seeded destination placeholders are disabled;
+deployment configuration must replace the destination and explicitly enable a method
+before players can submit deposits through it.
 
 ### Operator
 
@@ -195,8 +196,12 @@ Any other path returns the not-found response, not a router default.
 
 ## Money and time
 
-Money on the wire is an `int64` count of minor units in a field ending `_minor`, beside
-an ISO currency code. Never a decimal, never a string, never a float.
+Money on the wire is a JSON integer count of minor units in a field ending `_minor`,
+beside an ISO currency code. Go stores it as `int64`, but persisted and returned values
+must remain within JavaScript's exact integer range (`-9007199254740991` through
+`9007199254740991`). Never a decimal or floating-point amount. A string representation
+may replace JSON numbers in a future version only as an explicit whole-client contract
+change.
 
 A player may hold a wallet in each enabled currency. Every amount belongs to exactly one
 of them, no response sums across currencies, and **no endpoint converts or transfers

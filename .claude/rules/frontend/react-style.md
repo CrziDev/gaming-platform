@@ -35,10 +35,11 @@ The frontend never determines a financial outcome. Balances, payouts, and result
 read from the server and displayed — never computed, predicted, or optimistically
 patched.
 
-Money arrives as `int64` minor units plus a currency code. Format only at the render
-boundary, through `src/lib/money.ts`, which parses and formats by string and refuses to
-add two different currencies. Never arithmetic on money in JavaScript — no `+`, no `*`,
-no `parseFloat`. JavaScript numbers are IEEE-754 floats.
+Money arrives as integer minor units plus a currency code, within JavaScript's exact
+integer range. Validate that invariant in `src/lib/money.ts` and format only at the render
+boundary. The frontend never invents a financial outcome; small UI-only sums or
+differences may use the guarded money helpers, which refuse mixed currencies and unsafe
+results. Never use fractional arithmetic or `parseFloat` for money.
 
 Timestamps arrive as RFC 3339 UTC and convert to local time at the render boundary only.
 
