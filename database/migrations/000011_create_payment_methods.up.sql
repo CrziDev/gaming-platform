@@ -9,3 +9,9 @@ CREATE TABLE payment_methods (
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+INSERT INTO payment_methods (
+    name, description, pay_to, reference_required, enabled, sort_order
+) VALUES
+    ('GCash', 'Send your payment to the GCash account shown below.', 'To be supplied', true, false, 10),
+    ('Maya', 'Send your payment to the Maya account shown below.', 'To be supplied', true, false, 20);

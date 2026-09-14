@@ -8,7 +8,8 @@ CREATE TABLE wallets (
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     CONSTRAINT wallets_status_valid CHECK (status IN ('active', 'frozen', 'closed')),
-    CONSTRAINT wallets_balance_non_negative CHECK (balance_minor >= 0)
+    CONSTRAINT wallets_balance_non_negative CHECK (balance_minor >= 0),
+    CONSTRAINT wallets_balance_json_safe CHECK (balance_minor <= 9007199254740991)
 );
 
 CREATE UNIQUE INDEX wallets_user_currency_key ON wallets (user_id, currency);

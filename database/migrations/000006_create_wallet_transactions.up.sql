@@ -17,7 +17,11 @@ CREATE TABLE wallet_transactions (
     CONSTRAINT wallet_transactions_kind_valid CHECK (
         kind IN ('deposit', 'withdrawal', 'wager', 'win', 'refund', 'adjustment')),
     CONSTRAINT wallet_transactions_amount_non_zero CHECK (amount_minor <> 0),
-    CONSTRAINT wallet_transactions_arithmetic CHECK (balance_after = balance_before + amount_minor)
+    CONSTRAINT wallet_transactions_arithmetic CHECK (balance_after = balance_before + amount_minor),
+    CONSTRAINT wallet_transactions_money_json_safe CHECK (
+        amount_minor BETWEEN -9007199254740991 AND 9007199254740991
+        AND balance_before BETWEEN -9007199254740991 AND 9007199254740991
+        AND balance_after BETWEEN -9007199254740991 AND 9007199254740991)
 );
 
 CREATE UNIQUE INDEX wallet_transactions_idempotency_key

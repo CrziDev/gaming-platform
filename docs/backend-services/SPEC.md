@@ -70,8 +70,9 @@ A violation of anything in this section is a financial bug.
 
 ## 4. Schema
 
-The logical schema below is the starting contract; once a migration is applied it is the
-authority, and it is amended by a new migration rather than an edit (`database.md`).
+The logical schema below is the starting contract. Before the first production deployment
+the disposable baseline may be rebuilt; after deployment, an applied migration is the
+authority and is amended by a new migration rather than an edit (`database.md`).
 Status vocabularies match the wire types the web app is already coded against in
 `frontend/src/api/types.ts` — changing one of them is a change to both.
 
@@ -116,21 +117,29 @@ and short-lived — the same handling as a session token.
 
 ```sql
 CREATE TABLE currencies (
-    code        TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    symbol      TEXT NOT NULL,
-    minor_units SMALLINT NOT NULL,
-    enabled     BOOLEAN NOT NULL DEFAULT true,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    code              TEXT PRIMARY KEY,
+    name              TEXT NOT NULL,
+    symbol            TEXT NOT NULL,
+    minor_units       SMALLINT NOT NULL,
+    deposit_min_minor BIGINT NOT NULL DEFAULT 10000,
+    deposit_max_minor BIGINT NOT NULL DEFAULT 5000000,
+    enabled           BOOLEAN NOT NULL DEFAULT true,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     CONSTRAINT currencies_code_iso CHECK (code ~ '^[A-Z]{3}$'),
-    CONSTRAINT currencies_minor_units_sane CHECK (minor_units BETWEEN 0 AND 4)
+    CONSTRAINT currencies_minor_units_sane CHECK (minor_units BETWEEN 0 AND 4),
+    CONSTRAINT currencies_deposit_limits_valid CHECK (
+        deposit_min_minor > 0 AND deposit_max_minor >= deposit_min_minor),
+    CONSTRAINT currencies_deposit_limits_json_safe CHECK (
+        deposit_min_minor <= 9007199254740991
+        AND deposit_max_minor <= 9007199254740991)
 );
 ```
 
 `000004` seeds `PHP · Philippine Peso · ₱ · 2` and `USD · US Dollar · $ · 2` with the
-table, because a wallet cannot exist without a currency row to reference. There is no
+table, because a wallet cannot exist without a currency row to reference. Deposit limits
+are currency configuration and default to `10000`–`5000000` minor units. There is no
 exchange rate column, because there is no conversion anywhere in the platform.
 
 ### 4.3 `wallets` and the ledger
@@ -146,7 +155,8 @@ CREATE TABLE wallets (
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     CONSTRAINT wallets_status_valid CHECK (status IN ('active', 'frozen', 'closed')),
-    CONSTRAINT wallets_balance_non_negative CHECK (balance_minor >= 0)
+    CONSTRAINT wallets_balance_non_negative CHECK (balance_minor >= 0),
+    CONSTRAINT wallets_balance_json_safe CHECK (balance_minor <= 9007199254740991)
 );
 
 CREATE UNIQUE INDEX wallets_user_currency_key ON wallets (user_id, currency);
@@ -175,7 +185,11 @@ CREATE TABLE wallet_transactions (
     CONSTRAINT wallet_transactions_kind_valid CHECK (
         kind IN ('deposit', 'withdrawal', 'wager', 'win', 'refund', 'adjustment')),
     CONSTRAINT wallet_transactions_amount_non_zero CHECK (amount_minor <> 0),
-    CONSTRAINT wallet_transactions_arithmetic CHECK (balance_after = balance_before + amount_minor)
+    CONSTRAINT wallet_transactions_arithmetic CHECK (balance_after = balance_before + amount_minor),
+    CONSTRAINT wallet_transactions_money_json_safe CHECK (
+        amount_minor BETWEEN -9007199254740991 AND 9007199254740991
+        AND balance_before BETWEEN -9007199254740991 AND 9007199254740991
+        AND balance_after BETWEEN -9007199254740991 AND 9007199254740991)
 );
 
 CREATE UNIQUE INDEX wallet_transactions_idempotency_key
@@ -234,7 +248,11 @@ CREATE TABLE games (
     CONSTRAINT games_wager_bounds CHECK (
         min_wager_minor > 0
         AND max_wager_minor >= min_wager_minor
-        AND wager_step_minor > 0)
+        AND wager_step_minor > 0),
+    CONSTRAINT games_wagers_json_safe CHECK (
+        min_wager_minor <= 9007199254740991
+        AND max_wager_minor <= 9007199254740991
+        AND wager_step_minor <= 9007199254740991)
 );
 
 CREATE UNIQUE INDEX games_slug_key ON games (slug);
@@ -298,6 +316,11 @@ CREATE TABLE rtp_profiles (
 
 CREATE UNIQUE INDEX rtp_profiles_game_name_version_key ON rtp_profiles (game_id, name, version);
 CREATE UNIQUE INDEX rtp_profiles_one_active_per_game ON rtp_profiles (game_id) WHERE status = 'active';
+
+ALTER TABLE games
+    ADD COLUMN default_rtp_profile_id UUID,
+    ADD CONSTRAINT games_default_rtp_profile_fk
+        FOREIGN KEY (default_rtp_profile_id) REFERENCES rtp_profiles (id) ON DELETE SET NULL;
 ```
 
 A rate is basis points: `96.00%` is `9600`. The partial unique index is what makes "one
@@ -305,6 +328,8 @@ active profile per game" a fact rather than an intention, and
 `rtp_profiles_verified_has_evidence` is what stops a form from promoting a number.
 
 A verified profile is never edited. A change is a new `version`.
+`games.default_rtp_profile_id` preserves the verified profile to restore after a timed
+profile expires. It is added after `rtp_profiles` to resolve the two tables' dependency.
 
 ### 4.6 `game_rounds`
 
@@ -332,7 +357,10 @@ CREATE TABLE game_rounds (
     CONSTRAINT game_rounds_stake_positive CHECK (stake_minor > 0),
     CONSTRAINT game_rounds_win_non_negative CHECK (win_minor IS NULL OR win_minor >= 0),
     CONSTRAINT game_rounds_settled_has_outcome CHECK (
-        (status = 'settled') = (settled_at IS NOT NULL AND win_minor IS NOT NULL))
+        (status = 'settled') = (settled_at IS NOT NULL AND win_minor IS NOT NULL)),
+    CONSTRAINT game_rounds_money_json_safe CHECK (
+        stake_minor <= 9007199254740991
+        AND (win_minor IS NULL OR win_minor <= 9007199254740991))
 );
 
 CREATE UNIQUE INDEX game_rounds_round_key_key ON game_rounds (round_key);
@@ -365,6 +393,12 @@ CREATE TABLE payment_methods (
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+INSERT INTO payment_methods (
+    name, description, pay_to, reference_required, enabled, sort_order
+) VALUES
+    ('GCash', 'Send your payment to the GCash account shown below.', 'To be supplied', true, false, 10),
+    ('Maya', 'Send your payment to the Maya account shown below.', 'To be supplied', true, false, 20);
+
 CREATE TABLE deposit_requests (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id          UUID NOT NULL REFERENCES users (id),
@@ -390,7 +424,8 @@ CREATE TABLE deposit_requests (
     CONSTRAINT deposit_requests_rejection_has_reason CHECK (
         status <> 'rejected' OR length(btrim(coalesce(reason, ''))) > 0),
     CONSTRAINT deposit_requests_approval_has_movement CHECK (
-        (status = 'approved') = (transaction_id IS NOT NULL))
+        (status = 'approved') = (transaction_id IS NOT NULL)),
+    CONSTRAINT deposit_requests_amount_json_safe CHECK (amount_minor <= 9007199254740991)
 );
 
 CREATE UNIQUE INDEX deposit_requests_idempotency_key

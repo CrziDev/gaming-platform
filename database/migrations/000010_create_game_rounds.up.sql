@@ -21,7 +21,10 @@ CREATE TABLE game_rounds (
     CONSTRAINT game_rounds_stake_positive CHECK (stake_minor > 0),
     CONSTRAINT game_rounds_win_non_negative CHECK (win_minor IS NULL OR win_minor >= 0),
     CONSTRAINT game_rounds_settled_has_outcome CHECK (
-        (status = 'settled') = (settled_at IS NOT NULL AND win_minor IS NOT NULL))
+        (status = 'settled') = (settled_at IS NOT NULL AND win_minor IS NOT NULL)),
+    CONSTRAINT game_rounds_money_json_safe CHECK (
+        stake_minor <= 9007199254740991
+        AND (win_minor IS NULL OR win_minor <= 9007199254740991))
 );
 
 CREATE UNIQUE INDEX game_rounds_round_key_key ON game_rounds (round_key);
