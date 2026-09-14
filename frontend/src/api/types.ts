@@ -124,13 +124,24 @@ export type Transaction = {
 
 export type Round = {
   id: string
+  game_id: string
   game_slug: string
   game_name: string
+  rtp_profile_id: string
+  status: 'open' | 'settled' | 'cancelled' | 'failed'
   stake_minor: number
+  win_minor: number | null
   multiplier_hundredths: number | null
-  result_minor: number
   currency: Currency
-  created_at: string
+  started_at: string
+  settled_at: string | null
+}
+
+export type AdminRound = Round & {
+  user_id: string
+  user_email: string
+  display_name: string
+  wallet_id: string
 }
 
 export type DepositStatus = 'pending' | 'approved' | 'rejected'

@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
 import { useToast } from '@/components/ui/Toast'
 import { useFavorites, useGame, useGames, useToggleFavorite } from '@/features/catalogue'
@@ -123,7 +124,7 @@ export function GamePage() {
         <GameHost ref={hostRef} name={game.name} className="order-1 wide:order-2" />
 
         <div className="order-3">
-          <ActivityPanel />
+          <ActivityPanel gameId={game.id} />
         </div>
       </div>
 
@@ -305,9 +306,9 @@ function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProp
   )
 }
 
-function ActivityPanel() {
+function ActivityPanel({ gameId }: { gameId: string }) {
   const [tab, setTab] = useState<'activity' | 'rules'>('activity')
-  const roundsQuery = useRecentRounds()
+  const roundsQuery = useRecentRounds(gameId)
   const recentRounds = roundsQuery.data ?? []
 
   return (
@@ -323,45 +324,64 @@ function ActivityPanel() {
       />
 
       {tab === 'activity' ? (
-        <>
-          {recentRounds.length === 0 ? (
+        roundsQuery.isPending ? (
+          <div className="flex flex-col gap-2.5" aria-label="Loading recent rounds">
+            <Skeleton className="h-12 rounded-tile" />
+            <Skeleton className="h-12 rounded-tile" />
+          </div>
+        ) : roundsQuery.isError ? (
+          <div className="flex flex-col items-start gap-2.5">
+            <p className="text-[13px] leading-relaxed text-ink-mute">
+              Recent rounds could not be loaded.
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => void roundsQuery.refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <>
+            {recentRounds.length === 0 ? (
             <p className="text-[13px] leading-relaxed text-ink-mute">
               No rounds yet. Every settled round lands here and in your history.
             </p>
-          ) : null}
-          <ul className="flex flex-col gap-2.5">
-            {recentRounds.map((round) => (
-              <li key={round.id} className="flex items-center justify-between gap-3">
-                <span className="flex flex-col">
-                  <span className="font-mono text-[11.5px] text-ink-mute">
-                    {formatClockSeconds(round.created_at)}
+            ) : null}
+            <ul className="flex flex-col gap-2.5">
+              {recentRounds.map((round) => (
+                <li key={round.id} className="flex items-center justify-between gap-3">
+                  <span className="flex flex-col">
+                    <span className="font-mono text-[11.5px] text-ink-mute">
+                      {formatClockSeconds(round.started_at)}
+                    </span>
+                    <span className="text-[13px] text-ink-soft">
+                      Bet {formatMoney(money(round.stake_minor, round.currency), { decimals: 'trim' })}
+                      {round.multiplier_hundredths
+                        ? ` · ${formatMultiplier(round.multiplier_hundredths)}`
+                        : ''}
+                    </span>
                   </span>
-                  <span className="text-[13px] text-ink-soft">
-                    Bet {formatMoney(money(round.stake_minor, round.currency), { decimals: 'trim' })}
-                    {round.multiplier_hundredths
-                      ? ` · ${formatMultiplier(round.multiplier_hundredths)}`
-                      : ''}
-                  </span>
-                </span>
-                <MoneyDisplay
-                  value={money(round.result_minor, round.currency)}
-                  tone="auto"
-                  sign="always"
-                  className="text-[13.5px]"
-                />
-              </li>
-            ))}
-          </ul>
+                  {round.win_minor === null ? (
+                    <StatusBadge status={round.status} />
+                  ) : (
+                    <MoneyDisplay
+                      value={money(round.win_minor, round.currency)}
+                      tone="auto"
+                      className="text-[13.5px]"
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
 
-          <div className="flex items-baseline justify-between rounded-input bg-inset p-3">
-            <span className="label-mono text-ink-mute">Rounds this session</span>
-            <span className="font-mono text-[15px] font-medium tnum">{recentRounds.length}</span>
-          </div>
+            <div className="flex items-baseline justify-between rounded-input bg-inset p-3">
+              <span className="label-mono text-ink-mute">Recent rounds</span>
+              <span className="font-mono text-[15px] font-medium tnum">{recentRounds.length}</span>
+            </div>
 
-          <Link to={paths.history} className="text-[13px] text-accent-ink hover:text-accent-hi">
-            Full history →
-          </Link>
-        </>
+            <Link to={paths.history} className="text-[13px] text-accent-ink hover:text-accent-hi">
+              Full history →
+            </Link>
+          </>
+        )
       ) : (
         <p className="text-[13.5px] leading-relaxed text-ink-soft">
           Every round is settled by the game engine and written to your history as two entries — the

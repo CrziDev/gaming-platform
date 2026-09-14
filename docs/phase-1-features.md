@@ -40,29 +40,27 @@ never shows a fabricated win, promotion, or alert.
 - [x] The currency-scoped admin dashboard summary is backed by PostgreSQL.
 - [ ] Platform APIs replace the remaining frontend mocks (supported auth, wallet, deposit,
   dashboard, admin-user listing/detail/status, admin transactions, wallet adjustments,
-  audit reads, the public catalogue, game administration, and RTP profiles now default
-  to HTTP; rounds, favorites, promotions, big wins, live chat, notifications, alerts,
+  audit reads, the public catalogue, game administration, RTP profiles, and round reads
+  now default to HTTP; favorites, promotions, big wins, live chat, notifications, alerts,
   staff, and settings remain fixture-backed or undefined).
 - [ ] Financial services and their PostgreSQL concurrency tests are complete.
 - [ ] The platform satisfies the pre-engine readiness gate in this document.
 - [ ] Complete game source is available for the first title.
 - [ ] Any game engine or real-money game integration is complete.
 
-## Start here next: round read APIs
+## Completed slice: round read APIs
 
-The internal money-moving lifecycle is complete without exposing a player-controlled
-settle operation or inventing an outcome. The remaining round work is the player and
-operator read surface.
+Completed on 2026-09-14. The internal money-moving lifecycle and the player and operator
+read surfaces are complete without exposing a player-controlled settle operation or
+inventing an outcome.
 
 - [x] Implement internal open with the wallet lock and unique round key (§8).
 - [x] Implement internal settle, cancel, and fail operations with settle-at-most-once
   and compensating refunds (§8).
-- [ ] Add `GET /api/rounds`, `GET /api/rounds/{id}`, and `GET /api/admin/rounds`.
-- [ ] Wire the History rounds tab, `/admin/rounds`, and the game page's recent rounds,
-  and add a rounds section to the user detail page (the admin adapter carries an
-  unused `fetchUserRounds`; no page reads it).
-- [x] Cover the required round lifecycle tests in §8; read-route tests remain with the
-  read APIs.
+- [x] Add `GET /api/rounds`, `GET /api/rounds/{id}`, and `GET /api/admin/rounds`.
+- [x] Wire the History rounds tab, `/admin/rounds`, and the game page's recent rounds,
+  and add a rounds section to the user detail page.
+- [x] Cover the required round lifecycle and read-route tests in §8.
 
 Deferred by decision on 2026-09-12: password reset and change (`POST /api/password-reset`,
 `/password-reset/confirm`, `/password`). The `password_reset_tokens` table exists and
@@ -149,7 +147,7 @@ decision must update the API contract, frontend types, and implementation togeth
   (`Game`, `Category`, `AdminGame`, and `RtpProfile` are reconciled; `Transaction`,
   `AuditEntry`, and `AdminDeposit` are mapped in the adapter, and `Transaction` still
   carries a `label`, `reference`, `status`, and `round_id` the server does not send;
-  `Round` waits for its endpoints).
+  `Round` is reconciled with its read endpoints).
 - [x] Keep lobby rows client-derived unless merchandising configuration is explicitly
   added to scope.
 - [ ] Decide whether the v2 lobby's merchandising surfaces — big wins, promotions, and the
@@ -351,9 +349,9 @@ player-controlled settle operation or invent an outcome while no engine exists.
 - [x] Enforce one settlement with a conditional update and database constraints.
 - [x] Implement a compensating refund for cancelled or failed rounds.
 - [x] Ensure concurrent round starts on one wallet do not deadlock.
-- [ ] List a player's rounds with pagination.
-- [ ] Return one player-owned round without leaking another player's record.
-- [ ] Return filtered, paginated round history to administrators.
+- [x] List a player's rounds with pagination.
+- [x] Return one player-owned round without leaking another player's record.
+- [x] Return filtered, paginated round history to administrators.
 - [x] Do not add player-facing open or settle endpoints before the engine boundary is
   defined.
 
@@ -435,13 +433,13 @@ Metadata can be built now; verified mathematical behavior cannot.
   `404`).
 - [ ] Reset password `/reset` uses the real reset-confirmation API (same: wired to the
   contract, honest until the server implements it).
-- [x] Game host `/game/:slug` loads real metadata and the game's own wallet and safely
-  reports unavailable games (recent rounds and the favorite toggle are fixture-only).
+- [x] Game host `/game/:slug` loads real metadata, the game's own wallet, and recent rounds,
+  and safely reports unavailable games (the favorite toggle remains fixture-only).
 - [x] Wallet `/wallet` uses real wallets and balances.
 - [x] Deposit `/wallet/deposit` uses real methods, limits, and submission.
 - [x] Deposit status `/wallet/deposit/:id` uses the real player-owned request.
-- [ ] History `/history` uses real transaction and round history (transactions are real;
-  round history remains fixture-backed until round APIs exist).
+- [x] History `/history` uses real transaction and round history with server-side paging
+  and date filters.
 - [ ] Account `/account` uses real account and password operations (account and wallets
   are real; the password change control is absent until `POST /api/password` exists,
   and the Status badge is hardcoded).
@@ -458,12 +456,11 @@ Metadata can be built now; verified mathematical behavior cannot.
 - [x] Deposits `/admin/deposits` uses the real review queue.
 - [x] Users `/admin/users` uses real paging, search, and status filters.
 - [x] User status mutations use the real API.
-- [x] User details `/admin/users/:id` uses real wallets, deposits, and adjustments;
-  it has no rounds or sessions section until those read endpoints exist.
-- [x] Transactions `/admin/transactions` uses the real filtered ledger (the Rounds tab
-  is empty until round APIs exist).
-- [ ] Rounds `/admin/rounds` uses real filtered round records (fixture-only; empty
-  outside the demo).
+- [x] User details `/admin/users/:id` uses real wallets, deposits, rounds, and adjustments;
+  it has no sessions section until that read endpoint exists.
+- [x] Transactions `/admin/transactions` uses the real filtered ledger and the round-read
+  API for its Rounds tab.
+- [x] Rounds `/admin/rounds` uses real filtered, paginated round records.
 - [x] Games `/admin/games` uses real catalogue administration (the contract's `status`,
   `category`, and `search` filters are not yet exposed in the UI).
 - [x] Game details `/admin/games/:id` uses real game and profile metadata.
@@ -500,8 +497,7 @@ arrives. Its final message set must still be reviewed against the first real tit
 - [x] Report player and round counts.
 - [ ] Label RTP as target, theoretical, or observed; the dashboard currently labels the
   ledger-derived observed value as “Effective”.
-- [ ] Provide player transaction and round history (transactions with type and date
-  filters are real; rounds wait for §8).
+- [x] Provide player transaction and round history with paging and date filters.
 - [ ] Provide administrator search and filters across users, transactions, deposits,
   rounds, games, and audit entries.
 
@@ -517,8 +513,7 @@ arrives. Its final message set must still be reviewed against the first real tit
   table; a route sweep test proves every guarded route answers `401` anonymously and
   every admin route `403` to a player.
 - [ ] Re-check resource ownership in services that access money or private records.
-- [x] Return `404` rather than revealing another player's resource (wallets and deposits;
-  rounds follow when they exist).
+- [x] Return `404` rather than revealing another player's wallet, deposit, or round.
 - [ ] Validate all identifiers, enums, money, timestamps, and pagination input.
 - [ ] Keep passwords, hashes, raw session/reset tokens, proof contents, and RNG state out
   of logs.

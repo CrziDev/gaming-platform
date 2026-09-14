@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import type { Transaction } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
+import { RoundRecords } from '@/components/admin/RoundRecords'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
@@ -9,7 +10,7 @@ import { SegmentedTrack } from '@/components/ui/Tabs'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { useAdminTransactions } from '@/features/admin'
+import { useAdminRounds, useAdminTransactions } from '@/features/admin'
 import type { HistoryKind } from '@/features/wallet'
 import { formatDateTime, formatRelative } from '@/lib/format'
 import { money } from '@/lib/money'
@@ -17,9 +18,12 @@ import { money } from '@/lib/money'
 export function AdminTransactionsPage() {
   const [kind, setKind] = useState<HistoryKind>('all')
   const [page, setPage] = useState(1)
-  const query = useAdminTransactions({ kind, days: 90, page })
+  const showingRounds = kind === 'rounds'
+  const query = useAdminTransactions({ kind, days: 90, page }, !showingRounds)
+  const roundsQuery = useAdminRounds({ page, days: 90 }, showingRounds)
 
   const result = query.data
+  const roundResult = roundsQuery.data
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,7 +47,30 @@ export function AdminTransactionsPage() {
         label="Filter transactions by type"
       />
 
-      {query.isPending ? (
+      {showingRounds ? (
+        roundsQuery.isPending ? (
+          <SkeletonRows count={8} />
+        ) : roundsQuery.isError ? (
+          <ErrorState
+            title="Rounds unavailable"
+            message="Round records could not be loaded."
+            onRetry={() => void roundsQuery.refetch()}
+          />
+        ) : !roundResult || roundResult.rows.length === 0 ? (
+          <EmptyState title="No rounds" description="Nothing matches this filter." />
+        ) : (
+          <>
+            <RoundRecords rows={roundResult.rows} showPlayer />
+            <PageNav
+              page={roundResult.page}
+              pages={roundResult.pages}
+              size={roundResult.size}
+              total={roundResult.total}
+              onChange={setPage}
+            />
+          </>
+        )
+      ) : query.isPending ? (
         <SkeletonRows count={8} />
       ) : query.isError ? (
         <ErrorState

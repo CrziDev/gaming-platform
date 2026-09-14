@@ -60,7 +60,7 @@ A paginated list is the page, and the page is the resource:
 ```
 
 Parameters are `page`, `size`, `search`, `status`, `type`, `currency`, `category`, `sort`,
-`flag`, `game_id`, `from`, `to`, as each endpoint supports them. Default size 20, maximum
+`flag`, `game_id`, `user_id`, `from`, `to`, as each endpoint supports them. Default size 20, maximum
 100. A list of rows that players or operators keep adding to is always a page. A list
 bounded by configuration — currencies, categories, payment methods, a player's wallets,
 one game's RTP profiles — is a plain array.
@@ -108,14 +108,17 @@ revokes every other session on the account.
 | `POST` | `/api/deposits` | `201` + a new request · `200` + the original retry result | `400` · `401` · `413` |
 | `GET` | `/api/deposits` | `200` + a page of own requests, optionally filtered by `status=pending|approved|rejected` | `400` invalid filter · `401` |
 | `GET` | `/api/deposits/{id}` | `200` + the request | `401` · `404` |
+| `GET` | `/api/rounds` | `200` + a page of own rounds; accepts `game_id`, `status`, `currency`, `from`, `to` | `400` invalid filter · `401` |
+| `GET` | `/api/rounds/{id}` | `200` + the owned round | `401` · `404` |
 
 A player-scoped read answers `404` for a resource that exists but belongs to someone
 else. An id in a path is input, never a fact about who is asking.
 
-Planned, not yet routed: `GET /api/rounds` (`200` + a page of own rounds · `401`) and
-`GET /api/rounds/{id}` (`200` + the round · `401` · `404`). Internal round opening is
-implemented together with settle-at-most-once and idempotent cancel/fail refunds; these
-read routes remain.
+A round body carries `id`, `game_id`, `game_slug`, `game_name`, `rtp_profile_id`,
+`status`, `stake_minor`, nullable `win_minor`, nullable `multiplier_hundredths`,
+`currency`, `started_at`, and nullable `settled_at`. Internal round opening is implemented
+together with settle-at-most-once and idempotent cancel/fail refunds; there is still no
+player-controlled write route.
 
 The catalogue is public and shows only `active` games; a `draft`, `maintenance`, or
 `retired` game is `404` by slug and absent from every list. `search` matches the game
@@ -154,6 +157,7 @@ session. Those two are omitted from the failure column.
 | `GET` | `/api/admin/users/{id}/wallets` | `200` + the account's wallets | `404` |
 | `POST` | `/api/admin/users/{id}/wallet-adjustments` | `201` + the movement | `400` · `404` · `409` `INSUFFICIENT_BALANCE` / `WALLET_FROZEN` / `WALLET_CLOSED` / `AMOUNT_OVERFLOW` |
 | `GET` | `/api/admin/transactions` | `200` + a page of movements | — |
+| `GET` | `/api/admin/rounds` | `200` + a page of rounds; accepts `user_id`, `game_id`, `status`, `currency`, `from`, `to` | `400` invalid filter |
 | `GET` | `/api/admin/deposits` | `200` + a page of requests; defaults to pending and accepts `user_id` plus `status=all|pending|approved|rejected` | `400` invalid filter |
 | `GET` | `/api/admin/deposits/{id}/proof` | `200` + private image content | `404` |
 | `POST` | `/api/admin/deposits/{id}/review` | `200` + the request | `400` invalid action, amount, or reason · `404` · `409` `DEPOSIT_ALREADY_REVIEWED` / `DEPOSIT_APPROVAL_FAILED` / `AMOUNT_OVERFLOW` |
@@ -191,7 +195,8 @@ draft can be patched. Activation moves the profile previously in force back to
 `rtp_profile.create`, `rtp_profile.update`, `rtp_profile.activate`, and
 `rtp_profile.schedule` when the active profile's window changes.
 
-Planned, not yet routed: `GET /api/admin/rounds` (`200` + a page of rounds).
+An admin round body adds `user_id`, `user_email`, `display_name`, and `wallet_id` to the
+player round resource.
 
 Any other path returns the not-found response, not a router default.
 

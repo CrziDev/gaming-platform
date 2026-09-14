@@ -210,17 +210,25 @@ export const rounds: Round[] = transactions
 
     return {
       id: stake.round_id ?? stake.id,
+      game_id: stake.label.includes('Aurora')
+        ? 'gm-001'
+        : stake.label.includes('Skyline')
+          ? 'gm-003'
+          : 'gm-002',
       game_slug: stake.label.includes('Aurora')
         ? 'aurora-dice'
         : stake.label.includes('Skyline')
           ? 'skyline-crash'
           : 'vault-break',
       game_name: stake.label.replace('Stake · ', ''),
+      rtp_profile_id: 'rtp-demo-9600',
+      status: 'settled' as const,
       stake_minor: stakeAmount,
+      win_minor: win?.amount_minor ?? 0,
       multiplier_hundredths: win ? Math.round((win.amount_minor / stakeAmount) * 100) : null,
-      result_minor: win ? win.amount_minor - stakeAmount : -stakeAmount,
       currency: 'PHP' as const,
-      created_at: stake.created_at,
+      started_at: stake.created_at,
+      settled_at: stake.created_at,
     }
   })
 

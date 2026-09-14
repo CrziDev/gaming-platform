@@ -24,7 +24,9 @@ describe('admin user details', () => {
     expect(screen.getByText('USD wallet')).toBeInTheDocument()
 
     const main = within(screen.getByRole('main'))
-    expect(main.queryByRole('tab', { name: 'Rounds' })).not.toBeInTheDocument()
+    const roundsTab = main.getByRole('tab', { name: 'Rounds' })
+    await user.click(roundsTab)
+    expect(await main.findByRole('table', { name: 'Game rounds' })).toBeInTheDocument()
     expect(main.queryByRole('tab', { name: 'Sessions' })).not.toBeInTheDocument()
     expect(main.queryByRole('button', { name: /reset password/i })).not.toBeInTheDocument()
 

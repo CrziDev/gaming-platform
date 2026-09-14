@@ -45,6 +45,25 @@ type Round struct {
 	UpdatedAt            time.Time
 }
 
+type Record struct {
+	Round
+	GameSlug        string
+	GameName        string
+	UserEmail       string
+	UserDisplayName string
+}
+
+type ReadFilter struct {
+	Page     int
+	Size     int
+	UserID   string
+	GameID   string
+	Status   string
+	Currency string
+	From     *time.Time
+	To       *time.Time
+}
+
 type OpenInput struct {
 	RoundKey   string
 	UserID     string

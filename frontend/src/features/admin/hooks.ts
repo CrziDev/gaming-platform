@@ -95,8 +95,12 @@ export function useAdminUserWallets(id: string) {
   })
 }
 
-export function useUserRounds(id: string) {
-  return useQuery({ queryKey: ['admin', 'user', id, 'rounds'], queryFn: fetchUserRounds })
+export function useUserRounds(id: string, page = 1) {
+  return useQuery({
+    queryKey: ['admin', 'user', id, 'rounds', page],
+    queryFn: () => fetchUserRounds(id, page),
+    enabled: id !== '',
+  })
 }
 
 export function useUserDeposits(id: string, page = 1) {
@@ -122,10 +126,11 @@ export function useAdjustWallet() {
   })
 }
 
-export function useAdminTransactions(filter: Parameters<typeof fetchAdminTransactions>[0]) {
+export function useAdminTransactions(filter: Parameters<typeof fetchAdminTransactions>[0], enabled = true) {
   return useQuery({
     queryKey: ['admin', 'transactions', filter],
     queryFn: () => fetchAdminTransactions(filter),
+    enabled,
   })
 }
 
@@ -176,8 +181,12 @@ export function useUpdateGame() {
   })
 }
 
-export function useAdminRounds() {
-  return useQuery({ queryKey: ['admin', 'rounds'], queryFn: fetchAdminRounds })
+export function useAdminRounds(filter: Parameters<typeof fetchAdminRounds>[0], enabled = true) {
+  return useQuery({
+    queryKey: ['admin', 'rounds', filter],
+    queryFn: () => fetchAdminRounds(filter),
+    enabled,
+  })
 }
 
 export function useRtpProfiles() {

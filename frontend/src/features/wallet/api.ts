@@ -32,6 +32,11 @@ export type HistoryFilter = {
   currency?: Currency
 }
 
+export type RoundFilter = Pick<HistoryFilter, 'page' | 'currency'> & {
+  days?: HistoryFilter['days']
+  game_id?: string
+}
+
 function matchesKind(kind: HistoryKind, transaction: Transaction): boolean {
   if (kind === 'all') return true
   if (kind === 'rounds') return transaction.kind === 'wager' || transaction.kind === 'win'
@@ -187,12 +192,6 @@ export async function fetchTransactions(filter: HistoryFilter): Promise<Page<Tra
     })
   }
 
-  // Rounds are not a ledger kind the server can filter on, and no round has
-  // been played until the round APIs exist; the tab is honest about that.
-  if (filter.kind === 'rounds') {
-    return paginate<Transaction>([], 1, HISTORY_PAGE_SIZE)
-  }
-
   const params = new URLSearchParams({
     page: String(filter.page),
     size: String(HISTORY_PAGE_SIZE),
@@ -227,11 +226,33 @@ function toTransaction(row: BackendTransaction): Transaction {
   }
 }
 
-export async function fetchRecentRounds(): Promise<Round[]> {
+export async function fetchRounds(filter: RoundFilter): Promise<Page<Round>> {
   if (usingFixtures) {
-    return mockRequest(() => rounds.slice(0, 6))
+    return mockRequest(() => {
+      const cutoff = filter.days ? Date.now() - filter.days * 86_400_000 : null
+      const matched = rounds.filter(
+        (round) =>
+          (cutoff === null || Date.parse(round.started_at) >= cutoff) &&
+          (!filter.currency || round.currency === filter.currency) &&
+          (!filter.game_id || round.game_id === filter.game_id),
+      )
+      return paginate(matched, filter.page, HISTORY_PAGE_SIZE)
+    })
   }
-  return []
+
+  const params = new URLSearchParams({
+    page: String(filter.page),
+    size: String(HISTORY_PAGE_SIZE),
+  })
+  if (filter.days) params.set('from', new Date(Date.now() - filter.days * 86_400_000).toISOString())
+  if (filter.currency) params.set('currency', filter.currency)
+  if (filter.game_id) params.set('game_id', filter.game_id)
+  return api.get<Page<Round>>(`/rounds?${params.toString()}`)
+}
+
+export async function fetchRecentRounds(gameId: string): Promise<Round[]> {
+  const page = await fetchRounds({ page: 1, game_id: gameId })
+  return page.rows.slice(0, 6)
 }
 
 export async function fetchNotifications(): Promise<Notification[]> {

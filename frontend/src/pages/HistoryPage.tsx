@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { Transaction } from '@/api/types'
+import type { Round, Transaction } from '@/api/types'
 import { Select } from '@/components/ui/Field'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { PageNav } from '@/components/ui/PageNav'
@@ -9,9 +9,15 @@ import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
-import { ledgerColumns, useTransactions, type HistoryFilter, type HistoryKind } from '@/features/wallet'
-import { formatClock, formatDate } from '@/lib/format'
-import { money } from '@/lib/money'
+import {
+  ledgerColumns,
+  useRounds,
+  useTransactions,
+  type HistoryFilter,
+  type HistoryKind,
+} from '@/features/wallet'
+import { formatClock, formatDate, formatMultiplier } from '@/lib/format'
+import { formatMoney, money } from '@/lib/money'
 
 const kindTabs = [
   { id: 'all' as const, label: 'All' },
@@ -22,10 +28,21 @@ const kindTabs = [
 
 export function HistoryPage() {
   const [filter, setFilter] = useState<HistoryFilter>({ kind: 'all', days: 30, page: 1 })
-  const historyQuery = useTransactions(filter)
+  const showingRounds = filter.kind === 'rounds'
+  const historyQuery = useTransactions(filter, !showingRounds)
+  const roundsQuery = useRounds(
+    {
+      days: filter.days,
+      page: filter.page,
+      ...(filter.currency ? { currency: filter.currency } : {}),
+    },
+    showingRounds,
+  )
 
   const page = historyQuery.data
   const grouped = groupByDay(page?.rows ?? [])
+  const roundPage = roundsQuery.data
+  const groupedRounds = groupRoundsByDay(roundPage?.rows ?? [])
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,7 +74,100 @@ export function HistoryPage() {
         label="Filter by type"
       />
 
-      {historyQuery.isPending ? (
+      {showingRounds ? (
+        roundsQuery.isPending ? (
+          <SkeletonRows count={6} />
+        ) : roundsQuery.isError ? (
+          <ErrorState
+            title="Round history unavailable"
+            message="Your rounds could not be loaded."
+            onRetry={() => void roundsQuery.refetch()}
+          />
+        ) : !roundPage || roundPage.rows.length === 0 ? (
+          <EmptyState
+            title="No rounds in this range"
+            description="Widen the date range to see more of your play history."
+          />
+        ) : (
+          <>
+            <div className="lg:hidden">
+              {groupedRounds.map(([day, rows]) => (
+                <section key={day} className="flex flex-col gap-2.5 pb-5">
+                  <h2 className="label-mono pt-1 text-ink-mute">{day}</h2>
+                  {rows.map((round) => (
+                    <RecordCard
+                      key={round.id}
+                      title={round.game_name}
+                      meta={`${formatClock(round.started_at)} · ${round.id.slice(0, 8)}`}
+                      value={<RoundReturn round={round} />}
+                      aside={<StatusBadge status={round.status} />}
+                    />
+                  ))}
+                </section>
+              ))}
+            </div>
+
+            <div className="hidden lg:block">
+              <RecordTable
+                label="Round history"
+                rows={roundPage.rows}
+                rowKey={(round) => round.id}
+                columns={[
+                  {
+                    key: 'date',
+                    header: 'Started',
+                    width: '180px',
+                    cell: (round) => (
+                      <span className="font-mono text-[13px] text-ink-mute">
+                        {formatDate(round.started_at)} · {formatClock(round.started_at)}
+                      </span>
+                    ),
+                  },
+                  { key: 'game', header: 'Game', cell: (round) => round.game_name },
+                  {
+                    key: 'stake',
+                    header: 'Stake',
+                    align: 'right',
+                    cell: (round) => (
+                      <span className="font-mono text-sm tnum">
+                        {formatMoney(money(round.stake_minor, round.currency))}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'multiplier',
+                    header: 'Multiplier',
+                    align: 'right',
+                    cell: (round) => (
+                      <span className="font-mono text-sm text-ink-mute tnum">
+                        {round.multiplier_hundredths === null
+                          ? '—'
+                          : formatMultiplier(round.multiplier_hundredths)}
+                      </span>
+                    ),
+                  },
+                  { key: 'status', header: 'Status', cell: (round) => <StatusBadge status={round.status} /> },
+                  {
+                    key: 'return',
+                    header: 'Return',
+                    align: 'right',
+                    cell: (round) => <RoundReturn round={round} />,
+                  },
+                ]}
+                renderCard={() => null}
+              />
+            </div>
+
+            <PageNav
+              page={roundPage.page}
+              pages={roundPage.pages}
+              size={roundPage.size}
+              total={roundPage.total}
+              onChange={(next) => setFilter((current) => ({ ...current, page: next }))}
+            />
+          </>
+        )
+      ) : historyQuery.isPending ? (
         <SkeletonRows count={6} />
       ) : historyQuery.isError ? (
         <ErrorState
@@ -128,4 +238,28 @@ function groupByDay(rows: Transaction[]): [string, Transaction[]][] {
   }
 
   return [...groups.entries()]
+}
+
+function groupRoundsByDay(rows: Round[]): [string, Round[]][] {
+  const groups = new Map<string, Round[]>()
+
+  for (const row of rows) {
+    const day = formatDate(row.started_at)
+    groups.set(day, [...(groups.get(day) ?? []), row])
+  }
+
+  return [...groups.entries()]
+}
+
+function RoundReturn({ round }: { round: Round }) {
+  if (round.win_minor === null) {
+    return <span className="font-mono text-sm text-ink-mute">—</span>
+  }
+  return (
+    <MoneyDisplay
+      value={money(round.win_minor, round.currency)}
+      tone={round.win_minor > 0 ? 'auto' : 'neutral'}
+      className="text-sm"
+    />
+  )
 }

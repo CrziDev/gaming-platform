@@ -9,15 +9,15 @@ Source of truth: `frontend/src/routes/AppRoutes.tsx` and
 
 ## Current backend coverage
 
-As of 2026-09-12, authentication, wallets, manual deposits, the public catalogue,
+As of 2026-09-14, authentication, wallets, manual deposits, the public catalogue,
 paginated admin users, admin user details and status operations, wallet adjustments,
 admin transactions, deposit review, the audit log, the dashboard summary, game
-administration, and RTP profiles use real APIs when `VITE_API_MOCK=false`. Fixture-backed reads return nothing outside the demo and tests,
+administration, RTP profiles, and round history use real APIs when `VITE_API_MOCK=false`. Fixture-backed reads return nothing outside the demo and tests,
 so a real deployment renders the empty state for those surfaces rather than fixture
 content. A page stays unchecked while any of its visible data sources has no server.
 
-Audited against the frontend on 2026-09-12: every route below exists, every data hook
-on every page was traced to its adapter in `features/*/api.ts`, and the 99 frontend
+Audited against the frontend on 2026-09-14: every route below exists, every data hook
+on every page was traced to its adapter in `features/*/api.ts`, and the 105 frontend
 tests pass.
 
 ## Public and player pages
@@ -32,12 +32,12 @@ tests pass.
 - [x] **Register** — `/register` (opens the real registration flow)
 - [ ] **Forgot password** — `/forgot` (calls the contracted endpoint; reports reset as unavailable while the server answers 404)
 - [ ] **Reset password** — `/reset` (same; refuses to submit without a token in the link)
-- [ ] **Game** — `/game/:slug` (authentication required; real game metadata and the game's own wallet; recent rounds and the favorite toggle are fixture-only; the bet panel is a display slot whose Place bet only raises a toast, and there is no engine to launch)
+- [ ] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and recent rounds; the favorite toggle is fixture-only; the bet panel is a display slot whose Place bet only raises a toast, and there is no engine to launch)
 - [x] **Wallet** — `/wallet` (authentication required; real balance, currency switch sheet, open request list, and recent ledger)
 - [x] **Deposit** — `/wallet/deposit` (real methods, limits, proof upload, and submission)
 - [x] **Deposit status** — `/wallet/deposit/:id` (real player-owned request; no cancellation)
 - [ ] **Cash out** — `/wallet/cash-out` (authentication required; honest unavailable state until the withdrawal API exists)
-- [ ] **Transaction history** — `/history` (transactions with type and date filters are real; the Rounds tab is empty until round APIs exist)
+- [x] **Transaction history** — `/history` (real paginated transactions and rounds with date filters)
 - [ ] **Account** — `/account` (authentication required; account and wallets are real; password change waits for its endpoint, and the Status badge is a hardcoded "Active" because the player account body carries no status)
 - [x] **Not found** — `*` (tested application 404 state)
 
@@ -64,9 +64,9 @@ means the server is behind it.
 - [x] **Dashboard** — `/admin` (currency-scoped summary, queue and activity log are real; fixture alerts render only in the demo)
 - [x] **Deposits** — `/admin/deposits` (real pending review queue and approve/reject actions with the private proof image)
 - [x] **Users** — `/admin/users` (real paging, search, and status filters)
-- [x] **User details** — `/admin/users/:id` (real account, wallets, deposits, adjustments, and status operations; no rounds section until round APIs exist)
-- [x] **Transactions** — `/admin/transactions` (real filtered ledger; the Rounds tab is empty until round APIs exist)
-- [ ] **Rounds** — `/admin/rounds` (fixture-only; empty outside the demo)
+- [x] **User details** — `/admin/users/:id` (real account, wallets, deposits, rounds, adjustments, and status operations)
+- [x] **Transactions** — `/admin/transactions` (real filtered ledger and real round records in the Rounds tab)
+- [x] **Rounds** — `/admin/rounds` (real filtering and pagination across round records)
 - [x] **Games** — `/admin/games` (real list in every status; create dialog; the contract's `status`, `category`, and `search` filters are not yet exposed in the UI)
 - [x] **Game details** — `/admin/games/:id` (real game, edit dialog, real profiles, draft dialog)
 - [x] **RTP profiles** — `/admin/rtp` (real cross-game list, draft edit, real activation with the unverified refusal)

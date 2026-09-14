@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
 import type { Wallet } from '@/api/types'
+import { RoundRecords } from '@/components/admin/RoundRecords'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
@@ -19,6 +20,7 @@ import {
   useSetUserStatus,
   useUserAdjustments,
   useUserDeposits,
+  useUserRounds,
 } from '@/features/admin'
 import { formatDate, formatDateTime, formatRelative } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
@@ -26,7 +28,7 @@ import { adminPaths } from '@/routes/paths'
 
 import { WalletAdjustDialog, type AdjustDirection } from './WalletAdjustDialog'
 
-type DetailTab = 'deposits' | 'adjustments'
+type DetailTab = 'deposits' | 'rounds' | 'adjustments'
 type AdjustmentTarget = {
   direction: AdjustDirection
   wallet: Wallet
@@ -111,6 +113,7 @@ export function AdminUserDetailPage() {
           <ChipTabs
             items={[
               { id: 'deposits' as const, label: 'Deposits' },
+              { id: 'rounds' as const, label: 'Rounds' },
               { id: 'adjustments' as const, label: 'Adjustments' },
             ]}
             value={tab}
@@ -119,6 +122,7 @@ export function AdminUserDetailPage() {
           />
 
           {tab === 'deposits' ? <DepositsTab userId={user.id} /> : null}
+          {tab === 'rounds' ? <RoundsTab userId={user.id} /> : null}
           {tab === 'adjustments' ? <AdjustmentsTab userId={user.id} /> : null}
         </section>
 
@@ -304,6 +308,43 @@ function DepositsTab({ userId }: { userId: string }) {
         />
       }
     />
+  )
+}
+
+function RoundsTab({ userId }: { userId: string }) {
+  const [page, setPage] = useState(1)
+  const roundsQuery = useUserRounds(userId, page)
+  const result = roundsQuery.data
+
+  if (roundsQuery.isPending) {
+    return <SkeletonRows count={4} />
+  }
+
+  if (roundsQuery.isError) {
+    return (
+      <ErrorState
+        title="Rounds unavailable"
+        message="The account's rounds could not be loaded."
+        onRetry={() => void roundsQuery.refetch()}
+      />
+    )
+  }
+
+  if (!result || result.rows.length === 0) {
+    return <EmptyState title="No rounds" description="This account has not played a round." />
+  }
+
+  return (
+    <>
+      <RoundRecords rows={result.rows} />
+      <PageNav
+        page={result.page}
+        pages={result.pages}
+        size={result.size}
+        total={result.total}
+        onChange={setPage}
+      />
+    </>
   )
 }
 
