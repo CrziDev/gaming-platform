@@ -28,7 +28,9 @@ sudo systemctl enable --now postgresql
 # --owner matters: since PostgreSQL 15 a non-owner cannot CREATE in schema public.
 sudo -iu postgres createuser --pwprompt gaming            # password: gaming
 sudo -iu postgres createdb --owner=gaming gaming_platform
+sudo -iu postgres createdb --owner=gaming gaming_platform_test
 sudo -iu postgres psql -c "ALTER DATABASE gaming_platform SET timezone TO 'UTC'"
+sudo -iu postgres psql -c "ALTER DATABASE gaming_platform_test SET timezone TO 'UTC'"
 ```
 
 Verify over TCP, exactly as the application connects:
@@ -47,9 +49,14 @@ make migrate-up
 make dev          # API on :8080, web on :5173
 
 make seed         # create or reset the local admin (SEED_USER_*), 18 demo players, and 27 games
+make test         # migrates and uses only TEST_DATABASE_URL (a *_test database)
 ```
 
 `make help` lists every target. Ports: web 5173, API 8080, PostgreSQL 5432.
+
+Seeded GCash and Maya rows are disabled while their destination is `To be supplied`.
+Configure `payment_methods.pay_to`, then explicitly enable the method before accepting
+deposits.
 
 ## Game art
 

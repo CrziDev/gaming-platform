@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,6 +34,10 @@ func run(logger *slog.Logger) error {
 	if databaseURL == "" {
 		return errors.New("DATABASE_URL is required")
 	}
+	sessionTTL, err := sessionTTLFromEnv()
+	if err != nil {
+		return err
+	}
 
 	db, err := openDatabase(databaseURL)
 	if err != nil {
@@ -44,7 +49,7 @@ func run(logger *slog.Logger) error {
 	cfg := app.Config{
 		CookieName:      env("SESSION_COOKIE_NAME", "gp_session"),
 		CookieSecure:    env("SESSION_SECURE", "false") == "true",
-		SessionTTL:      time.Duration(envInt("SESSION_TTL_HOURS", 24)) * time.Hour,
+		SessionTTL:      sessionTTL,
 		AllowedOrigins:  strings.Split(env("CORS_ALLOWED_ORIGINS", "http://localhost:5173"), ","),
 		MaxBodyBytes:    int64(envInt("HTTP_MAX_BODY_BYTES", 6<<20)),
 		ProofDir:        env("PRIVATE_PROOF_DIR", "storage/private/deposit-proofs"),
@@ -93,6 +98,18 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("shutdown: %w", err)
 	}
 	return <-serveErr
+}
+
+func sessionTTLFromEnv() (time.Duration, error) {
+	raw := strings.TrimSpace(os.Getenv("SESSION_TTL_HOURS"))
+	if raw == "" {
+		return 24 * time.Hour, nil
+	}
+	hours, err := strconv.Atoi(raw)
+	if err != nil || hours <= 0 || hours > int(math.MaxInt64/int64(time.Hour)) {
+		return 0, errors.New("SESSION_TTL_HOURS must be a positive whole number of hours")
+	}
+	return time.Duration(hours) * time.Hour, nil
 }
 
 func openDatabase(databaseURL string) (*sql.DB, error) {

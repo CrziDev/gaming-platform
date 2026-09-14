@@ -35,6 +35,10 @@ describe('formatMoney', () => {
     expect(formatMoney(money(1_010))).toBe('₱10.10')
     expect(formatMoney(money(70_000_000_001))).toBe('₱700,000,000.01')
   })
+
+  it('refuses integers that JSON cannot represent exactly', () => {
+    expect(() => money(Number.MAX_SAFE_INTEGER + 1)).toThrow(/exact integer/)
+  })
 })
 
 describe('parseMoneyInput', () => {
@@ -65,6 +69,10 @@ describe('money arithmetic', () => {
 
   it('refuses to mix currencies, because there is no conversion anywhere', () => {
     expect(() => addMoney(money(100, 'PHP'), money(100, 'USD'))).toThrow()
+  })
+
+  it('refuses an arithmetic result outside the exact integer range', () => {
+    expect(() => addMoney(money(Number.MAX_SAFE_INTEGER), money(1))).toThrow(/exact integer/)
   })
 
   it('reports direction so sign and colour can stay redundant', () => {

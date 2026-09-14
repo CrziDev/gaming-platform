@@ -5,14 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/gaming-platform/backend/internal/money"
+	"github.com/gaming-platform/backend/internal/testdb"
 )
 
 var (
@@ -24,21 +23,7 @@ var (
 func walletTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	testDBOnce.Do(func() {
-		url := os.Getenv("TEST_DATABASE_URL")
-		if url == "" {
-			url = os.Getenv("DATABASE_URL")
-		}
-		if url == "" {
-			testDBErr = fmt.Errorf("no test database URL")
-			return
-		}
-		testDB, testDBErr = sql.Open("pgx", url)
-		if testDBErr != nil {
-			return
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		testDBErr = testDB.PingContext(ctx)
+		testDB, testDBErr = testdb.Open()
 	})
 	if testDBErr != nil {
 		if os.Getenv("REQUIRE_TEST_DATABASE") != "" {
@@ -213,11 +198,17 @@ func TestMoveRejectsInsufficientFrozenAndOverflowWithoutLedgerWrites(t *testing.
 	if _, err := Move(context.Background(), db, userID, "PHP", "deposit", 1, "frozen-key", "frozen"); !errors.Is(err, ErrWalletFrozen) {
 		t.Fatalf("frozen wallet: want %v, got %v", ErrWalletFrozen, err)
 	}
-	if _, err := db.Exec(`UPDATE wallets SET status = 'active', balance_minor = $2 WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, userID, int64(math.MaxInt64)); err != nil {
+	if _, err := db.Exec(`UPDATE wallets SET status = 'active', balance_minor = $2 WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, userID, money.MaxSafeMinor); err != nil {
 		t.Fatalf("prepare overflow balance: %v", err)
 	}
 	if _, err := Move(context.Background(), db, userID, "PHP", "deposit", 1, "overflow-key", "overflow"); !errors.Is(err, ErrAmountOverflow) {
 		t.Fatalf("overflow credit: want %v, got %v", ErrAmountOverflow, err)
+	}
+	if _, err := db.Exec(`UPDATE wallets SET balance_minor = 0 WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, userID); err != nil {
+		t.Fatalf("reset overflow balance: %v", err)
+	}
+	if _, err := Move(context.Background(), db, userID, "PHP", "deposit", money.MaxSafeMinor+1, "unsafe-json-key", "unsafe JSON integer"); !errors.Is(err, ErrAmountOverflow) {
+		t.Fatalf("unsafe JSON integer: want %v, got %v", ErrAmountOverflow, err)
 	}
 
 	var rows int

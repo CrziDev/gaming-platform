@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/httpx"
 	"github.com/gaming-platform/backend/internal/user"
@@ -132,7 +133,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if idempotencyKey == "" || len(idempotencyKey) > 200 {
+	if idempotencyKey == "" || utf8.RuneCountInString(idempotencyKey) > 200 {
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"idempotency_key": "A valid Idempotency-Key header is required"})
 		return
 	}
@@ -166,6 +167,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]string{}
 	if body.MethodID == "" {
 		fields["method_id"] = "Payment method is required"
+	} else if !httpx.IsUUID(body.MethodID) {
+		fields["method_id"] = "Payment method must be a valid UUID"
 	}
 	if body.Currency == "" {
 		fields["currency"] = "Currency is required"
@@ -173,7 +176,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if body.AmountMinor <= 0 {
 		fields["amount_minor"] = "Amount must be greater than zero"
 	}
-	if len(body.Reference) > 120 {
+	if utf8.RuneCountInString(body.Reference) > 120 {
 		fields["reference"] = "Reference is too long"
 	}
 	if len(fields) > 0 {

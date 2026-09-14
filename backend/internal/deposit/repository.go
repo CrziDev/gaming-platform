@@ -125,11 +125,14 @@ func GetByIdempotencyKey(ctx context.Context, db *sql.DB, userID, key string) (R
 func ProofPath(ctx context.Context, db *sql.DB, id string) (string, error) {
 	var path sql.NullString
 	err := db.QueryRowContext(ctx, `SELECT proof_path FROM deposit_requests WHERE id = ($1::text)::uuid`, id).Scan(&path)
-	if errors.Is(err, sql.ErrNoRows) || !path.Valid || path.String == "" {
+	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrNotFound
 	}
 	if err != nil {
 		return "", fmt.Errorf("deposit: proof path: %w", err)
+	}
+	if !path.Valid || path.String == "" {
+		return "", ErrNotFound
 	}
 	return path.String, nil
 }
@@ -280,10 +283,19 @@ func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, 
 	} else {
 		return Request{}, errors.New("deposit: review action is invalid")
 	}
+	var reviewed Request
+	err = tx.QueryRowContext(ctx, `SELECT `+requestColumns+` FROM deposit_requests d JOIN payment_methods p ON p.id = d.method_id WHERE d.id = ($1::text)::uuid`, requestID).Scan(
+		&reviewed.ID, &reviewed.UserID, &reviewed.WalletID, &reviewed.Currency,
+		&reviewed.MethodID, &reviewed.MethodName, &reviewed.AmountMinor, &reviewed.Reference,
+		&reviewed.Status, &reviewed.ReviewedAt, &reviewed.Reason, &reviewed.CreatedAt,
+	)
+	if err != nil {
+		return Request{}, fmt.Errorf("deposit: read reviewed request: %w", err)
+	}
 	if err := tx.Commit(); err != nil {
 		return Request{}, fmt.Errorf("deposit: commit review: %w", err)
 	}
-	return Get(ctx, db, item.UserID, item.ID)
+	return reviewed, nil
 }
 
 func writeAudit(ctx context.Context, tx *sql.Tx, actorID, entityID, action, beforeStatus, afterStatus string, beforeAmount, afterAmount int64, detail string) error {

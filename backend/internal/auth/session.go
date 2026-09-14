@@ -54,7 +54,11 @@ func findUserBySessionToken(ctx context.Context, db *sql.DB, token string) (user
 	return account, nil
 }
 
-func insertSession(ctx context.Context, db *sql.DB, userID, token string, expiresAt time.Time) error {
+type sessionExecer interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
+func insertSession(ctx context.Context, db sessionExecer, userID, token string, expiresAt time.Time) error {
 	_, err := db.ExecContext(ctx, insertSessionSQL, userID, hashSessionToken(token), expiresAt)
 	if err != nil {
 		return fmt.Errorf("auth: insert session: %w", err)
@@ -74,18 +78,30 @@ func (h *Handler) currentUser(w http.ResponseWriter, r *http.Request) (user.User
 }
 
 func (h *Handler) startSession(w http.ResponseWriter, r *http.Request, account user.User) bool {
-	token, err := newSessionToken()
+	token, expiresAt, err := h.prepareSession()
 	if err != nil {
 		h.internal(w, r, err)
 		return false
 	}
 
-	expiresAt := time.Now().UTC().Add(h.cfg.SessionTTL)
 	if err := insertSession(r.Context(), h.db, account.ID, token, expiresAt); err != nil {
 		h.internal(w, r, err)
 		return false
 	}
 
+	h.setSessionCookie(w, token, expiresAt)
+	return true
+}
+
+func (h *Handler) prepareSession() (string, time.Time, error) {
+	token, err := newSessionToken()
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return token, time.Now().UTC().Add(h.cfg.SessionTTL), nil
+}
+
+func (h *Handler) setSessionCookie(w http.ResponseWriter, token string, expiresAt time.Time) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     h.cfg.CookieName,
 		Value:    token,
@@ -96,7 +112,6 @@ func (h *Handler) startSession(w http.ResponseWriter, r *http.Request, account u
 		Secure:   h.cfg.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
-	return true
 }
 
 func (h *Handler) clearSessionCookie(w http.ResponseWriter) {

@@ -30,8 +30,8 @@ PSQL := psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1
 .PHONY: help setup dev backend frontend install build build-backend build-frontend \
         test test-backend test-frontend lint lint-backend lint-frontend \
         fmt fmt-backend fmt-frontend tools seed clean \
-        migrate-up migrate-down migrate-down-all migrate-create migrate-version migrate-force \
-        db-shell db-reset
+        migrate-up migrate-test-up migrate-down migrate-down-all migrate-create migrate-version migrate-force \
+        db-shell db-reset publish
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -69,10 +69,10 @@ build-frontend: ## Build the production web bundle
 
 test: test-backend test-frontend ## Run every test suite
 
-test-backend: ## Run the Go tests
+test-backend: migrate-test-up ## Run the Go tests against the explicit test database
 	# Packages share one PostgreSQL test database; serialize packages so one
 	# package's fixture cleanup cannot race another package's financial tests.
-	cd $(BACKEND_DIR) && go test -race -p 1 ./...
+	cd $(BACKEND_DIR) && REQUIRE_TEST_DATABASE=1 go test -race -count=1 -p 1 ./...
 
 test-frontend: ## Run the web tests
 	cd $(FRONTEND_DIR) && npm run test
@@ -102,6 +102,13 @@ fmt-frontend: ## Apply lint fixes to the web app
 migrate-up: $(MIGRATE) ## Apply all pending migrations
 	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up
 
+migrate-test-up: $(MIGRATE) ## Apply migrations to TEST_DATABASE_URL after a safety check
+	@test -n "$(TEST_DATABASE_URL)" || { echo "TEST_DATABASE_URL is required (use a database whose name ends in _test)"; exit 1; }
+	@[[ '$(TEST_DATABASE_URL)' != *dbname=* && '$(TEST_DATABASE_URL)' != *database=* ]] || { echo "refusing test migration: database override query parameters are not allowed"; exit 1; }
+	@url='$(TEST_DATABASE_URL)'; url="$${url%%\?*}"; \
+		[[ "$$url" == */*_test ]] || { echo "refusing test migration: database name must end in _test"; exit 1; }
+	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(TEST_DATABASE_URL)" up
+
 migrate-down: $(MIGRATE) ## Roll back the most recent migration
 	$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" down 1
 
@@ -130,6 +137,26 @@ db-shell: ## Open a psql session against the development database
 
 seed: ## Create or reset the development admin, demo players, and game catalogue
 	cd $(BACKEND_DIR) && go run ./cmd/seed
+
+## --- Publishing ------------------------------------------------------------
+
+# Day-to-day commits land on the work branch, Markdown included. Publishing merges
+# work into master minus the local Markdown, pushes, and returns to work. A conflict
+# outside those paths stops on master for a manual resolution.
+LOCAL_MD := CLAUDE.md .claude docs ':(exclude)docs/frontend-pages.md'
+
+publish: ## Merge work into master without the local Markdown, push, and return to work
+	@test "$$(git branch --show-current)" = work || { echo "publish: switch to the work branch first"; exit 1; }
+	@git diff --quiet && git diff --cached --quiet || { echo "publish: commit or stash your changes first"; exit 1; }
+	@git switch -q master
+	@git merge --no-ff --no-commit work >/dev/null 2>&1 || true
+	@git rm -r -q -f --ignore-unmatch $(LOCAL_MD)
+	@if git diff --name-only --diff-filter=U | grep -q .; then \
+		echo "publish: conflicts on master need a manual resolution, then: git commit && git push && git switch work"; \
+		git status --short; exit 1; fi
+	@git commit -q -m "Merge branch 'work'"
+	git push
+	@git switch -q work
 
 ## --- Tooling ---------------------------------------------------------------
 

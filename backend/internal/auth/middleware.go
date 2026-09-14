@@ -42,16 +42,26 @@ func (l *rateLimiter) allow(key string, now time.Time) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if len(l.seen) >= maxTrackedClients {
+	entry, tracked := l.seen[key]
+	if !tracked && len(l.seen) >= maxTrackedClients {
+		var earliestKey string
+		var earliestReset time.Time
 		for seenKey, entry := range l.seen {
-			if now.After(entry.resetAt) {
+			if !now.Before(entry.resetAt) {
 				delete(l.seen, seenKey)
+				continue
 			}
+			if earliestKey == "" || entry.resetAt.Before(earliestReset) {
+				earliestKey = seenKey
+				earliestReset = entry.resetAt
+			}
+		}
+		if len(l.seen) >= maxTrackedClients {
+			delete(l.seen, earliestKey)
 		}
 	}
 
-	entry, tracked := l.seen[key]
-	if !tracked || now.After(entry.resetAt) {
+	if !tracked || !now.Before(entry.resetAt) {
 		l.seen[key] = attempts{count: 1, resetAt: now.Add(l.window)}
 		return true
 	}

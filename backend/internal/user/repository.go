@@ -70,6 +70,18 @@ type ListFilter struct {
 }
 
 func Create(ctx context.Context, db *sql.DB, email, passwordHash, displayName string) (User, error) {
+	return create(ctx, db, email, passwordHash, displayName)
+}
+
+func CreateTx(ctx context.Context, tx *sql.Tx, email, passwordHash, displayName string) (User, error) {
+	return create(ctx, tx, email, passwordHash, displayName)
+}
+
+type rowQuerier interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func create(ctx context.Context, db rowQuerier, email, passwordHash, displayName string) (User, error) {
 	account := User{Email: email, PasswordHash: passwordHash, DisplayName: displayName}
 
 	err := db.QueryRowContext(ctx, insertUserSQL, email, passwordHash, displayName).

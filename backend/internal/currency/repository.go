@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/gaming-platform/backend/internal/money"
 )
 
 const listEnabledSQL = `
@@ -31,6 +33,9 @@ func ListEnabled(ctx context.Context, db *sql.DB) ([]Currency, error) {
 			&currency.DepositMaxMinor,
 		); err != nil {
 			return nil, fmt.Errorf("currency: list enabled row: %w", err)
+		}
+		if !money.IsSafeMinor(currency.DepositMinMinor) || !money.IsSafeMinor(currency.DepositMaxMinor) {
+			return nil, fmt.Errorf("currency: deposit limits for %s exceed the exact JSON integer range", currency.Code)
 		}
 		currencies = append(currencies, currency)
 	}

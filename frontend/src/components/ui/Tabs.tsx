@@ -19,7 +19,7 @@ type TabsProps<T extends string> = {
 
 export function ChipTabs<T extends string>({ items, value, onChange, label, className }: TabsProps<T>) {
   return (
-    <div role="tablist" aria-label={label} className={cn('flex gap-1.5 overflow-x-auto', className)}>
+    <div role="tablist" aria-label={label} className={cn('scrollbar-hidden flex gap-1.5 overflow-x-auto', className)}>
       {items.map((item) => {
         const active = item.id === value
         const Icon = item.icon
@@ -59,7 +59,7 @@ export function SegmentedTrack<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className={cn('inline-flex max-w-full gap-0.5 overflow-x-auto rounded-input bg-inset p-0.5', className)}
+      className={cn('scrollbar-hidden inline-flex max-w-full gap-0.5 overflow-x-auto rounded-input bg-inset p-0.5', className)}
     >
       {items.map((item) => {
         const active = item.id === value

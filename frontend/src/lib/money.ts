@@ -18,6 +18,9 @@ const currencies: Record<Currency, CurrencyMeta> = {
 const MINUS = '−'
 
 export function money(amount_minor: number, currency: Currency = 'PHP'): Money {
+  if (!Number.isSafeInteger(amount_minor)) {
+    throw new Error('money minor units must be an exact integer')
+  }
   return { amount_minor, currency }
 }
 
@@ -81,11 +84,11 @@ export function addMoney(a: Money, b: Money): Money {
   if (a.currency !== b.currency) {
     throw new Error(`cannot add ${a.currency} to ${b.currency}`)
   }
-  return { amount_minor: a.amount_minor + b.amount_minor, currency: a.currency }
+  return money(a.amount_minor + b.amount_minor, a.currency)
 }
 
 export function subtractMoney(a: Money, b: Money): Money {
-  return addMoney(a, { amount_minor: -b.amount_minor, currency: b.currency })
+  return addMoney(a, money(-b.amount_minor, b.currency))
 }
 
 export function moneyDirection(value: Money): 'credit' | 'debit' | 'zero' {

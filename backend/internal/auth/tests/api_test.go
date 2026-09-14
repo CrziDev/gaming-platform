@@ -2,7 +2,6 @@ package auth_test
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
@@ -22,7 +21,7 @@ import (
 	"time"
 
 	"github.com/gaming-platform/backend/internal/app"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/gaming-platform/backend/internal/testdb"
 )
 
 const (
@@ -42,20 +41,7 @@ func requireDB(t *testing.T) *sql.DB {
 	t.Helper()
 
 	dbOnce.Do(func() {
-		url := os.Getenv("TEST_DATABASE_URL")
-		if url == "" {
-			url = os.Getenv("DATABASE_URL")
-		}
-		if url == "" {
-			dbErr = errNoDatabaseURL{}
-			return
-		}
-		if testDB, dbErr = sql.Open("pgx", url); dbErr != nil {
-			return
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		dbErr = testDB.PingContext(ctx)
+		testDB, dbErr = testdb.Open()
 	})
 
 	if dbErr != nil {
@@ -70,10 +56,6 @@ func requireDB(t *testing.T) *sql.DB {
 	}
 	return testDB
 }
-
-type errNoDatabaseURL struct{}
-
-func (errNoDatabaseURL) Error() string { return "neither TEST_DATABASE_URL nor DATABASE_URL is set" }
 
 func newServer(t *testing.T, db *sql.DB) (string, *http.Client) {
 	t.Helper()
@@ -105,13 +87,28 @@ func newHandler(db *sql.DB) http.Handler {
 }
 
 func newHandlerWithProofDir(db *sql.DB, proofDir string) http.Handler {
+	return newHandlerWithSessionTTL(db, proofDir, time.Hour)
+}
+
+func newHandlerWithSessionTTL(db *sql.DB, proofDir string, sessionTTL time.Duration) http.Handler {
 	return app.New(db, slog.New(slog.NewTextHandler(io.Discard, nil)), app.Config{
 		CookieName:      "gp_session",
-		SessionTTL:      time.Hour,
+		SessionTTL:      sessionTTL,
 		AllowedOrigins:  []string{webOrigin},
 		MaxBodyBytes:    6 << 20,
 		ProofDir:        proofDir,
 		LoginsPerMinute: 100,
+	})
+}
+
+func enableTestPaymentMethod(t *testing.T, db *sql.DB) {
+	t.Helper()
+	var id string
+	if err := db.QueryRow(`UPDATE payment_methods SET enabled = true, updated_at = now() WHERE name = 'GCash' AND pay_to = 'To be supplied' RETURNING id::text`).Scan(&id); err != nil {
+		t.Fatalf("enable test payment method: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`UPDATE payment_methods SET enabled = false, updated_at = now() WHERE id = ($1::text)::uuid`, id)
 	})
 }
 
@@ -236,6 +233,38 @@ func TestRegisterCreatesAnAccountAndSignsItIn(t *testing.T) {
 
 	if status, body := send(t, client, http.MethodGet, base+"/api/me", nil); status != http.StatusOK {
 		t.Fatalf("me after register: want 200, got %d (%s)", status, body)
+	}
+}
+
+func TestRegisterRollsBackTheAccountWhenSessionCreationFails(t *testing.T) {
+	db := requireDB(t)
+	server := httptest.NewServer(newHandlerWithSessionTTL(db, "", -time.Hour))
+	t.Cleanup(server.Close)
+
+	status, body := register(t, clientWithCookies(t), server.URL)
+	if status != http.StatusInternalServerError {
+		t.Fatalf("register: want 500, got %d (%s)", status, body)
+	}
+	var users, sessions int
+	if err := db.QueryRow(`SELECT count(*) FROM users`).Scan(&users); err != nil {
+		t.Fatalf("count users: %v", err)
+	}
+	if err := db.QueryRow(`SELECT count(*) FROM auth_sessions`).Scan(&sessions); err != nil {
+		t.Fatalf("count sessions: %v", err)
+	}
+	if users != 0 || sessions != 0 {
+		t.Fatalf("partial registration remained: users=%d sessions=%d", users, sessions)
+	}
+}
+
+func TestRegisterUsesCharacterLengthsForUnicodeInput(t *testing.T) {
+	db := requireDB(t)
+	base, client := newServer(t, db)
+	status, body := send(t, client, http.MethodPost, base+"/api/register", map[string]string{
+		"email": "unicode@example.com", "password": strings.Repeat("🔐", 12), "display_name": strings.Repeat("界", 80),
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("register Unicode input: want 201, got %d (%s)", status, body)
 	}
 }
 
@@ -1052,6 +1081,7 @@ func TestCurrenciesListsEnabledMetadata(t *testing.T) {
 
 func TestPaymentMethodsRequireASession(t *testing.T) {
 	db := requireDB(t)
+	enableTestPaymentMethod(t, db)
 	base, client := newServer(t, db)
 
 	status, body := send(t, client, http.MethodGet, base+"/api/payment-methods", nil)
@@ -1081,6 +1111,7 @@ func TestPaymentMethodsRequireASession(t *testing.T) {
 
 func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	db := requireDB(t)
+	enableTestPaymentMethod(t, db)
 	base, playerClient, proofDir := newServerWithProofDir(t, db)
 	status, body := register(t, playerClient, base)
 	if status != http.StatusCreated {
@@ -1105,7 +1136,7 @@ func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	}
 
 	png := append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, 32)...)
-	status, body = sendDeposit(t, playerClient, base+"/api/deposits", methods[0].ID, "PHP", "10000", "payment-reference", "http-deposit-key", "untrusted-name.png", png)
+	status, body = sendDeposit(t, playerClient, base+"/api/deposits", methods[0].ID, "PHP", "10000", strings.Repeat("界", 120), "http-deposit-key", "untrusted-name.png", png)
 	if status != http.StatusCreated {
 		t.Fatalf("create deposit: want 201, got %d (%s)", status, body)
 	}
@@ -1283,6 +1314,7 @@ func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 
 func TestDepositHTTPRejectsNonImageProofWithoutPersistingIt(t *testing.T) {
 	db := requireDB(t)
+	enableTestPaymentMethod(t, db)
 	base, client, proofDir := newServerWithProofDir(t, db)
 	if status, body := register(t, client, base); status != http.StatusCreated {
 		t.Fatalf("register: want 201, got %d (%s)", status, body)
@@ -1307,6 +1339,10 @@ func TestDepositHTTPRejectsNonImageProofWithoutPersistingIt(t *testing.T) {
 	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"proof"`)) {
 		t.Fatalf("invalid proof: want proof field error, got %d (%s)", status, body)
 	}
+	status, body = sendDeposit(t, client, base+"/api/deposits", "not-a-uuid", "PHP", "10000", "reference", "bad-method-key", "proof.png", png)
+	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"method_id"`)) {
+		t.Fatalf("malformed method ID: want method field error, got %d (%s)", status, body)
+	}
 	entries, err := os.ReadDir(proofDir)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("read proof directory: %v", err)
@@ -1322,6 +1358,7 @@ func TestDepositHTTPRejectsNonImageProofWithoutPersistingIt(t *testing.T) {
 
 func TestDepositHTTPRejectionPreservesReasonWithoutMovingMoney(t *testing.T) {
 	db := requireDB(t)
+	enableTestPaymentMethod(t, db)
 	base, playerClient := newServer(t, db)
 	status, body := register(t, playerClient, base)
 	if status != http.StatusCreated {
@@ -2134,7 +2171,7 @@ func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM rtp_profiles WHERE game_id = ($1::text)::uuid`, gameID)
 	})
 	profilesPath := base + "/api/admin/games/" + gameID + "/rtp-profiles"
-	draft := map[string]any{"name": "Standard", "version": 1, "target_basis_points": 9600, "engine_config_ref": "cfg-" + suffix}
+	draft := map[string]any{"name": strings.Repeat("界", 80), "version": 1, "target_basis_points": 9600, "engine_config_ref": "cfg-" + suffix}
 
 	if status, body := send(t, playerClient, http.MethodPost, profilesPath, draft); status != http.StatusForbidden {
 		t.Fatalf("player draft: want 403, got %d (%s)", status, body)
