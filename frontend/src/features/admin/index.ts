@@ -1,6 +1,7 @@
 export { ADMIN_PAGE_SIZE, adminDepositProofUrl, reasonOptions } from './api'
 export type {
   AdminTransactionFilter,
+  AdminRoundFilter,
   DepositReview,
   GameInput,
   GamePatch,

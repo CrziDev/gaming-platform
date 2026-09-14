@@ -29,3 +29,8 @@ CREATE TABLE rtp_profiles (
 
 CREATE UNIQUE INDEX rtp_profiles_game_name_version_key ON rtp_profiles (game_id, name, version);
 CREATE UNIQUE INDEX rtp_profiles_one_active_per_game ON rtp_profiles (game_id) WHERE status = 'active';
+
+ALTER TABLE games
+    ADD COLUMN default_rtp_profile_id UUID,
+    ADD CONSTRAINT games_default_rtp_profile_fk
+        FOREIGN KEY (default_rtp_profile_id) REFERENCES rtp_profiles (id) ON DELETE SET NULL;

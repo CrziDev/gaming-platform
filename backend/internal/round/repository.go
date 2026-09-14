@@ -21,6 +21,67 @@ const roundColumns = `
 	COALESCE(rtp_profile_id::text, ''), status, stake_minor, win_minor, multiplier_hundredths,
 	COALESCE(engine_reference, ''), result_data, started_at, settled_at, created_at, updated_at`
 
+const roundReadColumns = `
+	r.id::text, r.round_key, r.user_id::text, r.game_id::text, r.wallet_id::text, r.currency,
+	COALESCE(r.rtp_profile_id::text, ''), r.status, r.stake_minor, r.win_minor, r.multiplier_hundredths,
+	COALESCE(r.engine_reference, ''), r.result_data, r.started_at, r.settled_at, r.created_at, r.updated_at,
+	g.slug, g.name, u.email, u.display_name`
+
+const roundReadFrom = `
+	FROM game_rounds r
+	JOIN games g ON g.id = r.game_id
+	JOIN users u ON u.id = r.user_id`
+
+const roundReadWhere = `
+	WHERE ($1 = '' OR r.user_id = ($1::text)::uuid)
+	  AND ($2 = '' OR r.game_id = ($2::text)::uuid)
+	  AND ($3 = '' OR r.status = $3)
+	  AND ($4 = '' OR r.currency = $4)
+	  AND ($5::timestamptz IS NULL OR r.started_at >= $5::timestamptz)
+	  AND ($6::timestamptz IS NULL OR r.started_at <= $6::timestamptz)`
+
+func List(ctx context.Context, db *sql.DB, filter ReadFilter) ([]Record, int, error) {
+	args := []any{filter.UserID, filter.GameID, filter.Status, filter.Currency, filter.From, filter.To}
+	var total int
+	if err := db.QueryRowContext(ctx, `SELECT count(*)`+roundReadFrom+roundReadWhere, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("round: count read list: %w", err)
+	}
+
+	offset := int64(filter.Page-1) * int64(filter.Size)
+	rows, err := db.QueryContext(ctx, `SELECT `+roundReadColumns+roundReadFrom+roundReadWhere+`
+		ORDER BY r.started_at DESC, r.id DESC
+		LIMIT $7 OFFSET $8`, append(args, filter.Size, offset)...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("round: read list: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]Record, 0)
+	for rows.Next() {
+		item, err := scanRecord(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("round: scan read list: %w", err)
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("round: read list rows: %w", err)
+	}
+	return items, total, nil
+}
+
+func GetForPlayer(ctx context.Context, db *sql.DB, userID, roundID string) (Record, error) {
+	item, err := scanRecord(db.QueryRowContext(ctx, `SELECT `+roundReadColumns+roundReadFrom+`
+		WHERE r.id = ($1::text)::uuid AND r.user_id = ($2::text)::uuid`, roundID, userID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return Record{}, ErrNotFound
+	}
+	if err != nil {
+		return Record{}, fmt.Errorf("round: read player round: %w", err)
+	}
+	return item, nil
+}
+
 func findByKey(ctx context.Context, tx *sql.Tx, key string) (Round, error) {
 	item, err := scanRound(tx.QueryRowContext(ctx, `SELECT `+roundColumns+` FROM game_rounds WHERE round_key = $1`, key))
 	if err != nil {
@@ -72,7 +133,7 @@ func lockGame(ctx context.Context, tx *sql.Tx, gameID string) (gameConfig, error
 		SELECT id::text, status, currency, min_wager_minor, max_wager_minor, wager_step_minor
 		FROM games
 		WHERE id = ($1::text)::uuid
-		FOR SHARE`, gameID).Scan(
+	FOR UPDATE`, gameID).Scan(
 		&config.ID, &config.Status, &config.Currency,
 		&config.MinWagerMinor, &config.MaxWagerMinor, &config.WagerStepMinor,
 	)
@@ -155,13 +216,32 @@ func updateTerminated(ctx context.Context, tx *sql.Tx, in TerminateInput, status
 	return item, nil
 }
 
-func scanRound(row *sql.Row) (Round, error) {
+type scanner interface {
+	Scan(dest ...any) error
+}
+
+func scanRound(row scanner) (Round, error) {
 	var item Round
 	var resultData []byte
 	err := row.Scan(
 		&item.ID, &item.RoundKey, &item.UserID, &item.GameID, &item.WalletID, &item.Currency,
 		&item.RTPProfileID, &item.Status, &item.StakeMinor, &item.WinMinor, &item.MultiplierHundredths,
 		&item.EngineReference, &resultData, &item.StartedAt, &item.SettledAt, &item.CreatedAt, &item.UpdatedAt,
+	)
+	if resultData != nil {
+		item.ResultData = resultData
+	}
+	return item, err
+}
+
+func scanRecord(row scanner) (Record, error) {
+	var item Record
+	var resultData []byte
+	err := row.Scan(
+		&item.ID, &item.RoundKey, &item.UserID, &item.GameID, &item.WalletID, &item.Currency,
+		&item.RTPProfileID, &item.Status, &item.StakeMinor, &item.WinMinor, &item.MultiplierHundredths,
+		&item.EngineReference, &resultData, &item.StartedAt, &item.SettledAt, &item.CreatedAt, &item.UpdatedAt,
+		&item.GameSlug, &item.GameName, &item.UserEmail, &item.UserDisplayName,
 	)
 	if resultData != nil {
 		item.ResultData = resultData

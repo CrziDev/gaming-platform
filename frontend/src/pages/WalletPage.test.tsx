@@ -92,4 +92,16 @@ describe('history', () => {
     expect(screen.queryByRole('button', { name: /export csv/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/Deposited ·/)).not.toBeInTheDocument()
   })
+
+  it('shows paginated round records in the rounds tab', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': player })
+
+    renderApp('/history')
+
+    await user.click(await screen.findByRole('tab', { name: 'Rounds' }))
+    expect(await screen.findByRole('table', { name: 'Round history' })).toBeInTheDocument()
+    expect(screen.getAllByText('Aurora Dice').length).toBeGreaterThan(0)
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument()
+  })
 })

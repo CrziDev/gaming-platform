@@ -3,6 +3,7 @@ package rtp
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -151,10 +152,12 @@ func Activate(ctx context.Context, db *sql.DB, actorID, id string, schedule Sche
 	}
 
 	action, detail := "rtp_profile.activate", "Activated "+describe(current)+" for "+current.GameName
+	var replaced Profile
+	var found bool
 	if current.Status == StatusActive {
 		action, detail = "rtp_profile.schedule", "Rescheduled "+describe(current)+" for "+current.GameName
 	} else {
-		replaced, found, err := activeForGame(ctx, tx, current.GameID)
+		replaced, found, err = activeForGame(ctx, tx, current.GameID)
 		if err != nil {
 			return Profile{}, err
 		}
@@ -163,6 +166,36 @@ func Activate(ctx context.Context, db *sql.DB, actorID, id string, schedule Sche
 				return Profile{}, err
 			}
 			detail += ", replacing " + describe(replaced)
+		}
+	}
+	defaultID, err := defaultForGame(ctx, tx, current.GameID)
+	if err != nil {
+		return Profile{}, err
+	}
+	if schedule.Until == nil {
+		defaultID = id
+		if err := setDefaultForGame(ctx, tx, current.GameID, id); err != nil {
+			return Profile{}, err
+		}
+	} else {
+		if defaultID == "" && found && replaced.EffectiveUntil == nil {
+			defaultID = replaced.ID
+			if err := setDefaultForGame(ctx, tx, current.GameID, defaultID); err != nil {
+				return Profile{}, err
+			}
+		}
+		if defaultID == "" || defaultID == id {
+			return Profile{}, ErrDefaultRequired
+		}
+		fallback, err := findByIDForUpdate(ctx, tx, defaultID)
+		if errors.Is(err, ErrNoProfile) {
+			return Profile{}, ErrDefaultRequired
+		}
+		if err != nil {
+			return Profile{}, err
+		}
+		if fallback.GameID != current.GameID || fallback.Status != StatusVerified {
+			return Profile{}, ErrDefaultRequired
 		}
 	}
 	if err := setStatus(ctx, tx, id, StatusActive, schedule.From, schedule.Until); err != nil {
@@ -184,6 +217,99 @@ func Activate(ctx context.Context, db *sql.DB, actorID, id string, schedule Sche
 	return activated, nil
 }
 
+// RevertExpired changes every expired timed profile back to verified and
+// restores its game's verified default. Each game is serialized independently.
+func RevertExpired(ctx context.Context, db *sql.DB, now time.Time) (int, error) {
+	gameIDs, err := expiredGameIDs(ctx, db, now)
+	if err != nil {
+		return 0, err
+	}
+	reverted := 0
+	var reversionErrors []error
+	for _, gameID := range gameIDs {
+		didRevert, err := revertExpiredForGame(ctx, db, gameID, now)
+		if err != nil {
+			reversionErrors = append(reversionErrors, fmt.Errorf("game %s: %w", gameID, err))
+			continue
+		}
+		if didRevert {
+			reverted++
+		}
+	}
+	return reverted, errors.Join(reversionErrors...)
+}
+
+func revertExpiredForGame(ctx context.Context, db *sql.DB, gameID string, now time.Time) (bool, error) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("rtp: begin reversion: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := lockGame(ctx, tx, gameID); err != nil {
+		return false, err
+	}
+	reverted, err := RevertExpiredForGameTx(ctx, tx, gameID, now)
+	if err != nil {
+		return false, err
+	}
+	if !reverted {
+		return false, nil
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("rtp: commit reversion: %w", err)
+	}
+	return true, nil
+}
+
+// RevertExpiredForGameTx requires the caller to hold the game row FOR UPDATE.
+// It lets round opening close the expiry boundary before selecting a profile.
+func RevertExpiredForGameTx(ctx context.Context, tx *sql.Tx, gameID string, now time.Time) (bool, error) {
+	current, found, err := activeForGame(ctx, tx, gameID)
+	if err != nil {
+		return false, err
+	}
+	if !found || current.EffectiveUntil == nil || current.EffectiveUntil.After(now) {
+		return false, nil
+	}
+
+	defaultID, err := defaultForGame(ctx, tx, gameID)
+	if err != nil {
+		return false, err
+	}
+	if defaultID == "" || defaultID == current.ID {
+		return false, ErrDefaultRequired
+	}
+	fallback, err := findByIDForUpdate(ctx, tx, defaultID)
+	if errors.Is(err, ErrNoProfile) {
+		return false, ErrDefaultRequired
+	}
+	if err != nil {
+		return false, err
+	}
+	if fallback.GameID != gameID || fallback.Status != StatusVerified {
+		return false, ErrDefaultRequired
+	}
+
+	before := map[string]any{"expired": snapshot(current), "default": snapshot(fallback)}
+	if err := setStatus(ctx, tx, current.ID, StatusVerified, nil, nil); err != nil {
+		return false, err
+	}
+	if err := setStatus(ctx, tx, fallback.ID, StatusActive, nil, nil); err != nil {
+		return false, err
+	}
+	current.Status, current.EffectiveFrom, current.EffectiveUntil = StatusVerified, nil, nil
+	fallback.Status, fallback.EffectiveFrom, fallback.EffectiveUntil = StatusActive, nil, nil
+	if err := audit.Record(ctx, tx, audit.Change{
+		Action: "rtp_profile.revert", EntityType: "rtp_profile", EntityID: current.ID,
+		Detail: "Reverted expired " + describe(current) + " to default " + describe(fallback) + " for " + current.GameName,
+		Before: before, After: map[string]any{"expired": snapshot(current), "default": snapshot(fallback)},
+	}); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func describe(p Profile) string {
 	return p.Name + " v" + strconv.Itoa(p.Version) + " (" + strconv.Itoa(p.TargetBasisPoints) + " bp)"
 }
@@ -193,5 +319,6 @@ func snapshot(p Profile) map[string]any {
 		"game_id": p.GameID, "name": p.Name, "version": p.Version, "target_basis_points": p.TargetBasisPoints,
 		"status": p.Status, "engine_config_ref": p.EngineConfigRef,
 		"effective_from": p.EffectiveFrom, "effective_until": p.EffectiveUntil,
+		"is_default": p.IsDefault,
 	}
 }

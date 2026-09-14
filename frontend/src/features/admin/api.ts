@@ -5,6 +5,7 @@ import type {
   AccountStatus,
   AdminDeposit,
   AdminGame,
+  AdminRound,
   AdminUser,
   Adjustment,
   AuditEntry,
@@ -55,8 +56,8 @@ export async function fetchDashboard(currency: Currency): Promise<DashboardSumma
   return api.get<DashboardSummary>(`/admin/dashboard?currency=${encodeURIComponent(currency)}`)
 }
 
-// Alerts, rounds, staff, and payment-method administration have no service
-// yet. Outside the demo and tests they read as empty so the console shows
+// Alerts, staff, and payment-method administration have no service yet.
+// Outside the demo and tests they read as empty so the console shows
 // nothing an operator could act on that the platform cannot do.
 export async function fetchConsoleAlerts(): Promise<ConsoleAlert[]> {
   if (!usingFixtures) return []
@@ -260,9 +261,8 @@ export async function fetchUserWallets(id: string): Promise<Wallet[]> {
   return api.get<Wallet[]>(`/admin/users/${id}/wallets`)
 }
 
-export async function fetchUserRounds(): Promise<Round[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => rounds.slice(0, 12))
+export async function fetchUserRounds(userId: string, page = 1): Promise<Page<AdminRound>> {
+  return fetchAdminRounds({ page, user_id: userId })
 }
 
 export async function fetchUserDeposits(userId: string, page = 1): Promise<Page<AdminDeposit>> {
@@ -430,8 +430,8 @@ export async function fetchAdminTransactions(filter: AdminTransactionFilter): Pr
     })
   }
 
-  // Rounds are two ledger kinds the server cannot select together, and none
-  // exist until the round APIs do; the tab is honest about that.
+  // The Rounds tab reads the round resource instead. This adapter only maps
+  // the immutable ledger and cannot combine wager and win into one filter.
   if (filter.kind === 'rounds') {
     return paginate<AdminTransaction>([], 1, ADMIN_PAGE_SIZE)
   }
@@ -583,9 +583,50 @@ export async function updateGame(id: string, patch: GamePatch): Promise<AdminGam
   return api.patch<AdminGame>(`/admin/games/${encodeURIComponent(id)}`, patch)
 }
 
-export async function fetchAdminRounds(): Promise<Round[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => rounds.slice(0, 40))
+export type AdminRoundFilter = {
+  page: number
+  days?: 7 | 30 | 90
+  status?: Round['status']
+  currency?: Currency
+  user_id?: string
+  game_id?: string
+}
+
+export async function fetchAdminRounds(filter: AdminRoundFilter): Promise<Page<AdminRound>> {
+  if (usingFixtures) {
+    return mockRequest(() => {
+      const cutoff = filter.days ? Date.now() - filter.days * 86_400_000 : null
+      const fixtureUser = adminUsers[0]
+      const matched = rounds
+        .map((round) => ({
+          ...round,
+          user_id: fixtureUser?.id ?? 'us-0001',
+          user_email: fixtureUser?.email ?? 'player@example.com',
+          display_name: fixtureUser?.display_name ?? 'Player',
+          wallet_id: 'wa-demo-php',
+        }))
+        .filter(
+          (round) =>
+            (cutoff === null || Date.parse(round.started_at) >= cutoff) &&
+            (!filter.status || round.status === filter.status) &&
+            (!filter.currency || round.currency === filter.currency) &&
+            (!filter.user_id || round.user_id === filter.user_id) &&
+            (!filter.game_id || round.game_id === filter.game_id),
+        )
+      return paginate(matched, filter.page, ADMIN_PAGE_SIZE)
+    })
+  }
+
+  const params = new URLSearchParams({
+    page: String(filter.page),
+    size: String(ADMIN_PAGE_SIZE),
+  })
+  if (filter.days) params.set('from', new Date(Date.now() - filter.days * 86_400_000).toISOString())
+  if (filter.status) params.set('status', filter.status)
+  if (filter.currency) params.set('currency', filter.currency)
+  if (filter.user_id) params.set('user_id', filter.user_id)
+  if (filter.game_id) params.set('game_id', filter.game_id)
+  return api.get<Page<AdminRound>>(`/admin/rounds?${params.toString()}`)
 }
 
 export async function fetchRtpProfiles(): Promise<RtpProfile[]> {
@@ -638,6 +679,7 @@ export async function createRtpProfile(gameId: string, input: RtpDraftInput): Pr
         verified_at: null,
         effective_from: null,
         effective_until: null,
+        is_default: false,
         created_by: '',
         created_by_display_name: 'R. Cruz',
         created_at: now,
@@ -686,6 +728,17 @@ export async function activateRtpProfile(id: string, schedule: RtpSchedule): Pro
           'RTP_PROFILE_NOT_VERIFIED',
         )
       }
+      const until = schedule.effective_until ?? null
+      const fallback = rtpProfiles.find(
+        (candidate) => candidate.game_id === profile.game_id && candidate.is_default,
+      )
+      if (until && (!fallback || fallback.id === profile.id)) {
+        throw new ApiError(
+          409,
+          'Activate an open-ended verified default profile before scheduling a temporary profile',
+          'RTP_DEFAULT_REQUIRED',
+        )
+      }
       for (const other of rtpProfiles) {
         if (other.game_id === profile.game_id && other.status === 'active' && other.id !== id) {
           other.status = 'verified'
@@ -695,7 +748,12 @@ export async function activateRtpProfile(id: string, schedule: RtpSchedule): Pro
       }
       profile.status = 'active'
       profile.effective_from = schedule.effective_from ?? null
-      profile.effective_until = schedule.effective_until ?? null
+      profile.effective_until = until
+      if (!until) {
+        for (const other of rtpProfiles) {
+          if (other.game_id === profile.game_id) other.is_default = other.id === profile.id
+        }
+      }
       const game = adminGames.find((candidate) => candidate.id === profile.game_id)
       if (game) game.active_rtp_basis_points = profile.target_basis_points
       return { ...profile }

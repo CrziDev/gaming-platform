@@ -22,7 +22,11 @@ CREATE TABLE games (
     CONSTRAINT games_wager_bounds CHECK (
         min_wager_minor > 0
         AND max_wager_minor >= min_wager_minor
-        AND wager_step_minor > 0)
+        AND wager_step_minor > 0),
+    CONSTRAINT games_wagers_json_safe CHECK (
+        min_wager_minor <= 9007199254740991
+        AND max_wager_minor <= 9007199254740991
+        AND wager_step_minor <= 9007199254740991)
 );
 
 CREATE UNIQUE INDEX games_slug_key ON games (slug);

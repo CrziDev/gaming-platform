@@ -12,6 +12,7 @@ import {
   fetchPaymentMethods,
   fetchPendingDeposits,
   fetchRecentRounds,
+  fetchRounds,
   fetchTransactions,
   fetchWallet,
   fetchWallets,
@@ -74,12 +75,20 @@ export function useSubmitDeposit() {
   })
 }
 
-export function useTransactions(filter: HistoryFilter) {
-  return useQuery({ queryKey: ['transactions', filter], queryFn: () => fetchTransactions(filter) })
+export function useTransactions(filter: HistoryFilter, enabled = true) {
+  return useQuery({ queryKey: ['transactions', filter], queryFn: () => fetchTransactions(filter), enabled })
 }
 
-export function useRecentRounds() {
-  return useQuery({ queryKey: ['rounds', 'recent'], queryFn: fetchRecentRounds })
+export function useRounds(filter: Parameters<typeof fetchRounds>[0], enabled = true) {
+  return useQuery({ queryKey: ['rounds', filter], queryFn: () => fetchRounds(filter), enabled })
+}
+
+export function useRecentRounds(gameId: string) {
+  return useQuery({
+    queryKey: ['rounds', 'recent', gameId],
+    queryFn: () => fetchRecentRounds(gameId),
+    enabled: gameId !== '',
+  })
 }
 
 export function useNotifications(enabled = true) {

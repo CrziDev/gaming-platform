@@ -12,6 +12,7 @@ import (
 	"github.com/gaming-platform/backend/internal/deposit"
 	"github.com/gaming-platform/backend/internal/game"
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/round"
 	"github.com/gaming-platform/backend/internal/rtp"
 	"github.com/gaming-platform/backend/internal/user"
 	"github.com/gaming-platform/backend/internal/wallet"
@@ -31,6 +32,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	depositHandler := deposit.NewHandler(db, logger, cfg.ProofDir)
 	dashboardHandler := dashboard.NewHandler(db, logger)
 	auditHandler := audit.NewHandler(db, logger)
+	roundHandler := round.NewHandler(db, logger)
 	player, admin := authHandler.Player, authHandler.Admin
 
 	mux := http.NewServeMux()
@@ -50,12 +52,15 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/wallets/{currency}", player(walletHandler.Get))
 	mux.HandleFunc("GET /api/wallets/{currency}/transactions", player(walletHandler.Transactions))
 	mux.HandleFunc("GET /api/transactions", player(walletHandler.Transactions))
+	mux.HandleFunc("GET /api/rounds", player(roundHandler.List))
+	mux.HandleFunc("GET /api/rounds/{id}", player(roundHandler.Get))
 	mux.HandleFunc("GET /api/admin/users", admin(authHandler.AdminUsers))
 	mux.HandleFunc("GET /api/admin/users/{id}", admin(authHandler.AdminUser))
 	mux.HandleFunc("PATCH /api/admin/users/{id}/status", admin(authHandler.AdminUserStatus))
 	mux.HandleFunc("GET /api/admin/users/{id}/wallets", admin(walletHandler.AdminUserWallets))
 	mux.HandleFunc("POST /api/admin/users/{id}/wallet-adjustments", admin(walletHandler.AdminAdjust))
 	mux.HandleFunc("GET /api/admin/transactions", admin(walletHandler.AdminTransactions))
+	mux.HandleFunc("GET /api/admin/rounds", admin(roundHandler.AdminList))
 	mux.HandleFunc("GET /api/admin/deposits", admin(depositHandler.AdminList))
 	mux.HandleFunc("GET /api/admin/deposits/{id}/proof", admin(depositHandler.AdminProof))
 	mux.HandleFunc("POST /api/admin/deposits/{id}/review", admin(depositHandler.AdminReview))

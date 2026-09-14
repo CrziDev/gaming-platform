@@ -17,6 +17,8 @@ var playerRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/wallets/PHP"},
 	{http.MethodGet, "/api/wallets/PHP/transactions"},
 	{http.MethodGet, "/api/transactions"},
+	{http.MethodGet, "/api/rounds"},
+	{http.MethodGet, "/api/rounds/" + anyID},
 }
 
 var adminRoutes = []struct{ method, path string }{
@@ -26,6 +28,7 @@ var adminRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/admin/users/" + anyID + "/wallets"},
 	{http.MethodPost, "/api/admin/users/" + anyID + "/wallet-adjustments"},
 	{http.MethodGet, "/api/admin/transactions"},
+	{http.MethodGet, "/api/admin/rounds"},
 	{http.MethodGet, "/api/admin/deposits"},
 	{http.MethodGet, "/api/admin/deposits/" + anyID + "/proof"},
 	{http.MethodPost, "/api/admin/deposits/" + anyID + "/review"},

@@ -39,6 +39,7 @@ type response struct {
 	VerifiedAt             *string `json:"verified_at"`
 	EffectiveFrom          *string `json:"effective_from"`
 	EffectiveUntil         *string `json:"effective_until"`
+	IsDefault              bool    `json:"is_default"`
 	CreatedBy              string  `json:"created_by"`
 	CreatedByDisplayName   string  `json:"created_by_display_name"`
 	CreatedAt              string  `json:"created_at"`
@@ -245,6 +246,10 @@ func (h *Handler) AdminActivate(w http.ResponseWriter, r *http.Request, actor us
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"effective_until": "A profile at or above 100% needs an end time"})
 		return
 	}
+	if errors.Is(err, ErrDefaultRequired) {
+		httpx.WriteCodedError(w, http.StatusConflict, "Activate an open-ended verified default profile before scheduling a temporary profile", "RTP_DEFAULT_REQUIRED")
+		return
+	}
 	if errors.Is(err, ErrScheduleOrder) {
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"effective_until": "The end must be after the start"})
 		return
@@ -284,6 +289,7 @@ func newResponse(p Profile) response {
 		Name: p.Name, Version: p.Version, TargetBasisPoints: p.TargetBasisPoints, Status: p.Status,
 		EngineConfigRef: p.EngineConfigRef, TheoreticalBasisPoints: p.TheoreticalBasisPoints, ObservedBasisPoints: p.ObservedBasisPoints,
 		VerifiedAt: stamp(p.VerifiedAt), EffectiveFrom: stamp(p.EffectiveFrom), EffectiveUntil: stamp(p.EffectiveUntil),
+		IsDefault: p.IsDefault,
 		CreatedBy: p.CreatedBy, CreatedByDisplayName: p.CreatedByDisplayName,
 		CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339),
 	}

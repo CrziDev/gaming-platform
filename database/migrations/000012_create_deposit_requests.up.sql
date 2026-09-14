@@ -23,7 +23,8 @@ CREATE TABLE deposit_requests (
     CONSTRAINT deposit_requests_rejection_has_reason CHECK (
         status <> 'rejected' OR length(btrim(coalesce(reason, ''))) > 0),
     CONSTRAINT deposit_requests_approval_has_movement CHECK (
-        (status = 'approved') = (transaction_id IS NOT NULL))
+        (status = 'approved') = (transaction_id IS NOT NULL)),
+    CONSTRAINT deposit_requests_amount_json_safe CHECK (amount_minor <= 9007199254740991)
 );
 
 CREATE UNIQUE INDEX deposit_requests_idempotency_key

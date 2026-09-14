@@ -10,6 +10,7 @@ var (
 	ErrNameVersionTaken  = errors.New("rtp: name and version are already taken")
 	ErrNotDraft          = errors.New("rtp: only a draft profile can be edited")
 	ErrNotVerified       = errors.New("rtp: only a verified profile can be activated")
+	ErrDefaultRequired   = errors.New("rtp: a timed profile needs a different verified default")
 	ErrTargetUnsupported = errors.New("rtp: target is not in the supported set")
 	ErrEndRequired       = errors.New("rtp: a profile at or above 100% needs an end time")
 	ErrScheduleOrder     = errors.New("rtp: the end must be after the start")
@@ -45,6 +46,7 @@ type Profile struct {
 	VerifiedAt             *time.Time
 	EffectiveFrom          *time.Time
 	EffectiveUntil         *time.Time
+	IsDefault              bool
 	CreatedBy              string
 	CreatedByDisplayName   string
 	CreatedAt              time.Time
