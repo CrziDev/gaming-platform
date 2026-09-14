@@ -10,17 +10,9 @@ import (
 	"github.com/gaming-platform/backend/internal/httpx"
 )
 
-type Actor struct {
-	ID   string
-	Role string
-}
-
-type CurrentActor func(http.ResponseWriter, *http.Request) (Actor, bool)
-
 type Handler struct {
-	db           *sql.DB
-	logger       *slog.Logger
-	currentActor CurrentActor
+	db     *sql.DB
+	logger *slog.Logger
 }
 
 type response struct {
@@ -36,19 +28,11 @@ type response struct {
 	CreatedAt        string          `json:"created_at"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger, currentActor CurrentActor) *Handler {
-	return &Handler{db: db, logger: logger, currentActor: currentActor}
+func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
+	return &Handler{db: db, logger: logger}
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.currentActor(w, r)
-	if !ok {
-		return
-	}
-	if actor.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
 	query, ok := httpx.ReadQuery(w, r)
 	if !ok {
 		return

@@ -12,7 +12,7 @@ Detailed behavior remains authoritative in:
 - [`.claude/rules/backend/api.md`](../.claude/rules/backend/api.md) for the HTTP contract;
 - [`.claude/rules/backend/security.md`](../.claude/rules/backend/security.md) for
   financial and security invariants;
-- [`site-map.md`](site-map.md) for every frontend page and the actions on it.
+- [`frontend-pages.md`](frontend-pages.md) for every frontend page and its backend coverage.
 
 Use `[x]` only when the implementation and its required tests are complete. A page that
 works only against frontend fixtures is not complete.
@@ -189,6 +189,9 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Add `GET /api/currencies` for enabled currency metadata.
 - [ ] Move database and HTTP server lifecycle ownership from `cmd/server` to
   `internal/app`, leaving the command as `main` only.
+- [ ] Move the `auth_sessions` SQL (create, find by token hash, revoke one) from
+  `internal/auth/session.go` into `internal/user` beside the revoke-all on suspension,
+  so the session rows sit with the account as `go-style.md` describes.
 
 ## 3. Accounts and access
 
@@ -506,7 +509,10 @@ arrives. Its final message set must still be reviewed against the first real tit
 - [x] Apply structured request logging.
 - [x] Check the Origin allowlist on state-changing requests, refusing a write that carries
   no `Origin` at all.
-- [ ] Centralize authentication and per-route player/admin authorization guards.
+- [x] Centralize authentication and per-route player/admin authorization guards as
+  `auth.Handler.Player` and `auth.Handler.Admin`, applied in the `internal/app` route
+  table; a route sweep test proves every guarded route answers `401` anonymously and
+  every admin route `403` to a player.
 - [ ] Re-check resource ownership in services that access money or private records.
 - [x] Return `404` rather than revealing another player's resource (wallets and deposits;
   rounds follow when they exist).

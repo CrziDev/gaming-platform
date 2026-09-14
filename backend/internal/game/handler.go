@@ -24,13 +24,10 @@ const (
 	maxDescriptionLength = 1000
 )
 
-type CurrentUser func(http.ResponseWriter, *http.Request) (user.User, bool)
-
 type Handler struct {
-	db          *sql.DB
-	logger      *slog.Logger
-	currentUser CurrentUser
-	now         func() time.Time
+	db     *sql.DB
+	logger *slog.Logger
+	now    func() time.Time
 }
 
 type response struct {
@@ -91,8 +88,8 @@ type patchBody struct {
 	WagerStepMinor *int64  `json:"wager_step_minor"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger, currentUser CurrentUser) *Handler {
-	return &Handler{db: db, logger: logger, currentUser: currentUser, now: time.Now}
+func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
+	return &Handler{db: db, logger: logger, now: time.Now}
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -164,10 +161,7 @@ func (h *Handler) Categories(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
-func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.admin(w, r); !ok {
-		return
-	}
+func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request, _ user.User) {
 	query, ok := httpx.ReadQuery(w, r)
 	if !ok {
 		return
@@ -197,10 +191,7 @@ func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))
 }
 
-func (h *Handler) AdminGet(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.admin(w, r); !ok {
-		return
-	}
+func (h *Handler) AdminGet(w http.ResponseWriter, r *http.Request, _ user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Game not found")
 		return
@@ -217,11 +208,7 @@ func (h *Handler) AdminGet(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, newAdminResponse(item, h.now()))
 }
 
-func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.admin(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request, actor user.User) {
 	var body createBody
 	if !httpx.ReadJSON(w, r, &body) {
 		return
@@ -261,11 +248,7 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, newAdminResponse(created, h.now()))
 }
 
-func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.admin(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request, actor user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Game not found")
 		return
@@ -355,18 +338,6 @@ func (h *Handler) writeRuleError(w http.ResponseWriter, err error) bool {
 		return false
 	}
 	return true
-}
-
-func (h *Handler) admin(w http.ResponseWriter, r *http.Request) (user.User, bool) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return user.User{}, false
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return user.User{}, false
-	}
-	return account, true
 }
 
 func validateText(fields map[string]string, name, description, categorySlug, provider, currency string) {

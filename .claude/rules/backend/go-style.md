@@ -35,11 +35,15 @@ makes an invariant easier to verify.
   guarded shape `func(w, r, account user.User)` into an `http.HandlerFunc`, writing the
   `401` or `403` themselves. The route table in `internal/app` is where a route is
   guarded, and a handler that needs the account has the guarded signature, so it cannot
-  be mounted bare by mistake. A public route is a plain `http.HandlerFunc`.
+  be mounted bare by mistake. A public route is a plain `http.HandlerFunc`. The one
+  guarded handler with the plain shape is the audit read, which cannot import
+  `user.User` without a cycle; the route table wraps it with `withoutAccount`.
 - Session rows belong to the account: `internal/user` holds the `auth_sessions` SQL
   (create, find by token hash, revoke one, revoke all on suspension). `internal/auth`
   owns what is actually authentication — token generation and hashing, the cookie,
-  passwords, the guards — and calls `user` for the rows.
+  passwords, the guards — and calls `user` for the rows. Not there yet: create, find,
+  and revoke-one live in `internal/auth/session.go`, and only revoke-all on suspension
+  is in `internal/user`; the move is tracked in `docs/phase-1-features.md` §2.
 - Repository and service are file roles, not object hierarchies. Functions normally take
   `*sql.DB` or `*sql.Tx` directly. Avoid layers that only forward, generic repositories,
   and factories that only call constructors; a narrow interface is appropriate when the

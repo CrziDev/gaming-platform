@@ -73,10 +73,6 @@ func revokeSession(ctx context.Context, db *sql.DB, token string) error {
 	return nil
 }
 
-func (h *Handler) currentUser(w http.ResponseWriter, r *http.Request) (user.User, bool) {
-	return h.CurrentUser(w, r)
-}
-
 func (h *Handler) startSession(w http.ResponseWriter, r *http.Request, account user.User) bool {
 	token, expiresAt, err := h.prepareSession()
 	if err != nil {

@@ -173,43 +173,11 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.CurrentUser(w, r)
-	if !ok {
-		return
-	}
+func (h *Handler) Me(w http.ResponseWriter, _ *http.Request, account user.User) {
 	httpx.WriteJSON(w, http.StatusOK, newUserResponse(account))
 }
 
-func (h *Handler) CurrentUser(w http.ResponseWriter, r *http.Request) (user.User, bool) {
-	cookie, err := r.Cookie(h.cfg.CookieName)
-	if err != nil || cookie.Value == "" {
-		httpx.WriteError(w, http.StatusUnauthorized, "Authentication is required")
-		return user.User{}, false
-	}
-
-	account, err := findUserBySessionToken(r.Context(), h.db, cookie.Value)
-	if errors.Is(err, ErrNoSession) {
-		httpx.WriteError(w, http.StatusUnauthorized, "Authentication is required")
-		return user.User{}, false
-	}
-	if err != nil {
-		h.internal(w, r, err)
-		return user.User{}, false
-	}
-	return account, true
-}
-
-func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
-
+func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request, _ user.User) {
 	query, ok := httpx.ReadQuery(w, r)
 	if !ok {
 		return
@@ -236,15 +204,7 @@ func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(response, total, query.Page, query.Size))
 }
 
-func (h *Handler) AdminUser(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) AdminUser(w http.ResponseWriter, r *http.Request, _ user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Account not found")
 		return
@@ -262,15 +222,7 @@ func (h *Handler) AdminUser(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, newAdminUserResponse(target))
 }
 
-func (h *Handler) AdminUserStatus(w http.ResponseWriter, r *http.Request) {
-	account, ok := h.currentUser(w, r)
-	if !ok {
-		return
-	}
-	if account.Role != "admin" {
-		httpx.WriteError(w, http.StatusForbidden, "Administrator access is required")
-		return
-	}
+func (h *Handler) AdminUserStatus(w http.ResponseWriter, r *http.Request, actor user.User) {
 	if !httpx.IsUUID(r.PathValue("id")) {
 		httpx.WriteError(w, http.StatusNotFound, "Account not found")
 		return
@@ -288,7 +240,7 @@ func (h *Handler) AdminUserStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target, err := user.ChangeStatus(r.Context(), h.db, account.ID, r.PathValue("id"), body.Status)
+	target, err := user.ChangeStatus(r.Context(), h.db, actor.ID, r.PathValue("id"), body.Status)
 	if errors.Is(err, user.ErrNoUser) {
 		httpx.WriteError(w, http.StatusNotFound, "Account not found")
 		return
