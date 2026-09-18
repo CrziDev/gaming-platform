@@ -5,17 +5,15 @@ import { useForm } from 'react-hook-form'
 import { ApiError } from '@/api/client'
 import type { RtpProfile } from '@/api/types'
 import { Button } from '@/components/ui/Button'
-import { Field, Input, Select } from '@/components/ui/Field'
+import { Field, Input } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import {
   rtpDraftSchema,
-  rtpTargets,
   useCreateRtpProfile,
   useUpdateRtpProfile,
   type RtpDraftFormInput,
   type RtpDraftInput,
 } from '@/features/admin'
-import { formatPercent } from '@/lib/format'
 
 type RtpProfileDialogProps = {
   open: boolean
@@ -139,15 +137,9 @@ function DraftForm({ game, profile, onClose }: Omit<RtpProfileDialogProps, 'open
           label="Target RTP"
           htmlFor="rtp-target"
           error={errors.target_basis_points?.message}
-          hint="The Phase 1 set. A target at or above 100% pays out more than it takes and can only run with an end time."
+          hint="Basis points: 9600 is 96.00%. A target at or above 100% pays out more than it takes and can only run with an end time."
         >
-          <Select id="rtp-target" {...register('target_basis_points')}>
-            {rtpTargets.map((target) => (
-              <option key={target} value={target}>
-                {formatPercent(target)}
-              </option>
-            ))}
-          </Select>
+          <Input id="rtp-target" inputMode="numeric" className="font-mono" {...register('target_basis_points')} />
         </Field>
 
         <Field

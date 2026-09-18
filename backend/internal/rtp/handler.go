@@ -130,8 +130,8 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request, actor user
 	if in.Version < 1 {
 		fields["version"] = "Version must be a positive integer"
 	}
-	if !Targets[in.TargetBasisPoints] {
-		fields["target_basis_points"] = "Target must be one of 9200, 9400, 9600, 10000, 10200, or 10500"
+	if !targetInRange(in.TargetBasisPoints) {
+		fields["target_basis_points"] = "Target must be between 5000 and 20000 basis points (50% to 200%)"
 	}
 	if utf8.RuneCountInString(in.EngineConfigRef) > maxConfigRefLength {
 		fields["engine_config_ref"] = "Engine configuration reference must be at most 200 characters"
@@ -178,8 +178,8 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request, actor user
 	if body.Version != nil && *body.Version < 1 {
 		fields["version"] = "Version must be a positive integer"
 	}
-	if body.TargetBasisPoints != nil && !Targets[*body.TargetBasisPoints] {
-		fields["target_basis_points"] = "Target must be one of 9200, 9400, 9600, 10000, 10200, or 10500"
+	if body.TargetBasisPoints != nil && !targetInRange(*body.TargetBasisPoints) {
+		fields["target_basis_points"] = "Target must be between 5000 and 20000 basis points (50% to 200%)"
 	}
 	if body.EngineConfigRef != nil {
 		ref := strings.TrimSpace(*body.EngineConfigRef)

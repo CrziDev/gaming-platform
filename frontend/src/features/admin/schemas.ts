@@ -5,10 +5,6 @@ import { parseMoneyInput } from '@/lib/money'
 
 export const gameStatuses = ['draft', 'active', 'maintenance', 'retired'] as const
 
-// The Phase 1 target set, in basis points. A draft outside it has no engine
-// that could implement it, and the server refuses it too.
-export const rtpTargets = [9200, 9400, 9600, 10000, 10200, 10500] as const
-
 const slug = z
   .string()
   .trim()
@@ -58,7 +54,9 @@ export const rtpDraftSchema = z.object({
   version: z.string().trim().regex(/^[1-9]\d*$/, 'Version is a whole number starting at 1'),
   target_basis_points: z
     .string()
-    .refine((value) => (rtpTargets as readonly number[]).includes(Number(value)), 'Choose a Phase 1 target'),
+    .trim()
+    .regex(/^\d+$/, 'Whole basis points, for example 9600')
+    .refine((value) => Number(value) >= 5000 && Number(value) <= 20000, 'Between 5000 and 20000 basis points'),
   engine_config_ref: z.string().trim().max(200, 'Use at most 200 characters'),
 })
 

@@ -1,6 +1,6 @@
 # Universal Game Integration Plan
 
-## 1. Purpose and status
+## 1. Purpose
 
 This plan defines one reusable path for integrating any supplied browser game with the
 platform.
@@ -36,8 +36,7 @@ game frontend
 
 ## 3. Source intake and feasibility review
 
-Every game is reviewed before integration. Save the result as
-`docs/games/<game-slug>-assessment.md`.
+Every game is reviewed before integration, and the result is recorded per game.
 
 Review only what affects feasibility and safety:
 
@@ -160,7 +159,7 @@ gaming-platform/
 |   `-- games/
 |       |-- <game-slug>-assessment.md            source and feasibility findings
 |       |-- <game-slug>-runtime.md               build and runtime instructions
-|       `-- <game-slug>-rtp-verification.md      RTP evidence when supported
+|       `-- <game-slug>-rtp.md                   RTP model, profiles, and verification evidence
 |
 |-- Makefile                                     modified if game build tasks are needed
 `-- frontend/dist/games/<game-slug>/             generated deployment output

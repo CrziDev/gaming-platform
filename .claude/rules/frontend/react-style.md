@@ -67,12 +67,12 @@ server's defence is the `Origin` header, which the browser sets on its own.
 
 `src/api/mode.ts` decides per build whether fixtures are in play: `usingMockApi` is the
 development demo (`VITE_API_MOCK=true` under `vite dev`), and `usingFixtures` adds the
-component-test run. Each query function in `features/*/api.ts` branches on that once —
-`auth`, `catalogue`, `wallet`, and `admin` all have live paths against the server and a
-fixture path for the demo; `chat`, big wins, promotions, and favourites are fixture-only
-until a service exists, and return nothing outside the demo so their sections do not
-render. A fixture is shaped like the response it stands in for, so wiring a real endpoint
-changes one query function, not a component. A production bundle never reads a fixture.
+component-test run. Each query function in `features/*/api.ts` branches on that once: a
+query with a live endpoint has a server path and a fixture path for the demo; a query
+with no service yet is fixture-only and returns nothing outside the demo so its section
+does not render. A fixture is shaped like the response it stands in for, so wiring a real
+endpoint changes one query function, not a component. A production bundle never reads a
+fixture.
 
 ## Games
 

@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	ErrNoProfile         = errors.New("rtp: no such profile")
-	ErrNameVersionTaken  = errors.New("rtp: name and version are already taken")
-	ErrNotDraft          = errors.New("rtp: only a draft profile can be edited")
-	ErrNotVerified       = errors.New("rtp: only a verified profile can be activated")
-	ErrDefaultRequired   = errors.New("rtp: a timed profile needs a different verified default")
-	ErrTargetUnsupported = errors.New("rtp: target is not in the supported set")
-	ErrEndRequired       = errors.New("rtp: a profile at or above 100% needs an end time")
-	ErrScheduleOrder     = errors.New("rtp: the end must be after the start")
+	ErrNoProfile        = errors.New("rtp: no such profile")
+	ErrNameVersionTaken = errors.New("rtp: name and version are already taken")
+	ErrNotDraft         = errors.New("rtp: only a draft profile can be edited")
+	ErrNotVerified      = errors.New("rtp: only a verified profile can be activated")
+	ErrDefaultRequired  = errors.New("rtp: a timed profile needs a different verified default")
+	ErrTargetOutOfRange = errors.New("rtp: target is outside 5000-20000 basis points")
+	ErrEndRequired      = errors.New("rtp: a profile at or above 100% needs an end time")
+	ErrScheduleOrder    = errors.New("rtp: the end must be after the start")
 )
 
 const (
@@ -25,9 +25,16 @@ const (
 
 var Statuses = map[string]bool{StatusDraft: true, StatusVerified: true, StatusActive: true, StatusRetired: true}
 
-// The Phase 1 target set. A target outside it has no engine that could
-// implement it, so a profile cannot be drafted against it.
-var Targets = map[int]bool{9200: true, 9400: true, 9600: true, 10000: true, 10200: true, 10500: true}
+// The bounds of rtp_profiles_target_sane; which targets a game can reach is
+// its engine's business, not the platform's.
+const (
+	MinTargetBasisPoints = 5000
+	MaxTargetBasisPoints = 20000
+)
+
+func targetInRange(basisPoints int) bool {
+	return basisPoints >= MinTargetBasisPoints && basisPoints <= MaxTargetBasisPoints
+}
 
 const NegativeMarginBasisPoints = 10000
 

@@ -1,41 +1,25 @@
 # Backend Platform Services
 
-## 1. Status
-
-Implementation status is tracked in one place, [`../phase-1-features.md`](../phase-1-features.md);
-this document does not restate it.
-
-These services were implemented once in the previous platform, but that implementation
-is not portable to this repository: it used `/api/v1`, a generated query layer, and a
-different error body. The design conclusions and required tests in this specification
-carry forward; the old code does not.
+## 1. Scope
 
 This document covers the platform services that are independent of any game's internal
-mechanics. It defines no reels, card odds, crash curve, RNG mapping, or payout
-mathematics — those belong to `../game-engine-integration/SPEC.md`, and none of them may
-be invented before a purchased game's source has been reviewed.
-
-The external contract is `.claude/rules/backend/api.md`: paths, status codes, the failure
-shape, the error-code table, and the page shape all live there and are not restated here.
-How the code is written is constrained by `.claude/rules/backend/security.md` (money,
-sessions, passwords, authority, CSRF), `go-style.md` (which also owns the package list),
-`packages.md`, and `database.md`. Where this document appears to disagree with one of
-those, the rule wins and this document is wrong.
+mechanics: accounts, wallets, the ledger, the catalogue, round records, RTP profile
+metadata, deposits, and the audit trail. It defines no reels, card odds, crash curve,
+RNG mapping, or payout mathematics, and none of those may be invented before a purchased
+game's source has been reviewed.
 
 ## 2. Packages
 
-The package list and the rules for what each one owns live in
-`.claude/rules/backend/go-style.md` ("Package layout"). Two decisions worth restating
-because they shape everything below:
+Two package decisions shape everything below:
 
 There is no `internal/admin`. An operator crediting a wallet is wallet code behind a role
 guard, and an operator listing rounds is round code behind the same guard; splitting by
 audience would put the same table in two packages.
 
-`internal/round` owns the internal round lifecycle. Opening, settlement, cancellation, and
-failure are implemented with wallet-first locking, exact wager validation, an active-profile
-snapshot, retry-safe movements, settle-at-most-once, and compensating refunds; the read
-handlers remain to be built.
+`internal/round` owns the round lifecycle end to end: opening, settlement, cancellation,
+and failure, with wallet-first locking, exact wager validation, an active-profile
+snapshot, retry-safe movements, settle-at-most-once, and compensating refunds, plus the
+round reads.
 
 ## 3. Invariants
 
@@ -72,9 +56,8 @@ A violation of anything in this section is a financial bug.
 
 The logical schema below is the starting contract. Before the first production deployment
 the disposable baseline may be rebuilt; after deployment, an applied migration is the
-authority and is amended by a new migration rather than an edit (`database.md`).
-Status vocabularies match the wire types the web app is already coded against in
-`frontend/src/api/types.ts` — changing one of them is a change to both.
+authority and is amended by a new migration rather than an edit. Status vocabularies
+are wire types; changing one is a change to both sides.
 
 Every table below has its own migration, one table per numbered pair, applied in
 dependency order: `000001` `users` · `000002` `auth_sessions` · `000003`
@@ -260,11 +243,11 @@ CREATE INDEX games_status_category ON games (status, category_slug);
 ```
 
 No game-specific mathematics is stored here. `integration` is the engine-review state and
-is set by the work in `../game-engine-integration/`, never by a catalogue edit.
+is set by the engine integration, never by a catalogue edit.
 
 One game carries one currency, because that is the contract the web app is coded against.
 A title offered in two currencies needs per-currency bounds in a `game_wager_limits`
-table and a change to the game body in `api.md` — not a second catalogue row.
+table and a change to the game body — not a second catalogue row.
 
 The game body carries `thumbnail_path` as `thumbnail_url`, null until reviewed art is
 attached. The web app renders the flat placeholder slot regardless; switching it to the
@@ -274,10 +257,8 @@ A game is `new` for thirty days after its row was created; the flag is computed 
 `created_at` on read and is never stored. `hot` has no definition until rounds exist.
 
 Categories are a table because the catalogue response names them. Lobby rows are not:
-they are assembled on the web side from the catalogue and the player's recent rounds, and
-merchandising configuration is not a Phase 1 surface. The v2 lobby's big-wins and
-promotions sections are fixture-only and render nowhere but the demo until that decision
-is revisited in `../phase-1-features.md` §1.
+they are assembled on the web side from the catalogue and the player's recent rounds.
+There is no merchandising configuration.
 
 ### 4.5 `rtp_profiles`
 
@@ -464,15 +445,15 @@ edit, and activation, and a password reset carried out on someone's behalf.
 
 ## 5. Accounts and sessions
 
-Built: registration, login, logout, `/api/me`, the paginated/searchable/status-filtered
-admin account list, individual admin detail, audited suspend/reinstate operations with
-immediate session revocation, and the paginated operator audit feed. Authentication uses
-Argon2id hashing with a per-hash salt and constant-time comparison, opaque 32-byte session
-tokens stored as a SHA-256 hash in an HttpOnly cookie, the `Origin` allowlist,
-indistinguishable login failures with matched timing, and a per-client rate limit on the
-credential endpoints.
+The account service covers registration, login, logout, `/api/me`, the
+paginated/searchable/status-filtered admin account list, individual admin detail,
+audited suspend/reinstate operations with immediate session revocation, and the
+paginated operator audit feed. Authentication uses Argon2id hashing with a per-hash salt
+and constant-time comparison, opaque 32-byte session tokens stored as a SHA-256 hash in
+an HttpOnly cookie, the `Origin` allowlist, indistinguishable login failures with matched
+timing, and a per-client rate limit on the credential endpoints.
 
-Still to build, all of it named in `api.md`:
+Password reset and change:
 
 - `POST /api/password-reset` — always `204`, whether or not the address is registered, and
   in the same time either way.
@@ -523,7 +504,7 @@ COMMIT
 ```
 
 Any failure rolls the whole transaction back. A package that needs a row written inside
-this transaction takes the `*sql.Tx` as an argument (`go-style.md`); nothing outside
+this transaction takes the `*sql.Tx` as an argument; nothing outside
 `internal/wallet` writes `wallets` or `wallet_transactions`.
 
 An operator adjustment additionally requires the `admin` role, a positive amount, a
@@ -562,14 +543,14 @@ against the form that produced it.
 
 A game whose status is not `active` refuses a round with `GAME_UNAVAILABLE`.
 
-There is no game-session endpoint in the contract. The host page gets what it needs from
+There is no game-session endpoint. The host page gets what it needs from
 `GET /api/games/{slug}` and the wallet; whether an engine needs more than that is decided
-in `../game-engine-integration/`, and adding a route is a change to `api.md`.
+by the engine integration, and adding a route is a contract change.
 
 ## 10. Rounds
 
-Round persistence and its lifecycle rules are platform work and can be built now.
-Outcome generation is not, and cannot be invented here.
+Round persistence and its lifecycle rules are platform work. Outcome generation is not,
+and cannot be invented here.
 
 Opening a round binds it to an account, a game, a wallet, and a currency, records the
 active `rtp_profile_id` at that moment, and debits the wager as a `wager` movement in the
@@ -599,39 +580,35 @@ wallet row for the rest of the transaction; two concurrent round starts that eac
 that and then asked for `FOR UPDATE` would deadlock, and a player double-tapping spin is
 exactly that case. Opening a round therefore takes the wallet lock first, then inserts.
 
-Neither opening nor settling a round is a player-facing HTTP operation, which is why
-`api.md` lists no `POST /api/rounds` and no settle route. A payout decides how much money
-moves, and a value the browser supplies is not something the server may act on; a round
-exists to be settled, so opening one before an engine can settle it would take a wager
-the platform cannot resolve. The engine stage calls this package directly, in process.
+Neither opening nor settling a round is a player-facing HTTP operation. A payout decides
+how much money moves, and a value the browser supplies is not something the server may
+act on; a round exists to be settled, so opening one before an engine can settle it would
+take a wager the platform cannot resolve. The engine calls this package directly, in
+process.
 
 Players read their own rounds through `GET /api/rounds` and `GET /api/rounds/{id}`;
 operators read all of them through `GET /api/admin/rounds`.
 
 ## 11. RTP profiles
 
-Before an engine exists, this package owns profile metadata, the activation rule, and
-scheduling. It owns no probability, no weight table, and no paytable.
+This package owns profile metadata, the activation rule, and scheduling. It owns no
+probability, no weight table, and no paytable.
 
-Permitted now: creating a `draft` profile with a name, a version, and a target in basis
-points · editing a draft · listing profiles for a game · recording every change in the
-audit log · scheduling a profile that is already `verified`.
+It creates a `draft` profile with a name, a version, and a target in basis points within
+the schema's range; edits a draft; lists profiles for a game; records every change in the
+audit log; and schedules a profile that is already `verified`. It never marks a profile
+verified, never claims an observed or theoretical RTP, never invents a probability table,
+and never activates a profile against a game that does not implement it.
 
-Not permitted now: marking a profile verified, claiming an observed or theoretical RTP,
-inventing a probability table, or activating a profile against a game that does not
-implement it.
-
-`POST /api/admin/rtp-profiles/{id}/activate` therefore answers
-`RTP_PROFILE_NOT_VERIFIED` for every profile today, and that refusal is the feature, not
-a gap. The activation path itself is real and tested against rows inserted as if verified:
-it takes the game row lock first so two operators queue instead of deadlocking, moves the
-profile previously in force back to `verified` so it stays a version to revert to, and
-refuses a target at or above 100% without an end time. An open-ended activation becomes
-the game's default. A timed activation requires a different verified default; a
-database-backed reconciler restores it at expiry, and round opening performs the same
-reconciliation inside its transaction before binding a profile. Nothing in this package can set `verified`: verification means an engine
-implements the profile and a simulation measured the result, which is §12 of
-`../game-engine-integration/SPEC.md`.
+`POST /api/admin/rtp-profiles/{id}/activate` answers `RTP_PROFILE_NOT_VERIFIED` for any
+profile that is not verified. Activation takes the game row lock first so two operators
+queue instead of deadlocking, moves the profile previously in force back to `verified`
+so it stays a version to revert to, and refuses a target at or above 100% without an end
+time. An open-ended activation becomes the game's default. A timed activation requires a
+different verified default; a database-backed reconciler restores it at expiry, and round
+opening performs the same reconciliation inside its transaction before binding a profile.
+Nothing in this package can set `verified`: verification means an engine implements the
+profile and a simulation measured the result.
 
 A schedule has an optional start and end and reverts to the game's default profile when
 it ends. Activation, scheduling, and reversion each write an audit row.
@@ -664,7 +641,7 @@ A second approval cannot credit a second time: the request row is locked and its
 is checked inside the transaction, and `deposit_requests_approval_has_movement` ties the
 approval to exactly one movement.
 
-Proof upload is part of `POST /api/deposits` and is required for Phase 1. It uses an image
+Proof upload is part of `POST /api/deposits` and is required. It uses an image
 MIME allowlist checked by content rather than extension, a 5 MiB file cap within the
 6 MiB request cap, a server-generated filename, and storage outside every served
 directory. Only an administrator can retrieve it through
@@ -691,36 +668,26 @@ A player-scoped read answers `404` for a resource that exists but belongs to som
 else. An identifier in a path is input, never a fact about who is asking, and `403` on
 someone else's wallet would confirm that the wallet exists.
 
-Phase 1 has two roles, `player` and `admin`. Finer roles are not built before they are
+There are two roles, `player` and `admin`. Finer roles are not built before they are
 needed, and no API is designed as though every authenticated caller may call an operator
 route.
 
 ## 15. Errors
 
 Each package declares its sentinel errors in `model.go` and wraps with `%w`. The handler
-is the only place that turns one into a status code, and the mapping is the table in
-`api.md`:
-
-```text
-ErrInsufficientBalance  409 INSUFFICIENT_BALANCE
-ErrWalletFrozen         409 WALLET_FROZEN
-ErrRoundSettled         409 ROUND_ALREADY_SETTLED
-ErrDuplicateRequest     409 DUPLICATE_REQUEST
-ErrUnsupportedCurrency  409 UNSUPPORTED_CURRENCY
-ErrGameUnavailable      409 GAME_UNAVAILABLE
-ErrProfileNotVerified   409 RTP_PROFILE_NOT_VERIFIED
-ErrDefaultRequired      409 RTP_DEFAULT_REQUIRED
-```
+is the only place that turns one into a status code and, where the contract defines one,
+an error code.
 
 A `400`, `401`, `403`, `404`, `413`, `429`, or `500` carries no code. Adding a code is a
-contract change in `api.md`, in `ApiErrorBody`, and in the handler together.
+contract change: the contract's code table, the client's error body type, and the
+handler change together.
 
 No driver error, constraint name, SQL fragment, or stack trace reaches a response. The
 cause is logged; the response is the failure shape.
 
 ## 16. Pagination and filtering
 
-`internal/httpx` owns the page shape in `api.md` and the parsing of `page`, `size`,
+`internal/httpx` owns the page shape and the parsing of `page`, `size`,
 `search`, `status`, `type`, `currency`, `game_id`, `from`, and `to`. Default size 20,
 maximum 100, and no unbounded list endpoint anywhere.
 
@@ -767,7 +734,7 @@ amount in minor units and the currency.
 
 ## 19. Tests
 
-Per `security.md`, tests accompany every change touching money, auth, or permissions.
+Tests accompany every change touching money, auth, or permissions.
 
 Unit tests cover validation, state-machine rules, authorization decisions, and money
 arithmetic including its overflow paths. Database-backed tests are mandatory for wallet
@@ -776,11 +743,11 @@ settlement — against real PostgreSQL, because locking semantics are the thing 
 HTTP tests drive an `httptest` server with a cookie-keeping client for the session guard,
 the role guard, validation, and status mapping.
 
-Database-backed tests read `TEST_DATABASE_URL`, fall back to `DATABASE_URL`, and skip
-when PostgreSQL is unreachable. CI sets `REQUIRE_TEST_DATABASE=1` so a skip there fails
-the build, and CI runs the migrations before the tests.
+Database-backed tests read only `TEST_DATABASE_URL`, whose database name ends in
+`_test`, and skip when it is absent or unreachable. CI sets `REQUIRE_TEST_DATABASE=1` so
+a skip there fails the build, and CI runs the migrations before the tests.
 
-The end-to-end scenarios that must pass before the engine stage opens:
+The end-to-end scenarios that must pass:
 
 1. register, log in, read `/api/me`;
 2. an operator credits a wallet, and the player sees the balance and the movement;
@@ -789,33 +756,3 @@ The end-to-end scenarios that must pass before the engine stage opens:
 5. a deposit request is submitted, approved, and lands as one credit;
 6. a suspended account loses access on its next request;
 7. a player cannot read another player's wallet, rounds, or deposits.
-
-## 20. Build order
-
-Each step ends with its tests passing and its migrations reversible. The master Phase 1
-checklist tracks their completion.
-
-```text
-A  schema, currencies, internal/app, internal/httpx
-B  wallets and the ledger
-C  operator money operations and the audit trail
-D  manual deposits and the review queue
-E  the game catalogue
-F  round records and RTP profile metadata
-G  hardening: paging, filtering, the dashboard, observability, integration tests
-```
-
-The remaining account endpoints in §5 do not block any of these and can land beside any
-step.
-
-## 21. Definition of done
-
-The backend is ready for the engine stage when an account can register, log in, and log
-out; a session authenticates and a role authorises; PHP and USD exist with their metadata;
-wallets provision and read correctly; a credit or debit is atomic, ledger-backed, and
-cannot drive a balance negative; idempotency and concurrency are tested against real
-PostgreSQL; an operator can adjust a balance with a reason and an audit row; the catalogue
-exists with server-enforced wager bounds; a round record exists with settlement that the
-database permits exactly once; an RTP profile cannot claim verification; manual deposits
-credit exactly once on approval; every response and failure matches `api.md`; and no
-game-specific probability or outcome logic has been invented anywhere in it.

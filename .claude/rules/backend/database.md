@@ -13,10 +13,7 @@ are applied by `make migrate-up`.
 - Every migration has a matching `down`, and `make migrate-down-all` is run in CI so the
   rollback chain stays executable. A destructive or security-sensitive data change may
   use a documented no-op `down` when reversal would be less safe than leaving the new
-  state in place. Phase 1 laid the
-  whole schema down first, so a table or column may exist ahead of any code that reads it
-  (`password_reset_tokens`, `game_rounds`, the session metadata columns); from here on a
-  migration ships in the same change as the code that depends on it.
+  state in place. A migration ships in the same change as the code that depends on it.
 - Name them `NNNNNN_verb_object.up.sql` / `.down.sql` with monotonically increasing
   numbers. Never remove a version that a database may already record; retain a documented
   no-op bridge pair when a legacy version has no remaining schema action.

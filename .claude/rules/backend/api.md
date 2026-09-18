@@ -80,19 +80,6 @@ one game's RTP profiles — is a plain array.
 `/api/register` and `/api/login` are rate limited per client by
 `LOGIN_ATTEMPTS_PER_MINUTE`.
 
-Planned, not yet routed — the contract these will meet when they land; a request today
-gets the not-found response:
-
-| Method | Path | Success | Failures |
-| --- | --- | --- | --- |
-| `POST` | `/api/password-reset` | `204` always | `400` invalid input |
-| `POST` | `/api/password-reset/confirm` | `204` | `400` invalid input or expired token |
-| `POST` | `/api/password` | `204` | `400` invalid input · `401` no session or wrong current password |
-
-`/api/password-reset` joins the rate-limited set, answers `204` whether or not the
-address is registered, and a successful `/api/password-reset/confirm` or `/api/password`
-revokes every other session on the account.
-
 ### Player
 
 | Method | Path | Success | Failures |
@@ -117,9 +104,7 @@ else. An id in a path is input, never a fact about who is asking.
 
 A round body carries `id`, `game_id`, `game_slug`, `game_name`, `rtp_profile_id`,
 `status`, `stake_minor`, nullable `win_minor`, nullable `multiplier_hundredths`,
-`currency`, `started_at`, and nullable `settled_at`. Internal round opening is implemented
-together with settle-at-most-once and idempotent cancel/fail refunds; there is still no
-player-controlled write route.
+`currency`, `started_at`, and nullable `settled_at`.
 
 The catalogue is public and shows only `active` games; a `draft`, `maintenance`, or
 `retired` game is `404` by slug and absent from every list. `search` matches the game
@@ -140,7 +125,7 @@ administrator approves or rejects it.
 is accepted; the client filename and declared MIME type are not trusted. A retry returns
 the original request and does not retain the redundant uploaded file.
 
-Payment methods are migration/configuration-managed in Phase 1. There is no operator
+Payment methods are configuration-managed. There is no operator
 payment-method mutation endpoint. Seeded destination placeholders are disabled;
 deployment configuration must replace the destination and explicitly enable a method
 before players can submit deposits through it.
@@ -188,8 +173,8 @@ A profile body carries `game_id`, `game_slug`, `game_name`, `name`, `version`,
 `target_basis_points`, `status`, `engine_config_ref`, the nullable
 `theoretical_basis_points`, `observed_basis_points`, `verified_at`, `effective_from`,
 and `effective_until`, plus `is_default`, `created_by`, `created_by_display_name`, and timestamps.
-A draft takes `name`, `version`, `target_basis_points` from the Phase 1 set (`9200`,
-`9400`, `9600`, `10000`, `10200`, `10500`), and an optional `engine_config_ref`. Only a
+A draft takes `name`, `version`, `target_basis_points` between `5000` and `20000`, and
+an optional `engine_config_ref`. Only a
 draft can be patched. Activation moves the profile previously in force back to
 `verified`, and a target at or above `10000` refuses to activate without
 `effective_until`. An open-ended activation becomes the game's default. A timed

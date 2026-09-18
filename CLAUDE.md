@@ -31,12 +31,8 @@ shell loads `.env`; no application code reads a `.env` file.
 
 ## Rules
 
-`.claude/rules/backend/` — `security.md` (money, sessions, passwords, CSRF; read this
-first), `api.md` (the contract), `go-style.md`, `packages.md` (standard library first),
-`database.md` (migrations and SQL).
-
-`.claude/rules/frontend/` — `system-design.md` (tokens, type, spacing, motion),
-`react-style.md` (structure, server state, forms, money at the render boundary).
+Standards live in `.claude/rules/backend/` and `.claude/rules/frontend/`, one file per
+subject.
 
 ## Commits
 

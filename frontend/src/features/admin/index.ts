@@ -10,7 +10,7 @@ export type {
   UserFilter,
   WalletAdjustment,
 } from './api'
-export { createGameSchema, gameStatuses, rtpDraftSchema, rtpTargets } from './schemas'
+export { createGameSchema, gameStatuses, rtpDraftSchema } from './schemas'
 export type { GameFormInput, RtpDraftFormInput } from './schemas'
 export {
   useActivateRtpProfile,

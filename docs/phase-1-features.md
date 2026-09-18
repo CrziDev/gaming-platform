@@ -4,16 +4,6 @@ This is the master delivery checklist for Phase 1. It replaces the former high-l
 feature list and separates platform work that can be completed now from work that must
 wait for the actual games and their engines.
 
-Detailed behavior remains authoritative in:
-
-- [`backend-services/SPEC.md`](backend-services/SPEC.md) for platform services;
-- [`game-engine-integration/SPEC.md`](game-engine-integration/SPEC.md) for engine and
-  per-game integration;
-- [`.claude/rules/backend/api.md`](../.claude/rules/backend/api.md) for the HTTP contract;
-- [`.claude/rules/backend/security.md`](../.claude/rules/backend/security.md) for
-  financial and security invariants;
-- [`frontend-pages.md`](frontend-pages.md) for every frontend page and its backend coverage.
-
 Use `[x]` only when the implementation and its required tests are complete. A page that
 works only against frontend fixtures is not complete.
 
@@ -151,8 +141,7 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Keep lobby rows client-derived unless merchandising configuration is explicitly
   added to scope.
 - [ ] Decide whether the v2 lobby's merchandising surfaces — big wins, promotions, and the
-  hot shelf — are Phase 1. They are fixture-only today, hidden outside the demo, and
-  `backend-services/SPEC.md` still states merchandising is not a Phase 1 surface. The
+  hot shelf — are Phase 1. They are fixture-only today and hidden outside the demo. The
   new shelf is real: a game is `new` for thirty days after it is added.
 - [ ] Decide whether favorites and the live chat rail are Phase 1; both are fixture-only
   and hidden outside the demo, and neither has a contract.
@@ -191,7 +180,7 @@ decision must update the API contract, frontend types, and implementation togeth
   `internal/app`, leaving the command as `main` only (`app.ConfigFromEnv`, `app.Run`).
 - [x] Move the `auth_sessions` SQL (create, find by token hash, revoke one) from
   `internal/auth/session.go` into `internal/user` beside the revoke-all on suspension,
-  so the session rows sit with the account as `go-style.md` describes.
+  so the session rows sit with the account.
 
 ## 3. Accounts and access
 
@@ -369,8 +358,8 @@ player-controlled settle operation or invent an outcome while no engine exists.
 Metadata can be built now; verified mathematical behavior cannot.
 
 - [x] Create a draft RTP profile with game, name, version, and target basis points.
-- [x] Support the Phase 1 target set: 92%, 94%, 96%, 100%, 102%, and 105%, where the
-  eventual game mathematics can actually implement and verify each target.
+- [x] Accept any target between 50% and 200% in basis points; which targets a game can
+  reach is decided by that game's RTP document, not the platform.
 - [x] Edit draft profiles only.
 - [x] List all profiles for an admin-selected game.
 - [x] Preserve verified profiles as immutable versions.

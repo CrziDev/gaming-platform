@@ -31,8 +31,8 @@ type Schedule struct {
 }
 
 func CreateDraft(ctx context.Context, db *sql.DB, actorID, gameID string, in DraftInput) (Profile, error) {
-	if !Targets[in.TargetBasisPoints] {
-		return Profile{}, ErrTargetUnsupported
+	if !targetInRange(in.TargetBasisPoints) {
+		return Profile{}, ErrTargetOutOfRange
 	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -94,8 +94,8 @@ func UpdateDraft(ctx context.Context, db *sql.DB, actorID, id string, patch Draf
 	if patch.EngineConfigRef != nil {
 		next.EngineConfigRef = *patch.EngineConfigRef
 	}
-	if !Targets[next.TargetBasisPoints] {
-		return Profile{}, ErrTargetUnsupported
+	if !targetInRange(next.TargetBasisPoints) {
+		return Profile{}, ErrTargetOutOfRange
 	}
 	if err := updateDraft(ctx, tx, next); err != nil {
 		return Profile{}, err

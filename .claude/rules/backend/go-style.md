@@ -17,7 +17,7 @@ makes an invariant easier to verify.
 - `internal/app` owns the route table, the configuration read from the environment,
   and the server lifecycle. `cmd/server` is `main` and nothing else: it builds the
   logger, handles the process signals, and calls `app.Run`. `internal/httpx` owns the response envelope and paging, because the
-  shape in `api.md` is one contract and belongs in one place.
+  response shape is one contract and belongs in one place.
 - SQL stays with the package that owns the operation. Wallet balance changes, their
   matching ledger inserts, and the ledger reads behind the transaction-list endpoints all
   belong to `internal/wallet`, because the balance and its ledger are one invariant.
@@ -118,7 +118,7 @@ a function, not to restate a signature.
 - `recover` only works when called directly from a deferred function. It belongs in the
   HTTP recovery middleware, not scattered through packages.
 - Never let a raw database error, stack trace, or driver message escape past the handler.
-  Log the cause and return the failure shape in `api.md`.
+  Log the cause and return the contract's failure shape.
 
 ## Data
 

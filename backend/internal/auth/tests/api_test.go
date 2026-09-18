@@ -2187,7 +2187,8 @@ func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
 		change map[string]any
 		field  string
 	}{
-		"unsupported target": {map[string]any{"target_basis_points": 9700}, "target_basis_points"},
+		"target below range": {map[string]any{"target_basis_points": 4999}, "target_basis_points"},
+		"target above range": {map[string]any{"target_basis_points": 20001}, "target_basis_points"},
 		"zero version":       {map[string]any{"version": 0}, "version"},
 		"blank name":         {map[string]any{"name": ""}, "name"},
 		"status in body":     {map[string]any{"status": "verified"}, ""},
@@ -2229,8 +2230,11 @@ func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
 	if status != http.StatusOK || !bytes.Contains(body, []byte(`"target_basis_points":9400`)) || !bytes.Contains(body, []byte(`"version":2`)) {
 		t.Fatalf("edit draft: want 200 with the new target, got %d (%s)", status, body)
 	}
-	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 9999}); status != http.StatusBadRequest {
-		t.Fatalf("edit draft to unsupported target: want 400, got %d (%s)", status, body)
+	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 9700}); status != http.StatusOK || !bytes.Contains(body, []byte(`"target_basis_points":9700`)) {
+		t.Fatalf("edit draft to a target off the round numbers: want 200, got %d (%s)", status, body)
+	}
+	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 4999}); status != http.StatusBadRequest {
+		t.Fatalf("edit draft to a target below range: want 400, got %d (%s)", status, body)
 	}
 
 	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+created.ID+"/activate", nil)
@@ -2333,7 +2337,7 @@ func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
 		}
 		actions = append(actions, action)
 	}
-	if strings.Join(actions, ",") != "rtp_profile.create,rtp_profile.update,rtp_profile.activate,rtp_profile.activate" {
+	if strings.Join(actions, ",") != "rtp_profile.create,rtp_profile.update,rtp_profile.update,rtp_profile.activate,rtp_profile.activate" {
 		t.Fatalf("audit actions: got %v", actions)
 	}
 }

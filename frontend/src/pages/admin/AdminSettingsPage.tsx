@@ -63,7 +63,7 @@ function MethodsTab() {
       ) : (methodsQuery.data ?? []).length === 0 ? (
         <EmptyState
           title="Managed by configuration"
-          description="Payment methods are seeded by deployment configuration in Phase 1. There is nothing to edit here yet."
+          description="Payment methods are seeded by deployment configuration. There is nothing to edit here yet."
         />
       ) : (
         <RecordTable
