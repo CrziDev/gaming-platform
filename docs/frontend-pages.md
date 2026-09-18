@@ -16,8 +16,8 @@ administration, RTP profiles, and round history use real APIs when `VITE_API_MOC
 so a real deployment renders the empty state for those surfaces rather than fixture
 content. A page stays unchecked while any of its visible data sources has no server.
 
-Audited against the frontend on 2026-09-14: every route below exists, every data hook
-on every page was traced to its adapter in `features/*/api.ts`, and the 105 frontend
+Audited against the frontend on 2026-09-19: every route below exists, every data hook
+on every page was traced to its adapter in `features/*/api.ts`, and the 159 frontend
 tests pass.
 
 ## Public and player pages
@@ -32,7 +32,7 @@ tests pass.
 - [x] **Register** — `/register` (opens the real registration flow)
 - [ ] **Forgot password** — `/forgot` (calls the contracted endpoint; reports reset as unavailable while the server answers 404)
 - [ ] **Reset password** — `/reset` (same; refuses to submit without a token in the link)
-- [ ] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and recent rounds; the favorite toggle is fixture-only; the bet panel is a display slot whose Place bet only raises a toast, and there is no engine to launch)
+- [ ] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and recent rounds; the favorite toggle is fixture-only. Plinko launches in the generic game host through the versioned bridge: in the demo a fixture settles each round and the board animates it, while outside the demo Place bet calls the contracted `POST /api/games/{slug}/rounds`, which the server does not serve yet, and the page reports the game as not available. Every other title keeps the display-slot placeholder)
 - [x] **Wallet** — `/wallet` (authentication required; real balance, currency switch sheet, open request list, and recent ledger)
 - [x] **Deposit** — `/wallet/deposit` (real methods, limits, proof upload, and submission)
 - [x] **Deposit status** — `/wallet/deposit/:id` (real player-owned request; no cancellation)

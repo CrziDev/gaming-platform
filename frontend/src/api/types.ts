@@ -137,6 +137,20 @@ export type Round = {
   settled_at: string | null
 }
 
+// A play request carries only the wager and the game's public parameters; the
+// response is the settled round, a safe display result, and the wallet after it.
+export type PlayRoundRequest = {
+  stake_minor: number
+  currency: Currency
+  params: Record<string, string | number>
+}
+
+export type PlayRoundResponse = {
+  round: Round
+  result: Record<string, string | number>
+  wallet: Wallet
+}
+
 export type AdminRound = Round & {
   user_id: string
   user_email: string

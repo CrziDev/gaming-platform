@@ -42,3 +42,7 @@ require, and arrives in the same change as the code that needs it.
 The frontend follows the same bar against `frontend/package.json`. React, the router,
 TanStack Query, React Hook Form, Zod and Tailwind are the current set; additions need the
 same concrete justification rather than a permanent ban.
+
+A supplied game's own libraries are not frontend dependencies. They stay vendored inside
+`games/<slug>/web/` beside their licence, are reviewed with that game's source, and never
+enter the React bundle.

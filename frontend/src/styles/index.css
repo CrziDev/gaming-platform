@@ -48,6 +48,56 @@
   color-scheme: dark;
 }
 
+/* Scrollbars: a translucent thumb on no track and no buttons, faint at rest and
+   stronger while its region is scrolling (`data-scrolling`, set by
+   app/scrollbars.ts). Chromium and WebKit take the pseudo-element route, which
+   controls every part; Firefox gets the standard properties, which only choose
+   thickness and colour. */
+:root {
+  --scrollbar-thumb: rgb(255 255 255 / 0.12);
+  --scrollbar-thumb-active: rgb(255 255 255 / 0.32);
+}
+
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 5px;
+    background-clip: content-box;
+    background-color: var(--scrollbar-thumb);
+  }
+
+  [data-scrolling]::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-active);
+  }
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  :root {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  [data-scrolling] {
+    scrollbar-color: var(--scrollbar-thumb-active) transparent;
+  }
+}
+
 .scrollbar-hidden {
   scrollbar-width: none;
 }

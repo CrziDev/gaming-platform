@@ -121,8 +121,10 @@ Applying the formula at `d = 0.24` to every supplied multiplier table:
 
 These assume the paid slot is the predetermined target slot. The supplied code pays on
 the physical `actualSlot` the ball lands in, which can differ from the target, so the
-table is the target-slot expectation and not an observed return. The supplied game
-contains no normalised RTP profile.
+table is the target-slot expectation and not an observed return. The integrated frame
+(`games/plinko/web/`) removes that gap: the ball is guided into the slot the platform
+settled, and the frame pays nothing itself. The supplied game contains no normalised
+RTP profile.
 
 ## 6. Solving the decay for a target
 

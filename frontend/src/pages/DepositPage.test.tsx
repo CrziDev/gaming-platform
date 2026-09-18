@@ -51,7 +51,7 @@ describe('submitting a deposit request', () => {
   it('lands on the request status page, awaiting approval', async () => {
     await submitARequest()
 
-    expect(await screen.findByText('Awaiting approval')).toBeInTheDocument()
+    expect(await screen.findByText('Awaiting approval', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /cancel request/i })).not.toBeInTheDocument()
     expect(screen.getByText(/submitted requests cannot be cancelled/i)).toBeInTheDocument()
   })

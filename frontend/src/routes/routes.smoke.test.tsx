@@ -18,6 +18,7 @@ const playerRoutes: [string, string][] = [
   ['/favorites', 'Favorites'],
   ['/promotions', 'Promotions'],
   ['/game/aurora-dice', 'Aurora Dice'],
+  ['/game/plinko', 'Plinko'],
   ['/wallet', 'Wallet'],
   ['/wallet/deposit', 'Deposit'],
   ['/wallet/deposit/dep-8841', 'Request 8841'],

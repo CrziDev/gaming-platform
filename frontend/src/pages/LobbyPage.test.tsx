@@ -56,7 +56,7 @@ describe('the lobby for a guest', () => {
     renderApp('/')
 
     const all = await screen.findByRole('list', { name: 'All games' })
-    expect(within(all).getAllByRole('listitem')).toHaveLength(3)
+    expect(within(all).getAllByRole('listitem')).toHaveLength(4)
     expect(screen.getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/games')
 
     const tabs = screen.getByRole('tablist', { name: 'Browse by category' })
