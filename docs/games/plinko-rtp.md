@@ -275,7 +275,10 @@ cd backend && go run ./cmd/gameverify solve -config plinko/v1/9600 -target 9600
 ```
 
 bisects the decay per board until the integer model lands on the target, and a test
-in `cmd/gameverify` asserts the checked-in weights are what it produces.
+in `cmd/gameverify` asserts the checked-in weights are what it produces. `solve` reads
+the profile through `ProfileByRef`, which validates every table, so a new profile is
+first checked in with its multipliers and symmetric placeholder weights — all `1` —
+then `solve` prints the weights that replace them.
 
 The multipliers are the supplied paytable, except where a board's floor blocks the
 target (§7). From 11 rows, every low-risk board has a centre of 1.0× or 1.1×, so its

@@ -32,10 +32,19 @@ func rollValue(roll, n int64) uint64 {
 	return value.Uint64()
 }
 
-func TestWeightedIndexWalksCumulativeWeights(t *testing.T) {
+func TestIndexForRollWalksCumulativeWeights(t *testing.T) {
 	weights := []int64{1, 2, 3}
 	for roll, want := range []int{0, 1, 1, 2, 2, 2} {
-		src := &sequenceSource{values: []uint64{rollValue(int64(roll), 6)}}
+		if got := indexForRoll(int64(roll), weights); got != want {
+			t.Fatalf("roll %d: want index %d, got %d", roll, want, got)
+		}
+	}
+}
+
+func TestWeightedIndexDrawsTheRollFromTheSource(t *testing.T) {
+	weights := []int64{1, 2, 3}
+	for roll, want := range map[int64]int{0: 0, 5: 2} {
+		src := &sequenceSource{values: []uint64{rollValue(roll, 6)}}
 		got, err := WeightedIndex(src, weights)
 		if err != nil {
 			t.Fatalf("roll %d: %v", roll, err)

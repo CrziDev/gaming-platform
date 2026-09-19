@@ -34,14 +34,19 @@ func WeightedIndex(src Source, weights []int64) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	roll := rand.New(src).Int64N(total)
+	return indexForRoll(rand.New(src).Int64N(total), weights), nil
+}
+
+// indexForRoll maps a roll in [0, Σ weights) to the slot whose cumulative
+// range holds it; the weights have already been checked.
+func indexForRoll(roll int64, weights []int64) int {
 	for i, weight := range weights {
 		if roll < weight {
-			return i, nil
+			return i
 		}
 		roll -= weight
 	}
-	return len(weights) - 1, nil
+	return len(weights) - 1
 }
 
 func SumWeights(weights []int64) (int64, error) {

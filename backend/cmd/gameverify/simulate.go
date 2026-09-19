@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"os"
 	"runtime"
 	"sync"
@@ -47,10 +48,16 @@ type report struct {
 	Elapsed                time.Duration
 }
 
+// passes is the one verdict: the board's theory is exactly the target and its
+// observed return is within tolerance of it.
+func (b boardResult) passes(target, tolerance int) bool {
+	return b.TheoreticalBasisPoints == target && absInt(b.ObservedBasisPoints-target) <= tolerance
+}
+
 func (r report) failures() []boardResult {
 	var out []boardResult
 	for _, board := range r.Boards {
-		if board.TheoreticalBasisPoints != r.Target || absInt(board.ObservedBasisPoints-r.Target) > r.ToleranceBasisPoints {
+		if !board.passes(r.Target, r.ToleranceBasisPoints) {
 			out = append(out, board)
 		}
 	}
@@ -169,8 +176,13 @@ func simulateBoard(profile plinko.Profile, params plinko.Params, rounds, stakeMi
 	return result, nil
 }
 
+// basisPoints is wins / stakes in basis points, rounded half up. The sums of a
+// long run can be large enough that wins × 10 000 leaves int64, so the ratio is
+// taken in big integers; the result itself is at most a few multiples of 10 000.
 func basisPoints(wins, stakes int64) int {
-	return int((wins*10_000 + stakes/2) / stakes)
+	numerator := new(big.Int).Mul(big.NewInt(wins), big.NewInt(10_000))
+	numerator.Add(numerator, big.NewInt(stakes/2))
+	return int(numerator.Div(numerator, big.NewInt(stakes)).Int64())
 }
 
 func writeReport(w io.Writer, r report) {
@@ -179,7 +191,7 @@ func writeReport(w io.Writer, r report) {
 	fmt.Fprintln(w, "|---:|---|---:|---:|---:|---:|---|")
 	for _, board := range r.Boards {
 		verdict := "yes"
-		if board.TheoreticalBasisPoints != r.Target || absInt(board.ObservedBasisPoints-r.Target) > r.ToleranceBasisPoints {
+		if !board.passes(r.Target, r.ToleranceBasisPoints) {
 			verdict = "NO"
 		}
 		fmt.Fprintf(w, "| %d | %s | %d | %d | %+d | %.0f | %s |\n", board.Params.Rows, board.Params.Risk, board.TheoreticalBasisPoints, board.ObservedBasisPoints, board.ObservedBasisPoints-r.Target, board.NoiseBasisPoints, verdict)

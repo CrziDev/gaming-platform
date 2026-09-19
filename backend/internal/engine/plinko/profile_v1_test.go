@@ -45,7 +45,7 @@ func TestV1EveryBoardReturnsExactlyTheTarget(t *testing.T) {
 }
 
 // The agreed adjustment: from 11 rows, a low-risk board's centre pays 0.9× and
-// its first ring at most 1.0×; nothing else departs from the supplied paytable.
+// its first ring 1.0×; nothing else departs from the supplied paytable.
 func TestV1MultipliersDepartFromSuppliedOnlyAtBlockedCentres(t *testing.T) {
 	for rows := MinRows; rows <= MaxRows; rows++ {
 		for _, risk := range Risks {
@@ -66,7 +66,7 @@ func TestV1MultipliersDepartFromSuppliedOnlyAtBlockedCentres(t *testing.T) {
 					case distance <= 1:
 						want = 90
 					case distance <= 3:
-						want = min(want, 100)
+						want = 100
 					}
 				}
 				if got != want {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"math"
 	"strings"
 	"testing"
 
@@ -72,10 +73,11 @@ func TestRunSimulationRefusesBadArguments(t *testing.T) {
 }
 
 func TestBasisPointsRoundsHalfUp(t *testing.T) {
+	// The last case is a run whose wins × 10 000 does not fit int64.
 	for _, c := range []struct {
 		wins, stakes int64
 		want         int
-	}{{96, 100, 9600}, {1, 3, 3333}, {2, 3, 6667}, {0, 100, 0}} {
+	}{{96, 100, 9600}, {1, 3, 3333}, {2, 3, 6667}, {0, 100, 0}, {math.MaxInt64 / 100 * 96, math.MaxInt64 / 100 * 100, 9600}} {
 		if got := basisPoints(c.wins, c.stakes); got != c.want {
 			t.Fatalf("%d/%d: want %d, got %d", c.wins, c.stakes, c.want, got)
 		}

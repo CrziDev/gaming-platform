@@ -10,6 +10,39 @@ because its licence forbids redistribution. It runs standalone by opening
 `Main/index.html` in a browser; it has no build step. It is vanilla JS with Matter.js
 0.19.0 (MIT) and an in-memory wallet, and it picks its own outcome client-side.
 
+### Assessment
+
+The intake review `../game-engine-integration/SPEC.md` §3 asks for. A preliminary
+review of `state.js`, `logic.js`, and `physics.js` was carried over from the previous
+codebase on 2026-09-13; the complete package was run and reviewed for the port on
+2026-09-19, and this is the result.
+
+```text
+Game:                                Plinko
+Version / source:                    "Plinko — Claymorphism" 1.0, ImpressDev, CodeCanyon; docs/games/source/plinko/
+Review date:                         2026-09-19
+
+Source complete and buildable:       PASS — complete package, no build step, runs from Main/index.html
+Financial flow identifiable:         YES — in-memory balance in state.js, debited and credited in logic.js
+Outcome and RNG identifiable:        YES — physics.js picks a slot with Math.random() over a 0.24 decay; paytable in state.js
+External backend required:           NO — no fetch, XMLHttpRequest, WebSocket, or storage; the only request is Google Fonts
+Server-authoritative outcome viable: YES — the picker is separable from the animation, which steers to a chosen slot
+Central wallet integration viable:   YES — one balance field in state.js, debited and credited in two places in logic.js
+RTP verification viable:             YES — weights and multipliers are plain data (plinko-rtp.md §11)
+
+Risk: MEDIUM
+Required changes: remove the wallet, bet arithmetic, outcome picker, and paytable from the
+  frame; make the server's slot authoritative and hold the ball to it, because the supplied
+  game pays on the physical landing slot rather than the slot it picked; restyle to the
+  platform tokens; change the blocked low-risk boards' centre and ring multipliers
+  (plinko-rtp.md §10).
+Unknowns: which CodeCanyon licence tier was purchased is not recorded in this repository.
+  The Regular terms restrict use to an end product that is free for end users; the
+  Extended terms cover a commercial platform.
+Recommendation: port critical logic — wallet, wager, outcome, and payout to Go; Matter.js
+  stays in the frame as presentation of the server's result.
+```
+
 ## Integrated frame — `games/plinko/web/`
 
 | File | Role |

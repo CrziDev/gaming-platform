@@ -36,7 +36,8 @@ game frontend
 
 ## 3. Source intake and feasibility review
 
-Every game is reviewed before integration, and the result is recorded per game.
+Every game is reviewed before integration, and the result is recorded per game as the
+assessment section of its runtime document, `docs/games/<game-slug>-runtime.md`.
 
 Review only what affects feasibility and safety:
 
@@ -157,8 +158,7 @@ gaming-platform/
 |
 |-- docs/
 |   `-- games/
-|       |-- <game-slug>-assessment.md            source and feasibility findings
-|       |-- <game-slug>-runtime.md               build and runtime instructions
+|       |-- <game-slug>-runtime.md               build and runtime instructions, with the section 3 assessment
 |       `-- <game-slug>-rtp.md                   RTP model, profiles, and verification evidence
 |
 |-- Makefile                                     modified if game build tasks are needed

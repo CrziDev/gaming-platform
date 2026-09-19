@@ -39,18 +39,17 @@ func verify(args []string) error {
 		return fmt.Errorf("verify: open database: %w", err)
 	}
 	defer db.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-	return verifyProfile(ctx, db, os.Stdout, *profileID, *rounds, *stake, *tolerance)
+	return verifyProfile(context.Background(), db, os.Stdout, *profileID, *rounds, *stake, *tolerance)
 }
 
+// databaseTimeout bounds each database call on its own; the simulation between
+// them is CPU-bound and may run for hours at the default sample size.
+const databaseTimeout = time.Minute
+
 func verifyProfile(ctx context.Context, db *sql.DB, out io.Writer, profileID string, rounds, stake int64, tolerance int) error {
-	profile, err := rtp.FindByID(ctx, db, profileID)
+	profile, err := findDraft(ctx, db, profileID)
 	if err != nil {
 		return err
-	}
-	if profile.Status != rtp.StatusDraft {
-		return rtp.ErrNotDraft
 	}
 	config, err := plinko.ProfileByRef(profile.EngineConfigRef)
 	if err != nil {
@@ -65,7 +64,7 @@ func verifyProfile(ctx context.Context, db *sql.DB, out io.Writer, profileID str
 		return fmt.Errorf("verify: %d of %d boards are outside %d bp of the %d bp target; profile left as draft", len(failures), len(result.Boards), tolerance, profile.TargetBasisPoints)
 	}
 
-	verified, err := rtp.Verify(ctx, db, profile.ID, rtp.Evidence{
+	verified, err := recordVerification(ctx, db, profile.ID, rtp.Evidence{
 		EngineConfigRef: config.Ref, Method: method, SampleSize: result.SampleSize,
 		TheoreticalBasisPoints: result.TheoreticalBasisPoints, ObservedBasisPoints: result.ObservedBasisPoints,
 		ToleranceBasisPoints: tolerance,
@@ -75,4 +74,23 @@ func verifyProfile(ctx context.Context, db *sql.DB, out io.Writer, profileID str
 	}
 	fmt.Fprintf(out, "\nVerified %s v%d (%s) for %s at %s.\n", verified.Name, verified.Version, verified.EngineConfigRef, verified.GameName, verified.VerifiedAt.UTC().Format(time.RFC3339))
 	return nil
+}
+
+func findDraft(ctx context.Context, db *sql.DB, profileID string) (rtp.Profile, error) {
+	ctx, cancel := context.WithTimeout(ctx, databaseTimeout)
+	defer cancel()
+	profile, err := rtp.FindByID(ctx, db, profileID)
+	if err != nil {
+		return rtp.Profile{}, err
+	}
+	if profile.Status != rtp.StatusDraft {
+		return rtp.Profile{}, rtp.ErrNotDraft
+	}
+	return profile, nil
+}
+
+func recordVerification(ctx context.Context, db *sql.DB, profileID string, evidence rtp.Evidence) (rtp.Profile, error) {
+	ctx, cancel := context.WithTimeout(ctx, databaseTimeout)
+	defer cancel()
+	return rtp.Verify(ctx, db, profileID, evidence)
 }
