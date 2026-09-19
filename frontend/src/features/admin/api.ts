@@ -5,6 +5,7 @@ import type {
   AccountStatus,
   AdminDeposit,
   AdminGame,
+  AdminRtpConfiguration,
   AdminRound,
   AdminUser,
   Adjustment,
@@ -518,6 +519,41 @@ export async function fetchAdminGame(id: string): Promise<AdminGame | null> {
   }
   try {
     return await api.get<AdminGame>(`/admin/games/${encodeURIComponent(id)}`)
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
+}
+
+export async function fetchAdminRtpConfiguration(
+  id: string,
+  basisPoints: number,
+  rows: number,
+  risk: 'low' | 'normal' | 'high',
+): Promise<AdminRtpConfiguration | null> {
+  if (usingTestFixtures) {
+    const [{ adminGames, plinkoRtpConfiguration }, { isPlinkoRows, isPlinkoRisk }] = await Promise.all([
+      import('@/mocks/admin'),
+      import('@/features/gameplay/multipliers'),
+    ])
+    return mockRequest(() => {
+      const game = adminGames.find((candidate) => candidate.id === id)
+      if (!game || game.slug !== 'plinko') return null
+      if (!game.rtp_options.includes(basisPoints) || !isPlinkoRows(rows) || !isPlinkoRisk(risk)) {
+        throw new ApiError(400, 'One or more fields are invalid')
+      }
+      return plinkoRtpConfiguration(basisPoints, rows, risk)
+    })
+  }
+  const params = new URLSearchParams({
+    rtp_basis_points: String(basisPoints),
+    rows: String(rows),
+    risk,
+  })
+  try {
+    return await api.get<AdminRtpConfiguration>(
+      `/admin/games/${encodeURIComponent(id)}/rtp-configuration?${params.toString()}`,
+    )
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null
     throw error

@@ -2250,6 +2250,41 @@ func TestAdminGameRTPIsSetFromTheEngineOptionsAndAudited(t *testing.T) {
 		t.Fatalf("plinko rtp %v options %v", plinko.RTPBasisPoints, plinko.RTPOptions)
 	}
 
+	configurationPath := base + "/api/admin/games/" + plinkoID + "/rtp-configuration?rtp_basis_points=9500&rows=8&risk=normal"
+	if status, body := send(t, playerClient, http.MethodGet, configurationPath, nil); status != http.StatusForbidden {
+		t.Fatalf("player configuration: want 403, got %d (%s)", status, body)
+	}
+	status, body = send(t, adminClient, http.MethodGet, configurationPath, nil)
+	var configuration struct {
+		ConfigurationRef string `json:"configuration_ref"`
+		RTPBasisPoints   int    `json:"rtp_basis_points"`
+		SelectedBoard    struct {
+			Rows                      int    `json:"rows"`
+			Risk                      string `json:"risk"`
+			TheoreticalRTPBasisPoints int    `json:"theoretical_rtp_basis_points"`
+			Slots                     []struct {
+				Slot                     int `json:"slot"`
+				MultiplierHundredths     int `json:"multiplier_hundredths"`
+				ChanceThousandthsPercent int `json:"chance_thousandths_percent"`
+			} `json:"slots"`
+		} `json:"selected_board"`
+	}
+	if err := json.Unmarshal(body, &configuration); status != http.StatusOK || err != nil {
+		t.Fatalf("get configuration: %d %v (%s)", status, err, body)
+	}
+	chanceTotal := 0
+	for slot, outcome := range configuration.SelectedBoard.Slots {
+		chanceTotal += outcome.ChanceThousandthsPercent
+		if outcome.Slot != slot || outcome.MultiplierHundredths <= 0 {
+			t.Fatalf("bad slot %d: %+v", slot, outcome)
+		}
+	}
+	if configuration.ConfigurationRef != "plinko/9500" || configuration.RTPBasisPoints != 9500 ||
+		configuration.SelectedBoard.Rows != 8 || configuration.SelectedBoard.Risk != "normal" ||
+		configuration.SelectedBoard.TheoreticalRTPBasisPoints != 9500 || len(configuration.SelectedBoard.Slots) != 9 || chanceTotal != 100000 {
+		t.Fatalf("unexpected configuration: %+v, chance total %d", configuration, chanceTotal)
+	}
+
 	for name, c := range map[string]struct {
 		id    string
 		body  any

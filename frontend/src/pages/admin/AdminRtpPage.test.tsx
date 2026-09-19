@@ -24,6 +24,7 @@ describe('admin RTP', () => {
     expect(table.queryByRole('link', { name: 'Vault Break' })).not.toBeInTheDocument()
 
     const plinko = within(table.getByRole('link', { name: 'Plinko' }).closest('tr')!)
+    expect(plinko.getByRole('link', { name: 'View details →' })).toHaveAttribute('href', '/admin/rtp/gm-004')
     expect(plinko.getByText('95.00%', { selector: 'span' })).toBeInTheDocument()
     const activate = plinko.getByRole('button', { name: 'Activate' })
     expect(activate).toBeDisabled()

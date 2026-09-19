@@ -6,7 +6,7 @@ import { ApiError } from '@/api/client'
 import type { AdminGame } from '@/api/types'
 import { ActiveRtp } from '@/components/admin/ActiveRtp'
 import { PageHeading } from '@/components/admin/PageHeading'
-import { Button } from '@/components/ui/Button'
+import { Button, buttonStyles } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Select } from '@/components/ui/Field'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
@@ -111,6 +111,16 @@ export function AdminRtpPage() {
               cell: (row) => <ActiveRtp basisPoints={row.rtp_basis_points} />,
             },
             {
+              key: 'configuration',
+              header: 'Configuration',
+              width: '150px',
+              cell: (row) => row.integration === 'integrated' ? (
+                <Link to={adminPaths.rtpGame(row.id)} className="font-medium text-accent-ink hover:text-accent-hi">
+                  View details →
+                </Link>
+              ) : <span className="text-ink-mute">—</span>,
+            },
+            {
               key: 'change',
               header: 'Change to',
               align: 'right',
@@ -123,7 +133,19 @@ export function AdminRtpPage() {
               title={row.name}
               meta={row.rtp_basis_points === null ? 'no RTP set' : 'playing now'}
               value={<ActiveRtp basisPoints={row.rtp_basis_points} />}
-              actions={controls(row, true)}
+              actions={
+                <>
+                  {row.integration === 'integrated' ? (
+                    <Link
+                      to={adminPaths.rtpGame(row.id)}
+                      className={`${buttonStyles('secondary', 'sm')} col-span-2`}
+                    >
+                      View configuration
+                    </Link>
+                  ) : null}
+                  {controls(row, true)}
+                </>
+              }
             />
           )}
         />

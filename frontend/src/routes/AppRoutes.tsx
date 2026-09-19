@@ -24,6 +24,7 @@ import { AdminGamesPage } from '@/pages/admin/AdminGamesPage'
 import { AdminLoginPage } from '@/pages/admin/AdminLoginPage'
 import { AdminRoundsPage } from '@/pages/admin/AdminRoundsPage'
 import { AdminRtpPage } from '@/pages/admin/AdminRtpPage'
+import { AdminRtpConfigurationPage } from '@/pages/admin/AdminRtpConfigurationPage'
 import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage'
 import { AdminTransactionsPage } from '@/pages/admin/AdminTransactionsPage'
 import { AdminUserDetailPage } from '@/pages/admin/AdminUserDetailPage'
@@ -52,6 +53,7 @@ export function AppRoutes() {
           <Route path={adminPaths.games} element={<AdminGamesPage />} />
           <Route path="/admin/games/:id" element={<AdminGameDetailPage />} />
           <Route path={adminPaths.rtp} element={<AdminRtpPage />} />
+          <Route path="/admin/rtp/:id" element={<AdminRtpConfigurationPage />} />
           <Route path={adminPaths.audit} element={<AdminAuditPage />} />
           <Route path={adminPaths.settings} element={<AdminSettingsPage />} />
         </Route>

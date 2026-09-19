@@ -84,6 +84,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub) http.Handle
 	mux.HandleFunc("GET /api/admin/games/{id}", admin(gameHandler.AdminGet))
 	mux.HandleFunc("PATCH /api/admin/games/{id}", admin(gameHandler.AdminUpdate))
 	mux.HandleFunc("PUT /api/admin/games/{id}/rtp", admin(gameHandler.AdminSetRTP))
+	mux.HandleFunc("GET /api/admin/games/{id}/rtp-configuration", admin(gameHandler.AdminRTPConfiguration))
 	mux.HandleFunc("GET /api/admin/audit-logs", admin(withoutAccount(auditHandler.List)))
 	mux.HandleFunc("GET /api/admin/dashboard", admin(dashboardHandler.Get))
 	mux.HandleFunc("/", notFound)

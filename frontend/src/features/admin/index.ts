@@ -16,6 +16,7 @@ export {
   useAdminGames,
   useAdminPaymentMethods,
   useAdminRounds,
+  useAdminRtpConfiguration,
   useAdminTransactions,
   useAdminUser,
   useAdminUserWallets,

@@ -1,6 +1,7 @@
 import type {
   AdminDeposit,
   AdminGame,
+  AdminRtpConfiguration,
   AdminUser,
   Adjustment,
   AuditEntry,
@@ -8,6 +9,13 @@ import type {
   DashboardSummary,
   Wallet,
 } from '@/api/types'
+import {
+  PLINKO_MULTIPLIERS_HUNDREDTHS,
+  PLINKO_RISKS,
+  PLINKO_ROWS,
+  type PlinkoRisk,
+  type PlinkoRows,
+} from '@/features/gameplay/multipliers'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
 import { games } from './games'
@@ -325,6 +333,54 @@ export const adminGames: AdminGame[] = games.map((game, index) => ({
   rounds_30d: [18_420, 12_880, 6_140][index] ?? 0,
   updated_at: game.created_at,
 }))
+
+export function plinkoRtpConfiguration(
+  basisPoints: number,
+  rows: PlinkoRows,
+  risk: PlinkoRisk,
+): AdminRtpConfiguration {
+  const multipliers = PLINKO_MULTIPLIERS_HUNDREDTHS[rows][risk]
+  const chances = rows === 8 && risk === 'normal'
+    ? [485, 1_567, 5_068, 16_387, 52_986, 16_387, 5_068, 1_567, 485]
+    : binomialChances(rows)
+  return {
+    configuration_ref: `plinko/${basisPoints}`,
+    rtp_basis_points: basisPoints,
+    rows: [...PLINKO_ROWS],
+    risks: [...PLINKO_RISKS],
+    selected_board: {
+      rows,
+      risk,
+      theoretical_rtp_basis_points: basisPoints,
+      slots: multipliers.map((multiplier, slot) => ({
+        slot,
+        multiplier_hundredths: multiplier,
+        chance_thousandths_percent: chances[slot] ?? 0,
+      })),
+    },
+  }
+}
+
+function binomialChances(rows: number): number[] {
+  const weights = Array.from({ length: rows + 1 }, (_, slot) => choose(rows, slot))
+  const total = 2 ** rows
+  const floors = weights.map((weight) => Math.floor((weight * 100_000) / total))
+  const missing = 100_000 - floors.reduce((sum, value) => sum + value, 0)
+  const ranked = weights
+    .map((weight, slot) => ({ slot, remainder: (weight * 100_000) % total }))
+    .sort((a, b) => b.remainder - a.remainder || a.slot - b.slot)
+  for (let i = 0; i < missing; i += 1) {
+    const slot = ranked[i]?.slot ?? 0
+    floors[slot] = (floors[slot] ?? 0) + 1
+  }
+  return floors
+}
+
+function choose(n: number, k: number): number {
+  let result = 1
+  for (let i = 1; i <= k; i += 1) result = (result * (n - i + 1)) / i
+  return result
+}
 
 export const staffAccounts = [
   { id: 'st-1', name: 'R. Cruz', email: 'r.cruz@ops.example.com', role: 'Operator', enabled: true },

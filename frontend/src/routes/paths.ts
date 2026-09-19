@@ -29,6 +29,7 @@ export const adminPaths = {
   game: (id: string) => `/admin/games/${id}`,
   rounds: '/admin/rounds',
   rtp: '/admin/rtp',
+  rtpGame: (id: string) => `/admin/rtp/${id}`,
   audit: '/admin/audit',
   settings: '/admin/settings',
 } as const

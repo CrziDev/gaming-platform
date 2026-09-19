@@ -61,6 +61,27 @@ type manifest struct {
 	MultipliersHundredths map[string]map[Risk][]int `json:"multipliers_hundredths"`
 }
 
+type adminSlot struct {
+	Slot                     int `json:"slot"`
+	MultiplierHundredths     int `json:"multiplier_hundredths"`
+	ChanceThousandthsPercent int `json:"chance_thousandths_percent"`
+}
+
+type adminBoard struct {
+	Rows                      int         `json:"rows"`
+	Risk                      Risk        `json:"risk"`
+	TheoreticalRTPBasisPoints int         `json:"theoretical_rtp_basis_points"`
+	Slots                     []adminSlot `json:"slots"`
+}
+
+type adminConfiguration struct {
+	ConfigurationRef string     `json:"configuration_ref"`
+	RTPBasisPoints   int        `json:"rtp_basis_points"`
+	Rows             []int      `json:"rows"`
+	Risks            []Risk     `json:"risks"`
+	SelectedBoard    adminBoard `json:"selected_board"`
+}
+
 func (Engine) Manifest(configRef string) (json.RawMessage, error) {
 	profile, err := ProfileByRef(configRef)
 	if err != nil {
@@ -82,6 +103,55 @@ func (Engine) Manifest(configRef string) (json.RawMessage, error) {
 	encoded, err := json.Marshal(out)
 	if err != nil {
 		return nil, fmt.Errorf("plinko: encode manifest: %w", err)
+	}
+	return encoded, nil
+}
+
+// AdminConfiguration is the private, inspectable side of a profile. Chances
+// are apportioned at 0.001 percentage-point precision and always total exactly
+// 100.000%, so the console never needs raw draw weights or float correction.
+func (Engine) AdminConfiguration(configRef string, rows int, riskValue string) (json.RawMessage, error) {
+	profile, err := ProfileByRef(configRef)
+	if err != nil {
+		return nil, err
+	}
+	params := Params{Rows: rows, Risk: Risk(riskValue)}
+	table, err := profile.Table(params)
+	if err != nil {
+		return nil, err
+	}
+	theoretical, err := TheoreticalBasisPoints(table)
+	if err != nil {
+		return nil, err
+	}
+	chances, err := normalizedChances(table.Weights)
+	if err != nil {
+		return nil, err
+	}
+	slots := make([]adminSlot, len(table.Weights))
+	for i := range table.Weights {
+		slots[i] = adminSlot{
+			Slot:                     i,
+			MultiplierHundredths:     table.MultipliersHundredths[i],
+			ChanceThousandthsPercent: chances[i],
+		}
+	}
+	availableRows := make([]int, 0, MaxRows-MinRows+1)
+	for candidate := MinRows; candidate <= MaxRows; candidate++ {
+		availableRows = append(availableRows, candidate)
+	}
+	out := adminConfiguration{
+		ConfigurationRef: profile.Ref,
+		RTPBasisPoints:   profile.BasisPoints,
+		Rows:             availableRows,
+		Risks:            Risks,
+		SelectedBoard: adminBoard{
+			Rows: rows, Risk: params.Risk, TheoreticalRTPBasisPoints: theoretical, Slots: slots,
+		},
+	}
+	encoded, err := json.Marshal(out)
+	if err != nil {
+		return nil, fmt.Errorf("plinko: encode admin configuration: %w", err)
 	}
 	return encoded, nil
 }

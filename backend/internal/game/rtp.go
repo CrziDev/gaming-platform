@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -17,6 +18,20 @@ var ErrRTPNotOffered = errors.New("game: that return is not one the engine offer
 // from importing round, which imports game.
 type engineOptions interface {
 	Options(slug string) ([]engine.Option, bool)
+}
+
+type engineConfigurations interface {
+	engineOptions
+	AdminConfiguration(slug, configRef string, rows int, risk string) (json.RawMessage, bool, error)
+}
+
+func configurationRef(options engineOptions, slug string, basisPoints int) (string, bool) {
+	for _, option := range optionsFor(options, slug) {
+		if option.BasisPoints == basisPoints {
+			return option.Ref, true
+		}
+	}
+	return "", false
 }
 
 // SetRTP is the one path that changes the return a game plays at. The value

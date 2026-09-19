@@ -19,6 +19,10 @@ type Engine interface {
 	Manifest(configRef string) (json.RawMessage, error)
 }
 
+type adminConfigurationEngine interface {
+	AdminConfiguration(configRef string, rows int, risk string) (json.RawMessage, error)
+}
+
 // Engines maps a game slug to the engine that plays it; a slug with no entry is
 // a game the platform cannot play, whatever its catalogue row says.
 type Engines map[string]Engine
@@ -29,6 +33,22 @@ func (e Engines) Options(slug string) ([]engine.Option, bool) {
 		return nil, false
 	}
 	return eng.Options(), true
+}
+
+// AdminConfiguration exposes the reviewed outcome distribution to guarded
+// console routes. It deliberately sits outside Manifest: player-facing game
+// metadata must never include the weights used to draw an outcome.
+func (e Engines) AdminConfiguration(slug, configRef string, rows int, risk string) (json.RawMessage, bool, error) {
+	eng, ok := e[slug]
+	if !ok {
+		return nil, false, nil
+	}
+	provider, ok := eng.(adminConfigurationEngine)
+	if !ok {
+		return nil, false, nil
+	}
+	configuration, err := provider.AdminConfiguration(configRef, rows, risk)
+	return configuration, true, err
 }
 
 // optionFor resolves the return a game row holds to the configuration that

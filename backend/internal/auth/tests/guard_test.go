@@ -44,6 +44,7 @@ var adminRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/admin/games/" + anyID},
 	{http.MethodPatch, "/api/admin/games/" + anyID},
 	{http.MethodPut, "/api/admin/games/" + anyID + "/rtp"},
+	{http.MethodGet, "/api/admin/games/" + anyID + "/rtp-configuration?rtp_basis_points=9500&rows=8&risk=normal"},
 	{http.MethodGet, "/api/admin/audit-logs"},
 	{http.MethodGet, "/api/admin/dashboard?currency=PHP"},
 }

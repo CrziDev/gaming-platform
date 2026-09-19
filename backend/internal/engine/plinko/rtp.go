@@ -3,6 +3,7 @@ package plinko
 import (
 	"fmt"
 	"math"
+	"sort"
 
 	"github.com/gaming-platform/backend/internal/engine"
 )
@@ -38,4 +39,36 @@ func TheoreticalBasisPoints(table Table) (int, error) {
 		return 0, fmt.Errorf("plinko: theoretical rtp: %w: basis point scale overflows", engine.ErrInvalidConfig)
 	}
 	return int((weighted*100 + total/2) / total), nil
+}
+
+const chanceScale = int64(100_000) // 100.000%, in thousandths of a percent.
+
+type chanceRemainder struct {
+	slot      int
+	remainder int64
+}
+
+// normalizedChances uses largest-remainder apportionment. Every returned value
+// is an integer thousandth of one percent, and the slice always sums to 100000.
+func normalizedChances(weights []int64) ([]int, error) {
+	total, err := engine.SumWeights(weights)
+	if err != nil {
+		return nil, fmt.Errorf("plinko: normalize chances: %w", err)
+	}
+	chances := make([]int, len(weights))
+	remainders := make([]chanceRemainder, len(weights))
+	assigned := int64(0)
+	for i, weight := range weights {
+		scaled := weight * chanceScale
+		chances[i] = int(scaled / total)
+		assigned += int64(chances[i])
+		remainders[i] = chanceRemainder{slot: i, remainder: scaled % total}
+	}
+	sort.SliceStable(remainders, func(i, j int) bool {
+		return remainders[i].remainder > remainders[j].remainder
+	})
+	for i := int64(0); i < chanceScale-assigned; i++ {
+		chances[remainders[i].slot]++
+	}
+	return chances, nil
 }

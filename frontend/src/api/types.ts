@@ -251,6 +251,25 @@ export type AdminGame = Game & {
   updated_at: string
 }
 
+export type AdminRtpSlot = {
+  slot: number
+  multiplier_hundredths: number
+  chance_thousandths_percent: number
+}
+
+export type AdminRtpConfiguration = {
+  configuration_ref: string
+  rtp_basis_points: number
+  rows: number[]
+  risks: Array<'low' | 'normal' | 'high'>
+  selected_board: {
+    rows: number
+    risk: 'low' | 'normal' | 'high'
+    theoretical_rtp_basis_points: number
+    slots: AdminRtpSlot[]
+  }
+}
+
 export type ConsoleAlert = {
   id: string
   tone: 'warning' | 'danger' | 'neutral'

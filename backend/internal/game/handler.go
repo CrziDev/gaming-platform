@@ -7,10 +7,12 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"github.com/gaming-platform/backend/internal/engine"
 	"github.com/gaming-platform/backend/internal/httpx"
 	"github.com/gaming-platform/backend/internal/money"
 	"github.com/gaming-platform/backend/internal/user"
@@ -400,6 +402,60 @@ func (h *Handler) AdminSetRTP(w http.ResponseWriter, r *http.Request, actor user
 		h.internal(w, r, err)
 	default:
 		httpx.WriteJSON(w, http.StatusOK, h.newAdminResponse(updated, h.now()))
+	}
+}
+
+func (h *Handler) AdminRTPConfiguration(w http.ResponseWriter, r *http.Request, _ user.User) {
+	if !httpx.IsUUID(r.PathValue("id")) {
+		httpx.WriteError(w, http.StatusNotFound, "Game not found")
+		return
+	}
+	item, err := FindByID(r.Context(), h.db, r.PathValue("id"))
+	if errors.Is(err, ErrNoGame) {
+		httpx.WriteError(w, http.StatusNotFound, "Game not found")
+		return
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+
+	query := r.URL.Query()
+	basisPoints, parseErr := strconv.Atoi(query.Get("rtp_basis_points"))
+	if parseErr != nil {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"rtp_basis_points": "Choose one of the game's RTP options"})
+		return
+	}
+	rows, parseErr := strconv.Atoi(query.Get("rows"))
+	if parseErr != nil {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"rows": "Choose an available row count"})
+		return
+	}
+	risk := query.Get("risk")
+	if risk == "" {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"risk": "Choose an available risk"})
+		return
+	}
+	ref, ok := configurationRef(h.options, item.Slug, basisPoints)
+	if !ok {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"rtp_basis_points": "Choose one of the game's RTP options"})
+		return
+	}
+	configurations, ok := h.options.(engineConfigurations)
+	if !ok {
+		httpx.WriteError(w, http.StatusNotFound, "RTP configuration not available")
+		return
+	}
+	configuration, supported, err := configurations.AdminConfiguration(item.Slug, ref, rows, risk)
+	switch {
+	case !supported:
+		httpx.WriteError(w, http.StatusNotFound, "RTP configuration not available")
+	case errors.Is(err, engine.ErrInvalidParams):
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"board": "Choose an available row count and risk"})
+	case err != nil:
+		h.internal(w, r, err)
+	default:
+		httpx.WriteJSON(w, http.StatusOK, configuration)
 	}
 }
 

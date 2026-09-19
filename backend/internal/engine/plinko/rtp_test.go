@@ -49,6 +49,40 @@ func TestTheoreticalBasisPointsIsExactForEvenOdds(t *testing.T) {
 	}
 }
 
+func TestNormalizedChancesAreDisplaySafeAndTotalOneHundredPercent(t *testing.T) {
+	for _, profile := range profiles {
+		for rows := MinRows; rows <= MaxRows; rows++ {
+			for _, risk := range Risks {
+				table, err := profile.Table(Params{Rows: rows, Risk: risk})
+				if err != nil {
+					t.Fatal(err)
+				}
+				chances, err := normalizedChances(table.Weights)
+				if err != nil {
+					t.Fatal(err)
+				}
+				total := 0
+				for _, chance := range chances {
+					total += chance
+				}
+				if total != 100000 {
+					t.Fatalf("%s %d rows %s: want 100000 thousandths of a percent, got %d", profile.Ref, rows, risk, total)
+				}
+			}
+		}
+	}
+
+	profile, _ := ProfileByBasisPoints(9500)
+	table, _ := profile.Table(Params{Rows: 8, Risk: RiskNormal})
+	chances, _ := normalizedChances(table.Weights)
+	want := []int{485, 1567, 5068, 16387, 52986, 16387, 5068, 1567, 485}
+	for i, chance := range chances {
+		if chance != want[i] {
+			t.Fatalf("slot %d: want %d, got %d", i, want[i], chance)
+		}
+	}
+}
+
 func TestTheoreticalBasisPointsRefusesOverflowAndBadTables(t *testing.T) {
 	cases := map[string]Table{
 		"product overflow": {Weights: []int64{math.MaxInt64 / 2}, MultipliersHundredths: []int{3}},

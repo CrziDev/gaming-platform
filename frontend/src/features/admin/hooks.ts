@@ -11,6 +11,7 @@ import {
   fetchAdminPaymentMethods,
   fetchAdminTransactions,
   fetchAdminRounds,
+  fetchAdminRtpConfiguration,
   fetchAllCategories,
   fetchAuditEntries,
   fetchConsoleAlerts,
@@ -143,6 +144,19 @@ export function useAdminGames() {
 
 export function useAdminGame(id: string) {
   return useQuery({ queryKey: ['admin', 'game', id], queryFn: () => fetchAdminGame(id) })
+}
+
+export function useAdminRtpConfiguration(
+  id: string,
+  basisPoints: number | null,
+  rows: number,
+  risk: 'low' | 'normal' | 'high',
+) {
+  return useQuery({
+    queryKey: ['admin', 'game', id, 'rtp-configuration', basisPoints, rows, risk],
+    queryFn: () => fetchAdminRtpConfiguration(id, basisPoints ?? 0, rows, risk),
+    enabled: id !== '' && basisPoints !== null,
+  })
 }
 
 export function useAllCategories() {
