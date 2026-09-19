@@ -32,7 +32,7 @@ export function AdminGamesPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeading
           title="Games"
-          meta="Every game in every status. Only an active game reaches the player catalogue."
+          meta="Only active games appear in the player catalogue."
         />
         {newGame}
       </div>
@@ -47,8 +47,8 @@ export function AdminGamesPage() {
         />
       ) : gamesQuery.data.length === 0 ? (
         <EmptyState
-          title="No games configured"
-          description="Add the first title to start the catalogue. It stays a draft until you activate it."
+          title="No games yet"
+          description="A new game stays a draft until you activate it."
           action={newGame}
         />
       ) : (

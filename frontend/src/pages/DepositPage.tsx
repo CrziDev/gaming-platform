@@ -129,7 +129,7 @@ export function DepositPage() {
     }
 
     toast.push(
-      `Request ${created.reference} sent for review. Funds appear once an admin approves.`,
+      `Request ${created.reference} submitted. Funds are added once it is approved.`,
       'success',
     )
     await navigate(paths.depositStatus(created.id), { replace: true })
@@ -143,7 +143,7 @@ export function DepositPage() {
     return (
       <ErrorState
         title="Deposits unavailable"
-        message="Payment methods and limits could not be loaded. No request was created."
+        message="Payment methods and limits could not be loaded."
         onRetry={() => {
           void methodsQuery.refetch()
           void walletQuery.refetch()
@@ -156,8 +156,7 @@ export function DepositPage() {
   if (methods.length === 0) {
     return (
       <p className="rounded-card bg-surface-1 p-6 text-sm text-ink-mute">
-        Deposits are paused while payment methods are being updated. Nothing is wrong with your
-        account.
+        Deposits are temporarily unavailable. Please try again later.
       </p>
     )
   }
@@ -317,7 +316,7 @@ export function DepositPage() {
             {submitDeposit.isPending ? 'Submitting…' : 'Submit request'}
           </Button>
           <p className="text-center text-[12px] leading-relaxed text-ink-mute">
-            Funds appear only after an admin approves. Typically under 15 minutes.
+            Funds are added once your request is approved, usually within 15 minutes.
           </p>
         </div>
       </form>

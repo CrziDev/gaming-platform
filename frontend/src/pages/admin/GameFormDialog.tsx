@@ -152,8 +152,8 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
       title={editing ? `Edit ${game.name}` : 'New game'}
       description={
         editing
-          ? 'Changes reach the player catalogue immediately. A status other than active hides the game.'
-          : 'A new game starts as a draft: it has a record but no player can see it until it is active.'
+          ? 'Changes apply immediately. Only an active game is visible to players.'
+          : 'A new game starts as a draft and stays hidden from players until it is active.'
       }
       footer={
         <div className="flex flex-col gap-3">
@@ -192,8 +192,8 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
               error={errors.slug?.message}
               hint={
                 editing
-                  ? 'The slug is the game’s address and cannot change.'
-                  : 'Lower-case, hyphenated; becomes /game/<slug>.'
+                  ? 'Cannot be changed after creation.'
+                  : 'Lower-case letters, digits and hyphens. Used in the game’s URL.'
               }
             >
               <Input
@@ -245,7 +245,7 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
               label="Currency"
               htmlFor="game-currency"
               error={errors.currency?.message}
-              hint="One currency per game. Bets are placed from the wallet in that currency."
+              hint="Bets are placed from the player’s wallet in this currency."
             >
               <Select
                 id="game-currency"
@@ -286,7 +286,7 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
               label={`Bet step (${symbol})`}
               htmlFor="game-step"
               error={errors.wager_step?.message}
-              hint="Every bet is the minimum plus a whole number of steps; the maximum must land on one."
+              hint="The maximum must be the minimum plus a whole number of steps."
             >
               <Input
                 id="game-step"

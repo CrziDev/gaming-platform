@@ -102,7 +102,7 @@ function toApiError(status: number, payload: unknown): ApiError {
   const body = payload as ApiErrorBody | null
 
   if (!body || typeof body.error !== 'string') {
-    return new ApiError(status, 'The server returned an unexpected response')
+    return new ApiError(status, 'Something went wrong. Please try again.')
   }
 
   return new ApiError(status, body.error, body.code ?? null, body.fields ?? {})

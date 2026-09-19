@@ -17,9 +17,9 @@ function frame(overrides: Partial<GameFrame> = {}): GameFrame {
 }
 
 describe('GameHost', () => {
-  it('shows the aspect-locked placeholder when there is no frame', () => {
+  it('shows the named placeholder when there is no frame', () => {
     render(<GameHost name="Aurora Dice" />)
-    expect(screen.getByText('game canvas · aspect-locked slot')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Aurora Dice game canvas' })).toHaveTextContent('Aurora Dice')
     expect(screen.queryByTitle('Aurora Dice game')).not.toBeInTheDocument()
   })
 

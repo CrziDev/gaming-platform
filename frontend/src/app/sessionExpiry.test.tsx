@@ -35,9 +35,7 @@ describe('a session that ends without the player asking', () => {
     act(() => reportSessionExpired())
 
     expect(await screen.findByText('Session expired')).toBeInTheDocument()
-    expect(
-      screen.getByText(/balance and any pending deposit are untouched/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/pick up where you left off/i)).toBeInTheDocument()
   })
 
   it('offers to keep browsing, and leaves the lobby usable', async () => {

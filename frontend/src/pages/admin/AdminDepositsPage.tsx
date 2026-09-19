@@ -26,7 +26,7 @@ export function AdminDepositsPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         title="Deposits"
-        meta="Oldest first while pending — the queue is worked from the top, never the newest."
+        meta="Pending requests, oldest first."
       />
 
       {depositsQuery.isPending ? (
@@ -38,7 +38,7 @@ export function AdminDepositsPage() {
           onRetry={() => void depositsQuery.refetch()}
         />
       ) : rows.length === 0 ? (
-        <EmptyState title="Queue clear" description="There are no pending deposit requests." />
+        <EmptyState title="Queue is clear" description="No deposits are waiting for review." />
       ) : (
         <RecordTable
           label="Deposit requests"

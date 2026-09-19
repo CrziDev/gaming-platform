@@ -66,7 +66,7 @@ export function AdminUsersPage() {
           onRetry={() => void usersQuery.refetch()}
         />
       ) : !page || page.rows.length === 0 ? (
-        <EmptyState title="No accounts match" description="Clear the filter or widen the search." />
+        <EmptyState title="No accounts match" description="Try a different search or filter." />
       ) : (
         <RecordTable
           label="Account records"

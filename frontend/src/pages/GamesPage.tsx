@@ -12,8 +12,8 @@ import type { GameFlag } from '@/api/types'
 import { useCategories, useGames, type GameFilters } from '@/features/catalogue'
 
 const shelves: Record<GameFlag, { title: string; empty: string }> = {
-  hot: { title: 'Hot games', empty: 'Nothing is trending right now. The full catalogue is one tap away.' },
-  new: { title: 'New games', empty: 'No new releases this week. The full catalogue is one tap away.' },
+  hot: { title: 'Hot games', empty: 'Nothing is trending right now.' },
+  new: { title: 'New games', empty: 'No new releases this week.' },
 }
 
 export function GamesPage({ flag }: { flag?: GameFlag }) {
@@ -103,7 +103,7 @@ export function GamesPage({ flag }: { flag?: GameFlag }) {
       ) : (
         <EmptyState
           title="No games match"
-          description={shelf?.empty ?? 'Nothing here yet. Clear the filters to see the full catalogue.'}
+          {...(shelf ? { description: shelf.empty } : {})}
           action={
             <Button variant="secondary" size="sm" onClick={() => setParams(new URLSearchParams())}>
               Clear filters

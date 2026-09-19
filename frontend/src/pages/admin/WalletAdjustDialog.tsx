@@ -64,7 +64,7 @@ function AdjustForm({
       return
     }
     if (reason.trim() === '') {
-      setError('A reason is required — it appears in the audit trail')
+      setError('Enter a reason')
       return
     }
 
@@ -115,8 +115,8 @@ function AdjustForm({
       <div className="flex flex-col gap-4">
         {crediting ? null : (
           <p className="rounded-input bg-danger/8 px-3.5 py-3 text-[13px] leading-relaxed text-ink-soft">
-            This removes funds from a player&rsquo;s wallet. A debit cannot exceed the current balance —
-            no negative balances. The player sees the entry in their History as an adjustment.
+            This removes funds from the player&rsquo;s wallet. They will see it in their history as an
+            adjustment.
           </p>
         )}
 
@@ -141,9 +141,9 @@ function AdjustForm({
           </div>
         </Field>
 
-        <Field label="Reason — required, shown in the audit trail" htmlFor="adjust-reason">
+        <Field label="Reason" htmlFor="adjust-reason">
           <Select id="adjust-reason" value={reason} onChange={(event) => setReason(event.target.value)}>
-            <option value="">Select or type a reason</option>
+            <option value="">Select a reason</option>
             {reasonOptions().map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -151,11 +151,6 @@ function AdjustForm({
             ))}
           </Select>
         </Field>
-
-        <p className="text-[12.5px] leading-relaxed text-ink-mute">
-          The new balance is what the server reports after the movement commits; nothing here
-          predicts it.
-        </p>
       </div>
     </Modal>
   )
@@ -175,7 +170,7 @@ function describeAdjustmentFailure(failure: unknown): string {
     case 'WALLET_CLOSED':
       return 'This wallet is closed and cannot receive or release funds.'
     case 'AMOUNT_OVERFLOW':
-      return 'That credit is too large to store safely. Enter a smaller amount.'
+      return 'That amount is too large. Enter a smaller amount.'
   }
   return Object.values(failure.fields)[0] ?? failure.message
 }

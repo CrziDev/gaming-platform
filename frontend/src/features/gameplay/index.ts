@@ -1,6 +1,5 @@
 export { PLINKO_RISKS, PLINKO_ROWS } from './multipliers'
 export type { PlinkoParams, PlinkoRisk, PlinkoRows, PlinkoTable } from './multipliers'
-export { GameNotice } from './GameNotice'
 export { PlinkoControls } from './PlinkoControls'
 export { GameHistory } from './GameHistory'
 export { PLINKO_BANDS, plinkoBand } from './plinkoPalette'

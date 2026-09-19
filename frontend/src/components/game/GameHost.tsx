@@ -69,7 +69,6 @@ export function GameHost({ name, className, ref, frame, frameRef, chrome }: Game
       {!frame ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
           <span className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{name}</span>
-          <span className="label-mono text-ink-mute">game canvas · aspect-locked slot</span>
         </div>
       ) : null}
 
@@ -86,9 +85,9 @@ export function GameHost({ name, className, ref, frame, frameRef, chrome }: Game
 
       {frame?.status === 'error' ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-1 px-6 text-center">
-          <p className="text-[15px] font-semibold tracking-[-0.01em] text-ink">The game did not load</p>
+          <p className="text-[15px] font-semibold tracking-[-0.01em] text-ink">The game didn&rsquo;t load</p>
           <p role="alert" className="max-w-[42ch] text-[13.5px] text-ink-mute text-pretty">
-            {frame.error ?? 'The game page did not answer in time.'}
+            {frame.error ?? 'It took too long to respond.'}
           </p>
           <Button variant="secondary" size="sm" onClick={frame.onRetry}>
             Try again

@@ -38,7 +38,6 @@ export function AdminGameDetailPage() {
     return (
       <EmptyState
         title="Game not found"
-        description="This game is not in the catalogue."
         action={
           <Link to={adminPaths.games} className="text-accent-ink hover:text-accent-hi">
             Back to games
@@ -98,17 +97,6 @@ export function AdminGameDetailPage() {
           {game.description ? (
             <p className="pt-1 text-[12.5px] leading-relaxed text-ink-mute">{game.description}</p>
           ) : null}
-        </Panel>
-
-        <Panel title="Panel slots" bodyClassName="flex flex-col gap-3 p-5">
-          <Row label="Bet controls">Platform-supplied</Row>
-          <Row label="Game parameters">From the game manifest</Row>
-          <Row label="Activity panel">Platform-supplied</Row>
-          <p className="text-[12.5px] leading-relaxed text-ink-mute">
-            A game that ships its own controls leaves the left slot empty and the canvas widens. The
-            slots are host provision, not game features. Integration state is set by the engine
-            review, never here.
-          </p>
         </Panel>
       </div>
 

@@ -23,7 +23,7 @@ type ModalProps = {
   description?: ReactNode
   size?: ModalSize
   footer?: ReactNode
-  children: ReactNode
+  children?: ReactNode
 }
 
 export function Modal({
@@ -122,7 +122,7 @@ export function Modal({
           </IconButton>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-4">{children}</div>
+        {children ? <div className="flex-1 overflow-y-auto px-4 pb-4">{children}</div> : null}
 
         {footer ? <footer className="px-4 pb-4">{footer}</footer> : null}
       </div>

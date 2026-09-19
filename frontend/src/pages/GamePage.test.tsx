@@ -71,14 +71,14 @@ describe('a title without an engine', () => {
     stubFetchRoutes({ 'GET /me': player })
     renderApp('/game/aurora-dice')
 
-    expect(await screen.findByText('game canvas · aspect-locked slot')).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Aurora Dice game canvas' })).toBeInTheDocument()
     expect(screen.queryByTitle(/game$/)).not.toBeInTheDocument()
     expect(screen.queryByRole('radiogroup', { name: 'Rows' })).not.toBeInTheDocument()
 
     const history = await screen.findByRole('table', { name: 'History' })
     expect(within(history).getAllByRole('row').length).toBeGreaterThan(1)
     expect(within(history).queryAllByRole('cell', { name: /Aurora/ })).toHaveLength(0)
-    expect(screen.getByRole('link', { name: 'Open full history' })).toHaveAttribute('href', '/history')
+    expect(screen.getByRole('link', { name: 'See all history' })).toHaveAttribute('href', '/history')
   })
 })
 
@@ -146,16 +146,15 @@ describe('the Plinko game page', () => {
     expect(php.balance_minor).not.toBe(startingBalance)
   })
 
-  it('shows the game notice and, once a round has landed, that round in the history', async () => {
+  it('shows, once a round has landed, that round in the history', async () => {
     const user = userEvent.setup()
     const { iframe, post } = await readyBoard()
 
-    expect(screen.getByRole('region', { name: 'Game notice' })).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'My Activity' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Rules' })).not.toBeInTheDocument()
     expect(screen.queryByText(/^More Originals/)).not.toBeInTheDocument()
     // No fixture round belongs to Plinko, so the feed only says where bets will go.
-    expect(await screen.findByText('Your bets on this game appear here as they settle.')).toBeInTheDocument()
+    expect(await screen.findByText('Your bets on this game will appear here.')).toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'History' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
@@ -229,7 +228,7 @@ describe('the Plinko game page', () => {
 
     await vi.advanceTimersByTimeAsync(10_100)
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('did not answer')
+    expect(await screen.findByRole('alert')).toHaveTextContent('too long to respond')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 })

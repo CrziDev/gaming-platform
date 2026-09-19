@@ -44,7 +44,7 @@ export function AuthModal() {
         joining
           ? 'Takes about a minute.'
           : intent.context
-            ? `${intent.context} is waiting — you'll land straight in it.`
+            ? `You'll go straight to ${intent.context} after signing in.`
             : undefined
       }
       footer={

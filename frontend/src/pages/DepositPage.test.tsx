@@ -37,14 +37,14 @@ describe('submitting a deposit request', () => {
   it('confirms the request in a toast that names the reference', async () => {
     await submitARequest()
 
-    expect(await screen.findByText(/Request 8841 sent for review/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Request 8841 submitted/i)).toBeInTheDocument()
   })
 
   it('never claims the money has landed', async () => {
     await submitARequest()
 
-    const toast = await screen.findByText(/Request 8841 sent for review/i)
-    expect(toast).toHaveTextContent(/Funds appear once an admin approves/i)
+    const toast = await screen.findByText(/Request 8841 submitted/i)
+    expect(toast).toHaveTextContent(/Funds are added once it is approved/i)
     expect(toast).not.toHaveTextContent(/added to your balance|credited|deposit complete/i)
   })
 
@@ -53,6 +53,6 @@ describe('submitting a deposit request', () => {
 
     expect(await screen.findByText('Awaiting approval', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /cancel request/i })).not.toBeInTheDocument()
-    expect(screen.getByText(/submitted requests cannot be cancelled/i)).toBeInTheDocument()
+    expect(screen.getByText(/request can’t be cancelled/i)).toBeInTheDocument()
   })
 })

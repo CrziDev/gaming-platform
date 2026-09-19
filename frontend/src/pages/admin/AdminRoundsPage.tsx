@@ -33,10 +33,7 @@ export function AdminRoundsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeading
-        title="Game rounds"
-        meta="Every round, with its stake, returned amount, and lifecycle state."
-      />
+      <PageHeading title="Game rounds" />
 
       <div className="grid gap-2.5 sm:grid-cols-3">
         <Select

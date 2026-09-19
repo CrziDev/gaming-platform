@@ -16,7 +16,7 @@ import { PROTOCOL_VERSION, type FrameMessage, type PlinkoBoards } from './schema
 
 const READY_TIMEOUT_MS = 10_000
 const SETTLE_FALLBACK_MS = 8_000
-const NOT_ON_THIS_SERVER = 'Plinko is not available on this server yet.'
+const NOT_ON_THIS_SERVER = "Plinko isn't available right now."
 
 export type GameSession = {
   attachFrame: Ref<HTMLIFrameElement | null>
@@ -163,9 +163,9 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
         case 'error':
           if (message.code === 'unsupported_version') {
             setStatus('error')
-            setFrameError('This game page speaks a different protocol version.')
+            setFrameError("This game can't be played right now.")
           } else {
-            toast.push('The game reported a problem. Your rounds are still settled.', 'danger')
+            toast.push('The game hit a problem. Your bets and results are unaffected.', 'danger')
           }
           break
       }
@@ -248,7 +248,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
 
         if (!dropped) {
           settle(roundId)
-          toast.push(`Round settled without the animation: ${label}`)
+          toast.push(`Round result: ${label}`)
         }
       } catch (error) {
         if (error instanceof ApiError && error.code === 'INSUFFICIENT_BALANCE') {
@@ -259,7 +259,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
           toast.push(NOT_ON_THIS_SERVER, 'danger')
           return
         }
-        toast.push(error instanceof Error ? error.message : 'The round could not be placed.', 'danger')
+        toast.push(error instanceof Error ? error.message : 'Your bet could not be placed.', 'danger')
       }
     },
     [currency, mutation, onShortfall, queryClient, settle, slug, toast],

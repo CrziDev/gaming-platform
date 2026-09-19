@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { useFavorites, useGame, useSetFavorite } from '@/features/catalogue'
-import { GameHistory, GameNotice, gameModuleFor, useGameSession, type GameSession } from '@/features/gameplay'
+import { GameHistory, gameModuleFor, useGameSession, type GameSession } from '@/features/gameplay'
 import { useWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatMoney, money, type Money } from '@/lib/money'
@@ -63,7 +63,7 @@ export function GamePage() {
     return (
       <EmptyState
         title="Game unavailable"
-        description="This game is not in the catalogue right now."
+        description="This game isn't available right now."
         action={
           <Link to={paths.games} className="text-accent-ink hover:text-accent-hi">
             Back to games
@@ -130,7 +130,6 @@ export function GamePage() {
             shortfall={shortfall}
             onShortfall={setShortfall}
           />
-          {module ? <GameNotice /> : null}
         </div>
 
         <div className="order-1 mx-auto w-full max-w-[520px] min-w-0 @rail:order-2 @rail:max-w-none">
@@ -210,7 +209,7 @@ function BetControls({
   const place = () => {
     if (!covered()) return
     if (!session) {
-      toast.push(`Stake of ${formatMoney(money(stakeMinor, currency))} sent to the game module.`)
+      toast.push("This game isn't available to play yet.")
       return
     }
     void session.play(stakeMinor)
@@ -262,14 +261,7 @@ function BetControls({
         </div>
       </div>
 
-      {paramsSlot ?? (
-        <div className="rounded-input bg-inset p-3">
-          <p className="font-mono text-[10.5px] leading-relaxed text-ink-mute">
-            Game parameter slot — rows, risk or lines come from the game manifest. Games that ship their
-            own controls leave this panel empty.
-          </p>
-        </div>
-      )}
+      {paramsSlot}
 
       <Button variant="play" size="lg" fullWidth onClick={place} disabled={busy || !offered}>
         PLACE BET

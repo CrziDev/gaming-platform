@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router'
 import { Button, buttonStyles } from '@/components/ui/Button'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
+import { SeeAll } from '@/components/ui/SeeAll'
 import { Skeleton, SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -98,8 +99,7 @@ export function WalletPage() {
               ))}
             </div>
             <p className="text-[12.5px] leading-relaxed text-ink-mute">
-              Pending amounts aren&rsquo;t spendable until an admin approves. Requests can&rsquo;t be
-              cancelled.
+              Funds are added once a request is approved.
             </p>
           </section>
         ) : null}
@@ -107,9 +107,7 @@ export function WalletPage() {
         <section className="flex flex-col gap-3 lg:order-1">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Recent activity</h2>
-            <Link to={paths.history} className="text-[12.5px] font-medium text-accent-ink hover:text-accent-hi">
-              Open full history
-            </Link>
+            <SeeAll to={paths.history} subject="history" />
           </div>
 
           {historyQuery.isPending ? (
@@ -117,13 +115,13 @@ export function WalletPage() {
           ) : historyQuery.isError ? (
             <ErrorState
               title="Activity unavailable"
-              message="Recent movements could not be loaded. Your balance above is unaffected."
+              message="Recent activity could not be loaded."
               onRetry={() => void historyQuery.refetch()}
             />
           ) : recent.length === 0 ? (
             <EmptyState
               title="No activity yet"
-              description="Your stakes, wins and deposits appear here as soon as they settle."
+              description="Your deposits, bets and wins will appear here."
             />
           ) : (
             <RecordTable

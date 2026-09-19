@@ -105,7 +105,7 @@ describe('Plinko against a server without the play endpoint', () => {
 
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
 
-    expect(await screen.findByText('Plinko is not available on this server yet.')).toBeInTheDocument()
+    expect(await screen.findByText("Plinko isn't available right now.")).toBeInTheDocument()
     expect(posted(post, 'drop')).toHaveLength(0)
     expect(screen.getByRole('radio', { name: '8' })).not.toHaveAttribute('aria-disabled')
 
@@ -136,7 +136,7 @@ describe('Plinko without a manifest', () => {
     const { iframe, post } = await openFrame()
     frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Plinko is not available on this server yet.')
+    expect(await screen.findByRole('alert')).toHaveTextContent("Plinko isn't available right now.")
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeDisabled()
     expect(posted(post, 'configure')).toHaveLength(0)
 

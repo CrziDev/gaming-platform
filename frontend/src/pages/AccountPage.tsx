@@ -48,10 +48,6 @@ export function AccountPage() {
       </Panel>
 
       <Panel title="Session" bodyClassName="flex flex-col items-start gap-3 p-5">
-        <p className="text-[13px] leading-relaxed text-ink-mute">
-          Signing out ends the session on this device. Sessions are held server-side and can be
-          revoked by support at any time.
-        </p>
         <Button variant="destructive" onClick={() => setConfirming(true)}>
           Sign out
         </Button>

@@ -19,7 +19,7 @@ export function AdminSettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeading title="Settings" meta="Owner-only changes are marked. Everything here writes to the audit log." />
+      <PageHeading title="Settings" />
 
       <ChipTabs
         items={[
@@ -48,9 +48,7 @@ function MethodsTab() {
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <p className="max-w-[60ch] text-[13px] leading-relaxed text-ink-mute">
-          What appears in the player&rsquo;s deposit step. Each method carries a display name, the
-          account details the player pays into, and whether a reference number is required. Turning
-          every method off disables deposits platform-wide.
+          Disabling every method turns deposits off for all players.
         </p>
         <Button size="sm">
           <Plus aria-hidden size={15} strokeWidth={2} />
@@ -62,8 +60,8 @@ function MethodsTab() {
         <SkeletonRows count={2} />
       ) : (methodsQuery.data ?? []).length === 0 ? (
         <EmptyState
-          title="Managed by configuration"
-          description="Payment methods are seeded by deployment configuration. There is nothing to edit here yet."
+          title="No payment methods"
+          description="Payment methods are set in the platform configuration. Contact an administrator to change them."
         />
       ) : (
         <RecordTable
@@ -117,11 +115,7 @@ function StaffTab() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="max-w-[60ch] text-[13px] leading-relaxed text-ink-mute">
-          Owner grants all access including RTP and staff. Operator covers deposits, users and games.
-          Owner-only section.
-        </p>
+      <div className="flex justify-end">
         <Button size="sm">
           <Plus aria-hidden size={15} strokeWidth={2} />
           Invite staff
@@ -131,10 +125,7 @@ function StaffTab() {
       {staffQuery.isPending ? (
         <SkeletonRows count={3} />
       ) : (staffQuery.data ?? []).length === 0 ? (
-        <EmptyState
-          title="No staff directory"
-          description="The development administrator is provisioned by seed. Staff management is not part of this phase."
-        />
+        <EmptyState title="No staff accounts" description="Contact an administrator to add staff." />
       ) : (
         <RecordTable
           label="Staff accounts"
@@ -189,11 +180,7 @@ function LimitsTab() {
           className="font-mono"
         />
       </Field>
-      <Field
-        label="Concurrent pending requests"
-        htmlFor="limit-pending"
-        hint="One open request per player keeps the queue reconcilable."
-      >
+      <Field label="Concurrent pending requests" htmlFor="limit-pending">
         <Select id="limit-pending" defaultValue="1">
           <option value="1">One at a time</option>
           <option value="many">Unlimited</option>
@@ -223,7 +210,7 @@ function PlatformTab() {
       <Field
         label="Enabled currencies"
         htmlFor="platform-currency"
-        hint="Every player holds a wallet in each enabled currency. Nothing converts between them."
+        hint="Players get a wallet in each enabled currency."
       >
         <Select id="platform-currency" defaultValue="PHP">
           <option value="PHP">PHP · ₱</option>

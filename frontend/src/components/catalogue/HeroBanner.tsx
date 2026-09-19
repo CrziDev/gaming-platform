@@ -31,10 +31,11 @@ export function HeroBanner({ featured }: { featured: Game | undefined }) {
             {featured.name}
           </h1>
 
-          <p className="max-w-[44ch] text-[13.5px] leading-normal text-ink-mute text-pretty">
-            A wallet in every currency you play, and a ledger that reconciles — every stake and
-            every win lands in your history the moment it settles.
-          </p>
+          {featured.description ? (
+            <p className="max-w-[44ch] text-[13.5px] leading-normal text-ink-mute text-pretty">
+              {featured.description}
+            </p>
+          ) : null}
 
           <p className="flex flex-wrap items-center gap-x-2 font-mono text-[11px] text-ink-mute">
             <span>{featured.provider}</span>

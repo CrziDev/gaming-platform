@@ -1,10 +1,10 @@
-import { Bell, ChevronRight } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router'
 
 import type { Notification } from '@/api/types'
 import { IconButton } from '@/components/ui/Button'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
+import { SeeAll } from '@/components/ui/SeeAll'
 import { useMarkNotificationsRead, useNotifications } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatRelative } from '@/lib/format'
@@ -96,14 +96,9 @@ export function NotificationsPanel() {
             ))}
           </ul>
 
-          <Link
-            to={paths.history}
-            onClick={() => setOpen(false)}
-            className="mt-1 flex min-h-11 items-center justify-center gap-1 rounded-input text-[12.5px] font-medium text-accent-ink transition-colors duration-[120ms] hover:bg-wash lg:min-h-9"
-          >
-            See all in History
-            <ChevronRight aria-hidden size={14} strokeWidth={1.5} />
-          </Link>
+          <div className="flex justify-end px-3">
+            <SeeAll to={paths.history} subject="in history" onClick={() => setOpen(false)} />
+          </div>
         </div>
       ) : null}
     </div>

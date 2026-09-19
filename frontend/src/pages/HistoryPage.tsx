@@ -95,7 +95,7 @@ export function HistoryPage() {
         ) : !roundPage || roundPage.rows.length === 0 ? (
           <EmptyState
             title="No rounds in this range"
-            description="Widen the date range to see more of your play history."
+            description="Try a wider date range."
           />
         ) : (
           <>
@@ -181,13 +181,13 @@ export function HistoryPage() {
       ) : historyQuery.isError ? (
         <ErrorState
           title="History unavailable"
-          message="Your ledger could not be loaded."
+          message="Your history could not be loaded."
           onRetry={() => void historyQuery.refetch()}
         />
       ) : !page || page.rows.length === 0 ? (
         <EmptyState
           title="Nothing in this range"
-          description="Widen the date range or clear the type filter to see more of your ledger."
+          description="Try a wider date range or a different filter."
         />
       ) : (
         <>

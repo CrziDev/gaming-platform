@@ -5,6 +5,7 @@ import type { AdminDeposit } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
 import { Button } from '@/components/ui/Button'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
+import { SeeAll } from '@/components/ui/SeeAll'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { StatCard } from '@/components/ui/StatCard'
 import { EmptyState, ErrorState } from '@/components/ui/States'
@@ -32,6 +33,7 @@ export function AdminDashboardPage() {
   const queue = queueQuery.data?.rows ?? []
   const currencies = currenciesQuery.data ?? []
   const alerts = alertsQuery.data ?? []
+  const audit = auditQuery.data?.rows ?? []
   const pendingMeta = summary
     ? `${formatMoney(money(summary.pending_held_minor, summary.currency), { decimals: 'trim' })} held${summary.oldest_pending_at ? ` · oldest ${formatDuration(summary.oldest_pending_at)}` : ''}`
     : ''
@@ -40,7 +42,7 @@ export function AdminDashboardPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         title="Today"
-        meta={`${formatDate(new Date().toISOString())} · every figure below is ${currency} only; currencies are never summed`}
+        meta={`${formatDate(new Date().toISOString())} · ${currency}`}
         actions={
           currencies.length > 1 ? (
             <SegmentedTrack
@@ -96,10 +98,10 @@ export function AdminDashboardPage() {
       <div className="grid gap-5 wide:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] wide:items-start">
         <section className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Deposit queue</h2>
-            <Link to={adminPaths.deposits} className="text-[13px] text-accent-ink hover:text-accent-hi">
-              Open full queue
-            </Link>
+            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
+              Deposit queue
+            </h2>
+            <SeeAll to={adminPaths.deposits} subject="pending deposits" />
           </div>
 
           {queueQuery.isPending ? (
@@ -111,7 +113,7 @@ export function AdminDashboardPage() {
               onRetry={() => void queueQuery.refetch()}
             />
           ) : queue.length === 0 ? (
-            <EmptyState title="Queue is clear" description="No deposit is waiting on a human." />
+            <EmptyState title="Queue is clear" description="No deposits are waiting for review." />
           ) : (
             <RecordTable
               label="Pending deposit queue"
@@ -145,27 +147,23 @@ export function AdminDashboardPage() {
                   }
                 />
               )}
-              footer={
-                <p className="font-mono text-[10.5px] text-ink-mute">
-                  Oldest first, never newest. Approve is only reachable inside Review — the proof must
-                  be seen before funds move.
-                </p>
-              }
             />
           )}
         </section>
 
         <div className="flex flex-col gap-5">
           {alerts.length > 0 ? (
-            <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
-              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Needs attention</h2>
-              <ul className="flex flex-col gap-2.5">
+            <section className="flex flex-col gap-3">
+              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
+                Needs attention
+              </h2>
+              <ul className="flex flex-col gap-0.5">
                 {alerts.map((alert) => (
                   <li key={alert.id}>
                     <Link
                       to={alert.href}
                       className={cn(
-                        'flex min-h-11 items-center gap-3 rounded-input px-3 text-[13px]',
+                        'flex min-h-11 items-center gap-3 rounded-tile px-3 text-[13px]',
                         alert.tone === 'warning' && 'bg-warning/10',
                         alert.tone === 'danger' && 'bg-danger/10',
                         alert.tone === 'neutral' && 'bg-surface-1',
@@ -186,33 +184,39 @@ export function AdminDashboardPage() {
                   </li>
                 ))}
               </ul>
-              <p className="text-[12px] leading-relaxed text-ink-mute">
-                Only states a human must resolve or has deliberately created. Nothing informational,
-                nothing that clears itself.
-              </p>
             </section>
           ) : null}
 
-          <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
+          <section className="flex flex-col gap-3">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Activity log</h2>
-              <Link to={adminPaths.audit} className="text-[12.5px] text-accent-ink hover:text-accent-hi">
-                All
-              </Link>
+              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
+                Activity log
+              </h2>
+              <SeeAll to={adminPaths.audit} subject="audit entries" />
             </div>
-            <ul className="flex flex-col gap-3">
-              {auditQuery.data?.rows.map((entry) => (
-                <li key={entry.id} className="flex gap-3">
-                  <span className="w-11 shrink-0 font-mono text-[11.5px] text-ink-mute">
-                    {formatClock(entry.created_at)}
-                  </span>
-                  <span className="text-[13px] leading-snug text-ink-soft">{entry.detail}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-[12px] leading-relaxed text-ink-mute">
-              Every money and config action is attributed and immutable.
-            </p>
+
+            {auditQuery.isPending ? (
+              <SkeletonRows count={3} />
+            ) : auditQuery.isError ? (
+              <ErrorState
+                title="Activity unavailable"
+                message="Recent actions could not be loaded."
+                onRetry={() => void auditQuery.refetch()}
+              />
+            ) : audit.length === 0 ? (
+              <EmptyState title="No activity yet" />
+            ) : (
+              <ul className="flex flex-col gap-3 rounded-card bg-surface-1 p-4">
+                {audit.map((entry) => (
+                  <li key={entry.id} className="flex gap-3">
+                    <span className="w-11 shrink-0 font-mono text-[11.5px] text-ink-mute">
+                      {formatClock(entry.created_at)}
+                    </span>
+                    <span className="text-[13px] leading-snug text-ink-soft">{entry.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
       </div>

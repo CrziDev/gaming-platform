@@ -204,7 +204,7 @@ describe('searching from the rail', () => {
     await user.click(within(results).getByRole('button', { name: /Plinko/ }))
 
     const dialog = await screen.findByRole('dialog', { name: 'Sign in to play' })
-    expect(dialog).toHaveTextContent('Plinko is waiting')
+    expect(dialog).toHaveTextContent('straight to Plinko')
   })
 
   it('drops the results and restores the navigation when the box is cleared', async () => {

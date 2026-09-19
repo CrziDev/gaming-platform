@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
-
 import type { Round } from '@/api/types'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
+import { SeeAll } from '@/components/ui/SeeAll'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/States'
 import { useRecentRounds } from '@/features/wallet'
@@ -70,9 +69,7 @@ function HistorySection({ children }: { children: ReactNode }) {
     <section aria-label="History" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">History</h2>
-        <Link to={paths.history} className="text-[12.5px] font-medium text-accent-ink hover:text-accent-hi">
-          Open full history
-        </Link>
+        <SeeAll to={paths.history} subject="history" />
       </div>
       {children}
     </section>
@@ -97,7 +94,7 @@ export function GameHistory({ gameId }: GameHistoryProps) {
     return (
       <ErrorState
         title="History unavailable"
-        message="Your rounds on this game could not be loaded. The board and your balance are unaffected."
+        message="Your recent bets could not be loaded."
         onRetry={() => void query.refetch()}
       />
     )
@@ -107,7 +104,7 @@ export function GameHistory({ gameId }: GameHistoryProps) {
   if (rows.length === 0) {
     return (
       <HistorySection>
-        <p className="text-[13px] text-ink-mute text-pretty">Your bets on this game appear here as they settle.</p>
+        <p className="text-[13px] text-ink-mute text-pretty">Your bets on this game will appear here.</p>
       </HistorySection>
     )
   }

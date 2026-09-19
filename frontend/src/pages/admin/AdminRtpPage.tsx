@@ -63,7 +63,7 @@ export function AdminRtpPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         title="RTP"
-        meta="Each integrated game plays at one of the returns its engine ships. A switch takes effect on the next round and holds until the next switch."
+        meta="A change takes effect on the next round."
       />
 
       <p className="flex items-start gap-3 rounded-card bg-danger/6 px-4 py-3.5 text-[13px] leading-relaxed text-ink-soft">
@@ -81,8 +81,7 @@ export function AdminRtpPage() {
         />
       ) : games.length === 0 ? (
         <EmptyState
-          title="No game has an RTP to set"
-          description="A game gets RTP options when an engine on this server plays it."
+          title="No games with RTP options"
           action={
             <Link to={adminPaths.games} className="text-accent-ink hover:text-accent-hi">
               Open games
@@ -160,7 +159,7 @@ function SwitchDialog({ request, onClose }: { request: Switch; onClose: () => vo
     <ConfirmDialog
       open
       title={`Switch ${game.name} to ${phrase}?`}
-      description={`Every new round settles at ${phrase}. Rounds already open are unaffected.`}
+      description={`New rounds play at ${phrase}. Rounds already in progress are unaffected.`}
       confirmLabel={`Switch to ${phrase}`}
       tone={negativeMargin ? 'destructive' : 'primary'}
       pending={setRtp.isPending}

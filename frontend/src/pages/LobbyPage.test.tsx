@@ -78,7 +78,7 @@ describe('the lobby for a guest', () => {
     await user.click(within(all).getByRole('button', { name: /Vault Break/ }))
 
     expect(await screen.findByRole('dialog', { name: 'Sign in to play' })).toBeInTheDocument()
-    expect(screen.getByText(/Vault Break is waiting/)).toBeInTheDocument()
+    expect(screen.getByText(/straight to Vault Break/)).toBeInTheDocument()
   })
 })
 
