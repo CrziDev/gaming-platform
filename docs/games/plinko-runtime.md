@@ -63,7 +63,7 @@ dropped. `engine` is the part every game shares; `engine/plinko` is this game's 
 | `plinko/profile_v1.go` | The baseline configuration `plinko/v1/9600`: weights and multipliers for all 27 boards, `plinko-rtp.md` §10 |
 | `plinko/profiles.go` | `ProfileByRef`, the lookup an RTP profile row's `engine_config_ref` resolves through |
 | `plinko/engine.go` | `Engine.Play`: decodes the public parameters (unknown fields refused), resolves the configuration, picks the slot from the secure source, and returns the payout, multiplier, and `{rows, risk, slot}` |
-| `backend/cmd/seed/profiles.go` | The development fixture: `plinko` integrated in the catalogue with `Baseline` v1 verified, active, and default |
+| `backend/cmd/seed/profiles.go` | The development fixture: `plinko` integrated in the catalogue with `Baseline` v1 verified, active, and default. `seed_test.go` runs the catalogue seed against the test database in a rolled-back transaction and asserts one active default whose `engine_config_ref` the engine resolves; CI also runs `make seed` after the suite |
 | `backend/cmd/gameverify` | Offline tooling: `solve` derives a profile's weights from its multipliers, `simulate` plays every board through the production `Pick` and `Payout` path, and `verify` does the same for a draft RTP profile row and marks it verified through `rtp.Verify` (`plinko-rtp.md` §11) |
 
 Deterministic sources exist only in `_test.go` files; nothing at runtime can select one.

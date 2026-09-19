@@ -63,6 +63,12 @@ jobs:
       - name: Test with PostgreSQL required
         run: make test
 
+      - name: Seed the migrated database
+        run: make seed
+        env:
+          SEED_USER_EMAIL: owner@example.com
+          SEED_USER_PASSWORD: ci-seed-only
+
       - name: Build
         run: make build
 

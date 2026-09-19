@@ -33,11 +33,13 @@ const upsertGame = `
 	       updated_at       = now()`
 
 // The slug the integrated title replaced; a development database that still has
-// it converges on the new row unless rounds were played against the old one.
+// it converges on the new row unless rounds or RTP profiles reference the old one,
+// in which case the row stays rather than the seed failing on their foreign keys.
 const deleteLegacyPlinko = `
 	DELETE FROM games
 	 WHERE slug = 'plinko-drop'
-	   AND NOT EXISTS (SELECT 1 FROM game_rounds WHERE game_rounds.game_id = games.id)`
+	   AND NOT EXISTS (SELECT 1 FROM game_rounds WHERE game_rounds.game_id = games.id)
+	   AND NOT EXISTS (SELECT 1 FROM rtp_profiles WHERE rtp_profiles.game_id = games.id)`
 
 type category struct {
 	slug      string
