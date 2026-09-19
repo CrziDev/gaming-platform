@@ -47,6 +47,22 @@ Buckets are flat bands by distance from the centre: edge `gold`/`on-gold`, next 
 `surface-3`. The landing bucket lifts a few pixels for 260 ms with an `ink` outline and
 the host's result label is drawn above it in `win`. No gradients, shadows, or glows.
 
+## Server engine — `backend/internal/engine/`
+
+The outcome is decided on the server, in integer arithmetic, before the ball is
+dropped. `engine` is the part every game shares; `engine/plinko` is this game's rules.
+
+| File | Role |
+| --- | --- |
+| `engine/random.go` | `SecureSource` on `crypto/rand`, the only source a production round may draw from, and `WeightedIndex`, an unbiased draw over integer weights via `math/rand/v2` |
+| `engine/errors.go` | `ErrInvalidParams`, `ErrUnknownConfig`, `ErrInvalidConfig`, `ErrInvalidWeights`, shared so the round package maps them without importing a game |
+| `plinko/config.go` | `Params` (rows 8–16, risk low/normal/high), `Table` (one board's slot weights and multipliers, symmetric), `Profile` (a table for every board, addressed by `engine_config_ref`) |
+| `plinko/supplied.go` | The vendor paytable in hundredths and the vendor `0.24` decay as integer weights — reference data for deriving and checking profiles, never played directly |
+| `plinko/rules.go` | `Pick` (a slot from a table) and `Payout` (`stake × multiplier / 100`, overflow-checked, truncating; exact under a wager step that is a multiple of 100) |
+| `plinko/rtp.go` | `TheoreticalBasisPoints` — `Σ w·m / Σ w` in integers; its tests reproduce every figure in `plinko-rtp.md` §5 |
+
+Deterministic sources exist only in `_test.go` files; nothing at runtime can select one.
+
 ## Serving
 
 `frontend/vite/gameFrames.ts` serves `games/plinko/web/` at `/games/plinko/` in
