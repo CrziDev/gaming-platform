@@ -144,9 +144,12 @@ the public shape of what that engine plays — for Plinko, `rows`, `risks`, and
 tells the client the table it holds is no longer the one rounds settle on.
 
 Payment methods are configuration-managed. There is no operator
-payment-method mutation endpoint. Seeded destination placeholders are disabled;
-deployment configuration must replace the destination and explicitly enable a method
-before players can submit deposits through it.
+payment-method mutation endpoint. The migration creates GCash and Maya disabled with a
+placeholder destination; deployment configuration must replace the destination and
+explicitly enable a method before players can submit deposits through it. `make seed`
+enables both for development with destinations that are visibly not real accounts, so
+the deposit flow can be exercised locally without a production destination ever being
+seeded.
 
 ### Operator
 

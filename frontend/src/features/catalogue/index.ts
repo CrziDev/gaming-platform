@@ -15,6 +15,7 @@ export {
   useCategories,
   useFavorites,
   useGame,
+  useGameSearch,
   useGames,
   useGamesByIds,
   useLobbyRows,

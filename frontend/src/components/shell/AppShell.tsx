@@ -6,13 +6,14 @@ import { BottomNav } from './BottomNav'
 import { ChatRail } from './ChatRail'
 import { Header } from './Header'
 import { MobileDrawer } from './MobileDrawer'
-import { SearchSheet } from './SearchSheet'
+import { useSearchShortcut } from './searchShortcut'
 import { ShellProvider } from './ShellContext'
 import { Sidebar } from './Sidebar'
 
 export function AppShell() {
   return (
     <ShellProvider>
+      <SearchShortcut />
       <div className="flex h-dvh flex-col overflow-hidden bg-base">
         <Header />
 
@@ -30,8 +31,12 @@ export function AppShell() {
       </div>
 
       <MobileDrawer />
-      <SearchSheet />
       <AuthModal />
     </ShellProvider>
   )
+}
+
+function SearchShortcut() {
+  useSearchShortcut()
+  return null
 }

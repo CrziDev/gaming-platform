@@ -87,6 +87,10 @@ func run() error {
 		return err
 	}
 
+	if err := seedPaymentMethods(ctx, tx); err != nil {
+		return err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("seed: commit: %w", err)
 	}
@@ -94,6 +98,7 @@ func run() error {
 	fmt.Printf("seeded admin %s (%s)\n", adminEmail, adminID)
 	fmt.Printf("seeded %d players with opening balances\n", playerCount)
 	fmt.Printf("seeded %d categories, %d games, and %d RTP profiles\n", len(categories), len(games), len(profiles))
+	fmt.Printf("seeded %d payment methods with development destinations\n", len(paymentMethods))
 	return nil
 }
 

@@ -23,3 +23,15 @@ export const railLabel: Record<RailMode, string> = {
   collapsed: 'sr-only',
   auto: 'sr-only @rail-wide:not-sr-only',
 }
+
+export const railWide: Record<RailMode, string> = {
+  expanded: 'flex',
+  collapsed: 'hidden',
+  auto: 'hidden @rail-wide:flex',
+}
+
+export const railNarrow: Record<RailMode, string> = {
+  expanded: 'hidden',
+  collapsed: 'flex',
+  auto: 'flex @rail-wide:hidden',
+}

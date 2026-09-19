@@ -17,7 +17,7 @@ so a real deployment renders the empty state for those surfaces rather than fixt
 content. A page stays unchecked while any of its visible data sources has no server.
 
 Audited against the frontend on 2026-09-19: every route below exists, every data hook
-on every page was traced to its adapter in `features/*/api.ts`, and the 159 frontend
+on every page was traced to its adapter in `features/*/api.ts`, and the 177 frontend
 tests pass.
 
 ## Public and player pages
@@ -47,7 +47,7 @@ Features that live in the chrome rather than on one route. The same rule applies
 means the server is behind it.
 
 - [x] **Header balance chip** — the active wallet's real balance on every authenticated route; switching happens on the wallet page
-- [x] **Search games** — `⌘K` / rail / drawer sheet, real catalogue search, hands off to `/games?q=`
+- [x] **Search games** — inline box at the top of the rail and drawer; real catalogue results list beneath it, above the navigation, until the box is cleared; `⌘K` focuses it; Enter and "See all results" hand off to `/games?q=`
 - [x] **Auth modal and deep links** — `/login` and `/register` open the modal over the lobby, a guest picking a game or a locked nav item is sent back to where they were after signing in
 - [x] **Session expired dialog** — raised when a live session stops being recognised, never on a deliberate sign-out; tested
 - [x] **Account menu** — Wallet, History, Account, Sign out against the real session

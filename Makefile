@@ -135,7 +135,7 @@ db-reset: ## Roll every migration back, re-apply, and re-seed
 db-shell: ## Open a psql session against the development database
 	psql "$(DATABASE_URL)"
 
-seed: ## Create or reset the development admin, funded demo players, and game catalogue
+seed: ## Create or reset the development admin, funded demo players, game catalogue, and enabled payment methods
 	cd $(BACKEND_DIR) && go run ./cmd/seed
 
 simulate-plinko: ## Play every Plinko board through the production engine and report the observed return

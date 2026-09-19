@@ -1,4 +1,4 @@
-import { Globe, LifeBuoy, Search, X } from 'lucide-react'
+import { Globe, LifeBuoy, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link } from 'react-router'
 
@@ -6,13 +6,14 @@ import { paths } from '@/routes/paths'
 
 import { NavList } from './NavList'
 import { playerNav } from './nav'
+import { RailSearch } from './RailSearch'
 import { useShell } from './ShellContext'
 
 const footerRow =
   'flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13px] text-ink-mute hover:text-ink-soft'
 
 export function MobileDrawer() {
-  const { drawerOpen, setDrawerOpen, setSearchOpen } = useShell()
+  const { drawerOpen, setDrawerOpen } = useShell()
 
   useEffect(() => {
     if (!drawerOpen) {
@@ -53,17 +54,7 @@ export function MobileDrawer() {
         </div>
 
         <div className="px-2 pb-3">
-          <button
-            type="button"
-            onClick={() => {
-              close()
-              setSearchOpen(true)
-            }}
-            className="flex min-h-11 w-full items-center gap-2.5 rounded-input bg-inset px-2.5 text-[13px] text-ink-mute"
-          >
-            <Search aria-hidden size={16} strokeWidth={1.5} />
-            Search games
-          </button>
+          <RailSearch mode="expanded" onNavigate={close} />
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2">

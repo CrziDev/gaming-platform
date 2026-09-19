@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
+import type { ComponentProps, ReactNode, SelectHTMLAttributes } from 'react'
 
 import { cn } from '@/lib/cn'
 
@@ -36,7 +36,7 @@ export function Field({ label, htmlFor, error, hint, action, children }: FieldPr
   )
 }
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(inputClass, className)} {...props} />
 }
 

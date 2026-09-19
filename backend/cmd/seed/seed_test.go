@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -238,5 +239,54 @@ func TestSeedPlayersFundsEachWalletOnceThroughTheLedger(t *testing.T) {
 	}
 	if actor != adminID {
 		t.Fatalf("opening balances were credited by %s, want the admin %s", actor, adminID)
+	}
+}
+
+func TestSeedPaymentMethodsEnablesEachMethodOnceWithoutARealDestination(t *testing.T) {
+	db := openSeedTestDB(t)
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback() })
+
+	// GCash takes the update path; Maya is renamed away so the insert path runs too.
+	var legacyBefore bool
+	if err := tx.QueryRowContext(ctx, `UPDATE payment_methods SET name = 'Legacy Maya' WHERE name = 'Maya' RETURNING enabled`).Scan(&legacyBefore); err != nil {
+		t.Fatal(err)
+	}
+
+	for run := 1; run <= 2; run++ {
+		if err := seedPaymentMethods(ctx, tx); err != nil {
+			t.Fatalf("seed %d: %v", run, err)
+		}
+		for _, want := range paymentMethods {
+			var count int
+			var payTo string
+			var enabled bool
+			if err := tx.QueryRowContext(ctx, `
+				SELECT count(*), min(pay_to), bool_and(enabled)
+				  FROM payment_methods WHERE name = $1`, want.name).Scan(&count, &payTo, &enabled); err != nil {
+				t.Fatalf("%s: %v", want.name, err)
+			}
+			if count != 1 {
+				t.Fatalf("seed %d: %d rows named %s, want 1", run, count, want.name)
+			}
+			if !enabled || payTo != want.payTo {
+				t.Fatalf("seed %d: %s enabled %t pay_to %q, want enabled with %q", run, want.name, enabled, payTo, want.payTo)
+			}
+			if payTo == "To be supplied" || !strings.Contains(payTo, "development placeholder") {
+				t.Fatalf("%s destination %q could be read as a real account", want.name, payTo)
+			}
+		}
+	}
+
+	var legacyAfter bool
+	if err := tx.QueryRowContext(ctx, `SELECT enabled FROM payment_methods WHERE name = 'Legacy Maya'`).Scan(&legacyAfter); err != nil {
+		t.Fatal(err)
+	}
+	if legacyAfter != legacyBefore {
+		t.Fatal("the seed changed a method it does not define")
 	}
 }

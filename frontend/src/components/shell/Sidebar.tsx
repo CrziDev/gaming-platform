@@ -1,14 +1,15 @@
-import { Globe, LifeBuoy, Search } from 'lucide-react'
+import { Globe, LifeBuoy } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
 
 import { NavList } from './NavList'
 import { playerNav } from './nav'
 import { railLabel, railMode, railRow, railWidth } from './rail'
+import { RailSearch } from './RailSearch'
 import { useShell } from './ShellContext'
 
 export function Sidebar() {
-  const { rail, setSearchOpen } = useShell()
+  const { rail } = useShell()
   const mode = railMode(rail)
 
   const footerRow = cn(
@@ -24,18 +25,7 @@ export function Sidebar() {
         railWidth[mode],
       )}
     >
-      <button
-        type="button"
-        onClick={() => setSearchOpen(true)}
-        className={cn(
-          'flex min-h-11 w-full items-center gap-2.5 rounded-input bg-inset px-2.5 text-[13px] text-ink-mute',
-          'transition-colors duration-[120ms] hover:bg-wash hover:text-ink-soft lg:min-h-[34px]',
-          railRow[mode],
-        )}
-      >
-        <Search aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
-        <span className={railLabel[mode]}>Search games</span>
-      </button>
+      <RailSearch mode={mode} />
 
       <nav>
         <NavList items={playerNav} mode={mode} />

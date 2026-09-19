@@ -13,8 +13,11 @@ type ShellValue = {
   setChatOpen: (open: boolean) => void
   drawerOpen: boolean
   setDrawerOpen: (open: boolean) => void
-  searchOpen: boolean
-  setSearchOpen: (open: boolean) => void
+  search: string
+  setSearch: (term: string) => void
+  searchFocus: number
+  focusSearch: () => void
+  searchFocused: () => void
 }
 
 const ShellContext = createContext<ShellValue | null>(null)
@@ -23,12 +26,24 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const [rail, setRail] = useRememberedChoice('shell.rail', railChoices)
   const [chatOpen, setChatOpen] = useRemembered('shell.chat-open', true)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [searchFocus, setSearchFocus] = useState(0)
 
   const toggleRail = useCallback(() => {
     const expanded = rail === null ? railWideByDefault() : rail === 'expanded'
     setRail(expanded ? 'collapsed' : 'expanded')
   }, [rail, setRail])
+
+  const focusSearch = useCallback(() => {
+    if (railVisible()) {
+      setRail('expanded')
+    } else {
+      setDrawerOpen(true)
+    }
+    setSearchFocus((count) => count + 1)
+  }, [setRail])
+
+  const searchFocused = useCallback(() => setSearchFocus(0), [])
 
   const value = useMemo(
     () => ({
@@ -38,10 +53,13 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       setChatOpen,
       drawerOpen,
       setDrawerOpen,
-      searchOpen,
-      setSearchOpen,
+      search,
+      setSearch,
+      searchFocus,
+      focusSearch,
+      searchFocused,
     }),
-    [rail, toggleRail, chatOpen, setChatOpen, drawerOpen, searchOpen],
+    [rail, toggleRail, chatOpen, setChatOpen, drawerOpen, search, searchFocus, focusSearch, searchFocused],
   )
 
   return <ShellContext value={value}>{children}</ShellContext>

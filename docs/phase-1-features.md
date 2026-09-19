@@ -271,6 +271,8 @@ wallet list needed by account details, is complete.
 ## 6. Manual deposits
 
 - [x] List enabled payment methods such as GCash and Maya.
+- [x] `make seed` enables GCash and Maya with development placeholder destinations; the
+  migration alone leaves them disabled.
 - [x] Show payment instructions and destination details.
 - [x] Validate the selected method, wallet, currency, amount, and required reference on
   the server.
