@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/ratelimit"
 	"github.com/gaming-platform/backend/internal/user"
 )
 
@@ -34,7 +35,7 @@ type Handler struct {
 	db      *sql.DB
 	logger  *slog.Logger
 	cfg     Config
-	limiter *rateLimiter
+	limiter *ratelimit.Limiter
 }
 
 func NewHandler(db *sql.DB, logger *slog.Logger, cfg Config) *Handler {
@@ -42,7 +43,7 @@ func NewHandler(db *sql.DB, logger *slog.Logger, cfg Config) *Handler {
 		db:      db,
 		logger:  logger,
 		cfg:     cfg,
-		limiter: newRateLimiter(cfg.LoginsPerMinute, time.Minute),
+		limiter: ratelimit.New(cfg.LoginsPerMinute, time.Minute),
 	}
 }
 

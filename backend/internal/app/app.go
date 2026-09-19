@@ -7,6 +7,7 @@ import (
 
 	"github.com/gaming-platform/backend/internal/audit"
 	"github.com/gaming-platform/backend/internal/auth"
+	"github.com/gaming-platform/backend/internal/chat"
 	"github.com/gaming-platform/backend/internal/currency"
 	"github.com/gaming-platform/backend/internal/dashboard"
 	"github.com/gaming-platform/backend/internal/deposit"
@@ -19,7 +20,7 @@ import (
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
-func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
+func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub) http.Handler {
 	authHandler := auth.NewHandler(db, logger, auth.Config{
 		CookieName:      cfg.CookieName,
 		CookieSecure:    cfg.CookieSecure,
@@ -34,6 +35,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	dashboardHandler := dashboard.NewHandler(db, logger)
 	auditHandler := audit.NewHandler(db, logger)
 	roundHandler := round.NewHandler(db, logger, round.Engines{"plinko": plinko.New()})
+	chatHandler := chat.NewHandler(db, logger, hub, chat.Config{MessagesPerMinute: cfg.ChatMessagesPerMinute, AllowedOrigins: cfg.AllowedOrigins})
 	player, admin := authHandler.Player, authHandler.Admin
 
 	mux := http.NewServeMux()
@@ -59,6 +61,9 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/wallets/{currency}/transactions", player(walletHandler.Transactions))
 	mux.HandleFunc("GET /api/transactions", player(walletHandler.Transactions))
 	mux.HandleFunc("GET /api/transactions/summary", player(walletHandler.Summary))
+	mux.HandleFunc("GET /api/chat/messages", chatHandler.Messages)
+	mux.HandleFunc("POST /api/chat/messages", player(chatHandler.Post))
+	mux.HandleFunc("GET /api/chat/socket", chatHandler.Socket)
 	mux.HandleFunc("GET /api/rounds", player(roundHandler.List))
 	mux.HandleFunc("GET /api/rounds/{id}", player(roundHandler.Get))
 	mux.HandleFunc("GET /api/admin/users", admin(authHandler.AdminUsers))

@@ -5,7 +5,7 @@ import type { ChatMessage } from '@/api/types'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuthIntent, useSession } from '@/features/auth'
-import { chatAvailable, useChatRoom, useSendChatMessage } from '@/features/chat'
+import { useChatRoom, useChatSocket, useSendChatMessage } from '@/features/chat'
 import { cn } from '@/lib/cn'
 import { formatClock } from '@/lib/format'
 
@@ -13,9 +13,11 @@ import { useShell } from './ShellContext'
 
 export function ChatRail() {
   const { chatOpen, setChatOpen } = useShell()
-  const room = useChatRoom(chatAvailable && chatOpen)
+  const room = useChatRoom(chatOpen)
+  const socket = useChatSocket(chatOpen)
+  const online = socket.online ?? room.data?.online
 
-  if (!chatAvailable || !chatOpen) {
+  if (!chatOpen) {
     return null
   }
 
@@ -23,10 +25,10 @@ export function ChatRail() {
     <aside aria-label="Live chat" className="hidden w-[272px] shrink-0 flex-col bg-panel @chat:flex">
       <div className="flex h-11 shrink-0 items-center gap-2 px-3">
         <span className="text-[13px] font-semibold text-ink-soft">Live chat</span>
-        {room.data ? (
+        {online !== undefined ? (
           <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink-mute">
             <span aria-hidden className="size-[5px] rounded-full bg-accent-ink" />
-            {room.data.online}
+            {online}
             <span className="sr-only">online</span>
           </span>
         ) : null}
@@ -73,7 +75,7 @@ function Message({ message }: { message: ChatMessage }) {
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
           <span className={cn('text-[11.5px] font-medium', admin ? 'text-accent-ink' : 'text-ink-soft')}>
-            {message.user}
+            {message.display_name}
           </span>
           {admin ? (
             <span className="rounded-[4px] bg-accent-ink/16 px-1.5 py-px font-mono text-[8.5px] font-medium tracking-[0.1em] text-accent-ink uppercase">
@@ -104,18 +106,22 @@ function Composer() {
     )
   }
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmed = text.trim()
     if (trimmed === '' || send.isPending) {
       return
     }
-    await send.mutateAsync({ user, text: trimmed })
-    setText('')
+    send.mutate({ user, text: trimmed }, { onSuccess: () => setText('') })
   }
 
   return (
-    <form onSubmit={(event) => void submit(event)} className="flex shrink-0 items-center gap-1.5 px-3 pt-2.5 pb-3">
+    <form onSubmit={submit} className="flex shrink-0 flex-wrap items-center gap-1.5 px-3 pt-2.5 pb-3">
+      {send.isError ? (
+        <p role="alert" className="w-full text-[12px] text-danger">
+          {send.error.message}
+        </p>
+      ) : null}
       <input
         type="text"
         value={text}

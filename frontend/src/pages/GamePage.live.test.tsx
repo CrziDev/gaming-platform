@@ -1,13 +1,17 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PlayRoundResponse, PlinkoManifest, Round } from '@/api/types'
 import { games } from '@/mocks/games'
 import { plinkoManifest } from '@/mocks/plinko'
-import { renderApp, stubFetchRoutes, userBody, type StubResponse } from '@/test-utils'
+import { liveShellStubs, renderApp, stubFetchRoutes, stubWebSocket, userBody, type StubResponse } from '@/test-utils'
 
 vi.mock('@/api/mode', () => ({ usingMockApi: false, usingFixtures: false }))
+
+beforeEach(() => {
+  stubWebSocket()
+})
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -16,6 +20,7 @@ afterEach(() => {
 const plinko = games.find((game) => game.slug === 'plinko')!
 
 const page = {
+  ...liveShellStubs,
   'GET /me': { status: 200, body: userBody() },
   'GET /games/plinko': { status: 200, body: plinko },
   'GET /games': { status: 200, body: { rows: [plinko], total: 1, page: 1, size: 100, pages: 1 } },

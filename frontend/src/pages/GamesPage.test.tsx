@@ -1,10 +1,14 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { errorBody, renderApp, stubFetchRoutes } from '@/test-utils'
+import { errorBody, liveShellStubs, renderApp, stubFetchRoutes, stubWebSocket } from '@/test-utils'
 
 vi.mock('@/api/mode', () => ({ usingMockApi: false, usingFixtures: false }))
+
+beforeEach(() => {
+  stubWebSocket()
+})
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -35,6 +39,7 @@ const page = (rows: unknown[]) => ({ rows, total: rows.length, page: 1, size: 10
 describe('the catalogue against a live server', () => {
   it('renders the cards the server returns', async () => {
     stubFetchRoutes({
+      ...liveShellStubs,
       'GET /me': guest,
       'GET /categories': { status: 200, body: [] },
       'GET /games': { status: 200, body: page([game]) },
@@ -51,6 +56,7 @@ describe('the catalogue against a live server', () => {
   it('reports a failed read instead of an empty catalogue', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({
+      ...liveShellStubs,
       'GET /me': guest,
       'GET /categories': { status: 200, body: [] },
       'GET /games': [

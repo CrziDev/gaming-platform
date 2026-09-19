@@ -137,3 +137,8 @@ func (r *statusRecorder) Write(body []byte) (int, error) {
 	r.wrote = true
 	return r.ResponseWriter.Write(body)
 }
+
+// Unwrap lets a WebSocket upgrade reach the server's writer for the hijack.
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
+}

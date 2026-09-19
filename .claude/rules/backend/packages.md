@@ -21,6 +21,7 @@ are all covered above. None of them justifies a framework.
 | --- | --- |
 | `github.com/jackc/pgx/v5` | PostgreSQL wire protocol driver. `database/sql` defines the interface but ships no driver. |
 | `golang.org/x/crypto` | Argon2id. A password hash written by hand is a security bug waiting to happen. |
+| `github.com/coder/websocket` | RFC 6455 for the live chat push. `net/http` ships no WebSocket server, and `golang.org/x/net/websocket` says in its own doc comment that it lacks features and points at this package. It has no dependencies, takes a `context`, and does the handshake, framing, masking, control frames, and close handshake that would otherwise be a bespoke protocol to maintain. |
 
 Use pgx through `database/sql` by default. A package may use pgx's native API when a
 PostgreSQL-specific feature or measurable performance need justifies it; keep one access

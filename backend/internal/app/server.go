@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gaming-platform/backend/internal/chat"
 	"github.com/gaming-platform/backend/internal/rtp"
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver with database/sql
 )
@@ -40,9 +41,10 @@ func Run(ctx context.Context, logger *slog.Logger, cfg Config) error {
 		<-workerDone
 	}()
 
+	hub := chat.NewHub()
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(cfg.Port),
-		Handler:           New(db, logger, cfg),
+		Handler:           New(db, logger, cfg, hub),
 		ReadHeaderTimeout: 15 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -72,6 +74,9 @@ func Run(ctx context.Context, logger *slog.Logger, cfg Config) error {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}
+	// Shutdown neither closes nor waits for hijacked connections, so the chat
+	// sockets are told to go away once ordinary requests have drained.
+	hub.Close()
 	return <-serveErr
 }
 

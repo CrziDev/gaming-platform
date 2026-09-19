@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gaming-platform/backend/internal/app"
+	"github.com/gaming-platform/backend/internal/chat"
 	"github.com/gaming-platform/backend/internal/testdb"
 )
 
@@ -92,13 +93,14 @@ func newHandlerWithProofDir(db *sql.DB, proofDir string) http.Handler {
 
 func newHandlerWithSessionTTL(db *sql.DB, proofDir string, sessionTTL time.Duration) http.Handler {
 	return app.New(db, slog.New(slog.NewTextHandler(io.Discard, nil)), app.Config{
-		CookieName:      "gp_session",
-		SessionTTL:      sessionTTL,
-		AllowedOrigins:  []string{webOrigin},
-		MaxBodyBytes:    6 << 20,
-		ProofDir:        proofDir,
-		LoginsPerMinute: 100,
-	})
+		CookieName:            "gp_session",
+		SessionTTL:            sessionTTL,
+		AllowedOrigins:        []string{webOrigin},
+		MaxBodyBytes:          6 << 20,
+		ProofDir:              proofDir,
+		LoginsPerMinute:       100,
+		ChatMessagesPerMinute: 100,
+	}, chat.NewHub())
 }
 
 func enableTestPaymentMethod(t *testing.T, db *sql.DB) {

@@ -143,9 +143,10 @@ decision must update the API contract, frontend types, and implementation togeth
 - [ ] Decide whether the v2 lobby's merchandising surfaces — big wins, promotions, and the
   hot shelf — are Phase 1. They are fixture-only today and hidden outside the demo. The
   new shelf is real: a game is `new` for thirty days after it is added.
-- [ ] Decide whether the live chat rail is Phase 1; it is fixture-only and hidden outside
-  the demo, and has no contract. Favorites are decided and built: `game_favorites`,
-  `GET /api/favorites`, and idempotent `PUT`/`DELETE /api/games/{slug}/favorite`.
+- [x] Favorites and the live chat rail are Phase 1 and built: `game_favorites` with
+  `GET /api/favorites` and idempotent `PUT`/`DELETE /api/games/{slug}/favorite`;
+  `chat_messages` with the public room read, the rate-limited post, and the WebSocket
+  push at `GET /api/chat/socket`.
 - [ ] Decide what the Support link, the language selector, and the console search box
   do in Phase 1. The link points at a placeholder host, the "English" button and the
   "Search player, ref or round id" input have no handler, and none has a contract.
@@ -407,8 +408,9 @@ Metadata can be built now; verified mathematical behavior cannot.
 - [x] The session-expired dialog is raised when a live session stops being recognised
   and never on a deliberate sign-out.
 - [x] The console navigation badge carries the real pending deposit total.
-- [ ] Live chat and notifications are fixture-only and hidden outside the demo; see
-  contract alignment.
+- [x] The live chat rail reads the real room, posts through the session, and re-reads on
+  the socket's push; presence comes from the socket.
+- [ ] Notifications are fixture-only and hidden outside the demo; see contract alignment.
 - [ ] The Support link, language selector, and console search box are unwired chrome;
   see contract alignment.
 

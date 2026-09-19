@@ -78,7 +78,8 @@ one game's RTP profiles — is a plain array.
 | `GET` | `/api/me` | `200` + the account | `401` no session |
 
 `/api/register` and `/api/login` are rate limited per client by
-`LOGIN_ATTEMPTS_PER_MINUTE`.
+`LOGIN_ATTEMPTS_PER_MINUTE`, and `POST /api/chat/messages` per account by
+`CHAT_MESSAGES_PER_MINUTE`.
 
 ### Player
 
@@ -102,6 +103,9 @@ one game's RTP profiles — is a plain array.
 | `POST` | `/api/deposits` | `201` + a new request · `200` + the original retry result | `400` · `401` · `413` |
 | `GET` | `/api/deposits` | `200` + a page of own requests, optionally filtered by `status=pending|approved|rejected` | `400` invalid filter · `401` |
 | `GET` | `/api/deposits/{id}` | `200` + the request | `401` · `404` |
+| `GET` | `/api/chat/messages` | `200` + the room: who is online and the latest fifty messages, oldest first | — |
+| `POST` | `/api/chat/messages` | `201` + the message | `400` empty, multi-line, or over 280 characters · `401` · `429` over the per-account limit |
+| `GET` | `/api/chat/socket` | `101` and a WebSocket the server pushes events on | `403` origin not allowed |
 | `GET` | `/api/rounds` | `200` + a page of own rounds; accepts `game_id`, `status`, `currency`, `from`, `to` | `400` invalid filter · `401` |
 | `GET` | `/api/rounds/{id}` | `200` + the owned round | `401` · `404` |
 
@@ -112,6 +116,17 @@ A favourite is a mark on a catalogue game, not a copy of it: `GET /api/favorites
 the same game bodies the catalogue serves, and a game that leaves `active` leaves the
 list with it. `PUT` and `DELETE` are idempotent by method, carry no body, and answer
 `204`; the client knows the state from the list it already holds.
+
+The chat room is `{ "online", "messages" }`, where a message is
+`{ "id", "display_name", "role", "text", "created_at" }`. It is a fixed window of the
+newest fifty, not a page, because the rail never asks for an older one. Reading is
+public; posting takes `{ "text" }` from a signed-in player, names the author from the
+session, and is limited per account by `CHAT_MESSAGES_PER_MINUTE` with `Retry-After` on
+the `429`. The socket at `/api/chat/socket` is read-only for the client and carries two
+events: `{"type":"message"}` after every accepted post, which tells the client to
+re-read `/api/chat/messages`, and `{"type":"presence","online":n}` whenever the count of
+open sockets changes. The handshake `Origin` is checked against the same allowlist as
+every write. Presence and fan-out are per server process.
 
 A wallet summary is `{ "currency", "deposited_minor", "staked_minor", "returned_minor" }`:
 the sum of `deposit` movements, the sum of `wager` debits, and the sum of `win` credits

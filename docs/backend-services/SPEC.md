@@ -64,7 +64,8 @@ dependency order: `000001` `users` · `000002` `auth_sessions` · `000003`
 `password_reset_tokens` · `000004` `currencies` · `000005` `wallets` · `000006`
 `wallet_transactions` · `000007` `game_categories` · `000008` `games` · `000009`
 `rtp_profiles` · `000010` `game_rounds` · `000011` `payment_methods` · `000012`
-`deposit_requests` · `000013` `audit_logs` · `000014` `game_favorites`.
+`deposit_requests` · `000013` `audit_logs` · `000014` `game_favorites` · `000015`
+`chat_messages`.
 
 ### 4.1 Accounts and sessions
 
@@ -460,6 +461,31 @@ CREATE INDEX game_favorites_user_created ON game_favorites (user_id, created_at 
 A favourite is a mark, not a record with a life of its own: it has no id of its own and
 carries nothing but who marked what, when. The primary key is what makes adding twice a
 no-op, and the read joins `games` so a retired title drops out of the list on its own.
+
+### 4.10 `chat_messages`
+
+```sql
+CREATE TABLE chat_messages (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES users (id),
+    text       TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT chat_messages_text_length CHECK (length(btrim(text)) BETWEEN 1 AND 280)
+);
+
+CREATE INDEX chat_messages_created ON chat_messages (created_at DESC, id DESC);
+```
+
+A message stores who said it, not what they were called: the display name and role are
+joined from `users` at read time, so a renamed or promoted account reads correctly in
+its old messages. The room is the newest fifty rows, read oldest first.
+
+`internal/chat` owns the table, the room read, the post with its per-account limiter,
+and the WebSocket that pushes `message` and `presence` events from an in-process hub.
+The hub is closed after `http.Server.Shutdown` returns, because a hijacked connection is
+outside the server's drain; each open socket is then sent a going-away close. Fan-out
+and the online count are per process, the same limit the login limiter already has.
 
 ## 5. Accounts and sessions
 

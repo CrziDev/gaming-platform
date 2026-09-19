@@ -1,2 +1,2 @@
-export { chatAvailable, fetchChatRoom, sendChatMessage } from './api'
-export { useChatRoom, useSendChatMessage } from './hooks'
+export { fetchChatRoom, sendChatMessage } from './api'
+export { useChatRoom, useChatSocket, useSendChatMessage } from './hooks'

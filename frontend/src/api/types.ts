@@ -85,7 +85,7 @@ export type Promotion = {
 
 export type ChatMessage = {
   id: string
-  user: string
+  display_name: string
   role: Role
   text: string
   created_at: string

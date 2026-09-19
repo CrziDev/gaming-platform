@@ -21,6 +21,7 @@ var playerRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/favorites"},
 	{http.MethodPut, "/api/games/plinko/favorite"},
 	{http.MethodDelete, "/api/games/plinko/favorite"},
+	{http.MethodPost, "/api/chat/messages"},
 	{http.MethodGet, "/api/rounds"},
 	{http.MethodGet, "/api/rounds/" + anyID},
 }

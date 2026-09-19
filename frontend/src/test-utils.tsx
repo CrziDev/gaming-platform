@@ -86,3 +86,40 @@ export function userBody(overrides: Partial<User> = {}): User {
 export function errorBody(message: string, fields?: Record<string, string>) {
   return fields ? { error: message, fields } : { error: message }
 }
+
+// What the shell fetches on every authenticated or public route outside the
+// demo. A live-mode test spreads these so the chrome does not trip the stub.
+export const liveShellStubs = {
+  'GET /chat/messages': { status: 200, body: { online: 0, messages: [] } },
+} satisfies Record<string, StubResponse>
+
+// A WebSocket that never connects on its own; a test drives it by calling
+// `emit` on the instance it finds in `FakeWebSocket.instances`.
+export class FakeWebSocket extends EventTarget {
+  static instances: FakeWebSocket[] = []
+  readonly url: string
+  closed = false
+
+  constructor(url: string) {
+    super()
+    this.url = url
+    FakeWebSocket.instances.push(this)
+  }
+
+  emit(type: 'open' | 'close'): void
+  emit(type: 'message', data: string): void
+  emit(type: 'open' | 'close' | 'message', data?: string) {
+    this.dispatchEvent(type === 'message' ? new MessageEvent('message', { data }) : new Event(type))
+  }
+
+  close() {
+    this.closed = true
+    this.emit('close')
+  }
+}
+
+export function stubWebSocket() {
+  FakeWebSocket.instances = []
+  vi.stubGlobal('WebSocket', FakeWebSocket)
+  return FakeWebSocket
+}

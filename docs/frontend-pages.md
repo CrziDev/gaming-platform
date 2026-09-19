@@ -22,7 +22,7 @@ tests pass.
 
 ## Public and player pages
 
-- [ ] **Lobby** — `/` (catalogue, categories, and the featured banner are real; big wins, promotions, recently-played rows, and the shell's live chat are fixture-only and hidden outside the demo)
+- [ ] **Lobby** — `/` (catalogue, categories, and the featured banner are real; big wins, promotions, and recently-played rows are fixture-only and hidden outside the demo)
 - [x] **Game catalogue** — `/games` (real catalogue with category, search, and sort)
 - [ ] **Hot games** — `/games/hot` (no round data to define "hot"; empty outside the demo)
 - [x] **New games** — `/games/new` (real thirty-day `new` flag from the catalogue)
@@ -52,7 +52,7 @@ means the server is behind it.
 - [x] **Session expired dialog** — raised when a live session stops being recognised, never on a deliberate sign-out; tested
 - [x] **Account menu** — Wallet, History, Account, Sign out against the real session
 - [x] **Console deposit badge** — the pending total from the real queue
-- [ ] **Live chat rail** — fixture-only; the rail and its header toggle are hidden outside the demo, no contract
+- [x] **Live chat rail** — the real room from `GET /api/chat/messages`, posts through `POST /api/chat/messages` with the server's `429` shown inline, and a WebSocket at `/api/chat/socket` whose `message` event re-reads the room and whose `presence` event drives the online count; reconnects with backoff
 - [ ] **Notifications bell** — fixture-only; the bell is hidden outside the demo, no contract for notifications or marking them read
 - [ ] **Support link** — rail and drawer point at `https://support.example.com`; the destination is a placeholder
 - [ ] **Language selector** — rail and drawer show an "English" button with no handler; there is one language
@@ -78,4 +78,4 @@ means the server is behind it.
 - Public and player routes: 17
 - Admin routes: 12
 - Total frontend routes: 29
-- Shell features: 11 (6 backed by the server)
+- Shell features: 11 (7 backed by the server)
