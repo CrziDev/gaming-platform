@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { useFavorites, useGame, useToggleFavorite } from '@/features/catalogue'
-import { GameNotice, gameModuleFor, useGameSession, type GameSession } from '@/features/gameplay'
+import { GameHistory, GameNotice, gameModuleFor, useGameSession, type GameSession } from '@/features/gameplay'
 import { useWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatMoney, money, type Money } from '@/lib/money'
@@ -155,7 +155,7 @@ export function GamePage() {
         </div>
       </div>
 
-      {module ? <module.History gameId={game.id} /> : null}
+      <GameHistory gameId={game.id} />
     </div>
   )
 }

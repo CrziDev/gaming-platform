@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 
 import type { Round } from '@/api/types'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
@@ -8,8 +9,9 @@ import { ErrorState } from '@/components/ui/States'
 import { useRecentRounds } from '@/features/wallet'
 import { formatMultiplier, formatRelative } from '@/lib/format'
 import { formatMoney, money, subtractMoney, type Money } from '@/lib/money'
+import { paths } from '@/routes/paths'
 
-type PlinkoBet = {
+type HistoryRow = {
   id: string
   stake: Money
   multiplier_hundredths: number
@@ -20,7 +22,7 @@ type PlinkoBet = {
 
 // Only a settled round has a multiplier and a win to show; anything else a
 // two-phase engine might leave behind has no row here.
-function toBet(round: Round): PlinkoBet | null {
+function toRow(round: Round): HistoryRow | null {
   if (round.status !== 'settled' || round.win_minor === null || round.multiplier_hundredths === null) return null
   const stake = money(round.stake_minor, round.currency)
   return {
@@ -32,93 +34,99 @@ function toBet(round: Round): PlinkoBet | null {
   }
 }
 
-const columns: Column<PlinkoBet>[] = [
+const columns: Column<HistoryRow>[] = [
   {
     key: 'bet',
     header: 'Bet',
-    cell: (bet) => <span className="font-mono tnum">{formatMoney(bet.stake)}</span>,
+    cell: (row) => <span className="font-mono tnum">{formatMoney(row.stake)}</span>,
   },
   {
     key: 'multiplier',
     header: 'Multiplier',
     align: 'right',
-    cell: (bet) => <span className="font-mono tnum">{formatMultiplier(bet.multiplier_hundredths)}</span>,
+    cell: (row) => <span className="font-mono tnum">{formatMultiplier(row.multiplier_hundredths)}</span>,
   },
   {
     key: 'profit',
     header: 'Profit',
     align: 'right',
-    cell: (bet) => <MoneyDisplay value={bet.profit} tone="auto" sign="always" />,
+    cell: (row) => <MoneyDisplay value={row.profit} tone="auto" sign="always" />,
   },
   {
     key: 'placed',
     header: 'When',
     align: 'right',
     columnClass: 'font-mono text-[11.5px] text-ink-mute',
-    cell: (bet) => formatRelative(bet.placed_at),
+    cell: (row) => formatRelative(row.placed_at),
   },
 ]
 
-type PlinkoHistoryProps = {
+type GameHistoryProps = {
   gameId: string
 }
 
-function Feed({ children }: { children: ReactNode }) {
+function HistorySection({ children }: { children: ReactNode }) {
   return (
-    <section aria-label="Your recent bets" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
-      <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Your recent bets</h2>
+    <section aria-label="History" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">History</h2>
+        <Link to={paths.history} className="text-[12.5px] font-medium text-accent-ink hover:text-accent-hi">
+          Open full history
+        </Link>
+      </div>
       {children}
     </section>
   )
 }
 
-// The player's own recent rounds on this game, under the board. The session
-// refetches rounds when a ball lands, so a bet appears here as it is revealed.
-export function PlinkoHistory({ gameId }: PlinkoHistoryProps) {
+// Under every title's board: the player's own recent rounds on this game. An
+// integrated game's session refetches rounds when a result is revealed, so a
+// bet appears here as it lands.
+export function GameHistory({ gameId }: GameHistoryProps) {
   const query = useRecentRounds(gameId)
 
   if (query.isPending) {
     return (
-      <Feed>
+      <HistorySection>
         <SkeletonRows count={3} />
-      </Feed>
+      </HistorySection>
     )
   }
 
   if (query.isError) {
     return (
       <ErrorState
-        title="Recent bets unavailable"
+        title="History unavailable"
         message="Your rounds on this game could not be loaded. The board and your balance are unaffected."
         onRetry={() => void query.refetch()}
       />
     )
   }
 
-  const bets = query.data.map(toBet).filter((bet): bet is PlinkoBet => bet !== null)
-  if (bets.length === 0) {
+  const rows = query.data.map(toRow).filter((row): row is HistoryRow => row !== null)
+  if (rows.length === 0) {
     return (
-      <Feed>
+      <HistorySection>
         <p className="text-[13px] text-ink-mute text-pretty">Your bets on this game appear here as they settle.</p>
-      </Feed>
+      </HistorySection>
     )
   }
 
   return (
-    <Feed>
+    <HistorySection>
       <RecordTable
-        label="Your recent bets"
+        label="History"
         columns={columns}
-        rows={bets}
-        rowKey={(bet) => bet.id}
-        renderCard={(bet) => (
+        rows={rows}
+        rowKey={(row) => row.id}
+        renderCard={(row) => (
           <RecordCard
-            title={formatMoney(bet.stake)}
-            meta={`${formatMultiplier(bet.multiplier_hundredths)} · ${formatRelative(bet.placed_at)}`}
-            value={<MoneyDisplay value={bet.profit} tone="auto" sign="always" />}
+            title={formatMoney(row.stake)}
+            meta={`${formatMultiplier(row.multiplier_hundredths)} · ${formatRelative(row.placed_at)}`}
+            value={<MoneyDisplay value={row.profit} tone="auto" sign="always" />}
           />
         )}
       />
-    </Feed>
+    </HistorySection>
   )
 }

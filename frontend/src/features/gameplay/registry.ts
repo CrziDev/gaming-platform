@@ -2,7 +2,6 @@ import type { ComponentType } from 'react'
 
 import { DEFAULT_PLINKO_PARAMS, type PlinkoParams, type PlinkoTable } from './multipliers'
 import { PlinkoControls, type GameControlsProps } from './PlinkoControls'
-import { PlinkoHistory } from './PlinkoHistory'
 
 // Everything the host needs to run one integrated title. Typed to Plinko's
 // parameters while it is the only game; a second engine widens this to a union.
@@ -12,8 +11,6 @@ export type GameModule = {
   aspect: 'portrait' | 'landscape'
   defaultParams: PlinkoParams
   Controls: ComponentType<GameControlsProps<PlinkoParams>>
-  // Rendered under the board and panel: the player's own recent rounds on the game.
-  History: ComponentType<{ gameId: string }>
   // Reads one board out of the manifest's table; the table itself is the server's.
   multipliers: (table: PlinkoTable, params: PlinkoParams) => readonly number[]
 }
@@ -24,7 +21,6 @@ const plinko: GameModule = {
   aspect: 'portrait',
   defaultParams: DEFAULT_PLINKO_PARAMS,
   Controls: PlinkoControls,
-  History: PlinkoHistory,
   multipliers: (table, params) => table[params.rows][params.risk],
 }
 

@@ -67,13 +67,18 @@ function lastDrop(post: ReturnType<typeof vi.spyOn>) {
 }
 
 describe('a title without an engine', () => {
-  it('keeps the display slot and no frame', async () => {
+  it('keeps the display slot and no frame, and still shows the history under it', async () => {
     stubFetchRoutes({ 'GET /me': player })
     renderApp('/game/aurora-dice')
 
     expect(await screen.findByText('game canvas · aspect-locked slot')).toBeInTheDocument()
     expect(screen.queryByTitle(/game$/)).not.toBeInTheDocument()
     expect(screen.queryByRole('radiogroup', { name: 'Rows' })).not.toBeInTheDocument()
+
+    const history = await screen.findByRole('table', { name: 'History' })
+    expect(within(history).getAllByRole('row').length).toBeGreaterThan(1)
+    expect(within(history).queryAllByRole('cell', { name: /Aurora/ })).toHaveLength(0)
+    expect(screen.getByRole('link', { name: 'Open full history' })).toHaveAttribute('href', '/history')
   })
 })
 
@@ -141,7 +146,7 @@ describe('the Plinko game page', () => {
     expect(php.balance_minor).not.toBe(startingBalance)
   })
 
-  it('shows the game notice and, once a round has landed, that round in the bets feed', async () => {
+  it('shows the game notice and, once a round has landed, that round in the history', async () => {
     const user = userEvent.setup()
     const { iframe, post } = await readyBoard()
 
@@ -151,14 +156,14 @@ describe('the Plinko game page', () => {
     expect(screen.queryByText(/^More Originals/)).not.toBeInTheDocument()
     // No fixture round belongs to Plinko, so the feed only says where bets will go.
     expect(await screen.findByText('Your bets on this game appear here as they settle.')).toBeInTheDocument()
-    expect(screen.queryByRole('table', { name: 'Your recent bets' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'History' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
     await waitFor(() => expect(lastDrop(post)).toBeDefined())
     const drop = lastDrop(post)!
     frameSays(iframe, { v: 1, type: 'landed', round_id: drop.round_id, slot: drop.slot })
 
-    const feed = await screen.findByRole('table', { name: 'Your recent bets' })
+    const feed = await screen.findByRole('table', { name: 'History' })
     const settled = rounds.find((round) => round.id === drop.round_id)!
     expect(within(feed).getAllByRole('row')).toHaveLength(2)
     expect(within(feed).getByText(formatMultiplier(settled.multiplier_hundredths!))).toBeInTheDocument()

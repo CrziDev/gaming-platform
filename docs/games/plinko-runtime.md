@@ -108,10 +108,10 @@ the SPA.
 `frontend/src/components/game/GameHost.tsx` embeds the frame and overlays the platform
 chrome. `frontend/src/features/gameplay/` owns the protocol (`schemas.ts`, `bridge.ts`),
 the manifest query and the round request (`api.ts`), the page session (`session.ts`),
-the Plinko controls, and the bets feed under the board (`PlinkoHistory.tsx`): the
-player's own recent rounds on the game, read through the wallet feature's
-`useRecentRounds` from `GET /api/rounds?game_id=`, with a one-line empty state until the
-first bet settles. The manifest is validated before it
+the Plinko controls, and `GameHistory.tsx`, which `GamePage` renders under every title's
+board, engine or not: the player's own recent rounds on the game, read through the wallet
+feature's `useRecentRounds` from `GET /api/rounds?game_id=`, with a one-line empty state
+until the first bet settles and a link to the full history. The manifest is validated before it
 configures anything: every board the controls offer must be present with exactly
 rows + 1 positive integers.
 `GamePage` wires them; a slug with no module in `registry.ts`
@@ -151,7 +151,7 @@ rejected.
 4. The settled result is sent as `drop`. Rows and risk are locked while any ball is in
    flight. The wallet, rounds, and transactions are refetched when the frame reports
    `landed`, or eight seconds later regardless, so an animation can never hide a
-   settled round; that refetch is what puts the round into the bets feed.
+   settled round; that refetch is what puts the round into the history under the board.
 5. Every settled round names its `rtp_profile_id`. When it is not the manifest's, the
    host refetches the manifest and reconfigures the board with the new table once no
    ball is in flight; the ball that revealed the change still drops, since its `drop`

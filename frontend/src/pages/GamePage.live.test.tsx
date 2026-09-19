@@ -200,7 +200,7 @@ describe('Plinko when the active profile changes mid-session', () => {
   })
 })
 
-describe('the bets feed under the Plinko board', () => {
+describe('the history under the Plinko board', () => {
   it("lists the player's own settled rounds on the game and refetches them when a ball lands", async () => {
     const user = userEvent.setup()
     const earlier: Round = {
@@ -220,7 +220,7 @@ describe('the bets feed under the Plinko board', () => {
     })
     renderApp('/game/plinko')
 
-    const feed = await screen.findByRole('table', { name: 'Your recent bets' })
+    const feed = await screen.findByRole('table', { name: 'History' })
     expect(within(feed).getAllByRole('row')).toHaveLength(2)
     expect(within(feed).getByText('1.70×')).toBeInTheDocument()
     expect(within(feed).getByText('+₱1.40')).toBeInTheDocument()
@@ -251,8 +251,8 @@ describe('the bets feed under the Plinko board', () => {
     frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
 
-    expect(await screen.findByText('Recent bets unavailable')).toBeInTheDocument()
+    expect(await screen.findByText('History unavailable')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
-    expect(screen.queryByRole('table', { name: 'Your recent bets' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'History' })).not.toBeInTheDocument()
   })
 })
