@@ -6,6 +6,7 @@ import type {
   Round,
   Transaction,
   Wallet,
+  WalletSummary,
 } from '@/api/types'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
@@ -18,6 +19,11 @@ export const currencies: CurrencyMetadata[] = [
 export const wallets: Wallet[] = [
   { currency: 'PHP', balance_minor: 525_000 },
   { currency: 'USD', balance_minor: 14_250 },
+]
+
+export const walletSummary: WalletSummary[] = [
+  { currency: 'PHP', deposited_minor: 650_000, staked_minor: 324_000, returned_minor: 299_000 },
+  { currency: 'USD', deposited_minor: 20_000, staked_minor: 7_500, returned_minor: 6_900 },
 ]
 
 export const paymentMethods: PaymentMethod[] = [

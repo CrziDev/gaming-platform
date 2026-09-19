@@ -89,6 +89,7 @@ one game's RTP profiles — is a plain array.
 | `GET` | `/api/wallets/{currency}` | `200` + the wallet, provisioned if absent | `401` · `404` unknown currency |
 | `GET` | `/api/wallets/{currency}/transactions` | `200` + a page of that wallet's movements; accepts `type`, `from`, `to` | `400` invalid filter · `401` · `404` |
 | `GET` | `/api/transactions` | `200` + a page of the player's movements; accepts `currency`, `type`, `from`, `to` | `400` invalid filter · `401` · `404` unknown currency |
+| `GET` | `/api/transactions/summary` | `200` + one summary per wallet the player holds; accepts `currency`, `from`, `to` | `400` invalid filter · `401` · `404` unknown currency |
 | `GET` | `/api/categories` | `200` + every category with its active-game count and availability | — |
 | `GET` | `/api/games` | `200` + a page of active games; accepts `category`, `search`, `sort=name\|newest`, `flag=new` | `400` invalid filter |
 | `GET` | `/api/games/{slug}` | `200` + the game | `404` not active or unknown |
@@ -103,6 +104,12 @@ one game's RTP profiles — is a plain array.
 
 A player-scoped read answers `404` for a resource that exists but belongs to someone
 else. An id in a path is input, never a fact about who is asking.
+
+A wallet summary is `{ "currency", "deposited_minor", "staked_minor", "returned_minor" }`:
+the sum of `deposit` movements, the sum of `wager` debits, and the sum of `win` credits
+inside the window. The response is a plain array with one entry per wallet, or one entry
+when `currency` narrows it; nothing in it adds two currencies together, and an operator
+adjustment or a refund counts in none of the three figures.
 
 A round body carries `id`, `game_id`, `game_slug`, `game_name`, `rtp_profile_id`,
 `status`, `stake_minor`, nullable `win_minor`, nullable `multiplier_hundredths`,

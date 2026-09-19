@@ -82,7 +82,7 @@ describe('the wallet page', () => {
 })
 
 describe('history', () => {
-  it('shows the ledger without a client-computed summary or a dead export button', async () => {
+  it('shows the ledger with a server-reported summary per currency and no export button', async () => {
     stubFetchRoutes({ 'GET /me': player })
 
     renderApp('/history')
@@ -90,7 +90,26 @@ describe('history', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument()
     expect(await screen.findByRole('navigation', { name: 'Pagination' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /export csv/i })).not.toBeInTheDocument()
-    expect(screen.queryByText(/Deposited ·/)).not.toBeInTheDocument()
+
+    const php = await screen.findByRole('region', { name: 'PHP summary' })
+    expect(within(php).getByText('Deposited · 30d')).toBeInTheDocument()
+    expect(within(php).getByText('₱6,500.00')).toBeInTheDocument()
+    expect(within(php).getByText('₱3,240.00')).toBeInTheDocument()
+    expect(within(php).getByText('₱2,990.00')).toBeInTheDocument()
+    const usd = screen.getByRole('region', { name: 'USD summary' })
+    expect(within(usd).getByText('$200.00')).toBeInTheDocument()
+    expect(screen.queryByText(/₱6,700/)).not.toBeInTheDocument()
+  })
+
+  it('relabels the summary for the chosen range', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': player })
+
+    renderApp('/history')
+
+    await screen.findByRole('region', { name: 'PHP summary' })
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Date range' }), '7')
+    expect(await screen.findAllByText('Deposited · 7d')).toHaveLength(2)
   })
 
   it('shows paginated round records in the rounds tab', async () => {

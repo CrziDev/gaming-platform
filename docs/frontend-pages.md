@@ -37,7 +37,7 @@ tests pass.
 - [x] **Deposit** — `/wallet/deposit` (real methods, limits, proof upload, and submission)
 - [x] **Deposit status** — `/wallet/deposit/:id` (real player-owned request; no cancellation)
 - [ ] **Cash out** — `/wallet/cash-out` (authentication required; honest unavailable state until the withdrawal API exists)
-- [x] **Transaction history** — `/history` (real paginated transactions and rounds with date filters)
+- [x] **Transaction history** — `/history` (real paginated transactions and rounds with date filters, and a server-reported deposited / staked / returned strip per currency for the chosen range)
 - [ ] **Account** — `/account` (authentication required; account and wallets are real; password change waits for its endpoint, and the Status badge is a hardcoded "Active" because the player account body carries no status)
 - [x] **Not found** — `*` (tested application 404 state)
 

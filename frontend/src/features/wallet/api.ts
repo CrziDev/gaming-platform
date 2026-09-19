@@ -9,6 +9,7 @@ import type {
   Round,
   Transaction,
   Wallet,
+  WalletSummary,
 } from '@/api/types'
 import type { Currency } from '@/lib/money'
 import {
@@ -19,6 +20,7 @@ import {
   rounds,
   transactions,
   wallets,
+  walletSummary,
 } from '@/mocks/wallet'
 
 export type HistoryKind = 'all' | 'deposit' | 'rounds' | 'adjustment'
@@ -36,6 +38,8 @@ export type RoundFilter = Pick<HistoryFilter, 'page' | 'currency'> & {
   days?: HistoryFilter['days']
   game_id?: string
 }
+
+export type SummaryFilter = Pick<HistoryFilter, 'days' | 'currency'>
 
 function matchesKind(kind: HistoryKind, transaction: Transaction): boolean {
   if (kind === 'all') return true
@@ -202,6 +206,23 @@ export async function fetchTransactions(filter: HistoryFilter): Promise<Page<Tra
 
   const response = await api.get<Page<BackendTransaction>>(`/transactions?${params.toString()}`)
   return { ...response, rows: response.rows.map(toTransaction) }
+}
+
+// One entry per wallet the player holds; the server never adds currencies
+// together and neither does anything here.
+export async function fetchWalletSummary(filter: SummaryFilter): Promise<WalletSummary[]> {
+  if (usingFixtures) {
+    return mockRequest(() =>
+      walletSummary.filter((entry) => !filter.currency || entry.currency === filter.currency),
+    )
+  }
+
+  const params = new URLSearchParams({
+    from: new Date(Date.now() - filter.days * 86_400_000).toISOString(),
+  })
+  if (filter.currency) params.set('currency', filter.currency)
+
+  return api.get<WalletSummary[]>(`/transactions/summary?${params.toString()}`)
 }
 
 type BackendTransaction = {

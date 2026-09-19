@@ -518,7 +518,10 @@ debit as a credit of the same size.
 ## 8. Ledger reads
 
 A player reads their own wallet's movements through
-`GET /api/wallets/{currency}/transactions`. An operator reads every movement through
+`GET /api/wallets/{currency}/transactions`, and the totals behind them through
+`GET /api/transactions/summary`, which returns one row per wallet — deposited, staked,
+and returned in the window — grouped in SQL by the wallet's currency so no figure can
+ever combine two of them. An operator reads every movement through
 `GET /api/admin/transactions`, filtered by account, currency, kind, and date range.
 
 There is no endpoint that updates or deletes a ledger row, and no administrative override

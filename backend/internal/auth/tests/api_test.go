@@ -1026,6 +1026,35 @@ func TestAdminWalletAdjustmentAndTransactionHTTPFlow(t *testing.T) {
 		t.Fatalf("player invalid from filter: want 400 with a from field error, got %d (%s)", status, body)
 	}
 
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/transactions/summary?from="+past, nil)
+	if status != http.StatusOK {
+		t.Fatalf("player summary: want 200, got %d (%s)", status, body)
+	}
+	var summary []struct {
+		Currency       string `json:"currency"`
+		DepositedMinor int64  `json:"deposited_minor"`
+		StakedMinor    int64  `json:"staked_minor"`
+		ReturnedMinor  int64  `json:"returned_minor"`
+	}
+	if err := json.Unmarshal(body, &summary); err != nil || len(summary) == 0 {
+		t.Fatalf("decode player summary: len=%d err=%v (%s)", len(summary), err, body)
+	}
+	for _, row := range summary {
+		if row.DepositedMinor != 0 || row.StakedMinor != 0 || row.ReturnedMinor != 0 {
+			t.Fatalf("adjustments must not count as deposits, stakes, or returns: %+v", row)
+		}
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/transactions/summary?currency=PHP", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`[{"currency":"PHP"`)) || bytes.Contains(body, []byte(`"USD"`)) {
+		t.Fatalf("player summary for one currency: want one PHP row, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/transactions/summary?currency=XXX", nil); status != http.StatusNotFound {
+		t.Fatalf("player summary for an unknown currency: want 404, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/transactions/summary?to=yesterday", nil); status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"to"`)) {
+		t.Fatalf("player summary with an invalid to filter: want 400 with a to field error, got %d (%s)", status, body)
+	}
+
 	var balance int64
 	var movements, audits int
 	if err := db.QueryRow(`SELECT balance_minor FROM wallets WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, player.ID).Scan(&balance); err != nil {

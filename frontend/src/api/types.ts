@@ -101,6 +101,13 @@ export type Wallet = {
   balance_minor: number
 }
 
+export type WalletSummary = {
+  currency: Currency
+  deposited_minor: number
+  staked_minor: number
+  returned_minor: number
+}
+
 export type TransactionKind =
   | 'deposit'
   | 'withdrawal'

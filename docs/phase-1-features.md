@@ -123,9 +123,9 @@ decision must update the API contract, frontend types, and implementation togeth
   currently fixture-only.
 - [ ] Define the cash-out / withdrawal contract (request, admin review, audit); the wallet
   page links to an honest placeholder at `/wallet/cash-out` until it exists.
-- [ ] Define the wallet-summary response. The history page no longer derives totals on
-  the client (that summed across currencies with JavaScript arithmetic); it shows none
-  until the server reports them.
+- [x] Define the wallet-summary response. `GET /api/transactions/summary` reports
+  deposited, staked, and returned per wallet for the requested window, and the history
+  page renders one row of cards per currency from it; the client sums nothing.
 - [ ] Define or remove fixture-only console alerts (hidden outside the demo meanwhile).
 - [ ] Decide whether staff-account management is Phase 1; the admin UI currently reads
   fixture staff accounts.

@@ -55,6 +55,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/wallets/{currency}", player(walletHandler.Get))
 	mux.HandleFunc("GET /api/wallets/{currency}/transactions", player(walletHandler.Transactions))
 	mux.HandleFunc("GET /api/transactions", player(walletHandler.Transactions))
+	mux.HandleFunc("GET /api/transactions/summary", player(walletHandler.Summary))
 	mux.HandleFunc("GET /api/rounds", player(roundHandler.List))
 	mux.HandleFunc("GET /api/rounds/{id}", player(roundHandler.Get))
 	mux.HandleFunc("GET /api/admin/users", admin(authHandler.AdminUsers))

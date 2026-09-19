@@ -15,10 +15,12 @@ import {
   fetchRounds,
   fetchTransactions,
   fetchWallet,
+  fetchWalletSummary,
   fetchWallets,
   markNotificationsRead,
   submitDeposit,
   type HistoryFilter,
+  type SummaryFilter,
 } from './api'
 
 export const walletQueryKey = ['wallets'] as const
@@ -77,6 +79,15 @@ export function useSubmitDeposit() {
 
 export function useTransactions(filter: HistoryFilter, enabled = true) {
   return useQuery({ queryKey: ['transactions', filter], queryFn: () => fetchTransactions(filter), enabled })
+}
+
+// Keyed under 'transactions' so every invalidation that refreshes the ledger
+// refreshes its totals in the same breath.
+export function useWalletSummary(filter: SummaryFilter) {
+  return useQuery({
+    queryKey: ['transactions', 'summary', filter],
+    queryFn: () => fetchWalletSummary(filter),
+  })
 }
 
 export function useRounds(filter: Parameters<typeof fetchRounds>[0], enabled = true) {

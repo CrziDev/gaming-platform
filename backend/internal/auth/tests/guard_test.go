@@ -17,6 +17,7 @@ var playerRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/wallets/PHP"},
 	{http.MethodGet, "/api/wallets/PHP/transactions"},
 	{http.MethodGet, "/api/transactions"},
+	{http.MethodGet, "/api/transactions/summary"},
 	{http.MethodGet, "/api/rounds"},
 	{http.MethodGet, "/api/rounds/" + anyID},
 }

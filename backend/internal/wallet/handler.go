@@ -35,6 +35,13 @@ type transactionResponse struct {
 	CreatedAt     string `json:"created_at"`
 }
 
+type summaryResponse struct {
+	Currency       string `json:"currency"`
+	DepositedMinor int64  `json:"deposited_minor"`
+	StakedMinor    int64  `json:"staked_minor"`
+	ReturnedMinor  int64  `json:"returned_minor"`
+}
+
 type adminTransactionResponse struct {
 	transactionResponse
 	WalletID         string `json:"wallet_id"`
@@ -140,6 +147,39 @@ func (h *Handler) Transactions(w http.ResponseWriter, r *http.Request, account u
 		result = append(result, transactionResponse{ID: item.ID, Kind: item.Kind, AmountMinor: item.AmountMinor, Currency: item.Currency, BalanceBefore: item.BalanceBefore, BalanceAfter: item.BalanceAfter, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))
+}
+
+func (h *Handler) Summary(w http.ResponseWriter, r *http.Request, account user.User) {
+	query, ok := httpx.ReadQuery(w, r)
+	if !ok {
+		return
+	}
+	if query.Currency != "" {
+		if len(query.Currency) != 3 {
+			httpx.WriteError(w, http.StatusNotFound, "Wallet not found")
+			return
+		}
+		if _, err := Get(r.Context(), h.db, account.ID, query.Currency); errors.Is(err, ErrCurrencyDisabled) {
+			httpx.WriteError(w, http.StatusNotFound, "Wallet not found")
+			return
+		} else if err != nil {
+			h.internal(w, r, err)
+			return
+		}
+	} else if _, err := List(r.Context(), h.db, account.ID); err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	items, err := Summarize(r.Context(), h.db, account.ID, SummaryFilter{Currency: query.Currency, From: query.From, To: query.To})
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	result := make([]summaryResponse, 0, len(items))
+	for _, item := range items {
+		result = append(result, summaryResponse{Currency: item.Currency, DepositedMinor: item.DepositedMinor, StakedMinor: item.StakedMinor, ReturnedMinor: item.ReturnedMinor})
+	}
+	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) AdminAdjust(w http.ResponseWriter, r *http.Request, actor user.User) {

@@ -80,6 +80,55 @@ func ListTransactions(ctx context.Context, db *sql.DB, userID string, filter Tra
 	return result, total, nil
 }
 
+type SummaryFilter struct {
+	Currency string
+	From     *time.Time
+	To       *time.Time
+}
+
+type Summary struct {
+	Currency       string
+	DepositedMinor int64
+	StakedMinor    int64
+	ReturnedMinor  int64
+}
+
+// Summarize totals one wallet per row, so a player holding several currencies
+// never receives a figure that adds them together.
+func Summarize(ctx context.Context, db *sql.DB, userID string, filter SummaryFilter) ([]Summary, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT w.currency,
+			COALESCE(sum(t.amount_minor) FILTER (WHERE t.kind = 'deposit'), 0),
+			COALESCE(sum(abs(t.amount_minor)) FILTER (WHERE t.kind = 'wager'), 0),
+			COALESCE(sum(t.amount_minor) FILTER (WHERE t.kind = 'win'), 0)
+		FROM wallets w
+		LEFT JOIN wallet_transactions t ON t.wallet_id = w.id
+			AND ($3::timestamptz IS NULL OR t.created_at >= $3::timestamptz)
+			AND ($4::timestamptz IS NULL OR t.created_at <= $4::timestamptz)
+		WHERE w.user_id = ($1::text)::uuid AND ($2 = '' OR w.currency = $2)
+		GROUP BY w.currency
+		ORDER BY w.currency`, userID, filter.Currency, filter.From, filter.To)
+	if err != nil {
+		return nil, fmt.Errorf("wallet: summarize: %w", err)
+	}
+	defer rows.Close()
+	result := make([]Summary, 0)
+	for rows.Next() {
+		var item Summary
+		if err := rows.Scan(&item.Currency, &item.DepositedMinor, &item.StakedMinor, &item.ReturnedMinor); err != nil {
+			return nil, fmt.Errorf("wallet: scan summary: %w", err)
+		}
+		if !money.IsSafeMinor(item.DepositedMinor) || !money.IsSafeMinor(item.StakedMinor) || !money.IsSafeMinor(item.ReturnedMinor) {
+			return nil, errors.New("wallet: summary totals exceed the exact JSON integer range")
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("wallet: summary rows: %w", err)
+	}
+	return result, nil
+}
+
 type AdminTransactionFilter struct {
 	Page     int
 	Size     int
