@@ -13,28 +13,28 @@ As of 2026-09-19, authentication, wallets, the wallet summary, manual deposits, 
 public catalogue, favorites, Plinko rounds and the manifest, live chat, notifications,
 paginated admin users, admin user details and status operations, wallet adjustments,
 admin transactions, deposit review, the audit log, the dashboard summary, game
-administration, RTP profiles, and round history use real APIs when
-`VITE_API_MOCK=false`. Fixture-backed reads return nothing outside the demo and tests,
-so a real deployment renders the empty state for those surfaces rather than fixture
-content. A page stays unchecked while any of its visible data sources has no server.
+administration, RTP profiles, and round history use real APIs in every application
+build. Fixture-backed reads exist only in component tests; application builds render
+the empty state for surfaces without a service rather than fabricated content. A page
+stays unchecked while any of its visible data sources has no server.
 
 Audited against the frontend on 2026-09-19: every route below exists, every data hook
-on every page was traced to its adapter in `features/*/api.ts`, and the 184 frontend
+on every page was traced to its adapter in `features/*/api.ts`, and the 188 frontend
 tests pass.
 
 ## Public and player pages
 
-- [ ] **Lobby** — `/` (catalogue, categories, and the featured banner are real; big wins, promotions, and recently-played rows are fixture-only and hidden outside the demo)
+- [ ] **Lobby** — `/` (catalogue, categories, and the featured banner are real; big wins, promotions, and recently-played rows have no service and are hidden in application builds)
 - [x] **Game catalogue** — `/games` (real catalogue with category and search)
-- [ ] **Hot games** — `/games/hot` (round data exists now but "hot" has no agreed definition; `flag=hot` answers `400` and the shelf is empty outside the demo)
+- [ ] **Hot games** — `/games/hot` (round data exists now but "hot" has no agreed definition; `flag=hot` answers `400` and the shelf is empty in application builds)
 - [x] **New games** — `/games/new` (real thirty-day `new` flag from the catalogue)
 - [x] **Favorites** — `/favorites` (authentication required; the player's real favourites, newest first, active games only)
-- [ ] **Promotions** — `/promotions` (fixture-only; empty outside the demo)
+- [ ] **Promotions** — `/promotions` (no service; empty in application builds)
 - [x] **Sign in** — `/login` (opens the real sign-in flow)
 - [x] **Register** — `/register` (opens the real registration flow)
 - [ ] **Forgot password** — `/forgot` (calls the contracted endpoint; reports reset as unavailable while the server answers 404)
 - [ ] **Reset password** — `/reset` (same; refuses to submit without a token in the link)
-- [x] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and under every title's board a history of the player's own recent rounds on that game; the favorite toggle writes `PUT`/`DELETE /api/games/{slug}/favorite` and re-reads the list. Plinko launches in the generic game host through the versioned bridge: in the demo a fixture settles each round and the board animates it, while outside the demo Place bet calls `POST /api/games/{slug}/rounds`, which the server settles through the Plinko engine at the return the operator set before the ball is dropped; a server without an engine for the slug answers 404 and the page reports the game as not available. The board is configured from `GET /api/games/{slug}/manifest`, the table of the return in force: until it loads the frame shows the loading state, a 404 or 409 is the frame's error state with a retry, and Place bet is disabled in both; a round settled at a different return than the manifest's refetches it and the board is reconfigured once no ball is in flight. Every other title has no engine on the server, so it keeps the display-slot placeholder and a round would answer `404`)
+- [x] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and under every title's board a history of the player's own recent rounds on that game; the favorite toggle writes `PUT`/`DELETE /api/games/{slug}/favorite` and re-reads the list. Plinko launches in the generic game host through the versioned bridge: Place bet calls `POST /api/games/{slug}/rounds`, which the server settles through the Plinko engine at the return the operator set before the ball is dropped; component tests use a deterministic fixture. A server without an engine for the slug answers 404 and the page reports the game as not available. The board is configured from `GET /api/games/{slug}/manifest`, the table of the return in force: until it loads the frame shows the loading state, a 404 or 409 is the frame's error state with a retry, and Place bet is disabled in both; a round settled at a different return than the manifest's refetches it and the board is reconfigured once no ball is in flight. Every other title has no engine on the server, so it keeps the display-slot placeholder and a round would answer `404`)
 - [x] **Wallet** — `/wallet` (authentication required; real balance, currency switch sheet, open request list, and recent ledger)
 - [x] **Deposit** — `/wallet/deposit` (real methods, limits, proof upload, and submission)
 - [x] **Deposit status** — `/wallet/deposit/:id` (real player-owned request; no cancellation)
@@ -63,7 +63,7 @@ means the server is behind it.
 ## Admin pages
 
 - [x] **Admin sign in** — `/admin/login` (real shared session API and admin route guard; a signed-in admin is sent straight to the dashboard)
-- [x] **Dashboard** — `/admin` (currency-scoped summary, queue and activity log are real; fixture alerts render only in the demo)
+- [x] **Dashboard** — `/admin` (currency-scoped summary, queue and activity log are real; alerts have no service and are hidden in application builds)
 - [x] **Deposits** — `/admin/deposits` (real pending review queue and approve/reject actions with the private proof image)
 - [x] **Users** — `/admin/users` (real paging, search, and status filters)
 - [x] **User details** — `/admin/users/:id` (real account, wallets, deposits, rounds, adjustments, and status operations)
@@ -73,7 +73,7 @@ means the server is behind it.
 - [x] **Game details** — `/admin/games/:id` (real game, edit dialog, the return in force and the engine's options)
 - [x] **RTP** — `/admin/rtp` (one row per game with options, a select of the engine's returns, a confirmation that reads in danger at or above 100%, real `PUT /api/admin/games/{id}/rtp`)
 - [x] **Audit log** — `/admin/audit` (real paginated append-only feed)
-- [ ] **Settings** — `/admin/settings` (Payment methods and Staff read fixture-only and show an explanatory empty state outside the demo; Limits and Platform are static forms whose Save, Add method, and Invite staff buttons have no handler and no contract)
+- [ ] **Settings** — `/admin/settings` (Payment methods and Staff have no management service and show an explanatory empty state in application builds; Limits and Platform are static forms whose Save, Add method, and Invite staff buttons have no handler and no contract)
 
 ## Coverage
 

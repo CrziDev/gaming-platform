@@ -1,18 +1,20 @@
 import { api } from '@/api/client'
 import { mockRequest } from '@/api/mock'
-import { usingFixtures } from '@/api/mode'
+import { testFixturesEnabled } from '@/api/mode'
 import type { PlayRoundRequest, PlayRoundResponse } from '@/api/types'
 import type { Currency } from '@/lib/money'
-import { plinkoManifest, settlePlinkoRound } from '@/mocks/plinko'
 
 import type { PlinkoParams } from './multipliers'
 import { playRoundResponseSchema, plinkoManifestSchema, type PlinkoBoards } from './schemas'
+
+const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
 
 // The board a game is configured with comes from the server's manifest and
 // nowhere else. A 404 or 409 propagates: the session turns it into the frame's
 // error state, and until a manifest has parsed no bet is offered.
 export async function fetchGameManifest(slug: string): Promise<PlinkoBoards> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { plinkoManifest } = await import('@/mocks/plinko')
     return plinkoManifestSchema.parse(await mockRequest(plinkoManifest))
   }
   const response = await api.get<unknown>(`/games/${encodeURIComponent(slug)}/manifest`)
@@ -28,7 +30,8 @@ export type PlayRoundInput = {
 }
 
 export async function playRound(input: PlayRoundInput): Promise<PlayRoundResponse> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { settlePlinkoRound } = await import('@/mocks/plinko')
     return mockRequest(
       () =>
         settlePlinkoRound({

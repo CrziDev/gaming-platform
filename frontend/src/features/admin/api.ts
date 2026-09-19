@@ -1,6 +1,6 @@
 import { api, ApiError } from '@/api/client'
 import { mockRequest, paginate, type Page } from '@/api/mock'
-import { usingFixtures } from '@/api/mode'
+import { testFixturesEnabled } from '@/api/mode'
 import type {
   AccountStatus,
   AdminDeposit,
@@ -19,20 +19,15 @@ import type {
   Wallet,
 } from '@/api/types'
 import type { Currency } from '@/lib/money'
-import {
-  adjustmentReasons,
-  adjustments,
-  adminDeposits,
-  adminGames,
-  adminUserWallets,
-  adminUsers,
-  auditEntries,
-  consoleAlerts,
-  dashboardSummary,
-  staffAccounts,
-} from '@/mocks/admin'
-import { categories, games } from '@/mocks/games'
-import { paymentMethods, rounds, transactions } from '@/mocks/wallet'
+
+const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
+const adjustmentReasons = [
+  'Goodwill — delayed deposit review',
+  'Deposit credited manually',
+  'Duplicate credit reversed',
+  'Chargeback recovered',
+  'Promotional credit',
+] as const
 
 export const ADMIN_PAGE_SIZE = 20
 
@@ -48,17 +43,23 @@ export type UserFilter = {
 }
 
 export async function fetchDashboard(currency: Currency): Promise<DashboardSummary> {
-  if (usingFixtures) {
-    return mockRequest(() => ({ ...dashboardSummary, currency, pending_deposits: pendingQueue().length }))
+  if (usingTestFixtures) {
+    const { adminDeposits, dashboardSummary } = await import('@/mocks/admin')
+    return mockRequest(() => ({
+      ...dashboardSummary,
+      currency,
+      pending_deposits: pendingQueue(adminDeposits).length,
+    }))
   }
   return api.get<DashboardSummary>(`/admin/dashboard?currency=${encodeURIComponent(currency)}`)
 }
 
 // Alerts, staff, and payment-method administration have no service yet.
-// Outside the demo and tests they read as empty so the console shows
-// nothing an operator could act on that the platform cannot do.
+// Application builds read them as empty so the console shows nothing an
+// operator could act on that the platform cannot do; tests use fixtures.
 export async function fetchConsoleAlerts(): Promise<ConsoleAlert[]> {
-  if (!usingFixtures) return []
+  if (!usingTestFixtures) return []
+  const { consoleAlerts } = await import('@/mocks/admin')
   return mockRequest(() => [...consoleAlerts])
 }
 
@@ -66,7 +67,8 @@ export async function fetchAuditEntries(
   page = 1,
   size = ADMIN_PAGE_SIZE,
 ): Promise<Page<AuditEntry>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { auditEntries } = await import('@/mocks/admin')
     return mockRequest(() => paginate(auditEntries, page, size))
   }
   const response = await api.get<Page<BackendAuditEntry>>(
@@ -95,15 +97,16 @@ type BackendAuditEntry = {
   created_at: string
 }
 
-function pendingQueue(): AdminDeposit[] {
+function pendingQueue(adminDeposits: AdminDeposit[]): AdminDeposit[] {
   return adminDeposits
     .filter((deposit) => deposit.status === 'pending')
     .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
 }
 
 export async function fetchDepositQueue(page = 1, size = ADMIN_PAGE_SIZE): Promise<Page<AdminDeposit>> {
-  if (usingFixtures) {
-    return mockRequest(() => paginate(pendingQueue(), page, size))
+  if (usingTestFixtures) {
+    const { adminDeposits } = await import('@/mocks/admin')
+    return mockRequest(() => paginate(pendingQueue(adminDeposits), page, size))
   }
   const response = await api.get<Page<BackendAdminDeposit>>(`/admin/deposits?page=${page}&size=${size}`)
   return { ...response, rows: response.rows.map(toAdminDeposit) }
@@ -117,7 +120,8 @@ export type DepositReview = {
 }
 
 export async function reviewDeposit(review: DepositReview): Promise<void> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminDeposits, adminUserWallets, auditEntries } = await import('@/mocks/admin')
     return mockRequest(() => {
       const deposit = adminDeposits.find((candidate) => candidate.id === review.id)
       if (!deposit) {
@@ -193,7 +197,8 @@ function toAdminDeposit(row: BackendAdminDeposit): AdminDeposit {
 }
 
 export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUser>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUsers } = await import('@/mocks/admin')
     return mockRequest(() => {
       const search = filter.search.trim().toLowerCase()
       const matched = adminUsers.filter((user) => {
@@ -219,7 +224,8 @@ export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUser>> {
 }
 
 export async function fetchUserCounts() {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUsers } = await import('@/mocks/admin')
     return mockRequest(() => ({
       all: adminUsers.length,
       active: adminUsers.filter((user) => user.status === 'active').length,
@@ -241,7 +247,8 @@ export async function fetchUserCounts() {
 }
 
 export async function fetchUser(id: string): Promise<AdminUser | null> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUsers } = await import('@/mocks/admin')
     return mockRequest(() => adminUsers.find((user) => user.id === id) ?? null)
   }
   try {
@@ -253,7 +260,8 @@ export async function fetchUser(id: string): Promise<AdminUser | null> {
 }
 
 export async function fetchUserWallets(id: string): Promise<Wallet[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUserWallets } = await import('@/mocks/admin')
     return mockRequest(() => (adminUserWallets[id] ?? []).map((wallet) => ({ ...wallet })))
   }
   return api.get<Wallet[]>(`/admin/users/${id}/wallets`)
@@ -264,7 +272,8 @@ export async function fetchUserRounds(userId: string, page = 1): Promise<Page<Ad
 }
 
 export async function fetchUserDeposits(userId: string, page = 1): Promise<Page<AdminDeposit>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminDeposits } = await import('@/mocks/admin')
     return mockRequest(() =>
       paginate(
         adminDeposits.filter((deposit) => deposit.user_id === userId),
@@ -280,7 +289,8 @@ export async function fetchUserDeposits(userId: string, page = 1): Promise<Page<
 }
 
 export async function fetchUserAdjustments(userId: string, page = 1): Promise<Page<Adjustment>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adjustments } = await import('@/mocks/admin')
     return mockRequest(() =>
       paginate(
         adjustments.filter((entry) => entry.user_id === userId),
@@ -326,7 +336,8 @@ export type AdminAdjustment = {
 }
 
 export async function adjustWallet(input: WalletAdjustment): Promise<AdminAdjustment> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adjustments, adminUsers, adminUserWallets, auditEntries } = await import('@/mocks/admin')
     return mockRequest(() => {
       const user = adminUsers.find((candidate) => candidate.id === input.user_id)
       if (!user) {
@@ -413,7 +424,8 @@ type BackendAdminTransaction = {
 }
 
 export async function fetchAdminTransactions(filter: AdminTransactionFilter): Promise<Page<AdminTransaction>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { transactions } = await import('@/mocks/wallet')
     return mockRequest(() => {
       const cutoff = Date.now() - filter.days * 86_400_000
       const rows = transactions
@@ -462,7 +474,8 @@ function toAdminTransaction(row: BackendAdminTransaction): AdminTransaction {
 }
 
 export async function setUserStatus(id: string, status: AccountStatus): Promise<AdminUser> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUsers, auditEntries } = await import('@/mocks/admin')
     return mockRequest(() => {
       const user = adminUsers.find((candidate) => candidate.id === id)
       if (!user) {
@@ -490,7 +503,8 @@ export async function setUserStatus(id: string, status: AccountStatus): Promise<
 const ADMIN_CATALOGUE_SIZE = 100
 
 export async function fetchAdminGames(): Promise<AdminGame[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminGames } = await import('@/mocks/admin')
     return mockRequest(() => [...adminGames])
   }
   const page = await api.get<Page<AdminGame>>(`/admin/games?page=1&size=${ADMIN_CATALOGUE_SIZE}`)
@@ -498,7 +512,8 @@ export async function fetchAdminGames(): Promise<AdminGame[]> {
 }
 
 export async function fetchAdminGame(id: string): Promise<AdminGame | null> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminGames } = await import('@/mocks/admin')
     return mockRequest(() => adminGames.find((game) => game.id === id) ?? null)
   }
   try {
@@ -512,7 +527,8 @@ export async function fetchAdminGame(id: string): Promise<AdminGame | null> {
 // Every category, including ones with no active game: an operator files a
 // game under a category before it has anything to show a player.
 export async function fetchAllCategories(): Promise<Category[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { categories } = await import('@/mocks/games')
     return mockRequest(() => [...categories])
   }
   return api.get<Category[]>('/categories')
@@ -534,7 +550,11 @@ export type GameInput = {
 export type GamePatch = Partial<Omit<GameInput, 'slug'>>
 
 export async function createGame(input: GameInput): Promise<AdminGame> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const [{ adminGames }, { categories, games }] = await Promise.all([
+      import('@/mocks/admin'),
+      import('@/mocks/games'),
+    ])
     return mockRequest(() => {
       if (adminGames.some((game) => game.slug === input.slug)) {
         throw new ApiError(409, 'That slug is already taken', null, { slug: 'Already taken' })
@@ -563,7 +583,11 @@ export async function createGame(input: GameInput): Promise<AdminGame> {
 }
 
 export async function updateGame(id: string, patch: GamePatch): Promise<AdminGame> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const [{ adminGames }, { categories, games }] = await Promise.all([
+      import('@/mocks/admin'),
+      import('@/mocks/games'),
+    ])
     return mockRequest(() => {
       const game = adminGames.find((candidate) => candidate.id === id)
       if (!game) {
@@ -592,7 +616,11 @@ export type AdminRoundFilter = {
 }
 
 export async function fetchAdminRounds(filter: AdminRoundFilter): Promise<Page<AdminRound>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const [{ adminUsers }, { rounds }] = await Promise.all([
+      import('@/mocks/admin'),
+      import('@/mocks/wallet'),
+    ])
     return mockRequest(() => {
       const cutoff = filter.days ? Date.now() - filter.days * 86_400_000 : null
       const fixtureUser = adminUsers[0]
@@ -628,10 +656,11 @@ export async function fetchAdminRounds(filter: AdminRoundFilter): Promise<Page<A
   return api.get<Page<AdminRound>>(`/admin/rounds?${params.toString()}`)
 }
 
-// The server validates the value against the engine's options; the fixture
-// mirrors that so the demo console refuses the same input.
+// The server validates the value against the engine's options; the test fixture
+// mirrors that so component coverage refuses the same input.
 export async function setGameRtp(gameId: string, basisPoints: number): Promise<AdminGame> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminGames } = await import('@/mocks/admin')
     return mockRequest(() => {
       const game = adminGames.find((candidate) => candidate.id === gameId)
       if (!game) {
@@ -650,13 +679,23 @@ export async function setGameRtp(gameId: string, basisPoints: number): Promise<A
   return api.put<AdminGame>(`/admin/games/${encodeURIComponent(gameId)}/rtp`, { rtp_basis_points: basisPoints })
 }
 
-export async function fetchStaff() {
-  if (!usingFixtures) return [] as typeof staffAccounts
+type StaffAccount = {
+  id: string
+  name: string
+  email: string
+  role: string
+  enabled: boolean
+}
+
+export async function fetchStaff(): Promise<StaffAccount[]> {
+  if (!usingTestFixtures) return []
+  const { staffAccounts } = await import('@/mocks/admin')
   return mockRequest(() => [...staffAccounts])
 }
 
 export async function fetchAdminPaymentMethods(): Promise<PaymentMethod[]> {
-  if (!usingFixtures) return []
+  if (!usingTestFixtures) return []
+  const { paymentMethods } = await import('@/mocks/wallet')
   return mockRequest(() => [...paymentMethods])
 }
 

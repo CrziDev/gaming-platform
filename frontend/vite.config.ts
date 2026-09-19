@@ -17,6 +17,5 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
     css: false,
-    env: { VITE_API_MOCK: 'false' },
   },
 })

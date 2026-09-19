@@ -1,11 +1,13 @@
 import { api } from '@/api/client'
 import { mockRequest } from '@/api/mock'
-import { usingFixtures } from '@/api/mode'
+import { testFixturesEnabled } from '@/api/mode'
 import type { ChatMessage, ChatRoom, User } from '@/api/types'
-import { chatMessages, chatOnline } from '@/mocks/chat'
+
+const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
 
 export async function fetchChatRoom(): Promise<ChatRoom> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { chatMessages, chatOnline } = await import('@/mocks/chat')
     return mockRequest(() => ({ online: chatOnline, messages: [...chatMessages] }))
   }
   return api.get<ChatRoom>('/chat/messages')
@@ -13,7 +15,8 @@ export async function fetchChatRoom(): Promise<ChatRoom> {
 
 // The server names the author from the session; `user` only feeds the fixture.
 export async function sendChatMessage(input: { user: User; text: string }): Promise<ChatMessage> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { chatMessages } = await import('@/mocks/chat')
     return mockRequest(() => {
       const message: ChatMessage = {
         id: `ch-${chatMessages.length + 1}`,

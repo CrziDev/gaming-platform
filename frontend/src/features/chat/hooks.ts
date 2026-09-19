@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
 import { socketUrl } from '@/api/client'
-import { usingFixtures } from '@/api/mode'
+import { testFixturesEnabled } from '@/api/mode'
 
 import { fetchChatRoom, sendChatMessage } from './api'
+
+const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
 
 const chatQueryKey = ['chat'] as const
 
@@ -49,7 +51,7 @@ export function useChatSocket(enabled: boolean): { online: number | null } {
   const [online, setOnline] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!enabled || usingFixtures) return
+    if (!enabled || usingTestFixtures) return
     let socket: WebSocket | null = null
     let timer: number | undefined
     let delay = reconnectFloorMs

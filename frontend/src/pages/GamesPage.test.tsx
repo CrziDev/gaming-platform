@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { errorBody, liveShellStubs, renderApp, stubFetchRoutes, stubWebSocket } from '@/test-utils'
 
-vi.mock('@/api/mode', () => ({ usingMockApi: false, usingFixtures: false }))
+vi.mock('@/api/mode', () => ({ testFixturesEnabled: false }))
 
 beforeEach(() => {
   stubWebSocket()

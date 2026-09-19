@@ -13,10 +13,9 @@ repository/service code, frontend transport code, and automated tests—not on t
 presence of a table or a fixture-backed screen alone.
 
 Fixture-only surfaces (big wins, promotions, the recently-played lobby row, the hot
-shelf, console alerts, staff) render only in the development demo (`VITE_API_MOCK=true`)
-and in component tests. Outside those two modes every fixture-backed read returns nothing
-and its section does not render, so a real deployment never shows a fabricated win,
-promotion, or alert.
+shelf, console alerts, staff) render only in component tests. Every application build
+uses the server API; unsupported reads return nothing and their sections do not render,
+so local development and deployments never show a fabricated win, promotion, or alert.
 
 ## Current state
 
@@ -82,8 +81,8 @@ was replaced by `games.rtp_basis_points`, one of the options the engine compiles
 ## Completed slice: public catalogue reads
 
 Completed on 2026-09-12. `internal/game` serves the seeded catalogue from PostgreSQL;
-the lobby, catalogue, shelves, search, and game page read it with `VITE_API_MOCK=false`.
-Real launch stays disabled until the engine gate is satisfied.
+the lobby, catalogue, shelves, search, and game page always read it in application
+builds. Real launch stays disabled until the engine gate is satisfied.
 
 - [x] Add paginated `GET /api/games` with category, search, and sort behavior.
 - [x] Add `GET /api/games/{slug}` with active-game and `404` behavior.
@@ -134,7 +133,7 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Define the wallet-summary response. `GET /api/transactions/summary` reports
   deposited, staked, and returned per wallet for the requested window, and the history
   page renders one row of cards per currency from it; the client sums nothing.
-- [ ] Define or remove fixture-only console alerts (hidden outside the demo meanwhile).
+- [ ] Define or remove fixture-only console alerts (hidden in application builds meanwhile).
 - [ ] Decide whether staff-account management is Phase 1; the admin UI currently reads
   fixture staff accounts.
 - [x] Define admin payment-method management endpoints, or make payment methods
@@ -150,7 +149,7 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Keep lobby rows client-derived unless merchandising configuration is explicitly
   added to scope.
 - [ ] Decide whether the v2 lobby's merchandising surfaces — big wins, promotions, and the
-  hot shelf — are Phase 1. They are fixture-only today and hidden outside the demo. The
+  hot shelf — are Phase 1. They are test fixtures today and hidden in application builds. The
   new shelf is real: a game is `new` for thirty days after it is added.
 - [x] Favorites and the live chat rail are Phase 1 and built: `game_favorites` with
   `GET /api/favorites` and idempotent `PUT`/`DELETE /api/games/{slug}/favorite`;
@@ -452,15 +451,15 @@ and can never make a percentage true on its own.
   and the Status badge is hardcoded).
 - [x] New `/games/new` is backed by the real catalogue's thirty-day `new` flag.
 - [x] Favorites `/favorites` lists the player's real favourites from `GET /api/favorites`.
-- [ ] Hot `/games/hot` and Promotions `/promotions` are fixture-only and hidden outside
-  the demo; see contract alignment.
+- [ ] Hot `/games/hot` and Promotions `/promotions` have no service and are hidden in
+  application builds; see contract alignment.
 - [x] Not found `*` presents the intended application state.
 
 ### Admin routes
 
 - [x] Admin sign in `/admin/login` uses the real session API and role check.
 - [x] Dashboard `/admin` uses real currency-scoped summary data with an operator-selected
-  currency; fixture alerts render only in the demo.
+  currency; alerts have no service and are hidden in application builds.
 - [x] Deposits `/admin/deposits` uses the real review queue.
 - [x] Users `/admin/users` uses real paging, search, and status filters.
 - [x] User status mutations use the real API.
@@ -475,8 +474,8 @@ and can never make a percentage true on its own.
 - [x] RTP `/admin/rtp` switches a game's return only among the engine's options.
 - [x] Audit log `/admin/audit` uses the real append-only audit feed.
 - [ ] Settings `/admin/settings` contains only settings backed by an agreed Phase 1
-  contract (Payment methods and Staff read fixture-only and show an explanatory empty
-  state outside the demo; Limits and Platform are static forms whose Save, Add method,
+  contract (Payment methods and Staff have no management service and show an explanatory
+  empty state in application builds; Limits and Platform are static forms whose Save, Add method,
   and Invite staff buttons have no handler).
 
 ## 11. Generic game host and bridge

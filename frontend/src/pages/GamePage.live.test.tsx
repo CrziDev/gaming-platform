@@ -7,7 +7,7 @@ import { games } from '@/mocks/games'
 import { plinkoManifest } from '@/mocks/plinko'
 import { liveShellStubs, renderApp, stubFetchRoutes, stubWebSocket, userBody, type StubResponse } from '@/test-utils'
 
-vi.mock('@/api/mode', () => ({ usingMockApi: false, usingFixtures: false }))
+vi.mock('@/api/mode', () => ({ testFixturesEnabled: false }))
 
 beforeEach(() => {
   stubWebSocket()

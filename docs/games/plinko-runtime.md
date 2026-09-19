@@ -179,11 +179,10 @@ rejected.
    it and remounts the frame; no bet is offered against a table the player cannot see.
    A second `ready` is a reloaded frame: the host settles everything outstanding and
    configures again. The host sends only a board the frame does not already have.
-3. Place bet calls the round request. In the demo `src/mocks/plinko.ts` settles it
-   with the supplied game's slot weights; outside the demo it is
-   `POST /api/games/{slug}/rounds` with an `Idempotency-Key`, served by
+3. Place bet calls `POST /api/games/{slug}/rounds` with an `Idempotency-Key`, served by
    `round.Handler.Play` through the engine registered for the slug, and a 404 is
-   reported as the game not being available on this server.
+   reported as the game not being available on this server. Component tests settle
+   against the deterministic fixture in `src/mocks/plinko.ts`.
 4. The settled result is sent as `drop`. Rows and risk are locked while any ball is in
    flight. The wallet, rounds, and transactions are refetched when the frame reports
    `landed`, or eight seconds later regardless, so an animation can never hide a
