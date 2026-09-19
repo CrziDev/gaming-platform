@@ -1341,6 +1341,42 @@ func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	if balance != 12_000 || movements != 1 || audits != 1 {
 		t.Fatalf("balance=%d movements=%d audits=%d, want 12000/1/1", balance, movements, audits)
 	}
+
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/notifications", nil); status != http.StatusOK || !bytes.Contains(body, []byte(`"total":0`)) {
+		t.Fatalf("the reviewer's own bell must stay empty: %d (%s)", status, body)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/notifications", nil)
+	if status != http.StatusOK {
+		t.Fatalf("player notifications: want 200, got %d (%s)", status, body)
+	}
+	var bell struct {
+		Rows []struct {
+			Kind        string  `json:"kind"`
+			AmountMinor *int64  `json:"amount_minor"`
+			Currency    *string `json:"currency"`
+			Detail      *string `json:"detail"`
+			ReferenceID string  `json:"reference_id"`
+			Read        bool    `json:"read"`
+			CreatedAt   string  `json:"created_at"`
+		} `json:"rows"`
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(body, &bell); err != nil || bell.Total != 1 || len(bell.Rows) != 1 {
+		t.Fatalf("decode notifications: err=%v total=%d (%s)", err, bell.Total, body)
+	}
+	got := bell.Rows[0]
+	if got.Kind != "deposit_approved" || got.AmountMinor == nil || *got.AmountMinor != 12_000 || got.Currency == nil || *got.Currency != "PHP" || got.Detail != nil || got.ReferenceID != created.ID || got.Read {
+		t.Fatalf("unexpected approval notification: %+v", got)
+	}
+	if _, err := time.Parse(time.RFC3339, got.CreatedAt); err != nil {
+		t.Fatalf("created_at is not RFC 3339: %q", got.CreatedAt)
+	}
+	if status, body := send(t, playerClient, http.MethodPost, base+"/api/notifications/read", nil); status != http.StatusNoContent {
+		t.Fatalf("mark read: want 204, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/notifications", nil); status != http.StatusOK || !bytes.Contains(body, []byte(`"read":true`)) {
+		t.Fatalf("after marking read: %d (%s)", status, body)
+	}
 }
 
 func TestDepositHTTPRejectsNonImageProofWithoutPersistingIt(t *testing.T) {
@@ -1455,6 +1491,10 @@ func TestDepositHTTPRejectionPreservesReasonWithoutMovingMoney(t *testing.T) {
 	}
 	if rejected.Status != "rejected" || rejected.Reason == nil || *rejected.Reason != "Reference not found" {
 		t.Fatalf("unexpected rejected request: %+v", rejected)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/notifications", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"kind":"deposit_rejected"`)) || !bytes.Contains(body, []byte(`"detail":"Reference not found"`)) || !bytes.Contains(body, []byte(`"reference_id":"`+request.ID+`"`)) {
+		t.Fatalf("rejection notification: %d (%s)", status, body)
 	}
 
 	var balance int64

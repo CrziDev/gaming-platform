@@ -46,6 +46,7 @@ func createDepositUser(t *testing.T, db *sql.DB) string {
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM audit_logs WHERE actor_user_id = ($1::text)::uuid OR entity_id IN (SELECT id::text FROM deposit_requests WHERE user_id = ($1::text)::uuid)`, id)
+		_, _ = db.Exec(`DELETE FROM notifications WHERE user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM deposit_requests WHERE user_id = ($1::text)::uuid OR reviewed_by = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid OR actor_user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM wallets WHERE user_id = ($1::text)::uuid`, id)
@@ -236,6 +237,23 @@ func TestReviewApprovalCreditsOnceAndAudits(t *testing.T) {
 	if actor != actorID || action != "deposit.approve" || detail != "Verified amount on proof" || beforeAmount != "10000" || afterAmount != "12000" {
 		t.Fatalf("unexpected approval audit: actor=%q action=%q detail=%q before=%q after=%q", actor, action, detail, beforeAmount, afterAmount)
 	}
+	assertNotification(t, db, userID, request.ID, "deposit_approved", 12_000, "")
+}
+
+func assertNotification(t *testing.T, db *sql.DB, userID, requestID, kind string, amount int64, detail string) {
+	t.Helper()
+	var count int
+	var gotKind, gotCurrency, gotDetail string
+	var gotAmount int64
+	if err := db.QueryRow(`SELECT count(*) FROM notifications WHERE user_id = ($1::text)::uuid`, userID).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("notifications for the player = %d, err = %v, want exactly one", count, err)
+	}
+	if err := db.QueryRow(`SELECT kind, amount_minor, currency, COALESCE(detail, '') FROM notifications WHERE reference_type = 'deposit' AND reference_id = ($1::text)::uuid`, requestID).Scan(&gotKind, &gotAmount, &gotCurrency, &gotDetail); err != nil {
+		t.Fatalf("read notification: %v", err)
+	}
+	if gotKind != kind || gotAmount != amount || gotCurrency != "PHP" || gotDetail != detail {
+		t.Fatalf("notification = %s %d %s %q, want %s %d PHP %q", gotKind, gotAmount, gotCurrency, gotDetail, kind, amount, detail)
+	}
 }
 
 func TestReviewRejectionPreservesReasonWithoutMovingMoney(t *testing.T) {
@@ -259,6 +277,7 @@ func TestReviewRejectionPreservesReasonWithoutMovingMoney(t *testing.T) {
 		t.Fatalf("unexpected rejected request: %+v", rejected)
 	}
 	assertDepositFinancialRows(t, db, userID, request.ID, 0, 0, 1)
+	assertNotification(t, db, userID, request.ID, "deposit_rejected", 10_000, "Reference not found")
 }
 
 func TestConcurrentApprovalsCreditExactlyOnce(t *testing.T) {

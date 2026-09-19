@@ -102,8 +102,15 @@ export function useRecentRounds(gameId: string) {
   })
 }
 
+// A review lands while the player is elsewhere, so the bell re-reads on a
+// slow clock; a settled round refreshes it directly through the game session.
 export function useNotifications(enabled = true) {
-  return useQuery({ queryKey: ['notifications'], queryFn: fetchNotifications, enabled })
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: fetchNotifications,
+    enabled,
+    refetchInterval: 60_000,
+  })
 }
 
 export function useMarkNotificationsRead() {

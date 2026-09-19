@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gaming-platform/backend/internal/audit"
+	"github.com/gaming-platform/backend/internal/notification"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
@@ -253,6 +254,12 @@ func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, 
 		if err := writeAudit(ctx, tx, actorID, requestID, "deposit.reject", item.Status, "rejected", originalAmount, originalAmount, reason); err != nil {
 			return Request{}, err
 		}
+		if err := notification.Create(ctx, tx, notification.Notification{
+			UserID: item.UserID, Kind: notification.KindDepositRejected, AmountMinor: &originalAmount, Currency: item.Currency,
+			ReferenceType: "deposit", ReferenceID: requestID, Detail: reason,
+		}); err != nil {
+			return Request{}, err
+		}
 	} else if action == "approve" {
 		var minMinor, maxMinor int64
 		if err := tx.QueryRowContext(ctx, `SELECT deposit_min_minor, deposit_max_minor FROM currencies WHERE code = $1`, item.Currency).Scan(&minMinor, &maxMinor); err != nil {
@@ -278,6 +285,12 @@ func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, 
 			return Request{}, fmt.Errorf("deposit: approve request: %w", err)
 		}
 		if err := writeAudit(ctx, tx, actorID, requestID, "deposit.approve", item.Status, "approved", originalAmount, item.AmountMinor, reason); err != nil {
+			return Request{}, err
+		}
+		if err := notification.Create(ctx, tx, notification.Notification{
+			UserID: item.UserID, Kind: notification.KindDepositApproved, AmountMinor: &item.AmountMinor, Currency: item.Currency,
+			ReferenceType: "deposit", ReferenceID: requestID,
+		}); err != nil {
 			return Request{}, err
 		}
 	} else {

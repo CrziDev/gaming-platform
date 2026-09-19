@@ -14,6 +14,7 @@ import (
 	"github.com/gaming-platform/backend/internal/engine/plinko"
 	"github.com/gaming-platform/backend/internal/game"
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/notification"
 	"github.com/gaming-platform/backend/internal/round"
 	"github.com/gaming-platform/backend/internal/rtp"
 	"github.com/gaming-platform/backend/internal/user"
@@ -34,7 +35,8 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub) http.Handle
 	depositHandler := deposit.NewHandler(db, logger, cfg.ProofDir)
 	dashboardHandler := dashboard.NewHandler(db, logger)
 	auditHandler := audit.NewHandler(db, logger)
-	roundHandler := round.NewHandler(db, logger, round.Engines{"plinko": plinko.New()})
+	roundHandler := round.NewHandler(db, logger, round.Engines{"plinko": plinko.New()}, cfg.BigWinMultiplierHundredths)
+	notificationHandler := notification.NewHandler(db, logger)
 	chatHandler := chat.NewHandler(db, logger, hub, chat.Config{MessagesPerMinute: cfg.ChatMessagesPerMinute, AllowedOrigins: cfg.AllowedOrigins})
 	player, admin := authHandler.Player, authHandler.Admin
 
@@ -65,6 +67,8 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub) http.Handle
 	mux.HandleFunc("POST /api/chat/messages", player(chatHandler.Post))
 	mux.HandleFunc("GET /api/chat/socket", chatHandler.Socket)
 	mux.HandleFunc("GET /api/rounds", player(roundHandler.List))
+	mux.HandleFunc("GET /api/notifications", player(notificationHandler.List))
+	mux.HandleFunc("POST /api/notifications/read", player(notificationHandler.MarkRead))
 	mux.HandleFunc("GET /api/rounds/{id}", player(roundHandler.Get))
 	mux.HandleFunc("GET /api/admin/users", admin(authHandler.AdminUsers))
 	mux.HandleFunc("GET /api/admin/users/{id}", admin(authHandler.AdminUser))

@@ -11,9 +11,8 @@ Reconciled against `master` on 2026-09-12, after the v2 interface rebuild. This 
 based on reachable routes, repository/service code, frontend transport code, and automated
 tests—not on the presence of a table or a fixture-backed screen alone.
 
-Fixture-only surfaces (catalogue, big wins, promotions, favorites, live chat,
-notifications, console alerts, games, rounds, RTP, staff) render only in the development
-demo (`VITE_API_MOCK=true`) and in component tests. Outside those two modes every
+Fixture-only surfaces (big wins, promotions, console alerts, staff) render only in the
+development demo (`VITE_API_MOCK=true`) and in component tests. Outside those two modes every
 fixture-backed read returns nothing and its section does not render, so a real deployment
 never shows a fabricated win, promotion, or alert.
 
@@ -31,8 +30,8 @@ never shows a fabricated win, promotion, or alert.
 - [ ] Platform APIs replace the remaining frontend mocks (supported auth, wallet, deposit,
   dashboard, admin-user listing/detail/status, admin transactions, wallet adjustments,
   audit reads, the public catalogue, game administration, RTP profiles, and round reads
-  now default to HTTP; favorites, promotions, big wins, live chat, notifications, alerts,
-  staff, and settings remain fixture-backed or undefined).
+  favorites, live chat, notifications, and the wallet summary now default to HTTP;
+  promotions, big wins, alerts, staff, and settings remain fixture-backed or undefined).
 - [ ] Financial services and their PostgreSQL concurrency tests are complete.
 - [ ] The platform satisfies the pre-engine readiness gate in this document.
 - [ ] Complete game source is available for the first title.
@@ -119,8 +118,9 @@ decision must update the API contract, frontend types, and implementation togeth
   approval or rejection, and there is no cancellation endpoint.
 - [x] Enabled currency resources expose the server-owned minimum and maximum deposit
   amounts used by the frontend.
-- [ ] Decide whether Phase 1 includes notifications and marking them read; both are
-  currently fixture-only.
+- [x] Notifications are Phase 1: a deposit review and a big win (at or above
+  `BIG_WIN_MULTIPLIER_HUNDREDTHS`) write one in the same transaction, read through
+  `GET /api/notifications` and cleared with `POST /api/notifications/read`.
 - [ ] Define the cash-out / withdrawal contract (request, admin review, audit); the wallet
   page links to an honest placeholder at `/wallet/cash-out` until it exists.
 - [x] Define the wallet-summary response. `GET /api/transactions/summary` reports
@@ -410,7 +410,8 @@ Metadata can be built now; verified mathematical behavior cannot.
 - [x] The console navigation badge carries the real pending deposit total.
 - [x] The live chat rail reads the real room, posts through the session, and re-reads on
   the socket's push; presence comes from the socket.
-- [ ] Notifications are fixture-only and hidden outside the demo; see contract alignment.
+- [x] The notifications bell reads the real list on a slow refetch, is refreshed when a
+  round lands, and marks everything read through the server.
 - [ ] The Support link, language selector, and console search box are unwired chrome;
   see contract alignment.
 

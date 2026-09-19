@@ -82,6 +82,8 @@ type SettleInput struct {
 	MultiplierHundredths int
 	EngineReference      string
 	ResultData           json.RawMessage
+	// A win at or above this multiplier notifies the player; zero notifies nobody.
+	BigWinMultiplierHundredths int
 }
 
 type TerminateInput struct {

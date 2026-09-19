@@ -17,7 +17,7 @@ so a real deployment renders the empty state for those surfaces rather than fixt
 content. A page stays unchecked while any of its visible data sources has no server.
 
 Audited against the frontend on 2026-09-19: every route below exists, every data hook
-on every page was traced to its adapter in `features/*/api.ts`, and the 177 frontend
+on every page was traced to its adapter in `features/*/api.ts`, and the 184 frontend
 tests pass.
 
 ## Public and player pages
@@ -53,7 +53,7 @@ means the server is behind it.
 - [x] **Account menu** — Wallet, History, Account, Sign out against the real session
 - [x] **Console deposit badge** — the pending total from the real queue
 - [x] **Live chat rail** — the real room from `GET /api/chat/messages`, posts through `POST /api/chat/messages` with the server's `429` shown inline, and a WebSocket at `/api/chat/socket` whose `message` event re-reads the room and whose `presence` event drives the online count; reconnects with backoff
-- [ ] **Notifications bell** — fixture-only; the bell is hidden outside the demo, no contract for notifications or marking them read
+- [x] **Notifications bell** — every signed-in player's real notifications from `GET /api/notifications`, re-read every minute and when a round lands; deposit approved, deposit rejected with its reason, and big wins; "Mark all read" posts to `/api/notifications/read`
 - [ ] **Support link** — rail and drawer point at `https://support.example.com`; the destination is a placeholder
 - [ ] **Language selector** — rail and drawer show an "English" button with no handler; there is one language
 - [ ] **Console search box** — the admin top bar's "Search player, ref or round id" input has no handler and no endpoint
@@ -78,4 +78,4 @@ means the server is behind it.
 - Public and player routes: 17
 - Admin routes: 12
 - Total frontend routes: 29
-- Shell features: 11 (7 backed by the server)
+- Shell features: 11 (8 backed by the server)

@@ -102,6 +102,67 @@ func TestPlayDebitsDecidesAndCreditsInOneCommit(t *testing.T) {
 	if l := ledgerFor(t, fixture); l != (ledger{Rounds: 1, Wagers: 1, Wins: 1, Balance: 1_140}) {
 		t.Fatalf("ledger = %+v", l)
 	}
+	if n := notificationsFor(t, fixture); n != 0 {
+		t.Fatalf("a handler with no threshold notified %d times", n)
+	}
+}
+
+func notificationsFor(t *testing.T, fixture roundFixture) int {
+	t.Helper()
+	db := openRoundTestDB(t)
+	var count int
+	if err := db.QueryRow(`SELECT count(*) FROM notifications WHERE user_id = ($1::text)::uuid AND kind = 'round_win' AND reference_type = 'round'`, fixture.UserID).Scan(&count); err != nil {
+		t.Fatalf("count notifications: %v", err)
+	}
+	return count
+}
+
+func TestPlayNotifiesABigWinOnceAtTheThreshold(t *testing.T) {
+	db := openRoundTestDB(t)
+	fixture := createRoundFixture(t, db, 1_000)
+	eng := winningEngine(340, 170)
+
+	below := playInput(fixture, "play-below-"+fixture.Suffix, 200)
+	below.BigWinMultiplierHundredths = 171
+	if _, err := Play(context.Background(), db, eng, below); err != nil {
+		t.Fatalf("play below the threshold: %v", err)
+	}
+	if n := notificationsFor(t, fixture); n != 0 {
+		t.Fatalf("a 1.70x win notified at a 1.71x threshold: %d", n)
+	}
+
+	at := playInput(fixture, "play-at-"+fixture.Suffix, 200)
+	at.BigWinMultiplierHundredths = 170
+	for range 2 {
+		if _, err := Play(context.Background(), db, eng, at); err != nil {
+			t.Fatalf("play at the threshold: %v", err)
+		}
+	}
+	if n := notificationsFor(t, fixture); n != 1 {
+		t.Fatalf("a settled win and its retry notified %d times, want once", n)
+	}
+	var amount int64
+	var currency, roundID string
+	if err := db.QueryRow(`SELECT amount_minor, currency, reference_id::text FROM notifications WHERE user_id = ($1::text)::uuid AND kind = 'round_win'`, fixture.UserID).Scan(&amount, &currency, &roundID); err != nil {
+		t.Fatalf("read notification: %v", err)
+	}
+	var settled string
+	if err := db.QueryRow(`SELECT id::text FROM game_rounds WHERE round_key = $1`, "play:"+fixture.UserID+":play-at-"+fixture.Suffix).Scan(&settled); err != nil {
+		t.Fatalf("find the round: %v", err)
+	}
+	if amount != 340 || currency != "PHP" || roundID != settled {
+		t.Fatalf("notification = %d %s round %s, want 340 PHP round %s", amount, currency, roundID, settled)
+	}
+
+	zero := &stubEngine{outcome: engine.Outcome{WinMinor: 0, MultiplierHundredths: 0, Reference: "test/v1"}}
+	none := playInput(fixture, "play-none-"+fixture.Suffix, 200)
+	none.BigWinMultiplierHundredths = 0
+	if _, err := Play(context.Background(), db, zero, none); err != nil {
+		t.Fatalf("play with no win: %v", err)
+	}
+	if n := notificationsFor(t, fixture); n != 1 {
+		t.Fatalf("a losing round changed the count to %d", n)
+	}
 }
 
 func TestPlayZeroWinWritesNoWinMovement(t *testing.T) {

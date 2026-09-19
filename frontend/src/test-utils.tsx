@@ -91,6 +91,7 @@ export function errorBody(message: string, fields?: Record<string, string>) {
 // demo. A live-mode test spreads these so the chrome does not trip the stub.
 export const liveShellStubs = {
   'GET /chat/messages': { status: 200, body: { online: 0, messages: [] } },
+  'GET /notifications': { status: 200, body: { rows: [], total: 0, page: 1, size: 20, pages: 1 } },
 } satisfies Record<string, StubResponse>
 
 // A WebSocket that never connects on its own; a test drives it by calling

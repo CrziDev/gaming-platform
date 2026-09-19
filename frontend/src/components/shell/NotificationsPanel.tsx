@@ -2,13 +2,20 @@ import { Bell, ChevronRight } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 
+import type { Notification } from '@/api/types'
 import { IconButton } from '@/components/ui/Button'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { useMarkNotificationsRead, useNotifications } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatRelative } from '@/lib/format'
-import { money } from '@/lib/money'
+import { formatMoney, money } from '@/lib/money'
 import { paths } from '@/routes/paths'
+
+const labels: Record<Notification['kind'], string> = {
+  deposit_approved: 'Deposit approved',
+  deposit_rejected: 'Deposit rejected',
+  round_win: 'Big win',
+}
 
 export function NotificationsPanel() {
   const [open, setOpen] = useState(false)
@@ -30,12 +37,6 @@ export function NotificationsPanel() {
     document.addEventListener('pointerdown', onPointerDown)
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [open])
-
-  // No notification service exists yet: a bell with nothing behind it is a
-  // control implying a feature that does not exist.
-  if (notifications !== undefined && notifications.length === 0) {
-    return null
-  }
 
   return (
     <div ref={containerRef} className="relative">
@@ -59,7 +60,11 @@ export function NotificationsPanel() {
             </button>
           </header>
 
-          <ul className="flex max-h-80 flex-col gap-0.5 overflow-y-auto">
+          {notifications !== undefined && notifications.length === 0 ? (
+            <p className="px-3 py-4 text-[12.5px] text-ink-mute">Nothing yet</p>
+          ) : null}
+
+          <ul aria-label="Notifications" className="flex max-h-80 flex-col gap-0.5 overflow-y-auto">
             {notifications?.map((notification) => (
               <li
                 key={notification.id}
@@ -81,18 +86,7 @@ export function NotificationsPanel() {
                       notification.read ? 'text-ink-mute' : 'text-ink-soft',
                     )}
                   >
-                    {notification.message}
-                    {notification.amount_minor !== null && notification.currency ? (
-                      <>
-                        {' — '}
-                        <MoneyDisplay
-                          value={money(notification.amount_minor, notification.currency)}
-                          tone="auto"
-                          sign="always"
-                          className="text-[13px]"
-                        />
-                      </>
-                    ) : null}
+                    <Label notification={notification} />
                   </span>
                   <span className="font-mono text-[10.5px] text-ink-mute">
                     {formatRelative(notification.created_at)}
@@ -113,5 +107,31 @@ export function NotificationsPanel() {
         </div>
       ) : null}
     </div>
+  )
+}
+
+// A credit reads with its sign and colour; a refused deposit's amount is the
+// sum that did not move, so it reads plain beside the reason.
+function Label({ notification }: { notification: Notification }) {
+  const amount =
+    notification.amount_minor !== null && notification.currency
+      ? money(notification.amount_minor, notification.currency)
+      : null
+
+  return (
+    <>
+      {labels[notification.kind]}
+      {amount ? (
+        <>
+          {' — '}
+          {notification.kind === 'deposit_rejected' ? (
+            <span className="font-mono tnum">{formatMoney(amount)}</span>
+          ) : (
+            <MoneyDisplay value={amount} tone="auto" sign="always" className="text-[13px]" />
+          )}
+        </>
+      ) : null}
+      {notification.detail ? ` — ${notification.detail}` : null}
+    </>
   )
 }

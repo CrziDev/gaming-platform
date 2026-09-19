@@ -84,6 +84,7 @@ func createRoundFixture(t *testing.T, db *sql.DB, balanceMinor int64) roundFixtu
 	}
 
 	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM notifications WHERE user_id = ($1::text)::uuid`, fixture.UserID)
 		_, _ = db.Exec(`DELETE FROM game_rounds WHERE game_id = ($1::text)::uuid`, fixture.GameID)
 		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, fixture.UserID)
 		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_id IN (SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid)`, fixture.GameID)

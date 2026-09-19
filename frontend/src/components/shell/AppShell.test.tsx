@@ -44,6 +44,28 @@ describe('the top bar for a player', () => {
     expect(deposit).not.toContainElement(balance)
   })
 
+  it('lights the bell for an unread notification and clears it on Mark all read', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': player, 'GET /wallets/PHP': wallet })
+
+    renderApp('/')
+
+    const bell = await screen.findByRole('button', { name: 'Notifications' })
+    await user.click(bell)
+
+    const panel = screen.getByRole('list', { name: 'Notifications' })
+    const approved = await within(panel).findByText(/Deposit approved/)
+    expect(approved).toHaveTextContent('+₱2,000.00')
+    expect(within(panel).getByText(/Deposit rejected/)).toHaveTextContent('₱1,000.00 — Reference not found')
+    expect(within(panel).getByText(/Deposit rejected/)).not.toHaveTextContent('+₱1,000.00')
+    expect(within(panel).getByText(/Big win/)).toHaveTextContent('+₱500.00')
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(3)
+
+    await user.click(screen.getByRole('button', { name: 'Mark all read' }))
+    await within(panel).findByText(/Deposit approved/)
+    expect(screen.queryByText('Nothing yet')).not.toBeInTheDocument()
+  })
+
   it('names the account menu by surname and offers Account and Sign out', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({ 'GET /me': player, 'GET /wallets/PHP': wallet })

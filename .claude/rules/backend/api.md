@@ -107,6 +107,8 @@ one game's RTP profiles — is a plain array.
 | `POST` | `/api/chat/messages` | `201` + the message | `400` empty, multi-line, or over 280 characters · `401` · `429` over the per-account limit |
 | `GET` | `/api/chat/socket` | `101` and a WebSocket the server pushes events on | `403` origin not allowed |
 | `GET` | `/api/rounds` | `200` + a page of own rounds; accepts `game_id`, `status`, `currency`, `from`, `to` | `400` invalid filter · `401` |
+| `GET` | `/api/notifications` | `200` + a page of the player's notifications, newest first | `400` invalid paging · `401` |
+| `POST` | `/api/notifications/read` | `204`; every unread one is now read | `401` |
 | `GET` | `/api/rounds/{id}` | `200` + the owned round | `401` · `404` |
 
 A player-scoped read answers `404` for a resource that exists but belongs to someone
@@ -127,6 +129,16 @@ events: `{"type":"message"}` after every accepted post, which tells the client t
 re-read `/api/chat/messages`, and `{"type":"presence","online":n}` whenever the count of
 open sockets changes. The handshake `Origin` is checked against the same allowlist as
 every write. Presence and fan-out are per server process.
+
+A notification is `{ "id", "kind", "amount_minor", "currency", "detail", "reference_id",
+"read", "created_at" }` with `kind` one of `deposit_approved`, `deposit_rejected`, or
+`round_win`; the client composes the text from `kind`, and `detail` carries a rejection
+reason. `amount_minor` and `currency` are the credited amount for an approval or a win
+and the requested amount for a rejection, or both null. A notification is written in
+the same transaction as the review or the settlement it reports, once per
+`(kind, reference_id)`, and a win notifies only at or above
+`BIG_WIN_MULTIPLIER_HUNDREDTHS` (`1000`, ten times the stake, by default; `0` turns it
+off). There is no per-item read endpoint; the bell is read as a whole.
 
 A wallet summary is `{ "currency", "deposited_minor", "staked_minor", "returned_minor" }`:
 the sum of `deposit` movements, the sum of `wager` debits, and the sum of `win` credits

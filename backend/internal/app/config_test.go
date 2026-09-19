@@ -49,7 +49,7 @@ func TestConfigFromEnvDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("defaults rejected: %v", err)
 	}
-	if cfg.Port != 8080 || cfg.CookieName != "gp_session" || cfg.CookieSecure || cfg.LoginsPerMinute != 10 || cfg.ChatMessagesPerMinute != 20 {
+	if cfg.Port != 8080 || cfg.CookieName != "gp_session" || cfg.CookieSecure || cfg.LoginsPerMinute != 10 || cfg.ChatMessagesPerMinute != 20 || cfg.BigWinMultiplierHundredths != 1000 {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:5173" {

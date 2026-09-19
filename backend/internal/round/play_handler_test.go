@@ -46,7 +46,7 @@ func TestPlayHandlerSettlesAndReplays(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	slug := "round-game-" + fixture.Suffix
-	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: winningEngine(340, 170)})
+	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: winningEngine(340, 170)}, 0)
 	account := user.User{ID: fixture.UserID}
 	call := playCall{slug: slug, key: "http-" + fixture.Suffix, body: `{"stake_minor": 200, "currency": "PHP", "params": {"rows": 8, "risk": "normal"}}`}
 
@@ -88,11 +88,11 @@ func TestPlayHandlerAnswers404ForAnUnplayableGame(t *testing.T) {
 	body := `{"stake_minor": 200, "currency": "PHP", "params": {}}`
 	account := user.User{ID: fixture.UserID}
 
-	noEngine := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{})
+	noEngine := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{}, 0)
 	if code, _ := noEngine.play(t, account, playCall{slug: slug, key: "k", body: body}); code != http.StatusNotFound {
 		t.Fatalf("no engine: want 404, got %d", code)
 	}
-	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: winningEngine(0, 0), "ghost": winningEngine(0, 0)})
+	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: winningEngine(0, 0), "ghost": winningEngine(0, 0)}, 0)
 	if code, _ := handler.play(t, account, playCall{slug: "ghost", key: "k", body: body}); code != http.StatusNotFound {
 		t.Fatalf("no game row: want 404, got %d", code)
 	}
@@ -111,7 +111,7 @@ func TestPlayHandlerRejectsBadInput(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	slug := "round-game-" + fixture.Suffix
-	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: winningEngine(340, 170)})
+	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: winningEngine(340, 170)}, 0)
 	account := user.User{ID: fixture.UserID}
 	good := `{"stake_minor": 200, "currency": "PHP", "params": {"rows": 8, "risk": "normal"}}`
 
@@ -137,7 +137,7 @@ func TestPlayHandlerRejectsBadInput(t *testing.T) {
 			t.Fatalf("%s: want a %s field error, got %v", name, c.field, body)
 		}
 	}
-	refusing := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: &stubEngine{err: engine.ErrInvalidParams}})
+	refusing := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: &stubEngine{err: engine.ErrInvalidParams}}, 0)
 	if code, body := refusing.play(t, account, playCall{slug: slug, key: "k7", body: good}); code != http.StatusBadRequest || fieldError(body, "params") == "" {
 		t.Fatalf("engine refusal: %d %v", code, body)
 	}
@@ -153,7 +153,7 @@ func TestPlayHandlerConflictCodes(t *testing.T) {
 
 	poor := createRoundFixture(t, db, 100)
 	poorSlug := "round-game-" + poor.Suffix
-	handler := NewHandler(db, logger, Engines{poorSlug: winningEngine(340, 170)})
+	handler := NewHandler(db, logger, Engines{poorSlug: winningEngine(340, 170)}, 0)
 	if code, body := handler.play(t, user.User{ID: poor.UserID}, playCall{slug: poorSlug, key: "k1", body: good}); code != http.StatusConflict || body["code"] != "INSUFFICIENT_BALANCE" {
 		t.Fatalf("insufficient: %d %v", code, body)
 	}
@@ -161,11 +161,11 @@ func TestPlayHandlerConflictCodes(t *testing.T) {
 	fixture := createRoundFixture(t, db, 1_000)
 	slug := "round-game-" + fixture.Suffix
 	account := user.User{ID: fixture.UserID}
-	handler = NewHandler(db, logger, Engines{slug: winningEngine(340, 170)})
+	handler = NewHandler(db, logger, Engines{slug: winningEngine(340, 170)}, 0)
 	if code, body := handler.play(t, account, playCall{slug: slug, key: "k2", body: `{"stake_minor": 200, "currency": "USD", "params": {}}`}); code != http.StatusConflict || body["code"] != "UNSUPPORTED_CURRENCY" {
 		t.Fatalf("currency: %d %v", code, body)
 	}
-	overflowing := NewHandler(db, logger, Engines{slug: &stubEngine{err: engine.ErrPayoutOverflow}})
+	overflowing := NewHandler(db, logger, Engines{slug: &stubEngine{err: engine.ErrPayoutOverflow}}, 0)
 	if code, body := overflowing.play(t, account, playCall{slug: slug, key: "k3", body: good}); code != http.StatusConflict || body["code"] != "AMOUNT_OVERFLOW" {
 		t.Fatalf("overflow: %d %v", code, body)
 	}
@@ -203,7 +203,7 @@ func TestPlayHandlerAnswersUnsupportedCurrencyWhenNoWalletCanBeProvisioned(t *te
 		t.Fatal(err)
 	}
 	slug := "round-game-" + fixture.Suffix
-	handler := NewHandler(db, logger, Engines{slug: winningEngine(340, 170)})
+	handler := NewHandler(db, logger, Engines{slug: winningEngine(340, 170)}, 0)
 	code, body := handler.play(t, user.User{ID: fixture.UserID}, playCall{slug: slug, key: "k-disabled", body: `{"stake_minor": 200, "currency": "RDX", "params": {}}`})
 	if code != http.StatusConflict || body["code"] != "UNSUPPORTED_CURRENCY" {
 		t.Fatalf("disabled currency: want 409 UNSUPPORTED_CURRENCY, got %d %v", code, body)
@@ -217,7 +217,7 @@ func TestManifestHandler(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 0)
 	slug := "round-game-" + fixture.Suffix
-	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: winningEngine(0, 0)})
+	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), Engines{slug: winningEngine(0, 0)}, 0)
 
 	manifest := func(slug string) (int, string) {
 		request := httptest.NewRequest(http.MethodGet, "/api/games/"+slug+"/manifest", nil)

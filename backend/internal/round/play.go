@@ -13,12 +13,13 @@ import (
 )
 
 type PlayInput struct {
-	IdempotencyKey string
-	UserID         string
-	GameID         string
-	Currency       string
-	StakeMinor     int64
-	Params         json.RawMessage
+	IdempotencyKey             string
+	UserID                     string
+	GameID                     string
+	Currency                   string
+	StakeMinor                 int64
+	Params                     json.RawMessage
+	BigWinMultiplierHundredths int
 }
 
 type PlayResult struct {
@@ -88,7 +89,7 @@ func Play(ctx context.Context, db *sql.DB, eng Engine, in PlayInput) (PlayResult
 	}
 	settle := SettleInput{
 		RoundID: opened.Round.ID, WinMinor: outcome.WinMinor, MultiplierHundredths: outcome.MultiplierHundredths,
-		EngineReference: outcome.Reference, ResultData: stored,
+		EngineReference: outcome.Reference, ResultData: stored, BigWinMultiplierHundredths: in.BigWinMultiplierHundredths,
 	}
 	if err := validateSettle(&settle); err != nil {
 		return PlayResult{}, err

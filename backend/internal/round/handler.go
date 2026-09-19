@@ -24,9 +24,10 @@ var readStatuses = map[string]bool{
 }
 
 type Handler struct {
-	db      *sql.DB
-	logger  *slog.Logger
-	engines Engines
+	db                         *sql.DB
+	logger                     *slog.Logger
+	engines                    Engines
+	bigWinMultiplierHundredths int
 }
 
 type playRequest struct {
@@ -69,8 +70,8 @@ type adminResponse struct {
 	WalletID    string `json:"wallet_id"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger, engines Engines) *Handler {
-	return &Handler{db: db, logger: logger, engines: engines}
+func NewHandler(db *sql.DB, logger *slog.Logger, engines Engines, bigWinMultiplierHundredths int) *Handler {
+	return &Handler{db: db, logger: logger, engines: engines, bigWinMultiplierHundredths: bigWinMultiplierHundredths}
 }
 
 const maxIdempotencyKeyLength = 200
@@ -126,7 +127,10 @@ func (h *Handler) Play(w http.ResponseWriter, r *http.Request, account user.User
 		return
 	}
 
-	in := PlayInput{IdempotencyKey: key, UserID: account.ID, GameID: item.ID, Currency: body.Currency, StakeMinor: body.StakeMinor, Params: body.Params}
+	in := PlayInput{
+		IdempotencyKey: key, UserID: account.ID, GameID: item.ID, Currency: body.Currency, StakeMinor: body.StakeMinor, Params: body.Params,
+		BigWinMultiplierHundredths: h.bigWinMultiplierHundredths,
+	}
 	result, err := Play(r.Context(), h.db, eng, in)
 	if errors.Is(err, wallet.ErrNotFound) {
 		// A wallet is provisioned on first sight of its currency; a player who has

@@ -278,20 +278,23 @@ export async function fetchRecentRounds(gameId: string): Promise<Round[]> {
   return page.rows.slice(0, RECENT_ROUNDS)
 }
 
+const NOTIFICATION_PAGE_SIZE = 20
+
 export async function fetchNotifications(): Promise<Notification[]> {
   if (usingFixtures) {
     return mockRequest(() => [...notifications])
   }
-  return []
+  const page = await api.get<Page<Notification>>(`/notifications?page=1&size=${NOTIFICATION_PAGE_SIZE}`)
+  return page.rows
 }
 
 export async function markNotificationsRead(): Promise<void> {
-  if (!usingFixtures) {
-    return
+  if (usingFixtures) {
+    return mockRequest(() => {
+      for (const notification of notifications) {
+        notification.read = true
+      }
+    }, 120)
   }
-  return mockRequest(() => {
-    for (const notification of notifications) {
-      notification.read = true
-    }
-  }, 120)
+  await api.post<void>('/notifications/read')
 }

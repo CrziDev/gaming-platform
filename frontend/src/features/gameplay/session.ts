@@ -114,6 +114,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
       void queryClient.invalidateQueries({ queryKey: walletQueryKey })
       void queryClient.invalidateQueries({ queryKey: ['rounds'] })
       void queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
     [queryClient],
   )

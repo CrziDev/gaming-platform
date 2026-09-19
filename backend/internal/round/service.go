@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gaming-platform/backend/internal/money"
+	"github.com/gaming-platform/backend/internal/notification"
 	"github.com/gaming-platform/backend/internal/rtp"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
@@ -199,6 +200,14 @@ func settleTx(ctx context.Context, tx *sql.Tx, in SettleInput) (Round, error) {
 			Reason:         "round win",
 		}); err != nil {
 			return Round{}, err
+		}
+		if in.BigWinMultiplierHundredths > 0 && in.MultiplierHundredths >= in.BigWinMultiplierHundredths {
+			if err := notification.Create(ctx, tx, notification.Notification{
+				UserID: item.UserID, Kind: notification.KindRoundWin, AmountMinor: &in.WinMinor, Currency: item.Currency,
+				ReferenceType: "round", ReferenceID: item.ID,
+			}); err != nil {
+				return Round{}, err
+			}
 		}
 	}
 	return updateSettled(ctx, tx, in)

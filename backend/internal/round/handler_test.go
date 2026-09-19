@@ -38,7 +38,7 @@ func TestPlayerRoundReadsAreOwnedAndPaginated(t *testing.T) {
 		t.Fatalf("open foreign round: %v", err)
 	}
 
-	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0)
 	listRequest := httptest.NewRequest(http.MethodGet, "/api/rounds?status=settled&page=1&size=1", nil)
 	listResponse := httptest.NewRecorder()
 	handler.List(listResponse, listRequest, user.User{ID: owner.UserID})
@@ -87,7 +87,7 @@ func TestAdminRoundListAppliesEveryFilter(t *testing.T) {
 		"&game_id=" + fixture.GameID + "&status=open&currency=PHP&from=" + from + "&to=" + to
 	request := httptest.NewRequest(http.MethodGet, target, nil)
 	recorder := httptest.NewRecorder()
-	NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), nil).AdminList(recorder, request, user.User{Role: "admin"})
+	NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0).AdminList(recorder, request, user.User{Role: "admin"})
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("admin list: want 200, got %d (%s)", recorder.Code, recorder.Body.String())
 	}
@@ -108,7 +108,7 @@ func TestRoundReadHandlersRejectInvalidFilters(t *testing.T) {
 		"?user_id=not-a-uuid",
 		"?from=yesterday",
 	}
-	handler := NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	handler := NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0)
 	for _, query := range tests {
 		t.Run(query, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/api/admin/rounds"+query, nil)
@@ -125,7 +125,7 @@ func TestPlayerRoundGetRejectsMalformedIDAsNotFound(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/api/rounds/not-an-id", nil)
 	request.SetPathValue("id", "not-an-id")
 	recorder := httptest.NewRecorder()
-	NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil).Get(recorder, request, user.User{})
+	NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0).Get(recorder, request, user.User{})
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("want 404, got %d (%s)", recorder.Code, recorder.Body.String())
 	}

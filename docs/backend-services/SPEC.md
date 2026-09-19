@@ -65,7 +65,7 @@ dependency order: `000001` `users` · `000002` `auth_sessions` · `000003`
 `wallet_transactions` · `000007` `game_categories` · `000008` `games` · `000009`
 `rtp_profiles` · `000010` `game_rounds` · `000011` `payment_methods` · `000012`
 `deposit_requests` · `000013` `audit_logs` · `000014` `game_favorites` · `000015`
-`chat_messages`.
+`chat_messages` · `000016` `notifications`.
 
 ### 4.1 Accounts and sessions
 
@@ -487,6 +487,38 @@ The hub is closed after `http.Server.Shutdown` returns, because a hijacked conne
 outside the server's drain; each open socket is then sent a going-away close. Fan-out
 and the online count are per process, the same limit the login limiter already has.
 
+### 4.11 `notifications`
+
+```sql
+CREATE TABLE notifications (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id        UUID NOT NULL REFERENCES users (id),
+    kind           TEXT NOT NULL,
+    amount_minor   BIGINT,
+    currency       TEXT REFERENCES currencies (code),
+    reference_type TEXT NOT NULL,
+    reference_id   UUID NOT NULL,
+    detail         TEXT,
+    read_at        TIMESTAMPTZ,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT notifications_kind_valid CHECK (kind IN ('deposit_approved', 'deposit_rejected', 'round_win')),
+    CONSTRAINT notifications_amount_json_safe CHECK (
+        amount_minor IS NULL OR amount_minor BETWEEN -9007199254740991 AND 9007199254740991),
+    CONSTRAINT notifications_amount_has_currency CHECK ((amount_minor IS NULL) = (currency IS NULL))
+);
+
+CREATE UNIQUE INDEX notifications_one_per_reference ON notifications (kind, reference_id);
+CREATE INDEX notifications_user_created ON notifications (user_id, created_at DESC);
+```
+
+A notification is a fact about a committed change, so `notification.Create` takes the
+caller's `*sql.Tx` the way `audit.Record` does and is called from inside the deposit
+review and the round settlement, never after them. The unique index makes a retried
+transaction write nothing, and `read_at` records when it was read rather than a flag
+that could be flipped back. The row carries no text: the kind and the amount are the
+facts, and the web app chooses the words.
+
 ## 5. Accounts and sessions
 
 The account service covers registration, login, logout, `/api/me`, the
@@ -619,6 +651,9 @@ UPDATE game_rounds
 Zero rows affected means the round was already settled — `ROUND_ALREADY_SETTLED`, and the
 client shows the settled result rather than retrying.
 
+A win at or above `BIG_WIN_MULTIPLIER_HUNDREDTHS` also writes a `round_win` notification
+inside the settlement transaction, so it exists exactly when the credit does.
+
 Cancellation and failure are terminal alternatives for an open round. Each credits one
 `refund` movement equal to the original stake and changes the status in the same
 transaction. Repeating the same cancel or fail operation returns the stored round without
@@ -689,7 +724,9 @@ COMMIT
 
 A second approval cannot credit a second time: the request row is locked and its status
 is checked inside the transaction, and `deposit_requests_approval_has_movement` ties the
-approval to exactly one movement.
+approval to exactly one movement. Both outcomes write the player's notification in the
+same transaction: an approval with the credited amount, a rejection with the requested
+amount and the reason.
 
 Proof upload is part of `POST /api/deposits` and is required. It uses an image
 MIME allowlist checked by content rather than extension, a 5 MiB file cap within the

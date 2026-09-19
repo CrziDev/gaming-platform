@@ -198,13 +198,17 @@ export type PaymentMethod = {
   enabled: boolean
 }
 
+export type NotificationKind = 'deposit_approved' | 'deposit_rejected' | 'round_win'
+
 export type Notification = {
   id: string
-  message: string
+  kind: NotificationKind
   amount_minor: number | null
   currency: Currency | null
-  created_at: string
+  detail: string | null
+  reference_id: string
   read: boolean
+  created_at: string
 }
 
 export type Adjustment = {
