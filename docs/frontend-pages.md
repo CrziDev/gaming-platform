@@ -9,10 +9,12 @@ Source of truth: `frontend/src/routes/AppRoutes.tsx` and
 
 ## Current backend coverage
 
-As of 2026-09-14, authentication, wallets, manual deposits, the public catalogue,
+As of 2026-09-19, authentication, wallets, the wallet summary, manual deposits, the
+public catalogue, favorites, Plinko rounds and the manifest, live chat, notifications,
 paginated admin users, admin user details and status operations, wallet adjustments,
 admin transactions, deposit review, the audit log, the dashboard summary, game
-administration, RTP profiles, and round history use real APIs when `VITE_API_MOCK=false`. Fixture-backed reads return nothing outside the demo and tests,
+administration, RTP profiles, and round history use real APIs when
+`VITE_API_MOCK=false`. Fixture-backed reads return nothing outside the demo and tests,
 so a real deployment renders the empty state for those surfaces rather than fixture
 content. A page stays unchecked while any of its visible data sources has no server.
 
@@ -24,7 +26,7 @@ tests pass.
 
 - [ ] **Lobby** — `/` (catalogue, categories, and the featured banner are real; big wins, promotions, and recently-played rows are fixture-only and hidden outside the demo)
 - [x] **Game catalogue** — `/games` (real catalogue with category, search, and sort)
-- [ ] **Hot games** — `/games/hot` (no round data to define "hot"; empty outside the demo)
+- [ ] **Hot games** — `/games/hot` (round data exists now but "hot" has no agreed definition; `flag=hot` answers `400` and the shelf is empty outside the demo)
 - [x] **New games** — `/games/new` (real thirty-day `new` flag from the catalogue)
 - [x] **Favorites** — `/favorites` (authentication required; the player's real favourites, newest first, active games only)
 - [ ] **Promotions** — `/promotions` (fixture-only; empty outside the demo)
@@ -32,7 +34,7 @@ tests pass.
 - [x] **Register** — `/register` (opens the real registration flow)
 - [ ] **Forgot password** — `/forgot` (calls the contracted endpoint; reports reset as unavailable while the server answers 404)
 - [ ] **Reset password** — `/reset` (same; refuses to submit without a token in the link)
-- [ ] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and under every title's board a history of the player's own recent rounds on that game; the favorite toggle writes `PUT`/`DELETE /api/games/{slug}/favorite` and re-reads the list. Plinko launches in the generic game host through the versioned bridge: in the demo a fixture settles each round and the board animates it, while outside the demo Place bet calls `POST /api/games/{slug}/rounds`, which the server settles through the Plinko engine against the active RTP profile before the ball is dropped; a server without an engine for the slug answers 404 and the page reports the game as not available. The board is configured from `GET /api/games/{slug}/manifest`, the active profile's table: until it loads the frame shows the loading state, a 404 or 409 is the frame's error state with a retry, and Place bet is disabled in both; a round settled on a different profile than the manifest's refetches it and the board is reconfigured once no ball is in flight. Every other title keeps the display-slot placeholder)
+- [x] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and under every title's board a history of the player's own recent rounds on that game; the favorite toggle writes `PUT`/`DELETE /api/games/{slug}/favorite` and re-reads the list. Plinko launches in the generic game host through the versioned bridge: in the demo a fixture settles each round and the board animates it, while outside the demo Place bet calls `POST /api/games/{slug}/rounds`, which the server settles through the Plinko engine against the active RTP profile before the ball is dropped; a server without an engine for the slug answers 404 and the page reports the game as not available. The board is configured from `GET /api/games/{slug}/manifest`, the active profile's table: until it loads the frame shows the loading state, a 404 or 409 is the frame's error state with a retry, and Place bet is disabled in both; a round settled on a different profile than the manifest's refetches it and the board is reconfigured once no ball is in flight. Every other title has no engine on the server, so it keeps the display-slot placeholder and a round would answer `404`)
 - [x] **Wallet** — `/wallet` (authentication required; real balance, currency switch sheet, open request list, and recent ledger)
 - [x] **Deposit** — `/wallet/deposit` (real methods, limits, proof upload, and submission)
 - [x] **Deposit status** — `/wallet/deposit/:id` (real player-owned request; no cancellation)
@@ -75,7 +77,7 @@ means the server is behind it.
 
 ## Coverage
 
-- Public and player routes: 17
-- Admin routes: 12
-- Total frontend routes: 29
+- Public and player routes: 18 (11 backed by the server)
+- Admin routes: 12 (11 backed by the server)
+- Total frontend routes: 30
 - Shell features: 11 (8 backed by the server)

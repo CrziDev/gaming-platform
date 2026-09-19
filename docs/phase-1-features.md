@@ -7,14 +7,16 @@ wait for the actual games and their engines.
 Use `[x]` only when the implementation and its required tests are complete. A page that
 works only against frontend fixtures is not complete.
 
-Reconciled against `master` on 2026-09-12, after the v2 interface rebuild. This status is
-based on reachable routes, repository/service code, frontend transport code, and automated
-tests—not on the presence of a table or a fixture-backed screen alone.
+Reconciled against `work` on 2026-09-19, after Plinko, favorites, live chat,
+notifications, and the wallet summary landed. This status is based on reachable routes,
+repository/service code, frontend transport code, and automated tests—not on the
+presence of a table or a fixture-backed screen alone.
 
-Fixture-only surfaces (big wins, promotions, console alerts, staff) render only in the
-development demo (`VITE_API_MOCK=true`) and in component tests. Outside those two modes every
-fixture-backed read returns nothing and its section does not render, so a real deployment
-never shows a fabricated win, promotion, or alert.
+Fixture-only surfaces (big wins, promotions, the recently-played lobby row, the hot
+shelf, console alerts, staff) render only in the development demo (`VITE_API_MOCK=true`)
+and in component tests. Outside those two modes every fixture-backed read returns nothing
+and its section does not render, so a real deployment never shows a fabricated win,
+promotion, or alert.
 
 ## Current state
 
@@ -27,15 +29,20 @@ never shows a fabricated win, promotion, or alert.
 - [x] Player payment-method and deposit-request APIs are backed by PostgreSQL.
 - [x] Admin deposit review APIs credit or reject requests atomically with audit entries.
 - [x] The currency-scoped admin dashboard summary is backed by PostgreSQL.
-- [ ] Platform APIs replace the remaining frontend mocks (supported auth, wallet, deposit,
-  dashboard, admin-user listing/detail/status, admin transactions, wallet adjustments,
-  audit reads, the public catalogue, game administration, RTP profiles, and round reads
-  favorites, live chat, notifications, and the wallet summary now default to HTTP;
-  promotions, big wins, alerts, staff, and settings remain fixture-backed or undefined).
-- [ ] Financial services and their PostgreSQL concurrency tests are complete.
-- [ ] The platform satisfies the pre-engine readiness gate in this document.
-- [ ] Complete game source is available for the first title.
-- [ ] Any game engine or real-money game integration is complete.
+- [ ] Platform APIs replace the remaining frontend mocks (auth, wallets, the wallet
+  summary, deposits, the dashboard, admin users, admin transactions, wallet adjustments,
+  audit reads, the public catalogue, game administration, RTP profiles, round reads,
+  Plinko rounds, favorites, live chat, and notifications default to HTTP; promotions,
+  big wins, the recently-played row, the hot shelf, console alerts, staff, and settings
+  remain fixture-backed or undefined).
+- [ ] Financial services and their PostgreSQL concurrency tests are complete (wallets,
+  adjustments, deposits, and rounds are; cash-out has no contract yet, §1).
+- [x] The platform satisfies the pre-engine readiness gate in this document (§16).
+- [x] Complete game source is available for the first title (Plinko, kept untouched at
+  `docs/games/source/plinko/`; `docs/games/plinko-runtime.md`).
+- [x] The first real-money game integration is complete: Plinko settles on the server
+  through the Plinko engine against its verified `plinko/v1/9600` profile (§16). A
+  browser pass on supported devices is still open in §16.
 
 ## Completed slice: round read APIs
 
@@ -137,7 +144,8 @@ decision must update the API contract, frontend types, and implementation togeth
   (`Game`, `Category`, `AdminGame`, and `RtpProfile` are reconciled; `Transaction`,
   `AuditEntry`, and `AdminDeposit` are mapped in the adapter, and `Transaction` still
   carries a `label`, `reference`, `status`, and `round_id` the server does not send;
-  `Round` is reconciled with its read endpoints).
+  `Round`, `WalletSummary`, `ChatMessage`, and `Notification` are reconciled with their
+  endpoints).
 - [x] Keep lobby rows client-derived unless merchandising configuration is explicitly
   added to scope.
 - [ ] Decide whether the v2 lobby's merchandising surfaces — big wins, promotions, and the
@@ -166,6 +174,9 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] `game_rounds` migration with unique round keys and settlement constraints.
 - [x] `payment_methods` and `deposit_requests` migrations.
 - [x] Append-only `audit_logs` migration.
+- [x] `game_favorites` migration keyed by user and game.
+- [x] `chat_messages` migration with the one-line length constraint.
+- [x] `notifications` migration with one row per kind and reference.
 - [x] Every migration has a working down migration.
 
 ### Application structure
@@ -320,9 +331,9 @@ These features do not require an engine.
 - [x] Reject a wager when its game is not active.
 - [ ] Replace fixture art with reviewed game thumbnails when assets arrive (the tile
   renders `frontend/src/assets/games/<slug>.png` or `thumbnail_url` when present).
-- [ ] Keep the real game launch disabled until its integration passes the engine gate
-  (nothing launches today; the game page's bet panel is a display slot and Place bet
-  only raises a toast).
+- [x] A real game launches only through an engine registered for its slug in
+  `internal/app`; Plinko passed the engine gate and launches, and every other catalogue
+  title answers `404` to a round and keeps the display-slot placeholder.
 
 ## 8. Round and betting infrastructure
 
@@ -378,7 +389,10 @@ Metadata can be built now; verified mathematical behavior cannot.
   `RTP_PROFILE_NOT_VERIFIED`.
 - [x] Provide no platform operation that can mark a profile verified without engine
   evidence.
-- [ ] Do not claim theoretical or observed RTP before verification.
+- [x] Do not claim theoretical or observed RTP before verification (only
+  `gameverify verify` writes `theoretical_basis_points` and `observed_basis_points`, and
+  the console shows a profile's target; the dashboard's ledger-derived figure is a
+  separate labelling item in §12).
 
 ## 10. Frontend integration
 
@@ -386,7 +400,9 @@ Metadata can be built now; verified mathematical behavior cannot.
 
 - [ ] Replace remaining fixture APIs with real HTTP calls while retaining deliberate test mocks.
 - [x] Make non-mock mode the production default.
-- [ ] Validate runtime responses where an untrusted payload crosses into the app.
+- [ ] Validate runtime responses where an untrusted payload crosses into the app (the
+  game frame's messages, the Plinko manifest, and the play response are validated with
+  Zod; every other response is typed only).
 - [x] Handle standard API errors without matching human-readable error text (the wired
   deposit, review, adjustment, and status mutations act on status and `code`; the
   remaining fixture-backed surfaces have no server errors to handle yet).
@@ -401,8 +417,8 @@ Metadata can be built now; verified mathematical behavior cannot.
 
 - [x] The header balance chip shows the active wallet's real balance on every
   authenticated route.
-- [x] The search sheet (`⌘K`, rail, drawer) searches the real catalogue and hands off to
-  `/games?q=`.
+- [x] The inline search box at the top of the rail and drawer (`⌘K` focuses it) lists
+  real catalogue results and hands off to `/games?q=`.
 - [x] `/login` and `/register` open the auth modal over the lobby, and a guest who picks
   a game or a locked nav item returns there after signing in.
 - [x] The session-expired dialog is raised when a live session stops being recognised
@@ -418,8 +434,9 @@ Metadata can be built now; verified mathematical behavior cannot.
 ### Public and player routes
 
 - [ ] Lobby `/` is backed by the real catalogue and player history where applicable (the
-  catalogue, categories, and featured banner are real; recently-played rows wait for
-  round history, and big wins and promotions are fixture-only).
+  catalogue, categories, and featured banner are real; the recently-played row is still
+  fixture-only although round history now exists to derive it, and big wins and
+  promotions are fixture-only).
 - [x] Game catalogue `/games` is backed by the real catalogue API.
 - [x] Sign in `/login` uses the real session API.
 - [x] Registration `/register` uses the real account API.
@@ -472,16 +489,27 @@ Metadata can be built now; verified mathematical behavior cannot.
 The transport shell can be built and tested with a non-financial harness before a game
 arrives. Its final message set must still be reviewed against the first real title.
 
-- [ ] Define a versioned `postMessage` protocol and runtime schemas.
-- [ ] Restrict messages by exact origin and expected source window.
-- [ ] Reject unknown versions, message types, and payload fields.
-- [ ] Let the host provide authenticated player context without exposing session tokens.
-- [ ] Let the host provide permitted game and wager configuration.
-- [ ] Let the host display server-returned balance and round results.
-- [ ] Ensure the embedded frame cannot directly mutate a wallet or settle a round.
-- [ ] Implement timeout, retry-safe, unavailable, and session-expired states.
-- [ ] Test the bridge with a deterministic, non-wagering harness.
-- [ ] Revalidate the protocol after reviewing the first complete game source.
+Built with Plinko as the first title; `docs/games/plinko-runtime.md` records the protocol.
+
+- [x] Define a versioned `postMessage` protocol and runtime schemas (`v: 1`, Zod
+  `strictObject` unions in `frontend/src/features/gameplay/schemas.ts`).
+- [x] Restrict messages by exact origin and expected source window (`bridge.ts`).
+- [x] Reject unknown versions, message types, and payload fields.
+- [x] Let the host provide authenticated player context without exposing session tokens
+  (the frame receives no player context at all: identity, wallet, and bet controls stay
+  on the host side).
+- [x] Let the host provide permitted game and wager configuration (`configure` carries
+  the active profile's board; wager bounds are the host's controls).
+- [x] Let the host display server-returned balance and round results.
+- [x] Ensure the embedded frame cannot directly mutate a wallet or settle a round (no
+  client-facing settle endpoint exists, and the vendored frame makes no network request).
+- [x] Implement timeout, retry-safe, unavailable, and session-expired states (ten-second
+  `ready` timeout, `Idempotency-Key` retries, manifest and engine `404`/`409` states,
+  the shell's session-expired dialog).
+- [x] Test the bridge with a deterministic, non-wagering harness (`bridge.test.ts` and
+  the fixture-settled game page tests).
+- [x] Revalidate the protocol after reviewing the first complete game source (the
+  protocol was cut to what the reviewed Plinko frame needs).
 
 ## 12. Dashboard, reporting, and history
 
@@ -541,14 +569,18 @@ arrives. Its final message set must still be reviewed against the first real tit
 - [x] A deposit is submitted, approved once, and appears as one wallet credit.
 - [x] A rejected deposit preserves its reason and never moves money.
 - [x] A suspended account loses access on its next request.
-- [ ] A player cannot read another player's wallet, deposits, rounds, or account data.
+- [x] A player cannot read another player's wallet, deposits, rounds, favorites, or
+  account data (wallets and the account are read only through the session; deposits,
+  rounds, and favorites are covered by HTTP tests; admin routes answer `403`).
 - [x] Catalogue and game availability changes appear correctly to players.
-- [ ] A round can be opened and settled through an internal deterministic test adapter,
-  with one wager and at most one win movement.
-- [ ] A failed test round follows the compensating refund path.
-- [ ] Every operator mutation produces its required audit entry (wallet, deposit,
-  account status, game, and RTP profile mutations and automatic RTP reversion do;
-  round lifecycle audit entries remain).
+- [x] A round can be opened and settled through an internal deterministic test adapter,
+  with one wager and at most one win movement (`round/play_test.go` with a stub engine).
+- [x] A failed test round follows the compensating refund path
+  (`TestCancelAndFailRefundOnceAndBecomeTerminal`).
+- [x] Every operator mutation produces its required audit entry (wallet, deposit,
+  account status, game, and RTP profile mutations, automatic RTP reversion, and offline
+  verification do; a round is a player action with its own record and no operator
+  mutation to audit).
 
 ## 16. Blocked until complete game source arrives
 
@@ -561,64 +593,92 @@ All of these platform prerequisites must be complete before real engine integrat
 starts:
 
 - [x] Wallet movements are row-locked, idempotent, and ledger-backed.
-- [ ] Round opening and settlement enforce settle-at-most-once.
+- [x] Round opening and settlement enforce settle-at-most-once (§8).
 - [x] RTP profile metadata enforces at most one active profile per game.
-- [ ] The generic game host and secured `postMessage` bridge are ready.
-- [x] Whole-unit wager steps are enforced by game configuration and round validation
-  (game configuration enforces them; round validation follows with §8).
+- [x] The generic game host and secured `postMessage` bridge are ready (§11).
+- [x] Whole-unit wager steps are enforced by game configuration and round validation.
 
 ### Source intake and assessment, per game
 
-- [ ] Obtain the complete, licensed game source and all assets and dependencies.
-- [ ] Commit the untouched source separately.
-- [ ] Run the game exactly as supplied.
-- [ ] Document its build and runtime requirements.
-- [ ] Trace its network requests and external dependencies.
-- [ ] Trace wager to outcome, payout, and balance mutation.
-- [ ] Locate RNG, probabilities, weights, paytables, bonus rules, and RTP logic.
-- [ ] Locate browser storage and any internal wallet implementation.
-- [ ] Write the feasibility report.
-- [ ] Select adapter, targeted modification, port, or rebuild based on evidence.
+Plinko: done on 2026-09-19, recorded in `docs/games/plinko-runtime.md` (assessment) and
+`docs/games/plinko-rtp.md` (model). The next title starts these boxes again.
+
+- [x] Obtain the complete, licensed game source and all assets and dependencies (which
+  CodeCanyon licence tier was purchased is not recorded; the runtime doc flags it).
+- [x] Keep the untouched source separately from the port (`docs/games/source/plinko/`,
+  gitignored because the licence forbids redistribution, so it is preserved but not
+  committed).
+- [x] Run the game exactly as supplied.
+- [x] Document its build and runtime requirements.
+- [x] Trace its network requests and external dependencies.
+- [x] Trace wager to outcome, payout, and balance mutation.
+- [x] Locate RNG, probabilities, weights, paytables, bonus rules, and RTP logic.
+- [x] Locate browser storage and any internal wallet implementation.
+- [x] Write the feasibility report.
+- [x] Select adapter, targeted modification, port, or rebuild based on evidence (port the
+  wallet, wager, outcome, and payout to Go; keep Matter.js as presentation).
 
 ### Engine implementation, per game
 
-- [ ] Generate unpredictable outcomes with the approved server-side RNG design.
-- [ ] Make the server authoritative for outcome and payout.
-- [ ] Implement exact game rules, probability weights, and paytables from reviewed
-  source.
-- [ ] Use integer arithmetic on the path that moves money.
-- [ ] Map the authoritative result to the game's animation without a visual/financial
-  mismatch.
-- [ ] Remove or neutralize the game's browser-authoritative wallet and payout logic.
-- [ ] Connect the engine to the internal round and wallet services.
-- [ ] Define crash recovery for every wager/outcome/settlement boundary.
-- [ ] Confirm refreshes, retries, duplicate input, and concurrent input cannot duplicate
-  a wager or payout.
+Plinko: `backend/internal/engine/` and `backend/internal/round/play.go`.
+
+- [x] Generate unpredictable outcomes with the approved server-side RNG design
+  (`crypto/rand` through `engine.SecureSource`; deterministic sources exist only in tests).
+- [x] Make the server authoritative for outcome and payout.
+- [x] Implement exact game rules, probability weights, and paytables from reviewed
+  source (the supplied multipliers, with the six low-risk boards the baseline profile
+  changes recorded in `plinko-rtp.md` §10).
+- [x] Use integer arithmetic on the path that moves money.
+- [x] Map the authoritative result to the game's animation without a visual/financial
+  mismatch (the landing guard holds the ball to the settled slot; the frame never pays
+  on a physical position).
+- [x] Remove or neutralize the game's browser-authoritative wallet and payout logic.
+- [x] Connect the engine to the internal round and wallet services.
+- [x] Define crash recovery for every wager/outcome/settlement boundary (a Plinko round
+  is one transaction, so no paid-but-unsettled state exists and no recovery worker is
+  needed; `Open`, `Settle`, `Cancel`, and `Fail` remain for two-phase engines).
+- [x] Confirm refreshes, retries, duplicate input, and concurrent input cannot duplicate
+  a wager or payout (player-scoped idempotency keys; retry and concurrent-duplicate
+  tests in `round/play_test.go`).
 
 ### RTP implementation and verification, per game/profile
 
-- [ ] Bind each profile to an immutable engine configuration version.
-- [ ] Prove theoretical RTP from the exact probability and payout model where possible.
-- [ ] Run a headless simulation through the production outcome path.
-- [ ] Choose sample size and tolerance appropriate to the game's volatility.
-- [ ] Record total wagered, total returned, observed RTP, confidence interval, runtime,
-  engine version, and verification timestamp.
-- [ ] Mark a profile verified only after its evidence passes review.
-- [ ] Confirm changing a profile changes real mathematical behavior, not just a label.
-- [ ] Activate and schedule only implemented, verified profiles.
+Plinko `plinko/v1/9600`: verified on 2026-09-19, evidence in `plinko-rtp.md` §11.
+
+- [x] Bind each profile to an immutable engine configuration version
+  (`engine_config_ref`, resolved through `plinko.ProfileByRef`).
+- [x] Prove theoretical RTP from the exact probability and payout model where possible
+  (`plinko.TheoreticalBasisPoints`; its tests reproduce every figure in `plinko-rtp.md`).
+- [x] Run a headless simulation through the production outcome path (`gameverify
+  simulate` plays every board through the production `Pick` and `Payout`).
+- [x] Choose sample size and tolerance appropriate to the game's volatility (10⁸ rounds
+  per board, ±100 basis points, justified against the 16-row high board's 500× slot).
+- [x] Record total wagered, total returned, observed RTP, confidence interval, runtime,
+  engine version, and verification timestamp (the evidence table, and
+  `theoretical_basis_points`, `observed_basis_points`, `verification_method`,
+  `sample_size`, and `verified_at` on the row).
+- [x] Mark a profile verified only after its evidence passes review (`gameverify verify`
+  is the only path to `verified`; no HTTP route can reach it).
+- [x] Confirm changing a profile changes real mathematical behavior, not just a label
+  (the engine plays the profile's own table; the manifest names the profile a round
+  settles on).
+- [x] Activate and schedule only implemented, verified profiles.
 
 ### Game delivery, per title
 
-- [ ] Launch the game from the authenticated platform host.
-- [ ] Associate every round with the correct player, wallet, currency, game, and profile.
-- [ ] Validate wagers server-side.
-- [ ] Record one authoritative round for every accepted wager.
-- [ ] Deduct the wager atomically and credit the win at most once.
-- [ ] Keep displayed balance synchronized with the server.
-- [ ] Make round and movements visible in player and admin history.
-- [ ] Pass supported mobile and desktop browser testing.
-- [ ] Document source assumptions, modifications, and operational requirements.
-- [ ] Integrate game 1.
+- [x] Launch the game from the authenticated platform host.
+- [x] Associate every round with the correct player, wallet, currency, game, and profile.
+- [x] Validate wagers server-side.
+- [x] Record one authoritative round for every accepted wager.
+- [x] Deduct the wager atomically and credit the win at most once.
+- [x] Keep displayed balance synchronized with the server (refetched when the frame
+  reports `landed`, or eight seconds later regardless).
+- [x] Make round and movements visible in player and admin history.
+- [ ] Pass supported mobile and desktop browser testing (the frame is exercised through
+  the host tests and the demo; a recorded pass on supported devices is outstanding).
+- [x] Document source assumptions, modifications, and operational requirements
+  (`docs/games/plinko-runtime.md`).
+- [x] Integrate game 1 (Plinko).
 - [ ] Integrate game 2.
 - [ ] Integrate game 3.
 
