@@ -7,15 +7,18 @@ import (
 )
 
 var (
-	ErrGameUnavailable    = errors.New("round: game is unavailable")
-	ErrProfileUnavailable = errors.New("round: active RTP profile is unavailable")
-	ErrInvalidWager       = errors.New("round: wager is outside the game's permitted steps")
-	ErrInvalidOutcome     = errors.New("round: outcome is invalid")
-	ErrNotFound           = errors.New("round: not found")
-	ErrRoundKeyRequired   = errors.New("round: round key is required")
-	ErrRoundKeyConflict   = errors.New("round: round key belongs to another request")
-	ErrRoundSettled       = errors.New("round: round is already settled")
-	ErrRoundClosed        = errors.New("round: round cannot make that transition")
+	ErrGameUnavailable     = errors.New("round: game is unavailable")
+	ErrProfileUnavailable  = errors.New("round: active RTP profile is unavailable")
+	ErrInvalidWager        = errors.New("round: wager is outside the game's permitted steps")
+	ErrInvalidOutcome      = errors.New("round: outcome is invalid")
+	ErrNotFound            = errors.New("round: not found")
+	ErrRoundKeyRequired    = errors.New("round: round key is required")
+	ErrRoundKeyConflict    = errors.New("round: round key belongs to another request")
+	ErrRoundSettled        = errors.New("round: round is already settled")
+	ErrRoundClosed         = errors.New("round: round cannot make that transition")
+	ErrUnsupportedCurrency = errors.New("round: the game does not play in that currency")
+	ErrEngineRequired      = errors.New("round: no engine plays that game")
+	ErrReplayIncomplete    = errors.New("round: a replayed round was never settled")
 )
 
 const (
@@ -69,6 +72,8 @@ type OpenInput struct {
 	UserID     string
 	GameID     string
 	StakeMinor int64
+	// Optional: when set it must be the game's currency.
+	Currency string
 }
 
 type SettleInput struct {

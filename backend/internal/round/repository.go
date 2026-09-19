@@ -70,7 +70,11 @@ func List(ctx context.Context, db *sql.DB, filter ReadFilter) ([]Record, int, er
 	return items, total, nil
 }
 
-func GetForPlayer(ctx context.Context, db *sql.DB, userID, roundID string) (Record, error) {
+type querier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+func GetForPlayer(ctx context.Context, db querier, userID, roundID string) (Record, error) {
 	item, err := scanRecord(db.QueryRowContext(ctx, `SELECT `+roundReadColumns+roundReadFrom+`
 		WHERE r.id = ($1::text)::uuid AND r.user_id = ($2::text)::uuid`, roundID, userID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -146,16 +150,21 @@ func lockGame(ctx context.Context, tx *sql.Tx, gameID string) (gameConfig, error
 	return config, nil
 }
 
-func activeProfileID(ctx context.Context, tx *sql.Tx, gameID string) (string, error) {
-	var profileID string
-	err := tx.QueryRowContext(ctx, `SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid AND status = 'active'`, gameID).Scan(&profileID)
+type activeProfileRow struct {
+	ID              string
+	EngineConfigRef string
+}
+
+func activeProfile(ctx context.Context, tx *sql.Tx, gameID string) (activeProfileRow, error) {
+	var profile activeProfileRow
+	err := tx.QueryRowContext(ctx, `SELECT id::text, COALESCE(engine_config_ref, '') FROM rtp_profiles WHERE game_id = ($1::text)::uuid AND status = 'active'`, gameID).Scan(&profile.ID, &profile.EngineConfigRef)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", ErrProfileUnavailable
+		return activeProfileRow{}, ErrProfileUnavailable
 	}
 	if err != nil {
-		return "", fmt.Errorf("round: find active RTP profile: %w", err)
+		return activeProfileRow{}, fmt.Errorf("round: find active RTP profile: %w", err)
 	}
-	return profileID, nil
+	return profile, nil
 }
 
 func insertOpen(ctx context.Context, tx *sql.Tx, in OpenInput, walletID, currency, profileID string) (Round, bool, error) {

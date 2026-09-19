@@ -181,6 +181,19 @@ func Get(ctx context.Context, db *sql.DB, userID, currency string) (Wallet, erro
 	return w, nil
 }
 
+// GetTx reads a wallet inside the caller's transaction without provisioning.
+func GetTx(ctx context.Context, tx *sql.Tx, userID, currency string) (Wallet, error) {
+	var w Wallet
+	err := tx.QueryRowContext(ctx, `SELECT `+walletColumns+` FROM wallets WHERE user_id = ($1::text)::uuid AND currency = $2`, userID, currency).Scan(&w.ID, &w.UserID, &w.Currency, &w.BalanceMinor, &w.Status, &w.CreatedAt, &w.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Wallet{}, ErrNotFound
+	}
+	if err != nil {
+		return Wallet{}, fmt.Errorf("wallet: get in transaction: %w", err)
+	}
+	return w, nil
+}
+
 type Movement struct {
 	UserID         string
 	Currency       string

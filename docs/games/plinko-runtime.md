@@ -62,9 +62,28 @@ dropped. `engine` is the part every game shares; `engine/plinko` is this game's 
 | `plinko/rtp.go` | `TheoreticalBasisPoints` — `Σ w·m / Σ w` in integers; its tests reproduce every figure in `plinko-rtp.md` §5 |
 | `plinko/profile_v1.go` | The baseline configuration `plinko/v1/9600`: weights and multipliers for all 27 boards, `plinko-rtp.md` §10 |
 | `plinko/profiles.go` | `ProfileByRef`, the lookup an RTP profile row's `engine_config_ref` resolves through |
+| `plinko/engine.go` | `Engine.Play`: decodes the public parameters (unknown fields refused), resolves the configuration, picks the slot from the secure source, and returns the payout, multiplier, and `{rows, risk, slot}` |
 | `backend/cmd/gameverify` | Offline tooling: `solve` derives a profile's weights from its multipliers, `simulate` plays every board through the production `Pick` and `Payout` path, and `verify` does the same for a draft RTP profile row and marks it verified through `rtp.Verify` (`plinko-rtp.md` §11) |
 
 Deterministic sources exist only in `_test.go` files; nothing at runtime can select one.
+
+### Round — `backend/internal/round/`
+
+`engine.go` declares the `Engine` interface the round package consumes — `Play(engine.Input)
+(engine.Outcome, error)` and nothing more — and `Engines`, the slug-to-engine map the
+route table builds. `play.go` is the orchestration. Plinko has no decision between the
+stake and the result, so a round is **one transaction**: `openTx` locks the wallet,
+binds the round to the active profile and debits the wager; the engine decides; `settleTx`
+credits any win and closes the round; then everything commits or nothing does. There is
+no state in which a player has paid for a round with no outcome, so no recovery worker
+exists for this game. `Open`, `Settle`, `Cancel`, and `Fail` remain for engines that
+need two phases.
+
+The idempotency key is scoped to the player (`play:<user>:<key>`). A retry returns the
+committed round and its display result as long as it asks for the same stake and
+parameters; a different stake or parameters under the same key is a conflict. The
+parameters and the engine's result are stored in `result_data` as
+`{"params": …, "result": …}` and the engine and configuration in `engine_reference`.
 
 ## Serving
 
