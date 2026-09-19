@@ -63,7 +63,7 @@ means the server is behind it.
 ## Admin pages
 
 - [x] **Admin sign in** — `/admin/login` (real shared session API and admin route guard; a signed-in admin is sent straight to the dashboard)
-- [x] **Dashboard** — `/admin` (currency-scoped summary, queue and activity log are real; alerts have no service and are hidden in application builds)
+- [x] **Dashboard** — `/admin` (currency-scoped summary with today's hold against the stake-weighted expected return, a per-game activity table, queue and activity log are real; alerts have no service and are hidden in application builds)
 - [x] **Deposits** — `/admin/deposits` (real pending review queue and approve/reject actions with the private proof image)
 - [x] **Users** — `/admin/users` (real paging, search, and status filters)
 - [x] **User details** — `/admin/users/:id` (real account, wallets, deposits, rounds, adjustments, and status operations)

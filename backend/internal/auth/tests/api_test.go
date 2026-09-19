@@ -651,16 +651,21 @@ func TestAdminDashboardHTTPContract(t *testing.T) {
 		t.Fatalf("dashboard: want 200, got %d (%s)", status, body)
 	}
 	var summary struct {
-		Currency                string  `json:"currency"`
-		PendingDeposits         int     `json:"pending_deposits"`
-		OldestPendingAt         *string `json:"oldest_pending_at"`
-		EffectiveRTPBasisPoints int     `json:"effective_rtp_basis_points"`
+		Currency                string           `json:"currency"`
+		PendingDeposits         int              `json:"pending_deposits"`
+		OldestPendingAt         *string          `json:"oldest_pending_at"`
+		EffectiveRTPBasisPoints int              `json:"effective_rtp_basis_points"`
+		ExpectedRTPBasisPoints  int              `json:"expected_rtp_basis_points"`
+		Games                   *json.RawMessage `json:"games"`
 	}
 	if err := json.Unmarshal(body, &summary); err != nil {
 		t.Fatalf("decode dashboard: %v (%s)", err, body)
 	}
-	if summary.Currency != "PHP" || summary.PendingDeposits != 0 || summary.OldestPendingAt != nil || summary.EffectiveRTPBasisPoints != 0 {
+	if summary.Currency != "PHP" || summary.PendingDeposits != 0 || summary.OldestPendingAt != nil || summary.EffectiveRTPBasisPoints != 0 || summary.ExpectedRTPBasisPoints != 0 {
 		t.Fatalf("unexpected dashboard summary: %+v", summary)
+	}
+	if summary.Games == nil || string(*summary.Games) != "[]" {
+		t.Fatalf("games must be an empty array, got %s", body)
 	}
 }
 

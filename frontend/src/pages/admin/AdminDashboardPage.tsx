@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 
-import type { AdminDeposit } from '@/api/types'
+import type { AdminDeposit, DashboardGameActivity } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
 import { Button } from '@/components/ui/Button'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
@@ -68,6 +68,7 @@ export function AdminDashboardPage() {
             label="Pending deposits"
             value={summary.pending_deposits}
             meta={pendingMeta}
+            help="Deposit requests waiting for review. Held is their total amount; nothing reaches a wallet until a request is approved."
           />
           <StatCard
             label="Approved today"
@@ -82,13 +83,15 @@ export function AdminDashboardPage() {
               decimals: 'trim',
             })}
             meta={`${formatCount(summary.rounds_today)} rounds · ${summary.players_today} players`}
+            help="Everything wagered on rounds settled since midnight UTC, and the rounds and players behind it. A round that was refunded does not count."
           />
           <StatCard
-            label="Returned today"
-            value={formatMoney(money(summary.returned_today_minor, summary.currency), {
+            label="Hold today"
+            value={formatMoney(money(summary.hold_today_minor, summary.currency), {
               decimals: 'trim',
             })}
-            meta={`Effective ${formatPercent(summary.effective_rtp_basis_points)} · target ${formatPercent(summary.target_rtp_basis_points)}`}
+            meta={`RTP ${formatPercent(summary.effective_rtp_basis_points)} · expected ${formatPercent(summary.expected_rtp_basis_points)}`}
+            help="What the house kept today: stake minus wins paid out. RTP is the share of stake paid back to players; expected is what the games were set to return on those same rounds. A gap of a few points over a few hundred rounds is normal variance."
           />
         </div>
       ) : (
@@ -149,6 +152,39 @@ export function AdminDashboardPage() {
               )}
             />
           )}
+
+          {summary && summary.games.length > 0 ? (
+            <>
+              <div className="flex items-baseline justify-between gap-3 pt-2">
+                <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
+                  Games today
+                </h2>
+                <SeeAll to={adminPaths.rounds} subject="rounds" />
+              </div>
+              <RecordTable
+                label="Game activity today"
+                columns={gameColumns(summary.currency)}
+                rows={summary.games}
+                rowKey={(row) => row.game_id}
+                renderCard={(row) => (
+                  <RecordCard
+                    title={row.game_name}
+                    meta={`${formatCount(row.rounds)} rounds · RTP ${formatPercent(row.effective_rtp_basis_points)} · expected ${formatPercent(row.expected_rtp_basis_points)}`}
+                    value={
+                      <span className="font-mono text-[15px] font-medium tnum">
+                        {formatMoney(money(row.hold_minor, summary.currency), { decimals: 'trim' })}
+                      </span>
+                    }
+                    aside={
+                      <span className="font-mono text-[11px] text-ink-mute">
+                        staked {formatMoney(money(row.staked_minor, summary.currency), { decimals: 'trim' })}
+                      </span>
+                    }
+                  />
+                )}
+              />
+            </>
+          ) : null}
         </section>
 
         <div className="flex flex-col gap-5">
@@ -287,6 +323,73 @@ function queueColumns(onReview: (deposit: AdminDeposit) => void): Column<AdminDe
           <Button size="sm" onClick={() => onReview(row)}>
             Review
           </Button>
+        </span>
+      ),
+    },
+  ]
+}
+
+function gameColumns(currency: Currency): Column<DashboardGameActivity>[] {
+  const amount = (minor: number) => (
+    <span className="font-mono text-sm font-medium tnum">
+      {formatMoney(money(minor, currency), { decimals: 'trim' })}
+    </span>
+  )
+  return [
+    {
+      key: 'game',
+      header: 'Game',
+      cell: (row) => (
+        <span className="flex min-w-0 flex-col">
+          <Link
+            to={adminPaths.game(row.game_id)}
+            className="truncate text-[13.5px] font-medium text-ink-soft hover:text-ink"
+          >
+            {row.game_name}
+          </Link>
+          <span className="font-mono text-[11px] text-ink-mute">{row.game_slug}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'rounds',
+      header: 'Rounds',
+      align: 'right',
+      width: '90px',
+      cell: (row) => <span className="font-mono text-sm tnum">{formatCount(row.rounds)}</span>,
+    },
+    {
+      key: 'staked',
+      header: 'Staked',
+      align: 'right',
+      width: '120px',
+      cell: (row) => amount(row.staked_minor),
+    },
+    {
+      key: 'returned',
+      header: 'Returned',
+      align: 'right',
+      width: '120px',
+      cell: (row) => amount(row.returned_minor),
+    },
+    {
+      key: 'hold',
+      header: 'Hold',
+      align: 'right',
+      width: '120px',
+      cell: (row) => amount(row.hold_minor),
+    },
+    {
+      key: 'rtp',
+      header: 'RTP',
+      align: 'right',
+      width: '130px',
+      cell: (row) => (
+        <span className="flex flex-col items-end">
+          <span className="font-mono text-sm tnum">{formatPercent(row.effective_rtp_basis_points)}</span>
+          <span className="font-mono text-[11px] text-ink-mute tnum">
+            expected {formatPercent(row.expected_rtp_basis_points)}
+          </span>
         </span>
       ),
     },

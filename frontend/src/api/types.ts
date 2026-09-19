@@ -258,6 +258,18 @@ export type ConsoleAlert = {
   href: string
 }
 
+export type DashboardGameActivity = {
+  game_id: string
+  game_slug: string
+  game_name: string
+  rounds: number
+  staked_minor: number
+  returned_minor: number
+  hold_minor: number
+  effective_rtp_basis_points: number
+  expected_rtp_basis_points: number
+}
+
 export type DashboardSummary = {
   pending_deposits: number
   pending_held_minor: number
@@ -265,10 +277,12 @@ export type DashboardSummary = {
   approved_today_minor: number
   approved_today_count: number
   staked_today_minor: number
+  returned_today_minor: number
+  hold_today_minor: number
   rounds_today: number
   players_today: number
-  returned_today_minor: number
   effective_rtp_basis_points: number
-  target_rtp_basis_points: number
+  expected_rtp_basis_points: number
+  games: DashboardGameActivity[]
   currency: Currency
 }

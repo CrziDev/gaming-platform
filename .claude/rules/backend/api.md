@@ -241,6 +241,18 @@ verified.
 An admin round body adds `user_id`, `user_email`, `display_name`, and `wallet_id` to the
 player round resource.
 
+The dashboard summary is one currency's day. Its deposit figures come from
+`deposit_requests`; its play figures — `staked_today_minor`, `returned_today_minor`,
+`hold_today_minor` (staked minus returned), `rounds_today`, `players_today` — come from
+rounds settled since midnight UTC, so a wager refunded on a failed round is not stake.
+`effective_rtp_basis_points` is returned over staked; `expected_rtp_basis_points` is the
+stake-weighted mean of the return each of those rounds recorded when it opened, which is
+the only figure the effective one can fairly be compared to across games or after a
+mid-day RTP switch. `games` is a plain array, largest stake first, with the same figures
+per game (`game_id`, `game_slug`, `game_name`, `rounds`, `staked_minor`, `returned_minor`,
+`hold_minor`, `effective_rtp_basis_points`, `expected_rtp_basis_points`) for every game
+with a settled round today; a game nobody played is absent.
+
 Any other path returns the not-found response, not a router default.
 
 ## Money and time

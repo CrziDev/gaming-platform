@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 
 import { cn } from '@/lib/cn'
 
+import { HelpTip } from './HelpTip'
+
 export type StatTone = 'default' | 'warning' | 'danger' | 'success'
 
 const tones: Record<StatTone, { frame: string; label: string }> = {
@@ -15,18 +17,20 @@ type StatCardProps = {
   label: string
   value: ReactNode
   meta?: ReactNode
+  help?: ReactNode
   tone?: StatTone
   className?: string
 }
 
-export function StatCard({ label, value, meta, tone = 'default', className }: StatCardProps) {
+export function StatCard({ label, value, meta, help, tone = 'default', className }: StatCardProps) {
   const style = tones[tone]
 
   return (
-    <div className={cn('flex flex-col gap-1.5 rounded-card p-4', style.frame, className)}>
-      <span className={cn('label-mono', style.label)}>{label}</span>
+    <div className={cn('relative flex flex-col gap-1.5 rounded-card p-4', style.frame, className)}>
+      <span className={cn('label-mono', style.label, help ? 'pr-8' : null)}>{label}</span>
       <span className="font-mono text-[20px] leading-tight font-medium text-ink tnum">{value}</span>
       {meta ? <span className="text-[12px] text-ink-mute">{meta}</span> : null}
+      {help ? <HelpTip subject={label}>{help}</HelpTip> : null}
     </div>
   )
 }
