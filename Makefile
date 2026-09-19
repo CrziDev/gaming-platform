@@ -29,7 +29,7 @@ PSQL := psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1
 
 .PHONY: help setup dev backend frontend install build build-backend build-frontend \
         test test-backend test-frontend lint lint-backend lint-frontend \
-        fmt fmt-backend fmt-frontend tools seed clean \
+        fmt fmt-backend fmt-frontend tools seed simulate-plinko clean \
         migrate-up migrate-test-up migrate-down migrate-down-all migrate-create migrate-version migrate-force \
         db-shell db-reset publish
 
@@ -137,6 +137,9 @@ db-shell: ## Open a psql session against the development database
 
 seed: ## Create or reset the development admin, demo players, and game catalogue
 	cd $(BACKEND_DIR) && go run ./cmd/seed
+
+simulate-plinko: ## Play every Plinko board through the production engine and report the observed return
+	cd $(BACKEND_DIR) && go run ./cmd/gameverify simulate -config plinko/v1/9600
 
 ## --- Publishing ------------------------------------------------------------
 

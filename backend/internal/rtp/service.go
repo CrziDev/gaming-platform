@@ -30,6 +30,84 @@ type Schedule struct {
 	Until *time.Time
 }
 
+// Evidence is what an offline verification run produced for one engine
+// configuration: the return its rules define and the return a simulation through
+// the production outcome path observed.
+type Evidence struct {
+	EngineConfigRef        string
+	Method                 string
+	SampleSize             int64
+	TheoreticalBasisPoints int
+	ObservedBasisPoints    int
+	ToleranceBasisPoints   int
+}
+
+// Verify is the only path from draft to verified, and no HTTP route reaches it.
+// The evidence must be for the profile's own configuration, its theoretical return
+// must equal the target exactly, and the observed return must sit within the
+// stated tolerance of it.
+func Verify(ctx context.Context, db *sql.DB, id string, evidence Evidence) (Profile, error) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return Profile{}, fmt.Errorf("rtp: begin verify: %w", err)
+	}
+	defer tx.Rollback()
+
+	current, err := findByIDForUpdate(ctx, tx, id)
+	if err != nil {
+		return Profile{}, err
+	}
+	if current.Status != StatusDraft {
+		return Profile{}, ErrNotDraft
+	}
+	if err := evidence.matches(current); err != nil {
+		return Profile{}, err
+	}
+	if err := setVerified(ctx, tx, id, evidence); err != nil {
+		return Profile{}, err
+	}
+	verified, err := FindByID(ctx, tx, id)
+	if err != nil {
+		return Profile{}, err
+	}
+	if err := audit.Record(ctx, tx, audit.Change{
+		Action: "rtp_profile.verify", EntityType: "rtp_profile", EntityID: id,
+		Detail: "Verified " + describe(verified) + " for " + verified.GameName + " by " + evidence.Method + " over " + strconv.FormatInt(evidence.SampleSize, 10) + " rounds",
+		Before: snapshot(current), After: map[string]any{
+			"profile": snapshot(verified), "method": evidence.Method, "sample_size": evidence.SampleSize,
+			"theoretical_basis_points": evidence.TheoreticalBasisPoints, "observed_basis_points": evidence.ObservedBasisPoints,
+			"tolerance_basis_points": evidence.ToleranceBasisPoints,
+		},
+	}); err != nil {
+		return Profile{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Profile{}, fmt.Errorf("rtp: commit verify: %w", err)
+	}
+	return verified, nil
+}
+
+func (e Evidence) matches(p Profile) error {
+	switch {
+	case e.Method == "" || e.SampleSize <= 0 || e.ToleranceBasisPoints < 0:
+		return fmt.Errorf("%w: method, sample size, and tolerance are required", ErrEvidenceMismatch)
+	case e.EngineConfigRef == "" || e.EngineConfigRef != p.EngineConfigRef:
+		return fmt.Errorf("%w: evidence is for %q, profile references %q", ErrEvidenceMismatch, e.EngineConfigRef, p.EngineConfigRef)
+	case e.TheoreticalBasisPoints != p.TargetBasisPoints:
+		return fmt.Errorf("%w: theoretical %d bp, target %d bp", ErrEvidenceMismatch, e.TheoreticalBasisPoints, p.TargetBasisPoints)
+	case absInt(e.ObservedBasisPoints-p.TargetBasisPoints) > e.ToleranceBasisPoints:
+		return fmt.Errorf("%w: observed %d bp is more than %d bp from target %d bp", ErrEvidenceMismatch, e.ObservedBasisPoints, e.ToleranceBasisPoints, p.TargetBasisPoints)
+	}
+	return nil
+}
+
+func absInt(value int) int {
+	if value < 0 {
+		return -value
+	}
+	return value
+}
+
 func CreateDraft(ctx context.Context, db *sql.DB, actorID, gameID string, in DraftInput) (Profile, error) {
 	if !targetInRange(in.TargetBasisPoints) {
 		return Profile{}, ErrTargetOutOfRange

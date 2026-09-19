@@ -14,6 +14,7 @@ var (
 	ErrTargetOutOfRange = errors.New("rtp: target is outside 5000-20000 basis points")
 	ErrEndRequired      = errors.New("rtp: a profile at or above 100% needs an end time")
 	ErrScheduleOrder    = errors.New("rtp: the end must be after the start")
+	ErrEvidenceMismatch = errors.New("rtp: verification evidence does not match the profile")
 )
 
 const (

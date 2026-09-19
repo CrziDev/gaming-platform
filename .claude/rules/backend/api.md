@@ -179,10 +179,13 @@ draft can be patched. Activation moves the profile previously in force back to
 `verified`, and a target at or above `10000` refuses to activate without
 `effective_until`. An open-ended activation becomes the game's default. A timed
 activation requires a different verified default and automatically returns to it at
-expiry. Nothing on these routes can mark a profile verified. Audited as
+expiry. Nothing on these routes can mark a profile verified: only
+`gameverify verify` does, offline, after simulating the profile's `engine_config_ref`
+through the production outcome path, and it records the evidence on the row. Audited as
 `rtp_profile.create`, `rtp_profile.update`, `rtp_profile.activate`, and
-`rtp_profile.schedule` when the active profile's window changes, with automatic expiry
-recorded as `rtp_profile.revert` under the system actor.
+`rtp_profile.schedule` when the active profile's window changes, with verification
+recorded as `rtp_profile.verify` and automatic expiry as `rtp_profile.revert`, both
+under the system actor.
 
 An admin round body adds `user_id`, `user_email`, `display_name`, and `wallet_id` to the
 player round resource.

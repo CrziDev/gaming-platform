@@ -82,6 +82,12 @@ const (
 	UPDATE rtp_profiles
 	   SET status = $2, effective_from = $3, effective_until = $4, updated_at = now()
 	 WHERE id = ($1::text)::uuid`
+
+	setVerifiedSQL = `
+	UPDATE rtp_profiles
+	   SET status = 'verified', theoretical_basis_points = $2, observed_basis_points = $3,
+	       verification_method = $4, sample_size = $5, verified_at = now(), updated_at = now()
+	 WHERE id = ($1::text)::uuid`
 )
 
 type querier interface {
@@ -216,6 +222,13 @@ func updateDraft(ctx context.Context, tx *sql.Tx, p Profile) error {
 	}
 	if err != nil {
 		return fmt.Errorf("rtp: update draft: %w", err)
+	}
+	return nil
+}
+
+func setVerified(ctx context.Context, tx *sql.Tx, id string, evidence Evidence) error {
+	if _, err := tx.ExecContext(ctx, setVerifiedSQL, id, evidence.TheoreticalBasisPoints, evidence.ObservedBasisPoints, evidence.Method, evidence.SampleSize); err != nil {
+		return fmt.Errorf("rtp: set verified: %w", err)
 	}
 	return nil
 }

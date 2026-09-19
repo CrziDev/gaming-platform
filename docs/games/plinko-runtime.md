@@ -62,7 +62,7 @@ dropped. `engine` is the part every game shares; `engine/plinko` is this game's 
 | `plinko/rtp.go` | `TheoreticalBasisPoints` — `Σ w·m / Σ w` in integers; its tests reproduce every figure in `plinko-rtp.md` §5 |
 | `plinko/profile_v1.go` | The baseline configuration `plinko/v1/9600`: weights and multipliers for all 27 boards, `plinko-rtp.md` §10 |
 | `plinko/profiles.go` | `ProfileByRef`, the lookup an RTP profile row's `engine_config_ref` resolves through |
-| `backend/cmd/gameverify` | Offline tooling: `solve` derives a profile's weights from its multipliers for a target return |
+| `backend/cmd/gameverify` | Offline tooling: `solve` derives a profile's weights from its multipliers, `simulate` plays every board through the production `Pick` and `Payout` path, and `verify` does the same for a draft RTP profile row and marks it verified through `rtp.Verify` (`plinko-rtp.md` §11) |
 
 Deterministic sources exist only in `_test.go` files; nothing at runtime can select one.
 

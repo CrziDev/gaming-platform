@@ -233,3 +233,94 @@ func TestConcurrentRevertersProduceOneTransition(t *testing.T) {
 		t.Fatalf("reversion audits = %d, want 1", audits)
 	}
 }
+
+func createDraftRTP(t *testing.T, db *sql.DB, fixture rtpFixture, ref string) string {
+	t.Helper()
+	var id string
+	if err := db.QueryRow(`
+		INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, engine_config_ref)
+		VALUES (($1::text)::uuid, 'Candidate', 1, 9600, 'draft', $2)
+		RETURNING id::text`, fixture.GameID, ref).Scan(&id); err != nil {
+		t.Fatalf("create draft profile: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_id = $1`, id) })
+	return id
+}
+
+func TestVerifyMovesADraftToVerifiedWithEvidence(t *testing.T) {
+	db := openRTPTestDB(t)
+	fixture := createRTPFixture(t, db)
+	id := createDraftRTP(t, db, fixture, "test:candidate")
+
+	evidence := Evidence{
+		EngineConfigRef: "test:candidate", Method: "simulation", SampleSize: 1_000_000,
+		TheoreticalBasisPoints: 9600, ObservedBasisPoints: 9587, ToleranceBasisPoints: 100,
+	}
+	verified, err := Verify(context.Background(), db, id, evidence)
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+	if verified.Status != StatusVerified || verified.VerifiedAt == nil || verified.ObservedBasisPoints == nil || *verified.ObservedBasisPoints != 9587 || verified.TheoreticalBasisPoints == nil || *verified.TheoreticalBasisPoints != 9600 {
+		t.Fatalf("verified profile = %+v", verified)
+	}
+
+	var method string
+	var sampleSize int64
+	if err := db.QueryRow(`SELECT verification_method, sample_size FROM rtp_profiles WHERE id = ($1::text)::uuid`, id).Scan(&method, &sampleSize); err != nil {
+		t.Fatalf("read evidence: %v", err)
+	}
+	if method != "simulation" || sampleSize != 1_000_000 {
+		t.Fatalf("evidence = %s/%d", method, sampleSize)
+	}
+	var audits int
+	if err := db.QueryRow(`SELECT count(*) FROM audit_logs WHERE entity_id = $1 AND action = 'rtp_profile.verify' AND actor_user_id IS NULL`, id).Scan(&audits); err != nil {
+		t.Fatalf("count audits: %v", err)
+	}
+	if audits != 1 {
+		t.Fatalf("want one system audit entry, got %d", audits)
+	}
+
+	if _, err := Verify(context.Background(), db, id, evidence); !errors.Is(err, ErrNotDraft) {
+		t.Fatalf("second verify: want %v, got %v", ErrNotDraft, err)
+	}
+	if _, err := Activate(context.Background(), db, "", id, Schedule{}); err != nil {
+		t.Fatalf("activate verified profile: %v", err)
+	}
+}
+
+func TestVerifyRefusesMismatchedEvidence(t *testing.T) {
+	db := openRTPTestDB(t)
+	fixture := createRTPFixture(t, db)
+	id := createDraftRTP(t, db, fixture, "test:candidate")
+	good := Evidence{
+		EngineConfigRef: "test:candidate", Method: "simulation", SampleSize: 1_000_000,
+		TheoreticalBasisPoints: 9600, ObservedBasisPoints: 9650, ToleranceBasisPoints: 100,
+	}
+	cases := map[string]func(e *Evidence){
+		"other configuration":        func(e *Evidence) { e.EngineConfigRef = "test:other" },
+		"theoretical off target":     func(e *Evidence) { e.TheoreticalBasisPoints = 9601 },
+		"observed outside tolerance": func(e *Evidence) { e.ObservedBasisPoints = 9701 },
+		"no method":                  func(e *Evidence) { e.Method = "" },
+		"no sample":                  func(e *Evidence) { e.SampleSize = 0 },
+	}
+	for name, mutate := range cases {
+		evidence := good
+		mutate(&evidence)
+		if _, err := Verify(context.Background(), db, id, evidence); !errors.Is(err, ErrEvidenceMismatch) {
+			t.Fatalf("%s: want %v, got %v", name, ErrEvidenceMismatch, err)
+		}
+	}
+	var status string
+	if err := db.QueryRow(`SELECT status FROM rtp_profiles WHERE id = ($1::text)::uuid`, id).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != StatusDraft {
+		t.Fatalf("draft was changed to %s", status)
+	}
+	if _, err := Verify(context.Background(), db, fixture.DefaultID, good); !errors.Is(err, ErrNotDraft) {
+		t.Fatalf("verified profile: want %v, got %v", ErrNotDraft, err)
+	}
+	if _, err := Verify(context.Background(), db, "00000000-0000-0000-0000-000000000000", good); !errors.Is(err, ErrNoProfile) {
+		t.Fatalf("unknown profile: want %v, got %v", ErrNoProfile, err)
+	}
+}

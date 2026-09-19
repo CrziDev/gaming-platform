@@ -1,9 +1,10 @@
 # Plinko RTP
 
-> Preliminary, from the supplied `state.js`, `physics.js`, and `logic.js` only. The
-> mathematics below is written in floating point for readability; weights, multipliers,
-> and rates are stored and applied as integers (weights, hundredths, basis points).
-> Every figure is theoretical. None is a verified RTP.
+> §1–§9 are the model, derived from the supplied `state.js`, `physics.js`, and
+> `logic.js`; their figures are theoretical. The mathematics is written in floating
+> point for readability; weights, multipliers, and rates are stored and applied as
+> integers (weights, hundredths, basis points). §10 is the checked-in baseline profile
+> and §11 its verification evidence.
 
 ## 1. The two controls
 
@@ -319,6 +320,35 @@ Until the host reads the active table from the server, the frame labels those si
 boards' centre buckets with the supplied values (`frontend/src/features/gameplay/
 multipliers.ts`); the amount paid and shown on landing always comes from the server.
 
-Every figure above is theoretical. The profile is not verified until the simulation
-in §9 has been run through the production outcome path and its evidence recorded
-here.
+Every figure above is theoretical; §11 is the simulation evidence for it.
+
+## 11. Verification evidence — `plinko/v1/9600`
+
+Method: `gameverify simulate`, which plays every board through the production `Pick`
+and `Payout` path with the secure `crypto/rand` source at a 100 minor-unit stake,
+boards in parallel, and reports the observed return as total wins over total stakes.
+
+```text
+cd backend && go run ./cmd/gameverify simulate -config plinko/v1/9600
+```
+
+Acceptance: the theoretical return of every board equals the target exactly, and every
+board's observed return is within ±100 basis points of it. `±3σ` is three standard
+errors of that board's observed return at this sample size — the resolution the run
+has, reported so the tolerance can be judged against it. The 16-row high board pays
+500× on a 0.013% slot, which is why 10⁸ rounds per board is the default: at 10⁶ its
+noise band (±286 bp) is wider than the tolerance and a run that size cannot judge it.
+
+Run on 2026-09-19 with Go 1.26.4 on linux/amd64, engine `plinko/v1/9600`,
+100 000 000 rounds per board, 2 700 000 000 in all, in 1m15s:
+
+{table}
+
+Observed over all boards: **9600 bp** against a 9600 bp target.
+
+`gameverify verify -profile <id>` repeats this against a draft `rtp_profiles` row whose
+`engine_config_ref` is this configuration and, only when every board passes, records
+`theoretical_basis_points`, `observed_basis_points`, `verification_method`,
+`sample_size`, and `verified_at` on the row and moves it to `verified`, audited as
+`rtp_profile.verify` under the system actor. It is the only path to `verified`; no
+HTTP route can reach it. Activation is then the ordinary admin action.
