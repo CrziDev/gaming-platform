@@ -129,21 +129,24 @@ func TestChatHTTPAndSocketFlow(t *testing.T) {
 	}
 }
 
+// The session is registered on an ordinary server and reused against one whose
+// request deadlines are far shorter than the socket's life; the cookie jar keys
+// on the host, so the same client speaks to both.
 func TestChatSocketOutlivesTheServerRequestTimeouts(t *testing.T) {
 	db := requireDB(t)
-	server := httptest.NewUnstartedServer(newHandler(db))
-	server.Config.ReadTimeout = 200 * time.Millisecond
-	server.Config.WriteTimeout = 200 * time.Millisecond
-	server.Start()
-	t.Cleanup(server.Close)
-	client := clientWithCookies(t)
-	if status, body := register(t, client, server.URL); status != http.StatusCreated {
+	base, client := newServer(t, db)
+	if status, body := register(t, client, base); status != http.StatusCreated {
 		t.Fatalf("register: want 201, got %d (%s)", status, body)
 	}
+	server := httptest.NewUnstartedServer(newHandler(db))
+	server.Config.ReadTimeout = 300 * time.Millisecond
+	server.Config.WriteTimeout = 300 * time.Millisecond
+	server.Start()
+	t.Cleanup(server.Close)
 
 	conn, _ := dialChat(t, server.URL, webOrigin)
 	readEvent(t, conn)
-	time.Sleep(600 * time.Millisecond)
+	time.Sleep(900 * time.Millisecond)
 
 	if status, body := send(t, client, http.MethodPost, server.URL+"/api/chat/messages", map[string]string{"text": "still here"}); status != http.StatusCreated {
 		t.Fatalf("post after the timeouts elapsed: want 201, got %d (%s)", status, body)
