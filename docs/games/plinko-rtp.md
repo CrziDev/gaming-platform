@@ -352,3 +352,9 @@ Observed over all boards: **9600 bp** against a 9600 bp target.
 `sample_size`, and `verified_at` on the row and moves it to `verified`, audited as
 `rtp_profile.verify` under the system actor. It is the only path to `verified`; no
 HTTP route can reach it. Activation is then the ordinary admin action.
+
+`make seed` provisions the same profile for development — `Baseline` v1 for `plinko`,
+target 9600, `plinko/v1/9600`, active and the game's default — carrying the evidence
+above (`backend/cmd/seed/profiles.go`) so a development database plays exactly the
+configuration this section verified. That is a fixture, like the seeded administrator:
+a production profile is verified by `gameverify verify` and activated by an operator.

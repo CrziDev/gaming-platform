@@ -32,6 +32,13 @@ const upsertGame = `
 	       thumbnail_path   = NULL,
 	       updated_at       = now()`
 
+// The slug the integrated title replaced; a development database that still has
+// it converges on the new row unless rounds were played against the old one.
+const deleteLegacyPlinko = `
+	DELETE FROM games
+	 WHERE slug = 'plinko-drop'
+	   AND NOT EXISTS (SELECT 1 FROM game_rounds WHERE game_rounds.game_id = games.id)`
+
 type category struct {
 	slug      string
 	name      string
@@ -84,7 +91,7 @@ var games = []game{
 	{slug: "aurora-dice", name: "Aurora Dice", description: "Roll over or under a target you choose and set your own odds.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
 	{slug: "vault-break", name: "Vault Break", description: "Crack the combination one dial at a time and stop before the alarm.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
 	{slug: "mine-sweep", name: "Mine Sweep", description: "Reveal safe tiles on a 5×5 grid and cash out before you hit a mine.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
-	{slug: "plinko-drop", name: "Plinko Drop", description: "Drop a ball through the pegs and land on a multiplier.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
+	{slug: "plinko", name: "Plinko", description: "Drop a ball through the pegs and land on a multiplier.", category: "originals", provider: inHouse, status: "active", integration: "integrated", currency: "PHP", wagers: originalWagers},
 	{slug: "coin-flip", name: "Coin Flip", description: "Heads or tails, double or nothing, streak as far as you dare.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
 	{slug: "hi-lo-ladder", name: "Hi-Lo Ladder", description: "Call the next card higher or lower and climb the payout ladder.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
 	{slug: "keno-nights", name: "Keno Nights", description: "Pick up to ten numbers and watch twenty draw.", category: "originals", provider: inHouse, status: "maintenance", integration: "supported", currency: "PHP", wagers: originalWagers},
@@ -129,6 +136,9 @@ func seedCatalogue(ctx context.Context, tx *sql.Tx) error {
 			return fmt.Errorf("seed: upsert game %s: %w", g.slug, err)
 		}
 	}
+	if _, err := tx.ExecContext(ctx, deleteLegacyPlinko); err != nil {
+		return fmt.Errorf("seed: remove legacy plinko-drop: %w", err)
+	}
 
-	return nil
+	return seedProfiles(ctx, tx)
 }

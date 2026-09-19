@@ -48,7 +48,7 @@ make tools        # pin golang-migrate into backend/bin
 make migrate-up
 make dev          # API on :8080, web on :5173
 
-make seed         # create or reset the local admin (SEED_USER_*), 18 demo players, and 27 games
+make seed         # create or reset the local admin (SEED_USER_*), 18 demo players, 27 games, and the Plinko RTP profile
 make test         # migrates and uses only TEST_DATABASE_URL (a *_test database)
 ```
 

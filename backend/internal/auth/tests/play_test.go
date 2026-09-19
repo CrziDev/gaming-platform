@@ -19,6 +19,16 @@ func createPlinko(t *testing.T, db *sql.DB) {
 	if _, err := db.Exec(`INSERT INTO game_categories (slug, name, sort_order) VALUES ('originals', 'Originals', 10) ON CONFLICT (slug) DO NOTHING`); err != nil {
 		t.Fatalf("create category: %v", err)
 	}
+	// The test database may carry a seeded catalogue; this test owns the row it plays.
+	for _, statement := range []string{
+		`DELETE FROM game_rounds WHERE game_id IN (SELECT id FROM games WHERE slug = 'plinko')`,
+		`DELETE FROM rtp_profiles WHERE game_id IN (SELECT id FROM games WHERE slug = 'plinko')`,
+		`DELETE FROM games WHERE slug = 'plinko'`,
+	} {
+		if _, err := db.Exec(statement); err != nil {
+			t.Fatalf("clear plinko: %v", err)
+		}
+	}
 	var gameID string
 	if err := db.QueryRow(`
 		INSERT INTO games (slug, name, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor)
