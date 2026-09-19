@@ -250,9 +250,11 @@ export async function fetchRounds(filter: RoundFilter): Promise<Page<Round>> {
   return api.get<Page<Round>>(`/rounds?${params.toString()}`)
 }
 
+const RECENT_ROUNDS = 10
+
 export async function fetchRecentRounds(gameId: string): Promise<Round[]> {
   const page = await fetchRounds({ page: 1, game_id: gameId })
-  return page.rows.slice(0, 6)
+  return page.rows.slice(0, RECENT_ROUNDS)
 }
 
 export async function fetchNotifications(): Promise<Notification[]> {

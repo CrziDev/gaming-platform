@@ -1,30 +1,40 @@
+import type { Round } from '@/api/types'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
+import { SkeletonRows } from '@/components/ui/Skeleton'
+import { ErrorState } from '@/components/ui/States'
+import { useRecentRounds } from '@/features/wallet'
 import { formatMultiplier, formatRelative } from '@/lib/format'
-import { formatMoney, money, type Currency } from '@/lib/money'
+import { formatMoney, money, subtractMoney, type Money } from '@/lib/money'
 
-export type PlinkoBet = {
+type PlinkoBet = {
   id: string
-  player: string
-  stake_minor: number
+  stake: Money
   multiplier_hundredths: number
   // Win minus stake, so a bucket under 1× reads as the loss it is.
-  profit_minor: number
-  currency: Currency
+  profit: Money
   placed_at: string
 }
 
-type PlinkoHistoryProps = {
-  bets: readonly PlinkoBet[]
+// Only a settled round has a multiplier and a win to show; anything else a
+// two-phase engine might leave behind has no row here.
+function toBet(round: Round): PlinkoBet | null {
+  if (round.status !== 'settled' || round.win_minor === null || round.multiplier_hundredths === null) return null
+  const stake = money(round.stake_minor, round.currency)
+  return {
+    id: round.id,
+    stake,
+    multiplier_hundredths: round.multiplier_hundredths,
+    profit: subtractMoney(money(round.win_minor, round.currency), stake),
+    placed_at: round.settled_at ?? round.started_at,
+  }
 }
 
 const columns: Column<PlinkoBet>[] = [
-  { key: 'player', header: 'Player', cell: (bet) => <span className="font-medium">{bet.player}</span> },
   {
     key: 'bet',
     header: 'Bet',
-    align: 'right',
-    cell: (bet) => <span className="font-mono tnum">{formatMoney(money(bet.stake_minor, bet.currency))}</span>,
+    cell: (bet) => <span className="font-mono tnum">{formatMoney(bet.stake)}</span>,
   },
   {
     key: 'multiplier',
@@ -36,7 +46,7 @@ const columns: Column<PlinkoBet>[] = [
     key: 'profit',
     header: 'Profit',
     align: 'right',
-    cell: (bet) => <MoneyDisplay value={money(bet.profit_minor, bet.currency)} tone="auto" sign="always" />,
+    cell: (bet) => <MoneyDisplay value={bet.profit} tone="auto" sign="always" />,
   },
   {
     key: 'placed',
@@ -47,23 +57,50 @@ const columns: Column<PlinkoBet>[] = [
   },
 ]
 
-// The bets feed under the board. Static fixture rows until settled rounds feed it.
-export function PlinkoHistory({ bets }: PlinkoHistoryProps) {
+type PlinkoHistoryProps = {
+  gameId: string
+}
+
+// The player's own recent rounds on this game, under the board. The session
+// refetches rounds when a ball lands, so a bet appears here as it is revealed.
+export function PlinkoHistory({ gameId }: PlinkoHistoryProps) {
+  const query = useRecentRounds(gameId)
+
+  if (query.isPending) {
+    return (
+      <section aria-label="Your recent bets" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
+        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Your recent bets</h2>
+        <SkeletonRows count={3} />
+      </section>
+    )
+  }
+
+  if (query.isError) {
+    return (
+      <ErrorState
+        title="Recent bets unavailable"
+        message="Your rounds on this game could not be loaded. The board and your balance are unaffected."
+        onRetry={() => void query.refetch()}
+      />
+    )
+  }
+
+  const bets = query.data.map(toBet).filter((bet): bet is PlinkoBet => bet !== null)
   if (bets.length === 0) return null
 
   return (
-    <section aria-label="Recent bets" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
-      <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Recent bets</h2>
+    <section aria-label="Your recent bets" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
+      <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Your recent bets</h2>
       <RecordTable
-        label="Recent bets"
+        label="Your recent bets"
         columns={columns}
-        rows={[...bets]}
+        rows={bets}
         rowKey={(bet) => bet.id}
         renderCard={(bet) => (
           <RecordCard
-            title={bet.player}
-            meta={`${formatMoney(money(bet.stake_minor, bet.currency))} · ${formatMultiplier(bet.multiplier_hundredths)} · ${formatRelative(bet.placed_at)}`}
-            value={<MoneyDisplay value={money(bet.profit_minor, bet.currency)} tone="auto" sign="always" />}
+            title={formatMoney(bet.stake)}
+            meta={`${formatMultiplier(bet.multiplier_hundredths)} · ${formatRelative(bet.placed_at)}`}
+            value={<MoneyDisplay value={bet.profit} tone="auto" sign="always" />}
           />
         )}
       />

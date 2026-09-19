@@ -1,8 +1,8 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { PlayRoundResponse, PlinkoManifest } from '@/api/types'
+import type { PlayRoundResponse, PlinkoManifest, Round } from '@/api/types'
 import { games } from '@/mocks/games'
 import { plinkoManifest } from '@/mocks/plinko'
 import { renderApp, stubFetchRoutes, userBody, type StubResponse } from '@/test-utils'
@@ -76,6 +76,10 @@ function posted(post: PostSpy, type: string) {
 
 function manifestRequests(fetchMock: ReturnType<typeof stubFetchRoutes>) {
   return fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/games/plinko/manifest'))
+}
+
+function roundsRequests(fetchMock: ReturnType<typeof stubFetchRoutes>) {
+  return fetchMock.mock.calls.filter(([input]) => new URL(String(input)).pathname.endsWith('/rounds'))
 }
 
 describe('Plinko against a server without the play endpoint', () => {
@@ -193,5 +197,62 @@ describe('Plinko when the active profile changes mid-session', () => {
 
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(2))
     expect(posted(post, 'configure')[1]?.multipliers_hundredths?.[4]).toBe(60)
+  })
+})
+
+describe('the bets feed under the Plinko board', () => {
+  it("lists the player's own settled rounds on the game and refetches them when a ball lands", async () => {
+    const user = userEvent.setup()
+    const earlier: Round = {
+      ...settledRound('profile-a').round,
+      id: 'round-live-0',
+      stake_minor: 200,
+      win_minor: 340,
+      multiplier_hundredths: 170,
+      started_at: '2026-09-19T11:00:00Z',
+      settled_at: '2026-09-19T11:00:00Z',
+    }
+    const fetchMock = stubFetchRoutes({
+      ...page,
+      'GET /rounds': { status: 200, body: { rows: [earlier], total: 1, page: 1, size: 20, pages: 1 } },
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest('profile-a', 55) },
+      'POST /games/plinko/rounds': { status: 200, body: settledRound('profile-a') },
+    })
+    renderApp('/game/plinko')
+
+    const feed = await screen.findByRole('table', { name: 'Your recent bets' })
+    expect(within(feed).getAllByRole('row')).toHaveLength(2)
+    expect(within(feed).getByText('1.70×')).toBeInTheDocument()
+    expect(within(feed).getByText('+₱1.40')).toBeInTheDocument()
+    expect(within(feed).queryByRole('columnheader', { name: 'Player' })).not.toBeInTheDocument()
+    const roundsUrl = new URL(String(roundsRequests(fetchMock)[0]?.[0]))
+    expect(roundsUrl.searchParams.get('game_id')).toBe(plinko.id)
+    const before = roundsRequests(fetchMock).length
+
+    const { iframe, post } = await openFrame()
+    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
+    await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
+    await waitFor(() => expect(posted(post, 'drop')).toHaveLength(1))
+    frameSays(iframe, { v: 1, type: 'landed', round_id: 'round-live-1', slot: 4 })
+
+    await waitFor(() => expect(roundsRequests(fetchMock).length).toBeGreaterThan(before))
+  })
+
+  it('reports a feed that cannot be loaded without touching the board', async () => {
+    stubFetchRoutes({
+      ...page,
+      'GET /rounds': { status: 400, body: { error: 'One or more fields are invalid' } },
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest('profile-a', 55) },
+    })
+    renderApp('/game/plinko')
+
+    const { iframe, post } = await openFrame()
+    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
+
+    expect(await screen.findByText('Recent bets unavailable')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
+    expect(screen.queryByRole('table', { name: 'Your recent bets' })).not.toBeInTheDocument()
   })
 })

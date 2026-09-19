@@ -3,7 +3,6 @@ export type { PlinkoParams, PlinkoRisk, PlinkoRows, PlinkoTable } from './multip
 export { GameNotice } from './GameNotice'
 export { PlinkoControls } from './PlinkoControls'
 export { PlinkoHistory } from './PlinkoHistory'
-export type { PlinkoBet } from './PlinkoHistory'
 export { PLINKO_BANDS, plinkoBand } from './plinkoPalette'
 export type { PlinkoBand } from './plinkoPalette'
 export type { GameControlsProps } from './PlinkoControls'

@@ -155,7 +155,7 @@ export function GamePage() {
         </div>
       </div>
 
-      {module ? <module.History /> : null}
+      {module ? <module.History gameId={game.id} /> : null}
     </div>
   )
 }

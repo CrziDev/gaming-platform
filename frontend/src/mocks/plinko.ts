@@ -1,7 +1,6 @@
 import { ApiError } from '@/api/client'
 import type { PlayRoundResponse, PlinkoManifest, Round } from '@/api/types'
 import type { PlinkoParams } from '@/features/gameplay/multipliers'
-import type { PlinkoBet } from '@/features/gameplay/PlinkoHistory'
 import {
   PLINKO_MULTIPLIERS_HUNDREDTHS,
   PLINKO_RISKS,
@@ -10,7 +9,6 @@ import {
 } from '@/features/gameplay/multipliers'
 import type { Currency } from '@/lib/money'
 
-import { minutesAgo } from './clock'
 import { games } from './games'
 import { rounds, transactions, wallets } from './wallet'
 
@@ -141,25 +139,3 @@ export function settlePlinkoRound(input: PlinkoSettlement, random: () => number 
   settled.set(input.idempotencyKey, response)
   return response
 }
-
-// A static bets feed under the board until settled rounds feed it.
-const feed: [string, number, number, number][] = [
-  ['Rayxa90', 1_000, 1700, 12],
-  ['mariacruz', 2_000, 3300, 27],
-  ['k1ngoff', 1_500, 400, 41],
-  ['benj_04', 500, 50, 58],
-  ['nina.dlc', 5_000, 1100, 75],
-  ['sadbetsonly', 1_000, 20, 96],
-  ['gregor56', 2_500, 800, 130],
-  ['Rayxa90', 1_000, 110, 172],
-]
-
-export const recentBets: readonly PlinkoBet[] = feed.map(([player, stake, multiplier, secondsAgo], index) => ({
-  id: `bet-${String(index + 1).padStart(2, '0')}`,
-  player,
-  stake_minor: stake,
-  multiplier_hundredths: multiplier,
-  profit_minor: Math.floor((stake * multiplier) / 100) - stake,
-  currency: 'PHP',
-  placed_at: minutesAgo(secondsAgo / 60),
-}))

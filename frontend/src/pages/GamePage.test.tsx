@@ -2,16 +2,19 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { formatMultiplier } from '@/lib/format'
 import { plinkoManifest } from '@/mocks/plinko'
-import { wallets } from '@/mocks/wallet'
+import { rounds, wallets } from '@/mocks/wallet'
 import { renderApp, stubFetchRoutes, userBody } from '@/test-utils'
 
 const player = { status: 200, body: userBody() }
 
 let startingBalance = 0
+let startingRounds = 0
 
 beforeEach(() => {
   startingBalance = wallets.find((wallet) => wallet.currency === 'PHP')?.balance_minor ?? 0
+  startingRounds = rounds.length
   try {
     window.localStorage.clear()
   } catch {
@@ -24,6 +27,8 @@ afterEach(() => {
   vi.useRealTimers()
   const php = wallets.find((wallet) => wallet.currency === 'PHP')
   if (php) php.balance_minor = startingBalance
+  // A settled fixture round is unshifted to the front; drop what this test added.
+  rounds.splice(0, rounds.length - startingRounds)
 })
 
 async function openPlinko() {
@@ -136,14 +141,27 @@ describe('the Plinko game page', () => {
     expect(php.balance_minor).not.toBe(startingBalance)
   })
 
-  it('shows the bets feed and the game notice, with no activity panel or related row', async () => {
-    await readyBoard()
-    const feed = screen.getByRole('table', { name: 'Recent bets' })
-    expect(within(feed).getAllByRole('row').length).toBeGreaterThan(1)
+  it('shows the game notice and, once a round has landed, that round in the bets feed', async () => {
+    const user = userEvent.setup()
+    const { iframe, post } = await readyBoard()
+
     expect(screen.getByRole('region', { name: 'Game notice' })).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'My Activity' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Rules' })).not.toBeInTheDocument()
     expect(screen.queryByText(/^More Originals/)).not.toBeInTheDocument()
+    // No fixture round belongs to Plinko, so there is no feed until the player bets.
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Your recent bets' })).not.toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
+    await waitFor(() => expect(lastDrop(post)).toBeDefined())
+    const drop = lastDrop(post)!
+    frameSays(iframe, { v: 1, type: 'landed', round_id: drop.round_id, slot: drop.slot })
+
+    const feed = await screen.findByRole('table', { name: 'Your recent bets' })
+    const settled = rounds.find((round) => round.id === drop.round_id)!
+    expect(within(feed).getAllByRole('row')).toHaveLength(2)
+    expect(within(feed).getByText(formatMultiplier(settled.multiplier_hundredths!))).toBeInTheDocument()
+    expect(within(feed).queryByRole('columnheader', { name: 'Player' })).not.toBeInTheDocument()
   })
 
   it('refreshes the settled truth even when the frame never reports the landing', async () => {
