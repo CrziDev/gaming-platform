@@ -10,6 +10,7 @@ import (
 	"github.com/gaming-platform/backend/internal/currency"
 	"github.com/gaming-platform/backend/internal/dashboard"
 	"github.com/gaming-platform/backend/internal/deposit"
+	"github.com/gaming-platform/backend/internal/engine/plinko"
 	"github.com/gaming-platform/backend/internal/game"
 	"github.com/gaming-platform/backend/internal/httpx"
 	"github.com/gaming-platform/backend/internal/round"
@@ -32,7 +33,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	depositHandler := deposit.NewHandler(db, logger, cfg.ProofDir)
 	dashboardHandler := dashboard.NewHandler(db, logger)
 	auditHandler := audit.NewHandler(db, logger)
-	roundHandler := round.NewHandler(db, logger)
+	roundHandler := round.NewHandler(db, logger, round.Engines{"plinko": plinko.New()})
 	player, admin := authHandler.Player, authHandler.Admin
 
 	mux := http.NewServeMux()
@@ -44,6 +45,8 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/categories", gameHandler.Categories)
 	mux.HandleFunc("GET /api/games", gameHandler.List)
 	mux.HandleFunc("GET /api/games/{slug}", gameHandler.Get)
+	mux.HandleFunc("GET /api/games/{slug}/manifest", roundHandler.Manifest)
+	mux.HandleFunc("POST /api/games/{slug}/rounds", player(roundHandler.Play))
 	mux.HandleFunc("GET /api/payment-methods", player(depositHandler.Methods))
 	mux.HandleFunc("GET /api/deposits", player(depositHandler.List))
 	mux.HandleFunc("GET /api/deposits/{id}", player(depositHandler.Get))

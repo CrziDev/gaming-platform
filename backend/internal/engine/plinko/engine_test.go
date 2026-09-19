@@ -3,6 +3,7 @@ package plinko
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/gaming-platform/backend/internal/engine"
@@ -56,5 +57,33 @@ func TestEnginePlayRejectsBadParamsConfigAndStake(t *testing.T) {
 		if _, err := New().Play(c.in); !errors.Is(err, c.want) {
 			t.Fatalf("%s: want %v, got %v", name, c.want, err)
 		}
+	}
+}
+
+func TestEngineManifestListsEveryBoardWithoutWeights(t *testing.T) {
+	raw, err := New().Manifest(v1Ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out manifest
+	if err := json.Unmarshal(raw, &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Rows) != 9 || out.Rows[0] != MinRows || out.Rows[8] != MaxRows || len(out.Risks) != 3 {
+		t.Fatalf("manifest = %s", raw)
+	}
+	table, err := v1.Table(Params{Rows: 13, Risk: RiskLow})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := out.MultipliersHundredths["13"][RiskLow]
+	if len(got) != 14 || got[6] != table.MultipliersHundredths[6] {
+		t.Fatalf("13 low = %v", got)
+	}
+	if strings.Contains(string(raw), "weight") {
+		t.Fatal("a manifest must not expose the weights")
+	}
+	if _, err := New().Manifest("plinko/v0"); !errors.Is(err, engine.ErrUnknownConfig) {
+		t.Fatalf("want %v, got %v", engine.ErrUnknownConfig, err)
 	}
 }

@@ -29,6 +29,13 @@ func (s *stubEngine) Play(in engine.Input) (engine.Outcome, error) {
 	return s.outcome, s.err
 }
 
+func (s *stubEngine) Manifest(configRef string) (json.RawMessage, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return json.RawMessage(`{"config":"` + configRef + `"}`), nil
+}
+
 func winningEngine(win int64, multiplier int) *stubEngine {
 	return &stubEngine{outcome: engine.Outcome{
 		WinMinor: win, MultiplierHundredths: multiplier, Result: json.RawMessage(`{"slot":2}`), Reference: "test/v1",

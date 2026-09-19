@@ -9,10 +9,7 @@ import (
 	"github.com/gaming-platform/backend/internal/money"
 )
 
-var (
-	ErrInvalidStake   = errors.New("plinko: stake must be a positive safe amount")
-	ErrPayoutOverflow = errors.New("plinko: payout cannot be represented safely")
-)
+var ErrInvalidStake = errors.New("plinko: stake must be a positive safe amount")
 
 func Pick(src engine.Source, table Table) (int, error) {
 	slot, err := engine.WeightedIndex(src, table.Weights)
@@ -34,11 +31,11 @@ func Payout(stakeMinor int64, multiplierHundredths int) (int64, error) {
 	}
 	multiplier := int64(multiplierHundredths)
 	if stakeMinor > math.MaxInt64/multiplier {
-		return 0, ErrPayoutOverflow
+		return 0, fmt.Errorf("%w: %d × %d", engine.ErrPayoutOverflow, stakeMinor, multiplierHundredths)
 	}
 	win := stakeMinor * multiplier / 100
 	if !money.IsSafeMinor(win) {
-		return 0, ErrPayoutOverflow
+		return 0, fmt.Errorf("%w: %d × %d", engine.ErrPayoutOverflow, stakeMinor, multiplierHundredths)
 	}
 	return win, nil
 }

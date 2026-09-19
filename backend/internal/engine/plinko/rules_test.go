@@ -101,8 +101,8 @@ func TestPayoutRefusesUnsafeAmounts(t *testing.T) {
 		{stake: money.MaxSafeMinor, multiplier: 101},
 		{stake: money.MaxSafeMinor, multiplier: math.MaxInt32},
 	} {
-		if _, err := Payout(c.stake, c.multiplier); !errors.Is(err, ErrPayoutOverflow) {
-			t.Fatalf("%d × %d: want %v, got %v", c.stake, c.multiplier, ErrPayoutOverflow, err)
+		if _, err := Payout(c.stake, c.multiplier); !errors.Is(err, engine.ErrPayoutOverflow) {
+			t.Fatalf("%d × %d: want %v, got %v", c.stake, c.multiplier, engine.ErrPayoutOverflow, err)
 		}
 	}
 }

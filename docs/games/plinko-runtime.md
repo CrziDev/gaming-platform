@@ -79,7 +79,10 @@ no state in which a player has paid for a round with no outcome, so no recovery 
 exists for this game. `Open`, `Settle`, `Cancel`, and `Fail` remain for engines that
 need two phases.
 
-The idempotency key is scoped to the player (`play:<user>:<key>`). A retry returns the
+`handler.go` mounts it as `POST /api/games/{slug}/rounds` and serves
+`GET /api/games/{slug}/manifest`, the active configuration's public parameters; both
+answer 404 for a slug with no engine in the registry `internal/app` builds. The
+idempotency key is scoped to the player (`play:<user>:<key>`). A retry returns the
 committed round and its display result as long as it asks for the same stake and
 parameters; a different stake or parameters under the same key is a conflict. The
 parameters and the engine's result are stored in `result_data` as
@@ -126,8 +129,9 @@ rejected.
    configures again.
 3. Place bet calls the round request. In the demo `src/mocks/plinko.ts` settles it
    with the supplied game's slot weights; outside the demo it is
-   `POST /api/games/{slug}/rounds` with an `Idempotency-Key`, and a 404 is reported as
-   the game not being available yet.
+   `POST /api/games/{slug}/rounds` with an `Idempotency-Key`, served by
+   `round.Handler.Play` through the engine registered for the slug, and a 404 is
+   reported as the game not being available on this server.
 4. The settled result is sent as `drop`. Rows and risk are locked while any ball is in
    flight. The wallet, rounds, and transactions are refetched when the frame reports
    `landed`, or eight seconds later regardless, so an animation can never hide a

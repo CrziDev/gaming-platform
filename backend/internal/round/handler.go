@@ -2,13 +2,20 @@ package round
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
+	"unicode/utf8"
 
+	"github.com/gaming-platform/backend/internal/engine"
+	"github.com/gaming-platform/backend/internal/game"
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/money"
 	"github.com/gaming-platform/backend/internal/user"
+	"github.com/gaming-platform/backend/internal/wallet"
 )
 
 var readStatuses = map[string]bool{
@@ -16,8 +23,26 @@ var readStatuses = map[string]bool{
 }
 
 type Handler struct {
-	db     *sql.DB
-	logger *slog.Logger
+	db      *sql.DB
+	logger  *slog.Logger
+	engines Engines
+}
+
+type playRequest struct {
+	StakeMinor int64           `json:"stake_minor"`
+	Currency   string          `json:"currency"`
+	Params     json.RawMessage `json:"params"`
+}
+
+type playResponse struct {
+	Round  response        `json:"round"`
+	Result json.RawMessage `json:"result"`
+	Wallet walletResponse  `json:"wallet"`
+}
+
+type walletResponse struct {
+	Currency     string `json:"currency"`
+	BalanceMinor int64  `json:"balance_minor"`
 }
 
 type response struct {
@@ -43,8 +68,131 @@ type adminResponse struct {
 	WalletID    string `json:"wallet_id"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
-	return &Handler{db: db, logger: logger}
+func NewHandler(db *sql.DB, logger *slog.Logger, engines Engines) *Handler {
+	return &Handler{db: db, logger: logger, engines: engines}
+}
+
+const maxIdempotencyKeyLength = 200
+
+// playable answers 404 for a slug that is not an active game with an engine,
+// which is the client's signal that the title cannot be played on this server.
+func (h *Handler) playable(w http.ResponseWriter, r *http.Request) (game.Game, Engine, bool) {
+	slug := r.PathValue("slug")
+	eng, ok := h.engines[slug]
+	if !ok {
+		httpx.WriteError(w, http.StatusNotFound, "Game not found")
+		return game.Game{}, nil, false
+	}
+	item, err := game.FindActiveBySlug(r.Context(), h.db, slug)
+	if errors.Is(err, game.ErrNoGame) {
+		httpx.WriteError(w, http.StatusNotFound, "Game not found")
+		return game.Game{}, nil, false
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return game.Game{}, nil, false
+	}
+	return item, eng, true
+}
+
+func (h *Handler) Play(w http.ResponseWriter, r *http.Request, account user.User) {
+	item, eng, ok := h.playable(w, r)
+	if !ok {
+		return
+	}
+	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if key == "" || utf8.RuneCountInString(key) > maxIdempotencyKeyLength {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"idempotency_key": "A valid Idempotency-Key header is required"})
+		return
+	}
+	var body playRequest
+	if !httpx.ReadJSON(w, r, &body) {
+		return
+	}
+	fields := map[string]string{}
+	if body.StakeMinor <= 0 || !money.IsSafeMinor(body.StakeMinor) {
+		fields["stake_minor"] = "Stake must be a positive amount in minor units"
+	}
+	body.Currency = strings.ToUpper(strings.TrimSpace(body.Currency))
+	if len(body.Currency) != 3 {
+		fields["currency"] = "Currency must be a three-letter code"
+	}
+	if len(body.Params) > 0 && !json.Valid(body.Params) {
+		fields["params"] = "Parameters must be a JSON object"
+	}
+	if len(fields) > 0 {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", fields)
+		return
+	}
+
+	in := PlayInput{IdempotencyKey: key, UserID: account.ID, GameID: item.ID, Currency: body.Currency, StakeMinor: body.StakeMinor, Params: body.Params}
+	result, err := Play(r.Context(), h.db, eng, in)
+	if errors.Is(err, wallet.ErrNotFound) {
+		// A wallet is provisioned on first sight of its currency; a player who has
+		// never opened the wallet page has none yet.
+		if _, provisionErr := wallet.Get(r.Context(), h.db, account.ID, item.Currency); provisionErr == nil {
+			result, err = Play(r.Context(), h.db, eng, in)
+		}
+	}
+	if err != nil {
+		h.writePlayError(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, playResponse{
+		Round:  newResponse(result.Round),
+		Result: result.Result,
+		Wallet: walletResponse{Currency: result.Wallet.Currency, BalanceMinor: result.Wallet.BalanceMinor},
+	})
+}
+
+func (h *Handler) writePlayError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, ErrRoundKeyRequired):
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"idempotency_key": "A valid Idempotency-Key header is required"})
+	case errors.Is(err, ErrRoundKeyConflict):
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"idempotency_key": "This key was already used for a different request"})
+	case errors.Is(err, ErrInvalidWager):
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"stake_minor": "Stake must be within the game's limits and on its step"})
+	case errors.Is(err, engine.ErrInvalidParams):
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"params": "Parameters are not valid for this game"})
+	case errors.Is(err, ErrUnsupportedCurrency), errors.Is(err, wallet.ErrCurrencyDisabled):
+		httpx.WriteCodedError(w, http.StatusConflict, "The game does not play in that currency", "UNSUPPORTED_CURRENCY")
+	case errors.Is(err, ErrGameUnavailable), errors.Is(err, ErrProfileUnavailable):
+		httpx.WriteCodedError(w, http.StatusConflict, "That game is not available right now", "GAME_UNAVAILABLE")
+	case errors.Is(err, wallet.ErrInsufficientFunds):
+		httpx.WriteCodedError(w, http.StatusConflict, "Your balance is too low for that bet", "INSUFFICIENT_BALANCE")
+	case errors.Is(err, wallet.ErrWalletFrozen):
+		httpx.WriteCodedError(w, http.StatusConflict, "The wallet is frozen", "WALLET_FROZEN")
+	case errors.Is(err, wallet.ErrWalletClosed):
+		httpx.WriteCodedError(w, http.StatusConflict, "The wallet is closed", "WALLET_CLOSED")
+	case errors.Is(err, wallet.ErrAmountOverflow), errors.Is(err, engine.ErrPayoutOverflow):
+		httpx.WriteCodedError(w, http.StatusConflict, "That win cannot be credited safely", "AMOUNT_OVERFLOW")
+	default:
+		h.logger.Error("round play failed", slog.String("path", r.URL.Path), slog.Any("error", err))
+		httpx.WriteError(w, http.StatusInternalServerError, "An unexpected error occurred")
+	}
+}
+
+func (h *Handler) Manifest(w http.ResponseWriter, r *http.Request) {
+	item, eng, ok := h.playable(w, r)
+	if !ok {
+		return
+	}
+	profile, err := activeProfile(r.Context(), h.db, item.ID)
+	if errors.Is(err, ErrProfileUnavailable) || (err == nil && profile.EngineConfigRef == "") {
+		httpx.WriteCodedError(w, http.StatusConflict, "That game is not available right now", "GAME_UNAVAILABLE")
+		return
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	manifest, err := eng.Manifest(profile.EngineConfigRef)
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, manifest)
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request, account user.User) {

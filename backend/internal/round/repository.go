@@ -155,9 +155,9 @@ type activeProfileRow struct {
 	EngineConfigRef string
 }
 
-func activeProfile(ctx context.Context, tx *sql.Tx, gameID string) (activeProfileRow, error) {
+func activeProfile(ctx context.Context, db querier, gameID string) (activeProfileRow, error) {
 	var profile activeProfileRow
-	err := tx.QueryRowContext(ctx, `SELECT id::text, COALESCE(engine_config_ref, '') FROM rtp_profiles WHERE game_id = ($1::text)::uuid AND status = 'active'`, gameID).Scan(&profile.ID, &profile.EngineConfigRef)
+	err := db.QueryRowContext(ctx, `SELECT id::text, COALESCE(engine_config_ref, '') FROM rtp_profiles WHERE game_id = ($1::text)::uuid AND status = 'active'`, gameID).Scan(&profile.ID, &profile.EngineConfigRef)
 	if errors.Is(err, sql.ErrNoRows) {
 		return activeProfileRow{}, ErrProfileUnavailable
 	}

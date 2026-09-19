@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/gaming-platform/backend/internal/engine"
 )
@@ -48,6 +49,37 @@ func (Engine) Play(in engine.Input) (engine.Outcome, error) {
 		return engine.Outcome{}, fmt.Errorf("plinko: encode result: %w", err)
 	}
 	return engine.Outcome{WinMinor: win, MultiplierHundredths: multiplier, Result: display, Reference: profile.Ref}, nil
+}
+
+type manifest struct {
+	Rows                  []int                     `json:"rows"`
+	Risks                 []Risk                    `json:"risks"`
+	MultipliersHundredths map[string]map[Risk][]int `json:"multipliers_hundredths"`
+}
+
+func (Engine) Manifest(configRef string) (json.RawMessage, error) {
+	profile, err := ProfileByRef(configRef)
+	if err != nil {
+		return nil, err
+	}
+	out := manifest{Risks: Risks, MultipliersHundredths: make(map[string]map[Risk][]int)}
+	for rows := MinRows; rows <= MaxRows; rows++ {
+		out.Rows = append(out.Rows, rows)
+		byRisk := make(map[Risk][]int, len(Risks))
+		for _, risk := range Risks {
+			table, err := profile.Table(Params{Rows: rows, Risk: risk})
+			if err != nil {
+				return nil, err
+			}
+			byRisk[risk] = table.MultipliersHundredths
+		}
+		out.MultipliersHundredths[strconv.Itoa(rows)] = byRisk
+	}
+	encoded, err := json.Marshal(out)
+	if err != nil {
+		return nil, fmt.Errorf("plinko: encode manifest: %w", err)
+	}
+	return encoded, nil
 }
 
 func decodeParams(raw json.RawMessage) (Params, error) {

@@ -92,6 +92,8 @@ one game's RTP profiles — is a plain array.
 | `GET` | `/api/categories` | `200` + every category with its active-game count and availability | — |
 | `GET` | `/api/games` | `200` + a page of active games; accepts `category`, `search`, `sort=name\|newest`, `flag=new` | `400` invalid filter |
 | `GET` | `/api/games/{slug}` | `200` + the game | `404` not active or unknown |
+| `GET` | `/api/games/{slug}/manifest` | `200` + the active profile's public parameters | `404` no engine or not active · `409` `GAME_UNAVAILABLE` no active profile |
+| `POST` | `/api/games/{slug}/rounds` | `200` + the settled round, its display result, and the wallet · the same for a retry | `400` · `401` · `404` no engine or not active · `409` `INSUFFICIENT_BALANCE` / `WALLET_FROZEN` / `WALLET_CLOSED` / `AMOUNT_OVERFLOW` / `UNSUPPORTED_CURRENCY` / `GAME_UNAVAILABLE` |
 | `GET` | `/api/payment-methods` | `200` + enabled methods | `401` |
 | `POST` | `/api/deposits` | `201` + a new request · `200` + the original retry result | `400` · `401` · `413` |
 | `GET` | `/api/deposits` | `200` + a page of own requests, optionally filtered by `status=pending|approved|rejected` | `400` invalid filter · `401` |
@@ -124,6 +126,20 @@ administrator approves or rejects it.
 6 MiB and the proof itself to 5 MiB. Only PNG and JPEG content identified from its bytes
 is accepted; the client filename and declared MIME type are not trusted. A retry returns
 the original request and does not retain the redundant uploaded file.
+
+`POST /api/games/{slug}/rounds` plays one round of an integrated game. It requires an
+`Idempotency-Key` header of at most 200 characters and a body of `stake_minor`,
+`currency`, and `params`, the game's public parameters as an object the engine
+validates (Plinko: `rows` 8–16 and `risk` `low|normal|high`). The wager is debited, the
+outcome decided, and any win credited in one transaction; the response is
+`{ "round": <round>, "result": <object>, "wallet": { "currency", "balance_minor" } }`,
+where `result` is a display hint (Plinko: `rows`, `risk`, `slot`) and the round's
+`win_minor` and `multiplier_hundredths` are the authoritative outcome. A retry with the
+same key returns the original response; the same key with a different stake or
+parameters is `400` with `fields.idempotency_key`. A slug with no engine on this server
+is `404`, however the catalogue describes it, and `GET /api/games/{slug}/manifest` is
+the public shape of what that engine plays — for Plinko, `rows`, `risks`, and
+`multipliers_hundredths` by rows and risk — from the active profile's configuration.
 
 Payment methods are configuration-managed. There is no operator
 payment-method mutation endpoint. Seeded destination placeholders are disabled;
