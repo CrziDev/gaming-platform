@@ -25,7 +25,7 @@ tests pass.
 ## Public and player pages
 
 - [ ] **Lobby** — `/` (catalogue, categories, and the featured banner are real; big wins, promotions, and recently-played rows are fixture-only and hidden outside the demo)
-- [x] **Game catalogue** — `/games` (real catalogue with category, search, and sort)
+- [x] **Game catalogue** — `/games` (real catalogue with category and search)
 - [ ] **Hot games** — `/games/hot` (round data exists now but "hot" has no agreed definition; `flag=hot` answers `400` and the shelf is empty outside the demo)
 - [x] **New games** — `/games/new` (real thirty-day `new` flag from the catalogue)
 - [x] **Favorites** — `/favorites` (authentication required; the player's real favourites, newest first, active games only)
