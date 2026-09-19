@@ -189,6 +189,30 @@ func TestPlayHandlerConflictCodes(t *testing.T) {
 	}
 }
 
+func TestPlayHandlerAnswersUnsupportedCurrencyWhenNoWalletCanBeProvisioned(t *testing.T) {
+	db := openRoundTestDB(t)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	// A currency disabled after its game was created: provisioning creates no
+	// wallet in it, so the play route cannot fall back to a fresh wallet.
+	if _, err := db.Exec(`INSERT INTO currencies (code, name, symbol, minor_units, enabled) VALUES ('RDX', 'Round Disabled', 'R', 2, false) ON CONFLICT (code) DO UPDATE SET enabled = false`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM currencies WHERE code = 'RDX'`) })
+	fixture := createRoundFixture(t, db, 1_000)
+	if _, err := db.Exec(`UPDATE games SET currency = 'RDX' WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
+		t.Fatal(err)
+	}
+	slug := "round-game-" + fixture.Suffix
+	handler := NewHandler(db, logger, Engines{slug: winningEngine(340, 170)})
+	code, body := handler.play(t, user.User{ID: fixture.UserID}, playCall{slug: slug, key: "k-disabled", body: `{"stake_minor": 200, "currency": "RDX", "params": {}}`})
+	if code != http.StatusConflict || body["code"] != "UNSUPPORTED_CURRENCY" {
+		t.Fatalf("disabled currency: want 409 UNSUPPORTED_CURRENCY, got %d %v", code, body)
+	}
+	if l := ledgerFor(t, fixture); l != (ledger{Balance: 1_000}) {
+		t.Fatalf("ledger = %+v", l)
+	}
+}
+
 func TestManifestHandler(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 0)

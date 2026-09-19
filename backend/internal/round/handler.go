@@ -129,8 +129,9 @@ func (h *Handler) Play(w http.ResponseWriter, r *http.Request, account user.User
 	result, err := Play(r.Context(), h.db, eng, in)
 	if errors.Is(err, wallet.ErrNotFound) {
 		// A wallet is provisioned on first sight of its currency; a player who has
-		// never opened the wallet page has none yet.
-		if _, provisionErr := wallet.Get(r.Context(), h.db, account.ID, item.Currency); provisionErr == nil {
+		// never opened the wallet page has none yet. When none can be provisioned,
+		// that failure is the one to answer.
+		if _, err = wallet.Get(r.Context(), h.db, account.ID, item.Currency); err == nil {
 			result, err = Play(r.Context(), h.db, eng, in)
 		}
 	}
