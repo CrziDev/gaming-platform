@@ -257,3 +257,68 @@ Calculated theoretical RTP
 The server uses the active profile to select the authoritative slot and payout. Before a
 profile is used, its theoretical RTP is calculated and a sufficiently large automated
 simulation confirms that observed results converge on the target.
+
+## 10. Baseline profile v1 — `plinko/v1/9600`
+
+The first checked-in configuration, `backend/internal/engine/plinko/profile_v1.go`,
+addressed by the `engine_config_ref` `plinko/v1/9600`. Target 9600 basis points on
+every board. Weights are integers, the centre slot at 1 000 000 000 and each other
+slot at `decay ^ distance` of it, rounded; the decay itself is never evaluated at
+runtime. `TheoreticalBasisPoints` returns exactly 9600 for all 27 boards and a test
+asserts it.
+
+The weights are derived, not typed:
+
+```text
+cd backend && go run ./cmd/gameverify solve -config plinko/v1/9600 -target 9600
+```
+
+bisects the decay per board until the integer model lands on the target, and a test
+in `cmd/gameverify` asserts the checked-in weights are what it produces.
+
+The multipliers are the supplied paytable, except where a board's floor blocks the
+target (§7). From 11 rows, every low-risk board has a centre of 1.0× or 1.1×, so its
+centre moves to 0.9× — the value the supplied 9- and 10-row low boards already use —
+and its first ring to 1.0×. Moving only the centre would need 73–81% of balls on one
+slot to reach 96% on the even boards; the ring change keeps the distribution in the
+character of the supplied 0.24 decay, which puts 61% on the centre of an even board.
+
+| Rows | Risk | Decay | Centre share | Multipliers changed | Theoretical |
+|---:|---|---:|---:|---|---:|
+| 8 | low | 0.3462 | 48.9% | — | 9600 |
+| 8 | normal | 0.3145 | 52.4% | — | 9600 |
+| 8 | high | 0.3312 | 50.5% | — | 9600 |
+| 9 | low | 0.2268 | 38.7% | — | 9600 |
+| 9 | normal | 0.2677 | 36.7% | — | 9600 |
+| 9 | high | 0.2952 | 35.3% | — | 9600 |
+| 10 | low | 0.2280 | 62.9% | — | 9600 |
+| 10 | normal | 0.3696 | 46.2% | — | 9600 |
+| 10 | high | 0.3612 | 47.1% | — | 9600 |
+| 11 | low | 0.2815 | 35.9% | centre 1× → 0.9×, ring 1.1× → 1.0× | 9600 |
+| 11 | normal | 0.3528 | 32.4% | — | 9600 |
+| 11 | high | 0.3456 | 32.8% | — | 9600 |
+| 12 | low | 0.2283 | 62.8% | centre 1× → 0.9×, ring 1.1× → 1.0× | 9600 |
+| 12 | normal | 0.3969 | 43.3% | — | 9600 |
+| 12 | high | 0.3799 | 45.0% | — | 9600 |
+| 13 | low | 0.2808 | 36.0% | centre 1.1× → 0.9×, ring 1.2× → 1.0× | 9600 |
+| 13 | normal | 0.3775 | 31.2% | — | 9600 |
+| 13 | high | 0.3739 | 31.3% | — | 9600 |
+| 14 | low | 0.2112 | 65.1% | centre 1.1× → 0.9×, ring 1.2× → 1.0× | 9600 |
+| 14 | normal | 0.4025 | 42.6% | — | 9600 |
+| 14 | high | 0.3984 | 43.1% | — | 9600 |
+| 15 | low | 0.2615 | 36.9% | centre 1.1× → 0.9×, ring 1.2× → 1.0× | 9600 |
+| 15 | normal | 0.4023 | 29.9% | — | 9600 |
+| 15 | high | 0.3855 | 30.7% | — | 9600 |
+| 16 | low | 0.1913 | 67.9% | centre 1.1× → 0.9×, ring 1.2× → 1.0× | 9600 |
+| 16 | normal | 0.4146 | 41.4% | — | 9600 |
+| 16 | high | 0.3598 | 47.1% | — | 9600 |
+
+Centre share is the probability of the middle slot (the middle pair on an odd board).
+
+Until the host reads the active table from the server, the frame labels those six
+boards' centre buckets with the supplied values (`frontend/src/features/gameplay/
+multipliers.ts`); the amount paid and shown on landing always comes from the server.
+
+Every figure above is theoretical. The profile is not verified until the simulation
+in §9 has been run through the production outcome path and its evidence recorded
+here.

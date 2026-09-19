@@ -60,6 +60,9 @@ dropped. `engine` is the part every game shares; `engine/plinko` is this game's 
 | `plinko/supplied.go` | The vendor paytable in hundredths and the vendor `0.24` decay as integer weights — reference data for deriving and checking profiles, never played directly |
 | `plinko/rules.go` | `Pick` (a slot from a table) and `Payout` (`stake × multiplier / 100`, overflow-checked, truncating; exact under a wager step that is a multiple of 100) |
 | `plinko/rtp.go` | `TheoreticalBasisPoints` — `Σ w·m / Σ w` in integers; its tests reproduce every figure in `plinko-rtp.md` §5 |
+| `plinko/profile_v1.go` | The baseline configuration `plinko/v1/9600`: weights and multipliers for all 27 boards, `plinko-rtp.md` §10 |
+| `plinko/profiles.go` | `ProfileByRef`, the lookup an RTP profile row's `engine_config_ref` resolves through |
+| `backend/cmd/gameverify` | Offline tooling: `solve` derives a profile's weights from its multipliers for a target return |
 
 Deterministic sources exist only in `_test.go` files; nothing at runtime can select one.
 
