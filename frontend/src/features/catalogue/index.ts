@@ -7,7 +7,7 @@ export {
   fetchGamesByIds,
   fetchLobbyRows,
   fetchPromotions,
-  toggleFavorite,
+  setFavorite,
 } from './api'
 export type { GameFilters } from './api'
 export {
@@ -20,5 +20,5 @@ export {
   useGamesByIds,
   useLobbyRows,
   usePromotions,
-  useToggleFavorite,
+  useSetFavorite,
 } from './hooks'

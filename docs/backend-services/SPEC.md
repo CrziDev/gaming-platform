@@ -64,7 +64,7 @@ dependency order: `000001` `users` · `000002` `auth_sessions` · `000003`
 `password_reset_tokens` · `000004` `currencies` · `000005` `wallets` · `000006`
 `wallet_transactions` · `000007` `game_categories` · `000008` `games` · `000009`
 `rtp_profiles` · `000010` `game_rounds` · `000011` `payment_methods` · `000012`
-`deposit_requests` · `000013` `audit_logs`.
+`deposit_requests` · `000013` `audit_logs` · `000014` `game_favorites`.
 
 ### 4.1 Accounts and sessions
 
@@ -443,6 +443,24 @@ The actions that must appear here: wallet credit and debit, deposit approval and
 rejection, account status change, game creation and status change, RTP profile creation,
 edit, and activation, and a password reset carried out on someone's behalf.
 
+### 4.9 `game_favorites`
+
+```sql
+CREATE TABLE game_favorites (
+    user_id    UUID NOT NULL REFERENCES users (id),
+    game_id    UUID NOT NULL REFERENCES games (id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    PRIMARY KEY (user_id, game_id)
+);
+
+CREATE INDEX game_favorites_user_created ON game_favorites (user_id, created_at DESC);
+```
+
+A favourite is a mark, not a record with a life of its own: it has no id of its own and
+carries nothing but who marked what, when. The primary key is what makes adding twice a
+no-op, and the read joins `games` so a retired title drops out of the list on its own.
+
 ## 5. Accounts and sessions
 
 The account service covers registration, login, logout, `/api/me`, the
@@ -535,9 +553,12 @@ operator who made an adjustment or the internal reason text.
 and wager configuration, filtered by `category`, `search`, `sort`, and `flag`.
 `GET /api/games/{slug}` is one active game; any other status is `404`, the same answer as
 an unknown slug. `GET /api/categories` lists every category with its active-game count so
-the web app can hide an empty one. An operator sees every
-game, including `draft`, `maintenance`, and `retired`, through `GET /api/admin/games`, and
-creates and edits them through the two admin routes.
+the web app can hide an empty one. A signed-in player marks an active game as a
+favourite with `PUT /api/games/{slug}/favorite`, unmarks it with `DELETE`, and reads the
+marked games as a page through `GET /api/favorites`; both writes are idempotent and a
+game that is not active is `404` to them, as it is to the catalogue. An operator sees
+every game, including `draft`, `maintenance`, and `retired`, through
+`GET /api/admin/games`, and creates and edits them through the two admin routes.
 
 Wager bounds are enforced server-side wherever a wager is accepted: at least
 `min_wager_minor`, at most `max_wager_minor`, and an exact multiple of

@@ -4,8 +4,8 @@ import { usingFixtures } from '@/api/mode'
 import type { BigWin, Category, Game, GameFlag, LobbyRow, Promotion } from '@/api/types'
 import { bigWins, categories, favoriteIds, games, lobbyRows, promotions } from '@/mocks/games'
 
-// The catalogue, a single game, and the category list are real reads. Big
-// wins, promotions, lobby rows, and favorites have no service yet, so outside
+// The catalogue, a single game, the category list, and favorites are real
+// reads. Big wins, promotions, and lobby rows have no service yet, so outside
 // the demo and tests they are empty and their sections do not render.
 
 export type GameFilters = {
@@ -43,20 +43,25 @@ export async function fetchPromotions(): Promise<Promotion[]> {
 }
 
 export async function fetchFavorites(): Promise<Game[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => games.filter((game) => favoriteIds.has(game.id)))
+  if (usingFixtures) {
+    return mockRequest(() => games.filter((game) => favoriteIds.has(game.id)))
+  }
+  const page = await api.get<Page<Game>>(`/favorites?page=1&size=${CATALOGUE_PAGE_SIZE}`)
+  return page.rows
 }
 
-export async function toggleFavorite(gameId: string): Promise<{ favorite: boolean }> {
-  if (!usingFixtures) return { favorite: false }
-  return mockRequest(() => {
-    if (favoriteIds.has(gameId)) {
-      favoriteIds.delete(gameId)
-      return { favorite: false }
-    }
-    favoriteIds.add(gameId)
-    return { favorite: true }
-  })
+export async function setFavorite({ slug, favorite }: { slug: string; favorite: boolean }): Promise<void> {
+  if (usingFixtures) {
+    return mockRequest(() => {
+      const game = games.find((entry) => entry.slug === slug)
+      if (!game) return
+      if (favorite) favoriteIds.add(game.id)
+      else favoriteIds.delete(game.id)
+    })
+  }
+  const path = `/games/${encodeURIComponent(slug)}/favorite`
+  if (favorite) await api.put<void>(path)
+  else await api.delete<void>(path)
 }
 
 export async function fetchGames(filters: GameFilters): Promise<Game[]> {

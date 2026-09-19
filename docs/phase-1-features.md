@@ -143,8 +143,9 @@ decision must update the API contract, frontend types, and implementation togeth
 - [ ] Decide whether the v2 lobby's merchandising surfaces — big wins, promotions, and the
   hot shelf — are Phase 1. They are fixture-only today and hidden outside the demo. The
   new shelf is real: a game is `new` for thirty days after it is added.
-- [ ] Decide whether favorites and the live chat rail are Phase 1; both are fixture-only
-  and hidden outside the demo, and neither has a contract.
+- [ ] Decide whether the live chat rail is Phase 1; it is fixture-only and hidden outside
+  the demo, and has no contract. Favorites are decided and built: `game_favorites`,
+  `GET /api/favorites`, and idempotent `PUT`/`DELETE /api/games/{slug}/favorite`.
 - [ ] Decide what the Support link, the language selector, and the console search box
   do in Phase 1. The link points at a placeholder host, the "English" button and the
   "Search player, ref or round id" input have no handler, and none has a contract.
@@ -425,7 +426,7 @@ Metadata can be built now; verified mathematical behavior cannot.
 - [ ] Reset password `/reset` uses the real reset-confirmation API (same: wired to the
   contract, honest until the server implements it).
 - [x] Game host `/game/:slug` loads real metadata, the game's own wallet, and recent rounds,
-  and safely reports unavailable games (the favorite toggle remains fixture-only).
+  and safely reports unavailable games; the favorite toggle writes to the server.
 - [x] Wallet `/wallet` uses real wallets and balances.
 - [x] Deposit `/wallet/deposit` uses real methods, limits, and submission.
 - [x] Deposit status `/wallet/deposit/:id` uses the real player-owned request.
@@ -435,8 +436,9 @@ Metadata can be built now; verified mathematical behavior cannot.
   are real; the password change control is absent until `POST /api/password` exists,
   and the Status badge is hardcoded).
 - [x] New `/games/new` is backed by the real catalogue's thirty-day `new` flag.
-- [ ] Hot `/games/hot`, Favorites `/favorites`, and Promotions `/promotions` are
-  fixture-only and hidden outside the demo; see contract alignment.
+- [x] Favorites `/favorites` lists the player's real favourites from `GET /api/favorites`.
+- [ ] Hot `/games/hot` and Promotions `/promotions` are fixture-only and hidden outside
+  the demo; see contract alignment.
 - [x] Not found `*` presents the intended application state.
 
 ### Admin routes

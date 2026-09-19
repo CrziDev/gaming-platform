@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"log/slog"
@@ -146,6 +147,54 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, newResponse(item, h.now()))
+}
+
+func (h *Handler) Favorites(w http.ResponseWriter, r *http.Request, account user.User) {
+	query, ok := httpx.ReadQuery(w, r)
+	if !ok {
+		return
+	}
+	games, total, err := ListFavorites(r.Context(), h.db, account.ID, query.Page, query.Size)
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	now := h.now()
+	result := make([]response, 0, len(games))
+	for _, item := range games {
+		result = append(result, newResponse(item, now))
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))
+}
+
+func (h *Handler) AddFavorite(w http.ResponseWriter, r *http.Request, account user.User) {
+	h.setFavorite(w, r, account, AddFavorite)
+}
+
+func (h *Handler) RemoveFavorite(w http.ResponseWriter, r *http.Request, account user.User) {
+	h.setFavorite(w, r, account, RemoveFavorite)
+}
+
+func (h *Handler) setFavorite(w http.ResponseWriter, r *http.Request, account user.User, apply func(context.Context, *sql.DB, string, string) error) {
+	slug := r.PathValue("slug")
+	if !isSlug(slug) {
+		httpx.WriteError(w, http.StatusNotFound, "Game not found")
+		return
+	}
+	item, err := FindActiveBySlug(r.Context(), h.db, slug)
+	if errors.Is(err, ErrNoGame) {
+		httpx.WriteError(w, http.StatusNotFound, "Game not found")
+		return
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	if err := apply(r.Context(), h.db, account.ID, item.ID); err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) Categories(w http.ResponseWriter, r *http.Request) {

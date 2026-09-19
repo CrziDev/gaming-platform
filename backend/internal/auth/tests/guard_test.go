@@ -18,6 +18,9 @@ var playerRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/wallets/PHP/transactions"},
 	{http.MethodGet, "/api/transactions"},
 	{http.MethodGet, "/api/transactions/summary"},
+	{http.MethodGet, "/api/favorites"},
+	{http.MethodPut, "/api/games/plinko/favorite"},
+	{http.MethodDelete, "/api/games/plinko/favorite"},
 	{http.MethodGet, "/api/rounds"},
 	{http.MethodGet, "/api/rounds/" + anyID},
 }

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gaming-platform/backend/internal/user"
 )
 
 func newTestHandler() *Handler {
@@ -62,6 +64,36 @@ func TestGetRejectsAMalformedSlugAsNotFound(t *testing.T) {
 				t.Fatalf("want 404, got %d (%s)", response.Code, response.Body.String())
 			}
 		})
+	}
+}
+
+func TestFavoriteMutationsRejectAMalformedSlugAsNotFound(t *testing.T) {
+	handler := newTestHandler()
+
+	for name, mutate := range map[string]func(http.ResponseWriter, *http.Request, user.User){
+		"add":    handler.AddFavorite,
+		"remove": handler.RemoveFavorite,
+	} {
+		t.Run(name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPut, "/api/games/Aurora-Dice/favorite", nil)
+			request.SetPathValue("slug", "Aurora-Dice")
+			mutate(response, request, user.User{Role: "player"})
+
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("want 404, got %d (%s)", response.Code, response.Body.String())
+			}
+		})
+	}
+}
+
+func TestFavoritesRejectsAnOversizedPage(t *testing.T) {
+	handler := newTestHandler()
+	response := httptest.NewRecorder()
+	handler.Favorites(response, httptest.NewRequest(http.MethodGet, "/api/favorites?size=101", nil), user.User{Role: "player"})
+
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), `"size"`) {
+		t.Fatalf("want 400 with a size field error, got %d (%s)", response.Code, response.Body.String())
 	}
 }
 

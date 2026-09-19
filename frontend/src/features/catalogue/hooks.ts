@@ -9,7 +9,7 @@ import {
   fetchGamesByIds,
   fetchLobbyRows,
   fetchPromotions,
-  toggleFavorite,
+  setFavorite,
   type GameFilters,
 } from './api'
 
@@ -54,11 +54,11 @@ export function useFavorites(enabled: boolean) {
   return useQuery({ queryKey: ['favorites'], queryFn: fetchFavorites, enabled })
 }
 
-export function useToggleFavorite() {
+export function useSetFavorite() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: toggleFavorite,
+    mutationFn: setFavorite,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
   })
 }

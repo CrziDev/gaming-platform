@@ -148,6 +148,52 @@ func ListCatalogue(ctx context.Context, db *sql.DB, filter CatalogueFilter) ([]G
 	return games, total, nil
 }
 
+const favoritesWhere = `
+	FROM game_favorites f
+	JOIN games g ON g.id = f.game_id
+	JOIN game_categories c ON c.slug = g.category_slug
+	WHERE f.user_id = ($1::text)::uuid AND g.status = 'active'`
+
+func ListFavorites(ctx context.Context, db *sql.DB, userID string, page, size int) ([]Game, int, error) {
+	var total int
+	if err := db.QueryRowContext(ctx, `SELECT count(*)`+favoritesWhere, userID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("game: count favorites: %w", err)
+	}
+	offset := int64(page-1) * int64(size)
+	rows, err := db.QueryContext(ctx, `SELECT `+gameColumns+favoritesWhere+` ORDER BY f.created_at DESC, g.slug ASC LIMIT $2 OFFSET $3`, userID, size, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("game: list favorites: %w", err)
+	}
+	defer rows.Close()
+
+	games := make([]Game, 0)
+	for rows.Next() {
+		item, err := scanGame(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("game: scan favorite: %w", err)
+		}
+		games = append(games, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("game: favorite rows: %w", err)
+	}
+	return games, total, nil
+}
+
+func AddFavorite(ctx context.Context, db *sql.DB, userID, gameID string) error {
+	if _, err := db.ExecContext(ctx, `INSERT INTO game_favorites (user_id, game_id) VALUES (($1::text)::uuid, ($2::text)::uuid) ON CONFLICT (user_id, game_id) DO NOTHING`, userID, gameID); err != nil {
+		return fmt.Errorf("game: add favorite: %w", err)
+	}
+	return nil
+}
+
+func RemoveFavorite(ctx context.Context, db *sql.DB, userID, gameID string) error {
+	if _, err := db.ExecContext(ctx, `DELETE FROM game_favorites WHERE user_id = ($1::text)::uuid AND game_id = ($2::text)::uuid`, userID, gameID); err != nil {
+		return fmt.Errorf("game: remove favorite: %w", err)
+	}
+	return nil
+}
+
 func FindActiveBySlug(ctx context.Context, db *sql.DB, slug string) (Game, error) {
 	item, err := scanGame(db.QueryRowContext(ctx, selectActiveBySlugSQL, slug))
 	if errors.Is(err, sql.ErrNoRows) {

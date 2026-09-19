@@ -42,6 +42,7 @@ func createPlinko(t *testing.T, db *sql.DB) {
 		t.Fatalf("create profile: %v", err)
 	}
 	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM game_favorites WHERE game_id = ($1::text)::uuid`, gameID)
 		_, _ = db.Exec(`DELETE FROM game_rounds WHERE game_id = ($1::text)::uuid`, gameID)
 		_, _ = db.Exec(`DELETE FROM rtp_profiles WHERE game_id = ($1::text)::uuid`, gameID)
 		_, _ = db.Exec(`DELETE FROM games WHERE id = ($1::text)::uuid`, gameID)

@@ -21,6 +21,7 @@ const page = {
   'GET /games': { status: 200, body: { rows: [plinko], total: 1, page: 1, size: 100, pages: 1 } },
   'GET /wallets/PHP': { status: 200, body: { currency: 'PHP', balance_minor: 100_000 } },
   'GET /rounds': { status: 200, body: { rows: [], total: 0, page: 1, size: 20, pages: 1 } },
+  'GET /favorites': { status: 200, body: { rows: [], total: 0, page: 1, size: 100, pages: 1 } },
 } satisfies Record<string, StubResponse>
 
 // A manifest whose default board differs from the bundled table at the centre,
@@ -254,5 +255,31 @@ describe('the history under the Plinko board', () => {
     expect(await screen.findByText('History unavailable')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
     expect(screen.queryByRole('table', { name: 'History' })).not.toBeInTheDocument()
+  })
+})
+
+describe('the favorite toggle against the server', () => {
+  it('adds the game with a PUT, re-reads the list, and removes it with a DELETE', async () => {
+    const user = userEvent.setup()
+    const favoritePage = (rows: typeof plinko[]) => ({
+      status: 200,
+      body: { rows, total: rows.length, page: 1, size: 100, pages: 1 },
+    })
+    const fetchMock = stubFetchRoutes({
+      ...page,
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest('profile-a', 55) },
+      'GET /favorites': [favoritePage([]), favoritePage([plinko]), favoritePage([])],
+      'PUT /games/plinko/favorite': { status: 204 },
+      'DELETE /games/plinko/favorite': { status: 204 },
+    })
+    renderApp('/game/plinko')
+
+    await user.click(await screen.findByRole('button', { name: 'Add to favorites' }))
+    expect(await screen.findByRole('button', { name: 'Remove from favorites' })).toHaveAttribute('aria-pressed', 'true')
+    expect(fetchMock.mock.calls.some(([input, init]) => init?.method === 'PUT' && String(input).endsWith('/games/plinko/favorite'))).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: 'Remove from favorites' }))
+    expect(await screen.findByRole('button', { name: 'Add to favorites' })).toHaveAttribute('aria-pressed', 'false')
+    expect(fetchMock.mock.calls.some(([input, init]) => init?.method === 'DELETE' && String(input).endsWith('/games/plinko/favorite'))).toBe(true)
   })
 })

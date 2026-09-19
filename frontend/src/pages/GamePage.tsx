@@ -9,7 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { useFavorites, useGame, useToggleFavorite } from '@/features/catalogue'
+import { useFavorites, useGame, useSetFavorite } from '@/features/catalogue'
 import { GameHistory, GameNotice, gameModuleFor, useGameSession, type GameSession } from '@/features/gameplay'
 import { useWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
@@ -24,7 +24,7 @@ export function GamePage() {
   // controls is that wallet's — never whichever one the header happens to show.
   const { data: wallet } = useWallet(game?.currency ?? 'PHP')
   const favorites = useFavorites(true)
-  const toggleFavorite = useToggleFavorite()
+  const setFavorite = useSetFavorite()
   const hostRef = useRef<HTMLElement>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [shortfall, setShortfall] = useState(false)
@@ -93,8 +93,8 @@ export function GamePage() {
           <IconButton
             label={favorite ? 'Remove from favorites' : 'Add to favorites'}
             aria-pressed={favorite}
-            disabled={toggleFavorite.isPending}
-            onClick={() => toggleFavorite.mutate(game.id)}
+            disabled={setFavorite.isPending}
+            onClick={() => setFavorite.mutate({ slug: game.slug, favorite: !favorite })}
             className={cn(favorite && 'text-accent-ink')}
           >
             <Heart aria-hidden size={16} strokeWidth={1.6} fill={favorite ? 'currentColor' : 'none'} />
