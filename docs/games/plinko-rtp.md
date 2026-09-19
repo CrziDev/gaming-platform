@@ -335,14 +335,44 @@ cd backend && go run ./cmd/gameverify simulate -config plinko/v1/9600
 Acceptance: the theoretical return of every board equals the target exactly, and every
 board's observed return is within ±100 basis points of it. `±3σ` is three standard
 errors of that board's observed return at this sample size — the resolution the run
-has, reported so the tolerance can be judged against it. The 16-row high board pays
+has, reported so the tolerance can be judged against it; it is rounded to whole basis
+points, so `0` means under half a point, and an observed figure is itself rounded half
+up, so a `+1` beside a `0` band is the integer resolution, not a miss. The 16-row high board pays
 500× on a 0.013% slot, which is why 10⁸ rounds per board is the default: at 10⁶ its
 noise band (±286 bp) is wider than the tolerance and a run that size cannot judge it.
 
 Run on 2026-09-19 with Go 1.26.4 on linux/amd64, engine `plinko/v1/9600`,
-100 000 000 rounds per board, 2 700 000 000 in all, in 1m15s:
+100 000 000 rounds per board, 2 700 000 000 in all, in 1m19s:
 
-{table}
+| Rows | Risk | Theoretical | Observed | Δ target | ±3σ | Within tolerance |
+|---:|---|---:|---:|---:|---:|---|
+| 8 | low | 9600 | 9599 | -1 | 1 | yes |
+| 8 | normal | 9600 | 9600 | +0 | 2 | yes |
+| 8 | high | 9600 | 9602 | +2 | 6 | yes |
+| 9 | low | 9600 | 9600 | +0 | 0 | yes |
+| 9 | normal | 9600 | 9600 | +0 | 2 | yes |
+| 9 | high | 9600 | 9601 | +1 | 6 | yes |
+| 10 | low | 9600 | 9601 | +1 | 0 | yes |
+| 10 | normal | 9600 | 9602 | +2 | 3 | yes |
+| 10 | high | 9600 | 9598 | -2 | 8 | yes |
+| 11 | low | 9600 | 9600 | +0 | 0 | yes |
+| 11 | normal | 9600 | 9599 | -1 | 3 | yes |
+| 11 | high | 9600 | 9596 | -4 | 9 | yes |
+| 12 | low | 9600 | 9600 | +0 | 0 | yes |
+| 12 | normal | 9600 | 9598 | -2 | 4 | yes |
+| 12 | high | 9600 | 9594 | -6 | 11 | yes |
+| 13 | low | 9600 | 9600 | +0 | 0 | yes |
+| 13 | normal | 9600 | 9595 | -5 | 4 | yes |
+| 13 | high | 9600 | 9599 | -1 | 13 | yes |
+| 14 | low | 9600 | 9600 | +0 | 0 | yes |
+| 14 | normal | 9600 | 9602 | +2 | 5 | yes |
+| 14 | high | 9600 | 9601 | +1 | 18 | yes |
+| 15 | low | 9600 | 9600 | +0 | 0 | yes |
+| 15 | normal | 9600 | 9600 | +0 | 6 | yes |
+| 15 | high | 9600 | 9593 | -7 | 22 | yes |
+| 16 | low | 9600 | 9600 | +0 | 0 | yes |
+| 16 | normal | 9600 | 9600 | +0 | 7 | yes |
+| 16 | high | 9600 | 9611 | +11 | 29 | yes |
 
 Observed over all boards: **9600 bp** against a 9600 bp target.
 
