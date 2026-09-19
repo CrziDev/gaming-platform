@@ -42,8 +42,6 @@ in the handler at the same time. A client never matches on `error` text.
 | `ROUND_ALREADY_SETTLED` | 409 | Show the settled result, do not retry |
 | `UNSUPPORTED_CURRENCY` | 409 | Refuse the currency, do not retry |
 | `GAME_UNAVAILABLE` | 409 | Return to the catalogue |
-| `RTP_PROFILE_NOT_VERIFIED` | 409 | Refuse activation, explain why |
-| `RTP_DEFAULT_REQUIRED` | 409 | Require an open-ended verified default before a temporary activation |
 | `DEPOSIT_ALREADY_REVIEWED` | 409 | Refresh the queue; another review already won |
 | `DEPOSIT_APPROVAL_FAILED` | 409 | Keep the request pending and report that its wallet cannot be credited |
 | `SELF_STATUS_CHANGE` | 409 | Refuse an administrator changing their own status |
@@ -64,7 +62,7 @@ Parameters are `page`, `size`, `search`, `status`, `type`, `currency`, `category
 `flag`, `game_id`, `user_id`, `from`, `to`, as each endpoint supports them. Default size 20, maximum
 100. A list of rows that players or operators keep adding to is always a page. A list
 bounded by configuration — currencies, categories, payment methods, a player's wallets,
-one game's RTP profiles — is a plain array.
+one game's RTP options — is a plain array.
 
 ## Endpoints
 
@@ -97,7 +95,7 @@ one game's RTP profiles — is a plain array.
 | `GET` | `/api/favorites` | `200` + a page of the player's favourite games, newest first; active games only | `401` |
 | `PUT` | `/api/games/{slug}/favorite` | `204`, and again `204` when it already was one | `401` · `404` not active or unknown |
 | `DELETE` | `/api/games/{slug}/favorite` | `204`, and again `204` when it was not one | `401` · `404` not active or unknown |
-| `GET` | `/api/games/{slug}/manifest` | `200` + the active profile's public parameters and its `rtp_profile_id` | `404` no engine or not active · `409` `GAME_UNAVAILABLE` no active profile |
+| `GET` | `/api/games/{slug}/manifest` | `200` + the public parameters of the return the game plays at, and its `rtp_basis_points` | `404` no engine or not active · `409` `GAME_UNAVAILABLE` no RTP set |
 | `POST` | `/api/games/{slug}/rounds` | `200` + the settled round, its display result, and the wallet · the same for a retry | `400` · `401` · `404` no engine or not active · `409` `INSUFFICIENT_BALANCE` / `WALLET_FROZEN` / `WALLET_CLOSED` / `AMOUNT_OVERFLOW` / `UNSUPPORTED_CURRENCY` / `GAME_UNAVAILABLE` |
 | `GET` | `/api/payment-methods` | `200` + enabled methods | `401` |
 | `POST` | `/api/deposits` | `201` + a new request · `200` + the original retry result | `400` · `401` · `413` |
@@ -146,7 +144,7 @@ inside the window. The response is a plain array with one entry per wallet, or o
 when `currency` narrows it; nothing in it adds two currencies together, and an operator
 adjustment or a refund counts in none of the three figures.
 
-A round body carries `id`, `game_id`, `game_slug`, `game_name`, `rtp_profile_id`,
+A round body carries `id`, `game_id`, `game_slug`, `game_name`, `rtp_basis_points`,
 `status`, `stake_minor`, nullable `win_minor`, nullable `multiplier_hundredths`,
 `currency`, `started_at`, and nullable `settled_at`.
 
@@ -181,9 +179,11 @@ same key returns the original response; the same key with a different stake or
 parameters is `400` with `fields.idempotency_key`. A slug with no engine on this server
 is `404`, however the catalogue describes it, and `GET /api/games/{slug}/manifest` is
 the public shape of what that engine plays — for Plinko, `rows`, `risks`, and
-`multipliers_hundredths` by rows and risk — from the active profile's configuration, plus
-`rtp_profile_id`, the profile it describes: a settled round whose `rtp_profile_id` differs
-tells the client the table it holds is no longer the one rounds settle on.
+`multipliers_hundredths` by rows and risk — from the configuration behind the return the
+game is set to, plus `rtp_basis_points`, the return it describes: a settled round whose
+`rtp_basis_points` differs tells the client the table it holds is no longer the one
+rounds settle on. A round records the return it was opened at, so a switch never
+changes a round already open.
 
 Payment methods are configuration-managed. There is no operator
 payment-method mutation endpoint. The migration creates GCash and Maya disabled with a
@@ -214,41 +214,29 @@ session. Those two are omitted from the failure column.
 | `GET` | `/api/admin/games/{id}` | `200` + the game | `404` |
 | `POST` | `/api/admin/games` | `201` + the game | `400` · `409` slug taken |
 | `PATCH` | `/api/admin/games/{id}` | `200` + the game | `400` · `404` |
-| `GET` | `/api/admin/games/{id}/rtp-profiles` | `200` + the game's profiles, newest first | `404` |
-| `POST` | `/api/admin/games/{id}/rtp-profiles` | `201` + the draft profile | `400` · `404` · `409` name and version taken |
-| `GET` | `/api/admin/rtp-profiles` | `200` + a page of profiles across games; accepts `game_id`, `status` | `400` invalid filter |
-| `PATCH` | `/api/admin/rtp-profiles/{id}` | `200` + the profile; drafts only | `400` · `404` · `409` name and version taken |
-| `POST` | `/api/admin/rtp-profiles/{id}/activate` | `200` + the profile; accepts `effective_from` and `effective_until` | `400` · `404` · `409` `RTP_PROFILE_NOT_VERIFIED` / `RTP_DEFAULT_REQUIRED` |
+| `PUT` | `/api/admin/games/{id}/rtp` | `200` + the game; takes `rtp_basis_points` | `400` not one of the game's `rtp_options` · `404` |
 | `GET` | `/api/admin/audit-logs` | `200` + a page of entries; accepts `user_id` (the actor), `type` (the action), `from`, `to` | `400` invalid filter |
 | `GET` | `/api/admin/dashboard?currency=PHP` | `200` + the summary for that currency | `400` missing or unknown currency |
 
-An admin game body is the catalogue body plus `integration`, `active_rtp_basis_points`
-(null when no profile is active), `rounds_30d`, and `updated_at`. A game is created with
-`slug`, `name`, `description`, `category_slug`, `provider`, `currency`, and the three
-wager bounds; `status` is optional and defaults to `draft`. The slug never changes after
-creation. `integration` is set by the engine review, never by these routes. Wager bounds
-are whole units of the game's currency, the maximum is the minimum plus a whole number
-of steps, and the currency cannot change once a round has been played. A create is
-audited as `game.create`; a patch as `game.update`, or `game.status_change` when the
-status moved.
+An admin game body is the catalogue body plus `integration`, `rtp_basis_points` (null
+until an operator sets one), `rtp_options` (the returns the game's engine ships,
+ascending; `[]` when no engine on this server plays it), `rounds_30d`, and `updated_at`.
+A game is created with `slug`, `name`, `description`, `category_slug`, `provider`,
+`currency`, and the three wager bounds; `status` is optional and defaults to `draft`.
+The slug never changes after creation. `integration` is set by the engine review, never
+by these routes. Wager bounds are whole units of the game's currency, the maximum is
+the minimum plus a whole number of steps, and the currency cannot change once a round
+has been played. A create is audited as `game.create`; a patch as `game.update`, or
+`game.status_change` when the status moved.
 
-A profile body carries `game_id`, `game_slug`, `game_name`, `name`, `version`,
-`target_basis_points`, `status`, `engine_config_ref`, the nullable
-`theoretical_basis_points`, `observed_basis_points`, `verified_at`, `effective_from`,
-and `effective_until`, plus `is_default`, `created_by`, `created_by_display_name`, and timestamps.
-A draft takes `name`, `version`, `target_basis_points` between `5000` and `20000`, and
-an optional `engine_config_ref`. Only a
-draft can be patched. Activation moves the profile previously in force back to
-`verified`, and a target at or above `10000` refuses to activate without
-`effective_until`. An open-ended activation becomes the game's default. A timed
-activation requires a different verified default and automatically returns to it at
-expiry. Nothing on these routes can mark a profile verified: only
-`gameverify verify` does, offline, after simulating the profile's `engine_config_ref`
-through the production outcome path, and it records the evidence on the row. Audited as
-`rtp_profile.create`, `rtp_profile.update`, `rtp_profile.activate`, and
-`rtp_profile.schedule` when the active profile's window changes, with verification
-recorded as `rtp_profile.verify` and automatic expiry as `rtp_profile.revert`, both
-under the system actor.
+A game's RTP is one of its `rtp_options`, nothing else: the engine compiles each option
+in with its tables, proves every board's return exactly, and records its simulation
+evidence in the game's RTP document before the option ships. `PUT
+/api/admin/games/{id}/rtp` switches the game to an option; it takes effect on the next
+round, holds until the next switch, and is audited as `game.rtp_change` with the
+before and after values. Setting the value already in force is `200` and writes no
+audit row. No route schedules a switch, and nothing in the database marks a return
+verified.
 
 An admin round body adds `user_id`, `user_email`, `display_name`, and `wallet_id` to the
 player round resource.

@@ -67,7 +67,7 @@ func Get(ctx context.Context, db *sql.DB, currency string) (Summary, error) {
 			COALESCE(sum(amount_minor) FILTER (WHERE kind = 'win'), 0),
 			count(DISTINCT user_id) FILTER (WHERE kind = 'wager'),
 			COALESCE((SELECT count(*) FROM game_rounds WHERE currency = $1 AND created_at >= date_trunc('day', now())), 0),
-			COALESCE((SELECT round(avg(target_basis_points))::int FROM rtp_profiles p JOIN games g ON g.id = p.game_id WHERE g.currency = $1 AND p.status = 'active'), 0)
+			COALESCE((SELECT round(avg(rtp_basis_points))::int FROM games WHERE currency = $1 AND status = 'active' AND rtp_basis_points IS NOT NULL), 0)
 		FROM wallet_transactions WHERE currency = $1 AND created_at >= date_trunc('day', now())`, currency).Scan(
 		&result.StakedTodayMinor, &result.ReturnedTodayMinor, &result.PlayersToday,
 		&result.RoundsToday, &result.TargetRTPBasisPoints)

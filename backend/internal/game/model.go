@@ -48,14 +48,16 @@ type Game struct {
 	MaxWagerMinor  int64
 	WagerStepMinor int64
 	ThumbnailPath  string
+	// The return the game plays at, one of its engine's options; nil until an
+	// operator picks one, and the game cannot play until then.
+	RTPBasisPoints *int
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
 
 type AdminGame struct {
 	Game
-	ActiveRTPBasisPoints *int
-	Rounds30d            int
+	Rounds30d int
 }
 
 type Category struct {

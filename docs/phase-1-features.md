@@ -31,7 +31,7 @@ promotion, or alert.
 - [x] The currency-scoped admin dashboard summary is backed by PostgreSQL.
 - [ ] Platform APIs replace the remaining frontend mocks (auth, wallets, the wallet
   summary, deposits, the dashboard, admin users, admin transactions, wallet adjustments,
-  audit reads, the public catalogue, game administration, RTP profiles, round reads,
+  audit reads, the public catalogue, game administration, the RTP switch, round reads,
   Plinko rounds, favorites, live chat, and notifications default to HTTP; promotions,
   big wins, the recently-played row, the hot shelf, console alerts, staff, and settings
   remain fixture-backed or undefined).
@@ -41,8 +41,8 @@ promotion, or alert.
 - [x] Complete game source is available for the first title (Plinko, kept untouched at
   `docs/games/source/plinko/`; `docs/games/plinko-runtime.md`).
 - [x] The first real-money game integration is complete: Plinko settles on the server
-  through the Plinko engine against its verified `plinko/v1/9600` profile (§16). A
-  browser pass on supported devices is still open in §16.
+  through the Plinko engine at whichever of its four shipped returns the operator set
+  (§16). A browser pass on supported devices is still open in §16.
 
 ## Completed slice: round read APIs
 
@@ -63,20 +63,21 @@ Deferred by decision on 2026-09-12: password reset and change (`POST /api/passwo
 `/forgot` and `/reset` already call the contracted endpoints; the open question is how a
 reset token reaches the player.
 
-## Completed slice: game and RTP-profile administration
+## Completed slice: game administration and the game's return
 
-Completed on 2026-09-12. `internal/game` gained the admin list, detail, create, and
-patch routes; `internal/rtp` owns profile drafts, edits, listing, and the activation
-rule. The console creates and edits games and drafts profiles against PostgreSQL.
+Completed on 2026-09-12; the return simplified on 2026-09-20. `internal/game` owns the
+admin list, detail, create, and patch routes and the one RTP switch. The profile
+subsystem (`internal/rtp`, drafts, offline verification rows, schedules, the reverter)
+was replaced by `games.rtp_basis_points`, one of the options the engine compiles in.
 
 - [x] `GET /api/admin/games`, `GET /api/admin/games/{id}`, `POST /api/admin/games`,
   `PATCH /api/admin/games/{id}` with whole-unit wager validation and audit entries.
-- [x] `GET`/`POST /api/admin/games/{id}/rtp-profiles`, `GET /api/admin/rtp-profiles`,
-  `PATCH /api/admin/rtp-profiles/{id}`, `POST /api/admin/rtp-profiles/{id}/activate`.
-- [x] Game create and edit forms, draft-profile forms, and the real activation dialog.
-- [x] HTTP/PostgreSQL coverage for authorisation, validation, slug and name/version
-  conflicts, catalogue visibility after a status change, the unverified-activation
-  refusal, the activation swap, the negative-margin end-time rule, and audit actions.
+- [x] `PUT /api/admin/games/{id}/rtp`, refusing any value outside the engine's options
+  and audited as `game.rtp_change`.
+- [x] Game create and edit forms, and the RTP page: one row per game, a select of its
+  options, and a confirmation that reads in danger at or above 100%.
+- [x] HTTP/PostgreSQL coverage for authorisation, validation, slug conflicts, catalogue
+  visibility after a status change, the option check, the no-op repeat, and audit actions.
 
 ## Completed slice: public catalogue reads
 
@@ -170,7 +171,7 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] `wallets` migration with one wallet per user and currency.
 - [x] `wallet_transactions` migration with ledger and idempotency constraints.
 - [x] `game_categories` and `games` migrations.
-- [x] `rtp_profiles` migration with one-active-profile constraint.
+- [x] `games.rtp_basis_points` (migration `000017`, replacing `rtp_profiles`).
 - [x] `game_rounds` migration with unique round keys and settlement constraints.
 - [x] `payment_methods` and `deposit_requests` migrations.
 - [x] Append-only `audit_logs` migration.
@@ -343,7 +344,7 @@ player-controlled settle operation or invent an outcome while no engine exists.
 - [x] Implement internal open.
 - [x] Implement internal settle, cancel, and fail operations.
 - [x] Lock the wallet before inserting a round that references it.
-- [x] Bind a round to its user, game, wallet, currency, and active RTP profile.
+- [x] Bind a round to its user, game, wallet, currency, and the return in force.
 - [x] Validate the wager against game minimum, maximum, and exact step.
 - [x] Debit the wager and create the open round in one transaction.
 - [x] Use a unique round key to prevent duplicate bets.
@@ -366,33 +367,27 @@ player-controlled settle operation or invent an outcome while no engine exists.
 - [x] Concurrent settlements credit at most once.
 - [x] A second settlement returns `ROUND_ALREADY_SETTLED`.
 - [x] Cancellation/refund is idempotent.
-- [x] A profile change does not alter an already-open round.
+- [x] An RTP switch does not alter an already-open round.
 
-## 9. RTP metadata and administration
+## 9. The game's return
 
-Metadata can be built now; verified mathematical behavior cannot.
+An engine ships a fixed set of returns; the platform stores which one a game plays at
+and can never make a percentage true on its own.
 
-- [x] Create a draft RTP profile with game, name, version, and target basis points.
-- [x] Accept any target between 50% and 200% in basis points; which targets a game can
-  reach is decided by that game's RTP document, not the platform.
-- [x] Edit draft profiles only.
-- [x] List all profiles for an admin-selected game.
-- [x] Preserve verified profiles as immutable versions.
-- [x] Show the currently active profile.
-- [x] Model an optional activation start and end time.
-- [x] Implement automatic reversion to the verified default profile (an open-ended
-  activation establishes the default; the background reconciler and round-open path
-  both enforce `effective_until`).
-- [x] Record profile creation, editing, scheduling, activation, and reversion in the
-  audit log (automatic reversion uses the system actor).
-- [x] Refuse activation of every unverified profile with
-  `RTP_PROFILE_NOT_VERIFIED`.
-- [x] Provide no platform operation that can mark a profile verified without engine
-  evidence.
-- [x] Do not claim theoretical or observed RTP before verification (only
-  `gameverify verify` writes `theoretical_basis_points` and `observed_basis_points`, and
-  the console shows a profile's target; the dashboard's ledger-derived figure is a
-  separate labelling item in §12).
+- [x] Store one return per game, `games.rtp_basis_points`, null until an operator
+  picks one; a game with none set opens no round.
+- [x] Accept only a value the game's engine offers (`game.SetRTP` checks the engine's
+  options; a game no engine plays refuses every value).
+- [x] Show the return in force and the options on the game and RTP pages.
+- [x] Take effect on the next round and hold until the next switch; no schedule, no
+  default, no reverter.
+- [x] Record every switch in the audit log as `game.rtp_change` with before and after.
+- [x] Provide no platform operation that can add a return the engine does not ship, and
+  no database column that claims one is verified.
+- [x] Do not claim theoretical or observed RTP in the platform: the engine's test pins
+  the theoretical figure and the game's RTP document records the simulation; the
+  console shows the basis points; the dashboard's ledger-derived figure is a separate
+  labelling item in §12.
 
 ## 10. Frontend integration
 
@@ -476,8 +471,8 @@ Metadata can be built now; verified mathematical behavior cannot.
 - [x] Rounds `/admin/rounds` uses real filtered, paginated round records.
 - [x] Games `/admin/games` uses real catalogue administration (the contract's `status`,
   `category`, and `search` filters are not yet exposed in the UI).
-- [x] Game details `/admin/games/:id` uses real game and profile metadata.
-- [x] RTP profiles `/admin/rtp` enforces the unverified-profile boundary.
+- [x] Game details `/admin/games/:id` uses real game metadata and shows the return.
+- [x] RTP `/admin/rtp` switches a game's return only among the engine's options.
 - [x] Audit log `/admin/audit` uses the real append-only audit feed.
 - [ ] Settings `/admin/settings` contains only settings backed by an agreed Phase 1
   contract (Payment methods and Staff read fixture-only and show an explanatory empty
@@ -499,7 +494,7 @@ Built with Plinko as the first title; `docs/games/plinko-runtime.md` records the
   (the frame receives no player context at all: identity, wallet, and bet controls stay
   on the host side).
 - [x] Let the host provide permitted game and wager configuration (`configure` carries
-  the active profile's board; wager bounds are the host's controls).
+  the board of the return in force; wager bounds are the host's controls).
 - [x] Let the host display server-returned balance and round results.
 - [x] Ensure the embedded frame cannot directly mutate a wallet or settle a round (no
   client-facing settle endpoint exists, and the vendored frame makes no network request).
@@ -578,9 +573,8 @@ Built with Plinko as the first title; `docs/games/plinko-runtime.md` records the
 - [x] A failed test round follows the compensating refund path
   (`TestCancelAndFailRefundOnceAndBecomeTerminal`).
 - [x] Every operator mutation produces its required audit entry (wallet, deposit,
-  account status, game, and RTP profile mutations, automatic RTP reversion, and offline
-  verification do; a round is a player action with its own record and no operator
-  mutation to audit).
+  account status, game, and RTP switches do; a round is a player action with its own
+  record and no operator mutation to audit).
 
 ## 16. Blocked until complete game source arrives
 
@@ -594,7 +588,7 @@ starts:
 
 - [x] Wallet movements are row-locked, idempotent, and ledger-backed.
 - [x] Round opening and settlement enforce settle-at-most-once (§8).
-- [x] RTP profile metadata enforces at most one active profile per game.
+- [x] A game plays at exactly one return, and only one its engine ships.
 - [x] The generic game host and secured `postMessage` bridge are ready (§11).
 - [x] Whole-unit wager steps are enforced by game configuration and round validation.
 
@@ -626,8 +620,8 @@ Plinko: `backend/internal/engine/` and `backend/internal/round/play.go`.
   (`crypto/rand` through `engine.SecureSource`; deterministic sources exist only in tests).
 - [x] Make the server authoritative for outcome and payout.
 - [x] Implement exact game rules, probability weights, and paytables from reviewed
-  source (the supplied multipliers, with the six low-risk boards the baseline profile
-  changes recorded in `plinko-rtp.md` §10).
+  source (the supplied multipliers, with each option's low-risk board changes recorded
+  in `plinko-rtp.md` §9).
 - [x] Use integer arithmetic on the path that moves money.
 - [x] Map the authoritative result to the game's animation without a visual/financial
   mismatch (the landing guard holds the ball to the settled slot; the frame never pays
@@ -641,33 +635,34 @@ Plinko: `backend/internal/engine/` and `backend/internal/round/play.go`.
   a wager or payout (player-scoped idempotency keys; retry and concurrent-duplicate
   tests in `round/play_test.go`).
 
-### RTP implementation and verification, per game/profile
+### RTP implementation and verification, per game/option
 
-Plinko `plinko/v1/9600`: verified on 2026-09-19, evidence in `plinko-rtp.md` §11.
+Plinko `plinko/9000`, `plinko/9500`, `plinko/10500`, `plinko/11000`: simulated on
+2026-09-20, evidence in `plinko-rtp.md` §9.
 
-- [x] Bind each profile to an immutable engine configuration version
-  (`engine_config_ref`, resolved through `plinko.ProfileByRef`).
-- [x] Prove theoretical RTP from the exact probability and payout model where possible
-  (`plinko.TheoreticalBasisPoints`; its tests reproduce every figure in `plinko-rtp.md`).
-- [x] Run a headless simulation through the production outcome path (`gameverify
-  simulate` plays every board through the production `Pick` and `Payout`).
+- [x] Bind each option to an immutable engine configuration (`plinko/<basis points>`,
+  resolved through `plinko.ProfileByBasisPoints` at open and recorded on the round as
+  `engine_reference`).
+- [x] Prove theoretical RTP from the exact probability and payout model
+  (`plinko.TheoreticalBasisPoints`; `profiles_test.go` pins every board of every option
+  to its basis points exactly).
+- [x] Run a headless simulation through the production outcome path (`make
+  simulate-plinko` plays every board of every option through the production `Pick`
+  and `Payout`).
 - [x] Choose sample size and tolerance appropriate to the game's volatility (10⁸ rounds
   per board, ±100 basis points, justified against the 16-row high board's 500× slot).
-- [x] Record total wagered, total returned, observed RTP, confidence interval, runtime,
-  engine version, and verification timestamp (the evidence table, and
-  `theoretical_basis_points`, `observed_basis_points`, `verification_method`,
-  `sample_size`, and `verified_at` on the row).
-- [x] Mark a profile verified only after its evidence passes review (`gameverify verify`
-  is the only path to `verified`; no HTTP route can reach it).
-- [x] Confirm changing a profile changes real mathematical behavior, not just a label
-  (the engine plays the profile's own table; the manifest names the profile a round
+- [x] Record total rounds, observed RTP, ±3σ, runtime, engine reference, and the date
+  (the per-option tables in `plinko-rtp.md` §9).
+- [x] Ship an option only after its evidence passes review; nothing in the database
+  marks one verified, and the console can only choose among what shipped.
+- [x] Confirm changing the return changes real mathematical behavior, not just a label
+  (the engine plays the option's own table; the manifest names the return a round
   settles on).
-- [x] Activate and schedule only implemented, verified profiles.
 
 ### Game delivery, per title
 
 - [x] Launch the game from the authenticated platform host.
-- [x] Associate every round with the correct player, wallet, currency, game, and profile.
+- [x] Associate every round with the correct player, wallet, currency, game, and return.
 - [x] Validate wagers server-side.
 - [x] Record one authoritative round for every accepted wager.
 - [x] Deduct the wager atomically and credit the win at most once.

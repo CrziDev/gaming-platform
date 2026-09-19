@@ -8,7 +8,7 @@ import (
 
 var (
 	ErrGameUnavailable     = errors.New("round: game is unavailable")
-	ErrProfileUnavailable  = errors.New("round: active RTP profile is unavailable")
+	ErrProfileUnavailable  = errors.New("round: the game has no RTP its engine plays")
 	ErrInvalidWager        = errors.New("round: wager is outside the game's permitted steps")
 	ErrInvalidOutcome      = errors.New("round: outcome is invalid")
 	ErrNotFound            = errors.New("round: not found")
@@ -35,7 +35,7 @@ type Round struct {
 	GameID               string
 	WalletID             string
 	Currency             string
-	RTPProfileID         string
+	RTPBasisPoints       int
 	Status               string
 	StakeMinor           int64
 	WinMinor             *int64

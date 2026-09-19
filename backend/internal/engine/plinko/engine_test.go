@@ -9,13 +9,15 @@ import (
 	"github.com/gaming-platform/backend/internal/engine"
 )
 
+const testRef = "plinko/9500"
+
 func TestEnginePlayReturnsAnOutcomeFromTheReferencedTable(t *testing.T) {
-	table, err := v1.Table(Params{Rows: 12, Risk: RiskHigh})
+	table, err := profile9500.Table(Params{Rows: 12, Risk: RiskHigh})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for range 500 {
-		outcome, err := New().Play(engine.Input{ConfigRef: v1Ref, Params: json.RawMessage(`{"rows": 12, "risk": "high"}`), StakeMinor: 300})
+		outcome, err := New().Play(engine.Input{ConfigRef: testRef, Params: json.RawMessage(`{"rows": 12, "risk": "high"}`), StakeMinor: 300})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -33,8 +35,8 @@ func TestEnginePlayReturnsAnOutcomeFromTheReferencedTable(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if outcome.WinMinor != want || outcome.Reference != v1Ref {
-			t.Fatalf("outcome %+v: want win %d and reference %q", outcome, want, v1Ref)
+		if outcome.WinMinor != want || outcome.Reference != testRef {
+			t.Fatalf("outcome %+v: want win %d and reference %q", outcome, want, testRef)
 		}
 	}
 }
@@ -44,14 +46,14 @@ func TestEnginePlayRejectsBadParamsConfigAndStake(t *testing.T) {
 		in   engine.Input
 		want error
 	}{
-		"missing risk":       {engine.Input{ConfigRef: v1Ref, Params: json.RawMessage(`{"rows": 8}`), StakeMinor: 100}, engine.ErrInvalidParams},
-		"unknown field":      {engine.Input{ConfigRef: v1Ref, Params: json.RawMessage(`{"rows": 8, "risk": "low", "seed": 1}`), StakeMinor: 100}, engine.ErrInvalidParams},
-		"fractional rows":    {engine.Input{ConfigRef: v1Ref, Params: json.RawMessage(`{"rows": 8.5, "risk": "low"}`), StakeMinor: 100}, engine.ErrInvalidParams},
-		"rows out of range":  {engine.Input{ConfigRef: v1Ref, Params: json.RawMessage(`{"rows": 17, "risk": "low"}`), StakeMinor: 100}, engine.ErrInvalidParams},
-		"trailing data":      {engine.Input{ConfigRef: v1Ref, Params: json.RawMessage(`{"rows": 8, "risk": "low"} {}`), StakeMinor: 100}, engine.ErrInvalidParams},
-		"empty params":       {engine.Input{ConfigRef: v1Ref, Params: nil, StakeMinor: 100}, engine.ErrInvalidParams},
+		"missing risk":       {engine.Input{ConfigRef: testRef, Params: json.RawMessage(`{"rows": 8}`), StakeMinor: 100}, engine.ErrInvalidParams},
+		"unknown field":      {engine.Input{ConfigRef: testRef, Params: json.RawMessage(`{"rows": 8, "risk": "low", "seed": 1}`), StakeMinor: 100}, engine.ErrInvalidParams},
+		"fractional rows":    {engine.Input{ConfigRef: testRef, Params: json.RawMessage(`{"rows": 8.5, "risk": "low"}`), StakeMinor: 100}, engine.ErrInvalidParams},
+		"rows out of range":  {engine.Input{ConfigRef: testRef, Params: json.RawMessage(`{"rows": 17, "risk": "low"}`), StakeMinor: 100}, engine.ErrInvalidParams},
+		"trailing data":      {engine.Input{ConfigRef: testRef, Params: json.RawMessage(`{"rows": 8, "risk": "low"} {}`), StakeMinor: 100}, engine.ErrInvalidParams},
+		"empty params":       {engine.Input{ConfigRef: testRef, Params: nil, StakeMinor: 100}, engine.ErrInvalidParams},
 		"unknown config":     {engine.Input{ConfigRef: "plinko/v0", Params: json.RawMessage(`{"rows": 8, "risk": "low"}`), StakeMinor: 100}, engine.ErrUnknownConfig},
-		"non-positive stake": {engine.Input{ConfigRef: v1Ref, Params: json.RawMessage(`{"rows": 8, "risk": "low"}`), StakeMinor: 0}, ErrInvalidStake},
+		"non-positive stake": {engine.Input{ConfigRef: testRef, Params: json.RawMessage(`{"rows": 8, "risk": "low"}`), StakeMinor: 0}, ErrInvalidStake},
 	}
 	for name, c := range cases {
 		if _, err := New().Play(c.in); !errors.Is(err, c.want) {
@@ -61,7 +63,7 @@ func TestEnginePlayRejectsBadParamsConfigAndStake(t *testing.T) {
 }
 
 func TestEngineManifestListsEveryBoardWithoutWeights(t *testing.T) {
-	raw, err := New().Manifest(v1Ref)
+	raw, err := New().Manifest(testRef)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +74,7 @@ func TestEngineManifestListsEveryBoardWithoutWeights(t *testing.T) {
 	if len(out.Rows) != 9 || out.Rows[0] != MinRows || out.Rows[8] != MaxRows || len(out.Risks) != 3 {
 		t.Fatalf("manifest = %s", raw)
 	}
-	table, err := v1.Table(Params{Rows: 13, Risk: RiskLow})
+	table, err := profile9500.Table(Params{Rows: 13, Risk: RiskLow})
 	if err != nil {
 		t.Fatal(err)
 	}

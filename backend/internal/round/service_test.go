@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gaming-platform/backend/internal/engine"
 	"github.com/gaming-platform/backend/internal/money"
 	"github.com/gaming-platform/backend/internal/testdb"
 	"github.com/gaming-platform/backend/internal/wallet"
@@ -40,11 +41,14 @@ func openRoundTestDB(t *testing.T) *sql.DB {
 var roundTestSequence atomic.Uint64
 
 type roundFixture struct {
-	UserID    string
-	GameID    string
-	ProfileID string
-	Suffix    string
+	UserID string
+	GameID string
+	Suffix string
 }
+
+// The fixture game plays at 9600 under test:v1; a second option lets a test
+// switch the game's return and watch what a round records.
+var testOptions = []engine.Option{{Ref: "test:v1", BasisPoints: 9600}, {Ref: "test:v2", BasisPoints: 9400}}
 
 func createRoundFixture(t *testing.T, db *sql.DB, balanceMinor int64) roundFixture {
 	t.Helper()
@@ -63,16 +67,10 @@ func createRoundFixture(t *testing.T, db *sql.DB, balanceMinor int64) roundFixtu
 		t.Fatalf("create category: %v", err)
 	}
 	if err := db.QueryRow(`
-		INSERT INTO games (slug, name, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor)
-		VALUES ($1, $2, $3, 'Test', 'active', 'integrated', 'PHP', 100, 1000, 100)
+		INSERT INTO games (slug, name, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points)
+		VALUES ($1, $2, $3, 'Test', 'active', 'integrated', 'PHP', 100, 1000, 100, 9600)
 		RETURNING id::text`, gameSlug, "Round Game "+suffix, category).Scan(&fixture.GameID); err != nil {
 		t.Fatalf("create game: %v", err)
-	}
-	if err := db.QueryRow(`
-		INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, engine_config_ref, observed_basis_points, verified_at)
-		VALUES (($1::text)::uuid, 'Test Profile', 1, 9600, 'active', 'test:v1', 9600, now())
-		RETURNING id::text`, fixture.GameID).Scan(&fixture.ProfileID); err != nil {
-		t.Fatalf("create profile: %v", err)
 	}
 	if _, err := wallet.List(context.Background(), db, fixture.UserID); err != nil {
 		t.Fatalf("provision wallets: %v", err)
@@ -87,8 +85,6 @@ func createRoundFixture(t *testing.T, db *sql.DB, balanceMinor int64) roundFixtu
 		_, _ = db.Exec(`DELETE FROM notifications WHERE user_id = ($1::text)::uuid`, fixture.UserID)
 		_, _ = db.Exec(`DELETE FROM game_rounds WHERE game_id = ($1::text)::uuid`, fixture.GameID)
 		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, fixture.UserID)
-		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_id IN (SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid)`, fixture.GameID)
-		_, _ = db.Exec(`DELETE FROM rtp_profiles WHERE game_id = ($1::text)::uuid`, fixture.GameID)
 		_, _ = db.Exec(`DELETE FROM games WHERE id = ($1::text)::uuid`, fixture.GameID)
 		_, _ = db.Exec(`DELETE FROM wallets WHERE user_id = ($1::text)::uuid`, fixture.UserID)
 		_, _ = db.Exec(`DELETE FROM users WHERE id = ($1::text)::uuid`, fixture.UserID)
@@ -101,7 +97,7 @@ func TestOpenDebitsWagerAndBindsRoundAtomically(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 
-	opened, err := Open(context.Background(), db, OpenInput{
+	opened, err := Open(context.Background(), db, testOptions, OpenInput{
 		RoundKey: "open-round-once-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200,
 	})
 	if err != nil {
@@ -110,7 +106,7 @@ func TestOpenDebitsWagerAndBindsRoundAtomically(t *testing.T) {
 	if opened.Status != StatusOpen || opened.Currency != "PHP" || opened.StakeMinor != 200 {
 		t.Fatalf("unexpected round: %+v", opened)
 	}
-	if opened.UserID != fixture.UserID || opened.GameID != fixture.GameID || opened.RTPProfileID != fixture.ProfileID {
+	if opened.UserID != fixture.UserID || opened.GameID != fixture.GameID || opened.RTPBasisPoints != 9600 {
 		t.Fatalf("round bindings are wrong: %+v", opened)
 	}
 
@@ -151,7 +147,7 @@ func TestOpenDuplicateRoundKeyReturnsOneRoundAndDebitsOnce(t *testing.T) {
 		go func() {
 			defer wait.Done()
 			<-start
-			item, err := Open(context.Background(), db, input)
+			item, err := Open(context.Background(), db, testOptions, input)
 			results <- item
 			errs <- err
 		}()
@@ -196,11 +192,11 @@ func TestOpenRejectsConflictingRoundKeyWithoutAnotherDebit(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	input := OpenInput{RoundKey: "conflicting-open-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200}
-	if _, err := Open(context.Background(), db, input); err != nil {
+	if _, err := Open(context.Background(), db, testOptions, input); err != nil {
 		t.Fatalf("first open: %v", err)
 	}
 	input.StakeMinor = 300
-	if _, err := Open(context.Background(), db, input); !errors.Is(err, ErrRoundKeyConflict) {
+	if _, err := Open(context.Background(), db, testOptions, input); !errors.Is(err, ErrRoundKeyConflict) {
 		t.Fatalf("conflicting open: want %v, got %v", ErrRoundKeyConflict, err)
 	}
 
@@ -228,7 +224,7 @@ func TestOpenConcurrentStartsDoNotOverspendOrDeadlock(t *testing.T) {
 		go func() {
 			defer wait.Done()
 			<-start
-			_, err := Open(ctx, db, OpenInput{RoundKey: key, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 800})
+			_, err := Open(ctx, db, testOptions, OpenInput{RoundKey: key, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 800})
 			errs <- err
 		}()
 	}
@@ -288,11 +284,20 @@ func TestOpenRejectsUnavailableGameProfileAndInvalidWagersWithoutMovingMoney(t *
 			},
 		},
 		{
-			name: "no active profile", stake: 100, want: ErrProfileUnavailable,
+			name: "no RTP set", stake: 100, want: ErrProfileUnavailable,
 			prepare: func(t *testing.T, db *sql.DB, fixture roundFixture) {
 				t.Helper()
-				if _, err := db.Exec(`UPDATE rtp_profiles SET status = 'verified' WHERE id = ($1::text)::uuid`, fixture.ProfileID); err != nil {
-					t.Fatalf("deactivate profile: %v", err)
+				if _, err := db.Exec(`UPDATE games SET rtp_basis_points = NULL WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
+					t.Fatalf("unset RTP: %v", err)
+				}
+			},
+		},
+		{
+			name: "RTP the engine does not offer", stake: 100, want: ErrProfileUnavailable,
+			prepare: func(t *testing.T, db *sql.DB, fixture roundFixture) {
+				t.Helper()
+				if _, err := db.Exec(`UPDATE games SET rtp_basis_points = 9700 WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
+					t.Fatalf("set RTP: %v", err)
 				}
 			},
 		},
@@ -305,7 +310,7 @@ func TestOpenRejectsUnavailableGameProfileAndInvalidWagersWithoutMovingMoney(t *
 			if test.prepare != nil {
 				test.prepare(t, db, fixture)
 			}
-			_, err := Open(context.Background(), db, OpenInput{
+			_, err := Open(context.Background(), db, testOptions, OpenInput{
 				RoundKey: "rejected-" + test.name + "-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: test.stake,
 			})
 			if !errors.Is(err, test.want) {
@@ -330,76 +335,42 @@ func TestOpenRejectsUnavailableGameProfileAndInvalidWagersWithoutMovingMoney(t *
 	}
 }
 
-func TestOpenSnapshotsActiveProfile(t *testing.T) {
+func TestOpenSnapshotsTheReturnInForce(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	opened, err := Open(context.Background(), db, OpenInput{
-		RoundKey: "profile-snapshot-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
+	opened, err := Open(context.Background(), db, testOptions, OpenInput{
+		RoundKey: "rtp-snapshot-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
 	})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
 	}
-
-	if _, err := db.Exec(`UPDATE rtp_profiles SET status = 'verified' WHERE id = ($1::text)::uuid`, fixture.ProfileID); err != nil {
-		t.Fatalf("retire original profile: %v", err)
-	}
-	var replacementID string
-	if err := db.QueryRow(`
-		INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, engine_config_ref, observed_basis_points, verified_at)
-		VALUES (($1::text)::uuid, 'Replacement', 2, 9400, 'active', 'test:v2', 9400, now())
-		RETURNING id::text`, fixture.GameID).Scan(&replacementID); err != nil {
-		t.Fatalf("activate replacement profile: %v", err)
+	if opened.RTPBasisPoints != 9600 {
+		t.Fatalf("round rtp = %d, want 9600", opened.RTPBasisPoints)
 	}
 
-	var storedProfileID string
-	if err := db.QueryRow(`SELECT rtp_profile_id::text FROM game_rounds WHERE id = ($1::text)::uuid`, opened.ID).Scan(&storedProfileID); err != nil {
-		t.Fatalf("read round profile: %v", err)
+	if _, err := db.Exec(`UPDATE games SET rtp_basis_points = 9400 WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
+		t.Fatalf("switch RTP: %v", err)
 	}
-	if storedProfileID != fixture.ProfileID || storedProfileID == replacementID {
-		t.Fatalf("round profile = %q, want original %q", storedProfileID, fixture.ProfileID)
-	}
-}
-
-func TestOpenRevertsAnExpiredProfileBeforeBindingTheRound(t *testing.T) {
-	db := openRoundTestDB(t)
-	fixture := createRoundFixture(t, db, 1_000)
-	var defaultID string
-	if err := db.QueryRow(`
-		INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, engine_config_ref, observed_basis_points, verified_at)
-		VALUES (($1::text)::uuid, 'Default', 2, 9400, 'verified', 'test:default', 9400, now())
-		RETURNING id::text`, fixture.GameID).Scan(&defaultID); err != nil {
-		t.Fatalf("create default profile: %v", err)
-	}
-	if _, err := db.Exec(`UPDATE games SET default_rtp_profile_id = ($2::text)::uuid WHERE id = ($1::text)::uuid`, fixture.GameID, defaultID); err != nil {
-		t.Fatalf("set default profile: %v", err)
-	}
-	if _, err := db.Exec(`UPDATE rtp_profiles SET effective_until = now() - interval '1 minute' WHERE id = ($1::text)::uuid`, fixture.ProfileID); err != nil {
-		t.Fatalf("expire active profile: %v", err)
-	}
-
-	opened, err := Open(context.Background(), db, OpenInput{
-		RoundKey: "expired-profile-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
+	next, err := Open(context.Background(), db, testOptions, OpenInput{
+		RoundKey: "rtp-snapshot-next-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
 	})
 	if err != nil {
-		t.Fatalf("open round: %v", err)
-	}
-	if opened.RTPProfileID != defaultID {
-		t.Fatalf("round profile = %q, want restored default %q", opened.RTPProfileID, defaultID)
+		t.Fatalf("open next round: %v", err)
 	}
 
-	var activeID string
-	if err := db.QueryRow(`SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid AND status = 'active'`, fixture.GameID).Scan(&activeID); err != nil {
-		t.Fatalf("read active profile: %v", err)
+	var stored int
+	if err := db.QueryRow(`SELECT rtp_basis_points FROM game_rounds WHERE id = ($1::text)::uuid`, opened.ID).Scan(&stored); err != nil {
+		t.Fatalf("read round rtp: %v", err)
 	}
-	if activeID != defaultID {
-		t.Fatalf("active profile = %q, want %q", activeID, defaultID)
+	if stored != 9600 || next.RTPBasisPoints != 9400 {
+		t.Fatalf("first round keeps %d (want 9600), next round has %d (want 9400)", stored, next.RTPBasisPoints)
 	}
 }
 
 func TestSettleCreditsPositiveWinAndClosesRoundAtomically(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	opened, err := Open(context.Background(), db, OpenInput{
+	opened, err := Open(context.Background(), db, testOptions, OpenInput{
 		RoundKey: "settle-positive-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200,
 	})
 	if err != nil {
@@ -445,7 +416,7 @@ func TestSettleCreditsPositiveWinAndClosesRoundAtomically(t *testing.T) {
 func TestSettleRecordsZeroWinWithoutMovement(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	opened, err := Open(context.Background(), db, OpenInput{
+	opened, err := Open(context.Background(), db, testOptions, OpenInput{
 		RoundKey: "settle-zero-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
 	})
 	if err != nil {
@@ -475,7 +446,7 @@ func TestSettleRecordsZeroWinWithoutMovement(t *testing.T) {
 func TestConcurrentSettlementCreditsAtMostOnce(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	opened, err := Open(context.Background(), db, OpenInput{
+	opened, err := Open(context.Background(), db, testOptions, OpenInput{
 		RoundKey: "concurrent-settle-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200,
 	})
 	if err != nil {
@@ -531,7 +502,7 @@ func TestConcurrentSettlementCreditsAtMostOnce(t *testing.T) {
 func TestSettleRollsBackBalanceAndStatusWhenWinLedgerInsertFails(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	opened, err := Open(context.Background(), db, OpenInput{
+	opened, err := Open(context.Background(), db, testOptions, OpenInput{
 		RoundKey: "settle-rollback-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
 	})
 	if err != nil {
@@ -581,7 +552,7 @@ func TestCancelAndFailRefundOnceAndBecomeTerminal(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			db := openRoundTestDB(t)
 			fixture := createRoundFixture(t, db, 1_000)
-			opened, err := Open(context.Background(), db, OpenInput{
+			opened, err := Open(context.Background(), db, testOptions, OpenInput{
 				RoundKey: test.name + "-refund-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 300,
 			})
 			if err != nil {
@@ -630,7 +601,7 @@ func TestCancelAndFailRefundOnceAndBecomeTerminal(t *testing.T) {
 func TestLifecycleRejectsInvalidOutcomeWithoutMovingMoney(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	opened, err := Open(context.Background(), db, OpenInput{
+	opened, err := Open(context.Background(), db, testOptions, OpenInput{
 		RoundKey: "invalid-outcome-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
 	})
 	if err != nil {

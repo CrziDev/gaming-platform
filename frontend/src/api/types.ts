@@ -134,7 +134,7 @@ export type Round = {
   game_id: string
   game_slug: string
   game_name: string
-  rtp_profile_id: string
+  rtp_basis_points: number
   status: 'open' | 'settled' | 'cancelled' | 'failed'
   stake_minor: number
   win_minor: number | null
@@ -161,7 +161,7 @@ export type PlayRoundResponse = {
 // The active profile's public parameters for an integrated game, and the id of the
 // profile they describe. Plinko's are its boards; the table is keyed by rows then risk.
 export type PlinkoManifest = {
-  rtp_profile_id: string
+  rtp_basis_points: number
   rows: number[]
   risks: string[]
   multipliers_hundredths: Record<string, Record<string, number[]>>
@@ -238,35 +238,15 @@ export type AdminDeposit = DepositRequest & {
   rejected_count?: number
 }
 
-export type RtpStatus = 'draft' | 'verified' | 'active' | 'retired'
-
-export type RtpProfile = {
-  id: string
-  game_id: string
-  game_slug: string
-  game_name: string
-  name: string
-  version: number
-  target_basis_points: number
-  status: RtpStatus
-  engine_config_ref: string
-  theoretical_basis_points: number | null
-  observed_basis_points: number | null
-  verified_at: string | null
-  effective_from: string | null
-  effective_until: string | null
-  is_default: boolean
-  created_by: string
-  created_by_display_name: string
-  created_at: string
-  updated_at: string
-}
-
 export type GameIntegration = 'unreviewed' | 'under_review' | 'supported' | 'integrated' | 'unsupported'
 
+// rtp_basis_points is the return the game plays at, null until an operator
+// picks one; rtp_options are the returns its engine ships, empty when no engine
+// on the server plays the game.
 export type AdminGame = Game & {
   integration: GameIntegration
-  active_rtp_basis_points: number | null
+  rtp_basis_points: number | null
+  rtp_options: number[]
   rounds_30d: number
   updated_at: string
 }

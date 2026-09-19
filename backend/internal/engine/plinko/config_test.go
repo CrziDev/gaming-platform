@@ -37,7 +37,7 @@ func suppliedProfileTables(t *testing.T) map[Params]Table {
 }
 
 func TestNewProfileAcceptsEveryBoard(t *testing.T) {
-	profile, err := NewProfile("plinko/test", suppliedProfileTables(t))
+	profile, err := NewProfile("plinko/test", 9600, suppliedProfileTables(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,12 +90,15 @@ func TestNewProfileRefusesBrokenTables(t *testing.T) {
 		}),
 	}
 	for name, tables := range cases {
-		if _, err := NewProfile("plinko/test", tables); !errors.Is(err, engine.ErrInvalidConfig) {
+		if _, err := NewProfile("plinko/test", 9600, tables); !errors.Is(err, engine.ErrInvalidConfig) {
 			t.Fatalf("%s: want %v, got %v", name, engine.ErrInvalidConfig, err)
 		}
 	}
-	if _, err := NewProfile("", suppliedProfileTables(t)); !errors.Is(err, engine.ErrInvalidConfig) {
+	if _, err := NewProfile("", 9600, suppliedProfileTables(t)); !errors.Is(err, engine.ErrInvalidConfig) {
 		t.Fatalf("empty ref: want %v, got %v", engine.ErrInvalidConfig, err)
+	}
+	if _, err := NewProfile("plinko/test", 0, suppliedProfileTables(t)); !errors.Is(err, engine.ErrInvalidConfig) {
+		t.Fatalf("no return: want %v, got %v", engine.ErrInvalidConfig, err)
 	}
 }
 

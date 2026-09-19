@@ -37,7 +37,7 @@ export function pickPlinkoSlot(rows: number, random: () => number = Math.random)
   return Math.floor(middle)
 }
 
-export const DEMO_PLINKO_PROFILE_ID = 'rtp-demo-plinko'
+export const DEMO_PLINKO_RTP_BASIS_POINTS = 9500
 
 // The demo's manifest: the supplied paytable in the wire shape the server serves.
 export function plinkoManifest(): PlinkoManifest {
@@ -47,7 +47,7 @@ export function plinkoManifest(): PlinkoManifest {
     for (const risk of PLINKO_RISKS) byRisk[risk] = [...PLINKO_MULTIPLIERS_HUNDREDTHS[rows][risk]]
     multipliers_hundredths[String(rows)] = byRisk
   }
-  return { rtp_profile_id: DEMO_PLINKO_PROFILE_ID, rows: [...PLINKO_ROWS], risks: [...PLINKO_RISKS], multipliers_hundredths }
+  return { rtp_basis_points: DEMO_PLINKO_RTP_BASIS_POINTS, rows: [...PLINKO_ROWS], risks: [...PLINKO_RISKS], multipliers_hundredths }
 }
 
 export type PlinkoSettlement = {
@@ -94,7 +94,7 @@ export function settlePlinkoRound(input: PlinkoSettlement, random: () => number 
     game_id: game.id,
     game_slug: game.slug,
     game_name: game.name,
-    rtp_profile_id: DEMO_PLINKO_PROFILE_ID,
+    rtp_basis_points: DEMO_PLINKO_RTP_BASIS_POINTS,
     status: 'settled',
     stake_minor: input.stake_minor,
     win_minor: win,

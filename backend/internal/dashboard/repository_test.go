@@ -78,21 +78,14 @@ func TestGetReturnsCurrencyScopedSummary(t *testing.T) {
 
 	var gameID string
 	if err := db.QueryRow(`
-		INSERT INTO games (slug, name, category_slug, provider, status, currency, min_wager_minor, max_wager_minor, wager_step_minor)
-		VALUES ('dashboard-game', 'Dashboard Game', 'dashboard-test', 'Test', 'active', 'DSH', 100, 10000, 100)
+		INSERT INTO games (slug, name, category_slug, provider, status, currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points)
+		VALUES ('dashboard-game', 'Dashboard Game', 'dashboard-test', 'Test', 'active', 'DSH', 100, 10000, 100, 9400)
 		RETURNING id::text`).Scan(&gameID); err != nil {
 		t.Fatalf("create game: %v", err)
 	}
-	var profileID string
-	if err := db.QueryRow(`
-		INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, observed_basis_points, verified_at)
-		VALUES (($1::text)::uuid, 'Default', 1, 9400, 'active', 9400, now())
-		RETURNING id::text`, gameID).Scan(&profileID); err != nil {
-		t.Fatalf("create RTP profile: %v", err)
-	}
-	insertDashboardRound(t, db, "dashboard-round-one", firstUserID, gameID, firstWalletID, profileID, "now()")
-	insertDashboardRound(t, db, "dashboard-round-two", secondUserID, gameID, secondWalletID, profileID, "now()")
-	insertDashboardRound(t, db, "dashboard-round-old", firstUserID, gameID, firstWalletID, profileID, "now() - interval '2 days'")
+	insertDashboardRound(t, db, "dashboard-round-one", firstUserID, gameID, firstWalletID, "now()")
+	insertDashboardRound(t, db, "dashboard-round-two", secondUserID, gameID, secondWalletID, "now()")
+	insertDashboardRound(t, db, "dashboard-round-old", firstUserID, gameID, firstWalletID, "now() - interval '2 days'")
 
 	summary, err := Get(context.Background(), db, "DSH")
 	if err != nil {
@@ -161,11 +154,11 @@ func insertDashboardMovement(t *testing.T, db *sql.DB, walletID, userID, kind st
 	}
 }
 
-func insertDashboardRound(t *testing.T, db *sql.DB, key, userID, gameID, walletID, profileID, createdAt string) {
+func insertDashboardRound(t *testing.T, db *sql.DB, key, userID, gameID, walletID, createdAt string) {
 	t.Helper()
-	query := `INSERT INTO game_rounds (round_key, user_id, game_id, wallet_id, currency, rtp_profile_id, status, stake_minor, created_at)
-		VALUES ($1, ($2::text)::uuid, ($3::text)::uuid, ($4::text)::uuid, 'DSH', ($5::text)::uuid, 'open', 100, ` + createdAt + `)`
-	if _, err := db.Exec(query, key, userID, gameID, walletID, profileID); err != nil {
+	query := `INSERT INTO game_rounds (round_key, user_id, game_id, wallet_id, currency, rtp_basis_points, status, stake_minor, created_at)
+		VALUES ($1, ($2::text)::uuid, ($3::text)::uuid, ($4::text)::uuid, 'DSH', 9400, 'open', 100, ` + createdAt + `)`
+	if _, err := db.Exec(query, key, userID, gameID, walletID); err != nil {
 		t.Fatalf("create round: %v", err)
 	}
 }
@@ -175,7 +168,6 @@ func removeDashboardFixtures(t *testing.T, db *sql.DB) {
 	statements := []string{
 		`DELETE FROM deposit_requests WHERE currency = 'DSH'`,
 		`DELETE FROM game_rounds WHERE currency = 'DSH'`,
-		`DELETE FROM rtp_profiles WHERE game_id IN (SELECT id FROM games WHERE currency = 'DSH')`,
 		`DELETE FROM wallet_transactions WHERE currency = 'DSH'`,
 		`DELETE FROM games WHERE currency = 'DSH'`,
 		`DELETE FROM wallets WHERE currency = 'DSH'`,

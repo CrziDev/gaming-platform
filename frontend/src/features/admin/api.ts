@@ -15,7 +15,6 @@ import type {
   GameStatus,
   PaymentMethod,
   Round,
-  RtpProfile,
   Transaction,
   Wallet,
 } from '@/api/types'
@@ -30,7 +29,6 @@ import {
   auditEntries,
   consoleAlerts,
   dashboardSummary,
-  rtpProfiles,
   staffAccounts,
 } from '@/mocks/admin'
 import { categories, games } from '@/mocks/games'
@@ -550,7 +548,8 @@ export async function createGame(input: GameInput): Promise<AdminGame> {
         thumbnail_url: null,
         flags: ['new'],
         integration: 'unreviewed',
-        active_rtp_basis_points: null,
+        rtp_basis_points: null,
+        rtp_options: [],
         rounds_30d: 0,
         created_at: now,
         updated_at: now,
@@ -629,137 +628,26 @@ export async function fetchAdminRounds(filter: AdminRoundFilter): Promise<Page<A
   return api.get<Page<AdminRound>>(`/admin/rounds?${params.toString()}`)
 }
 
-export async function fetchRtpProfiles(): Promise<RtpProfile[]> {
-  if (usingFixtures) {
-    return mockRequest(() => [...rtpProfiles])
-  }
-  const page = await api.get<Page<RtpProfile>>(`/admin/rtp-profiles?page=1&size=${ADMIN_CATALOGUE_SIZE}`)
-  return page.rows
-}
-
-export async function fetchGameRtpProfiles(gameId: string): Promise<RtpProfile[]> {
-  if (usingFixtures) {
-    return mockRequest(() => rtpProfiles.filter((profile) => profile.game_id === gameId))
-  }
-  return api.get<RtpProfile[]>(`/admin/games/${encodeURIComponent(gameId)}/rtp-profiles`)
-}
-
-export type RtpDraftInput = {
-  name: string
-  version: number
-  target_basis_points: number
-  engine_config_ref: string
-}
-
-export async function createRtpProfile(gameId: string, input: RtpDraftInput): Promise<RtpProfile> {
+// The server validates the value against the engine's options; the fixture
+// mirrors that so the demo console refuses the same input.
+export async function setGameRtp(gameId: string, basisPoints: number): Promise<AdminGame> {
   if (usingFixtures) {
     return mockRequest(() => {
       const game = adminGames.find((candidate) => candidate.id === gameId)
       if (!game) {
         throw new ApiError(404, 'Game not found')
       }
-      const taken = rtpProfiles.some(
-        (p) => p.game_id === gameId && p.name === input.name && p.version === input.version,
-      )
-      if (taken) {
-        throw new ApiError(409, 'That name and version already exist for this game', null, {
-          version: 'Already used with this name',
+      if (!game.rtp_options.includes(basisPoints)) {
+        throw new ApiError(400, 'One or more fields are invalid', null, {
+          rtp_basis_points: "Choose one of the game's RTP options",
         })
       }
-      const now = new Date().toISOString()
-      const created: RtpProfile = {
-        id: `rtp-${Date.now()}`,
-        game_id: game.id,
-        game_slug: game.slug,
-        game_name: game.name,
-        ...input,
-        status: 'draft',
-        theoretical_basis_points: null,
-        observed_basis_points: null,
-        verified_at: null,
-        effective_from: null,
-        effective_until: null,
-        is_default: false,
-        created_by: '',
-        created_by_display_name: 'R. Cruz',
-        created_at: now,
-        updated_at: now,
-      }
-      rtpProfiles.unshift(created)
-      return created
+      game.rtp_basis_points = basisPoints
+      game.updated_at = new Date().toISOString()
+      return { ...game }
     }, 400)
   }
-  return api.post<RtpProfile>(`/admin/games/${encodeURIComponent(gameId)}/rtp-profiles`, input)
-}
-
-export async function updateRtpProfile(id: string, patch: Partial<RtpDraftInput>): Promise<RtpProfile> {
-  if (usingFixtures) {
-    return mockRequest(() => {
-      const profile = rtpProfiles.find((candidate) => candidate.id === id)
-      if (!profile) {
-        throw new ApiError(404, 'Profile not found')
-      }
-      if (profile.status !== 'draft') {
-        throw new ApiError(400, 'Only a draft profile can be edited; a verified profile changes by a new version')
-      }
-      Object.assign(profile, patch, { updated_at: new Date().toISOString() })
-      return { ...profile }
-    }, 400)
-  }
-  return api.patch<RtpProfile>(`/admin/rtp-profiles/${encodeURIComponent(id)}`, patch)
-}
-
-export type RtpSchedule = {
-  effective_from?: string
-  effective_until?: string
-}
-
-export async function activateRtpProfile(id: string, schedule: RtpSchedule): Promise<RtpProfile> {
-  if (usingFixtures) {
-    return mockRequest(() => {
-      const profile = rtpProfiles.find((candidate) => candidate.id === id)
-      if (!profile) {
-        throw new ApiError(404, 'Profile not found')
-      }
-      if (profile.status !== 'verified' && profile.status !== 'active') {
-        throw new ApiError(
-          409,
-          'Only a profile the engine has verified can be activated',
-          'RTP_PROFILE_NOT_VERIFIED',
-        )
-      }
-      const until = schedule.effective_until ?? null
-      const fallback = rtpProfiles.find(
-        (candidate) => candidate.game_id === profile.game_id && candidate.is_default,
-      )
-      if (until && (!fallback || fallback.id === profile.id)) {
-        throw new ApiError(
-          409,
-          'Activate an open-ended verified default profile before scheduling a temporary profile',
-          'RTP_DEFAULT_REQUIRED',
-        )
-      }
-      for (const other of rtpProfiles) {
-        if (other.game_id === profile.game_id && other.status === 'active' && other.id !== id) {
-          other.status = 'verified'
-          other.effective_from = null
-          other.effective_until = null
-        }
-      }
-      profile.status = 'active'
-      profile.effective_from = schedule.effective_from ?? null
-      profile.effective_until = until
-      if (!until) {
-        for (const other of rtpProfiles) {
-          if (other.game_id === profile.game_id) other.is_default = other.id === profile.id
-        }
-      }
-      const game = adminGames.find((candidate) => candidate.id === profile.game_id)
-      if (game) game.active_rtp_basis_points = profile.target_basis_points
-      return { ...profile }
-    }, 400)
-  }
-  return api.post<RtpProfile>(`/admin/rtp-profiles/${encodeURIComponent(id)}/activate`, schedule)
+  return api.put<AdminGame>(`/admin/games/${encodeURIComponent(gameId)}/rtp`, { rtp_basis_points: basisPoints })
 }
 
 export async function fetchStaff() {

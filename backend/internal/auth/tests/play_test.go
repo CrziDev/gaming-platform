@@ -12,8 +12,8 @@ import (
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
-// The Plinko catalogue row and its active baseline profile, as the seed will
-// create them; the engine registry in app.New is keyed by this slug.
+// The Plinko catalogue row at the seed's return; the engine registry in app.New
+// is keyed by this slug.
 func createPlinko(t *testing.T, db *sql.DB) {
 	t.Helper()
 	if _, err := db.Exec(`INSERT INTO game_categories (slug, name, sort_order) VALUES ('originals', 'Originals', 10) ON CONFLICT (slug) DO NOTHING`); err != nil {
@@ -21,8 +21,8 @@ func createPlinko(t *testing.T, db *sql.DB) {
 	}
 	// The test database may carry a seeded catalogue; this test owns the row it plays.
 	for _, statement := range []string{
+		`DELETE FROM game_favorites WHERE game_id IN (SELECT id FROM games WHERE slug = 'plinko')`,
 		`DELETE FROM game_rounds WHERE game_id IN (SELECT id FROM games WHERE slug = 'plinko')`,
-		`DELETE FROM rtp_profiles WHERE game_id IN (SELECT id FROM games WHERE slug = 'plinko')`,
 		`DELETE FROM games WHERE slug = 'plinko'`,
 	} {
 		if _, err := db.Exec(statement); err != nil {
@@ -31,20 +31,14 @@ func createPlinko(t *testing.T, db *sql.DB) {
 	}
 	var gameID string
 	if err := db.QueryRow(`
-		INSERT INTO games (slug, name, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor)
-		VALUES ('plinko', 'Plinko', 'originals', 'In-house', 'active', 'integrated', 'PHP', 100, 500000, 100)
+		INSERT INTO games (slug, name, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points)
+		VALUES ('plinko', 'Plinko', 'originals', 'In-house', 'active', 'integrated', 'PHP', 100, 500000, 100, 9500)
 		RETURNING id::text`).Scan(&gameID); err != nil {
 		t.Fatalf("create plinko: %v", err)
-	}
-	if _, err := db.Exec(`
-		INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, engine_config_ref, theoretical_basis_points, observed_basis_points, verified_at)
-		VALUES (($1::text)::uuid, 'Baseline', 1, 9600, 'active', 'plinko/v1/9600', 9600, 9600, now())`, gameID); err != nil {
-		t.Fatalf("create profile: %v", err)
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM game_favorites WHERE game_id = ($1::text)::uuid`, gameID)
 		_, _ = db.Exec(`DELETE FROM game_rounds WHERE game_id = ($1::text)::uuid`, gameID)
-		_, _ = db.Exec(`DELETE FROM rtp_profiles WHERE game_id = ($1::text)::uuid`, gameID)
 		_, _ = db.Exec(`DELETE FROM games WHERE id = ($1::text)::uuid`, gameID)
 	})
 }
@@ -113,7 +107,7 @@ func TestPlinkoRoundHTTPFlow(t *testing.T) {
 	multiplier := round["multiplier_hundredths"].(float64)
 	win := round["win_minor"].(float64)
 	slot := result["slot"].(float64)
-	if round["status"] != "settled" || round["game_slug"] != "plinko" || slot < 0 || slot > 12 || win != float64(int64(300*multiplier)/100) {
+	if round["status"] != "settled" || round["game_slug"] != "plinko" || round["rtp_basis_points"] != float64(9500) || slot < 0 || slot > 12 || win != float64(int64(300*multiplier)/100) {
 		t.Fatalf("round %v result %v", round, result)
 	}
 	if walletOut["balance_minor"] != 10_000-300+win {
@@ -140,10 +134,11 @@ func TestPlinkoRoundHTTPFlow(t *testing.T) {
 
 	_, raw := send(t, client, http.MethodGet, base+"/api/games/plinko/manifest", nil)
 	var manifest struct {
+		RTPBasisPoints        int                         `json:"rtp_basis_points"`
 		Rows                  []int                       `json:"rows"`
 		MultipliersHundredths map[string]map[string][]int `json:"multipliers_hundredths"`
 	}
-	if err := json.Unmarshal(raw, &manifest); err != nil || len(manifest.Rows) != 9 || len(manifest.MultipliersHundredths["12"]["high"]) != 13 {
+	if err := json.Unmarshal(raw, &manifest); err != nil || manifest.RTPBasisPoints != 9500 || len(manifest.Rows) != 9 || len(manifest.MultipliersHundredths["12"]["high"]) != 13 {
 		t.Fatalf("manifest: %s (%v)", raw, err)
 	}
 	if manifest.MultipliersHundredths["12"]["high"][int(slot)] != int(multiplier) {

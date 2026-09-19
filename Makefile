@@ -138,8 +138,8 @@ db-shell: ## Open a psql session against the development database
 seed: ## Create or reset the development admin, funded demo players, game catalogue, and enabled payment methods
 	cd $(BACKEND_DIR) && go run ./cmd/seed
 
-simulate-plinko: ## Play every Plinko board through the production engine and report the observed return
-	cd $(BACKEND_DIR) && go run ./cmd/gameverify simulate -config plinko/v1/9600
+simulate-plinko: ## Play every board of every Plinko RTP option through the production engine and report the observed return
+	cd $(BACKEND_DIR) && go run ./cmd/gameverify simulate
 
 ## --- Publishing ------------------------------------------------------------
 

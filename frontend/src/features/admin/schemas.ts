@@ -46,18 +46,3 @@ export function createGameSchema(currency: Currency) {
 }
 
 export type GameFormInput = z.infer<ReturnType<typeof createGameSchema>>
-
-// Form values stay strings until submit; the numbers are counts and basis
-// points, never money, so a plain Number() at the boundary is safe.
-export const rtpDraftSchema = z.object({
-  name: z.string().trim().min(1, 'Enter a name').max(80, 'Use at most 80 characters'),
-  version: z.string().trim().regex(/^[1-9]\d*$/, 'Version is a whole number starting at 1'),
-  target_basis_points: z
-    .string()
-    .trim()
-    .regex(/^\d+$/, 'Whole basis points, for example 9600')
-    .refine((value) => Number(value) >= 5000 && Number(value) <= 20000, 'Between 5000 and 20000 basis points'),
-  engine_config_ref: z.string().trim().max(200, 'Use at most 200 characters'),
-})
-
-export type RtpDraftFormInput = z.infer<typeof rtpDraftSchema>

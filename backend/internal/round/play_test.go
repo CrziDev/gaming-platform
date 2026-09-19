@@ -29,6 +29,10 @@ func (s *stubEngine) Play(in engine.Input) (engine.Outcome, error) {
 	return s.outcome, s.err
 }
 
+func (s *stubEngine) Options() []engine.Option {
+	return testOptions
+}
+
 func (s *stubEngine) Manifest(configRef string) (json.RawMessage, error) {
 	if s.err != nil {
 		return nil, s.err
@@ -82,7 +86,7 @@ func TestPlayDebitsDecidesAndCreditsInOneCommit(t *testing.T) {
 	if round.Status != StatusSettled || round.StakeMinor != 200 || round.WinMinor == nil || *round.WinMinor != 340 || round.MultiplierHundredths == nil || *round.MultiplierHundredths != 170 {
 		t.Fatalf("round = %+v", round)
 	}
-	if round.RTPProfileID != fixture.ProfileID || round.EngineReference != "test/v1" || round.SettledAt == nil || round.GameSlug == "" {
+	if round.RTPBasisPoints != 9600 || round.EngineReference != "test/v1" || round.SettledAt == nil || round.GameSlug == "" {
 		t.Fatalf("round bindings = %+v", round)
 	}
 	if !sameParams(result.Result, json.RawMessage(`{"slot":2}`)) || result.Wallet.BalanceMinor != 1_140 || result.Wallet.Currency != "PHP" {
@@ -305,10 +309,10 @@ func TestPlayWritesNothingWhenItCannotComplete(t *testing.T) {
 	}
 }
 
-func TestPlayRequiresAProfileWithAnEngineConfiguration(t *testing.T) {
+func TestPlayRequiresAReturnTheEngineOffers(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	if _, err := db.Exec(`UPDATE rtp_profiles SET engine_config_ref = NULL WHERE id = ($1::text)::uuid`, fixture.ProfileID); err != nil {
+	if _, err := db.Exec(`UPDATE games SET rtp_basis_points = 9700 WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
 		t.Fatal(err)
 	}
 	eng := winningEngine(340, 170)
@@ -316,7 +320,7 @@ func TestPlayRequiresAProfileWithAnEngineConfiguration(t *testing.T) {
 		t.Fatalf("want %v, got %v", ErrProfileUnavailable, err)
 	}
 	if eng.calls.Load() != 0 {
-		t.Fatal("engine must not play without a configuration")
+		t.Fatal("engine must not play a return it does not offer")
 	}
 	if l := ledgerFor(t, fixture); l != (ledger{Balance: 1_000}) {
 		t.Fatalf("ledger = %+v", l)
@@ -327,7 +331,7 @@ func TestPlayRetryOfAnUnsettledRoundIsRefused(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	key := "play-open-" + fixture.Suffix
-	if _, err := Open(context.Background(), db, OpenInput{RoundKey: "play:" + fixture.UserID + ":" + key, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200}); err != nil {
+	if _, err := Open(context.Background(), db, testOptions, OpenInput{RoundKey: "play:" + fixture.UserID + ":" + key, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200}); err != nil {
 		t.Fatal(err)
 	}
 	in := playInput(fixture, key, 200)

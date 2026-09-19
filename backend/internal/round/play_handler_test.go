@@ -55,7 +55,7 @@ func TestPlayHandlerSettlesAndReplays(t *testing.T) {
 		t.Fatalf("want 200, got %d: %v", code, body)
 	}
 	round := body["round"].(map[string]any)
-	if round["status"] != "settled" || round["stake_minor"] != float64(200) || round["win_minor"] != float64(340) || round["multiplier_hundredths"] != float64(170) || round["currency"] != "PHP" || round["game_slug"] != slug || round["rtp_profile_id"] != fixture.ProfileID || round["settled_at"] == nil {
+	if round["status"] != "settled" || round["stake_minor"] != float64(200) || round["win_minor"] != float64(340) || round["multiplier_hundredths"] != float64(170) || round["currency"] != "PHP" || round["game_slug"] != slug || round["rtp_basis_points"] != float64(9600) || round["settled_at"] == nil {
 		t.Fatalf("round = %v", round)
 	}
 	if _, exposed := round["result_data"]; exposed {
@@ -178,11 +178,11 @@ func TestPlayHandlerConflictCodes(t *testing.T) {
 	if _, err := db.Exec(`UPDATE wallets SET status = 'active' WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, fixture.UserID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`UPDATE rtp_profiles SET status = 'verified' WHERE id = ($1::text)::uuid`, fixture.ProfileID); err != nil {
+	if _, err := db.Exec(`UPDATE games SET rtp_basis_points = NULL WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
 		t.Fatal(err)
 	}
 	if code, body := handler.play(t, account, playCall{slug: slug, key: "k5", body: good}); code != http.StatusConflict || body["code"] != "GAME_UNAVAILABLE" {
-		t.Fatalf("no profile: %d %v", code, body)
+		t.Fatalf("no rtp: %d %v", code, body)
 	}
 	if l := ledgerFor(t, fixture); l != (ledger{Balance: 1_000}) {
 		t.Fatalf("ledger = %+v", l)
@@ -226,13 +226,19 @@ func TestManifestHandler(t *testing.T) {
 		handler.Manifest(recorder, request)
 		return recorder.Code, recorder.Body.String()
 	}
-	if code, body := manifest(slug); code != http.StatusOK || strings.TrimSpace(body) != `{"config":"test:v1","rtp_profile_id":"`+fixture.ProfileID+`"}` {
+	if code, body := manifest(slug); code != http.StatusOK || strings.TrimSpace(body) != `{"config":"test:v1","rtp_basis_points":9600}` {
 		t.Fatalf("manifest: %d %s", code, body)
+	}
+	if _, err := db.Exec(`UPDATE games SET rtp_basis_points = 9400 WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
+		t.Fatal(err)
+	}
+	if code, body := manifest(slug); code != http.StatusOK || strings.TrimSpace(body) != `{"config":"test:v2","rtp_basis_points":9400}` {
+		t.Fatalf("manifest after switch: %d %s", code, body)
 	}
 	if code, _ := manifest("nothing"); code != http.StatusNotFound {
 		t.Fatalf("unknown: want 404, got %d", code)
 	}
-	if _, err := db.Exec(`UPDATE rtp_profiles SET status = 'verified' WHERE id = ($1::text)::uuid`, fixture.ProfileID); err != nil {
+	if _, err := db.Exec(`UPDATE games SET rtp_basis_points = NULL WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
 		t.Fatal(err)
 	}
 	code, body := manifest(slug)
@@ -241,6 +247,6 @@ func TestManifestHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	if code != http.StatusConflict || failure.Code != "GAME_UNAVAILABLE" {
-		t.Fatalf("no profile: %d %s", code, body)
+		t.Fatalf("no rtp: %d %s", code, body)
 	}
 }

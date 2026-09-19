@@ -3,8 +3,8 @@
 ## 1. Scope
 
 This document covers the platform services that are independent of any game's internal
-mechanics: accounts, wallets, the ledger, the catalogue, round records, RTP profile
-metadata, deposits, and the audit trail. It defines no reels, card odds, crash curve,
+mechanics: accounts, wallets, the ledger, the catalogue, round records, each game's
+chosen return, deposits, and the audit trail. It defines no reels, card odds, crash curve,
 RNG mapping, or payout mathematics, and none of those may be invented before a purchased
 game's source has been reviewed.
 
@@ -17,9 +17,9 @@ guard, and an operator listing rounds is round code behind the same guard; split
 audience would put the same table in two packages.
 
 `internal/round` owns the round lifecycle end to end: opening, settlement, cancellation,
-and failure, with wallet-first locking, exact wager validation, an active-profile
-snapshot, retry-safe movements, settle-at-most-once, and compensating refunds, plus the
-round reads.
+and failure, with wallet-first locking, exact wager validation, a snapshot of the
+return in force, retry-safe movements, settle-at-most-once, and compensating refunds,
+plus the round reads.
 
 ## 3. Invariants
 
@@ -65,7 +65,8 @@ dependency order: `000001` `users` · `000002` `auth_sessions` · `000003`
 `wallet_transactions` · `000007` `game_categories` · `000008` `games` · `000009`
 `rtp_profiles` · `000010` `game_rounds` · `000011` `payment_methods` · `000012`
 `deposit_requests` · `000013` `audit_logs` · `000014` `game_favorites` · `000015`
-`chat_messages` · `000016` `notifications`.
+`chat_messages` · `000016` `notifications` · `000017` replaces `rtp_profiles` with
+`games.rtp_basis_points`.
 
 ### 4.1 Accounts and sessions
 
@@ -244,7 +245,9 @@ CREATE INDEX games_status_category ON games (status, category_slug);
 ```
 
 No game-specific mathematics is stored here. `integration` is the engine-review state and
-is set by the engine integration, never by a catalogue edit.
+is set by the engine integration, never by a catalogue edit. `rtp_basis_points` (added by
+`000017`, nullable, checked to `5000..20000`) is the return the game plays at; §4.5 says
+what may go there.
 
 One game carries one currency, because that is the contract the web app is coded against.
 A title offered in two currencies needs per-currency bounds in a `game_wager_limits`
@@ -261,57 +264,26 @@ Categories are a table because the catalogue response names them. Lobby rows are
 they are assembled on the web side from the catalogue and the player's recent rounds.
 There is no merchandising configuration.
 
-### 4.5 `rtp_profiles`
+### 4.5 The game's return
 
-Metadata only until an engine exists. A row here describes an intent; it does not make a
-percentage true.
+A game's return is one column, `games.rtp_basis_points`, and its only legal values are
+the options its engine compiles in. A rate is basis points: `95.00%` is `9500`. The
+engine is the authority on what each option pays: each option's tables are literals
+reviewed into the repository, a test proves every board's exact return equals the
+option's basis points, and the option's simulation evidence is recorded in the game's
+RTP document before it ships. The database records none of that, holds no draft, no
+verified status, no schedule, and no evidence; `game.SetRTP` refuses any value the
+engine does not offer.
 
-```sql
-CREATE TABLE rtp_profiles (
-    id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    game_id                  UUID NOT NULL REFERENCES games (id),
-    name                     TEXT NOT NULL,
-    version                  INTEGER NOT NULL,
-    target_basis_points      INTEGER NOT NULL,
-    status                   TEXT NOT NULL DEFAULT 'draft',
-    engine_config_ref        TEXT,
-    theoretical_basis_points INTEGER,
-    observed_basis_points    INTEGER,
-    verification_method      TEXT,
-    sample_size              BIGINT,
-    verified_at              TIMESTAMPTZ,
-    effective_from           TIMESTAMPTZ,
-    effective_until          TIMESTAMPTZ,
-    created_by               UUID REFERENCES users (id),
-    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+`game_rounds.rtp_basis_points` is the return a round was opened at, written in the same
+statement that opens it, so a switch never changes a round already open and the trail
+reads as a number a person understands. `game_rounds.engine_reference` names the exact
+configuration that produced the outcome.
 
-    CONSTRAINT rtp_profiles_status_valid CHECK (status IN ('draft', 'verified', 'active', 'retired')),
-    CONSTRAINT rtp_profiles_target_sane CHECK (target_basis_points BETWEEN 5000 AND 20000),
-    CONSTRAINT rtp_profiles_version_positive CHECK (version > 0),
-    CONSTRAINT rtp_profiles_schedule_ordered CHECK (
-        effective_until IS NULL OR effective_from IS NULL OR effective_until > effective_from),
-    CONSTRAINT rtp_profiles_verified_has_evidence CHECK (
-        status IN ('draft', 'retired')
-        OR (verified_at IS NOT NULL AND observed_basis_points IS NOT NULL))
-);
-
-CREATE UNIQUE INDEX rtp_profiles_game_name_version_key ON rtp_profiles (game_id, name, version);
-CREATE UNIQUE INDEX rtp_profiles_one_active_per_game ON rtp_profiles (game_id) WHERE status = 'active';
-
-ALTER TABLE games
-    ADD COLUMN default_rtp_profile_id UUID,
-    ADD CONSTRAINT games_default_rtp_profile_fk
-        FOREIGN KEY (default_rtp_profile_id) REFERENCES rtp_profiles (id) ON DELETE SET NULL;
-```
-
-A rate is basis points: `96.00%` is `9600`. The partial unique index is what makes "one
-active profile per game" a fact rather than an intention, and
-`rtp_profiles_verified_has_evidence` is what stops a form from promoting a number.
-
-A verified profile is never edited. A change is a new `version`.
-`games.default_rtp_profile_id` preserves the verified profile to restore after a timed
-profile expires. It is added after `rtp_profiles` to resolve the two tables' dependency.
+The earlier `rtp_profiles` table — drafts, verification evidence, schedules, and a
+default to revert to — was replaced by `000017`. That migration carries every round's
+return across from its profile and leaves `games.rtp_basis_points` null, because the
+retired 96% profile is not an option; an operator picks one before the game plays again.
 
 ### 4.6 `game_rounds`
 
@@ -323,7 +295,7 @@ CREATE TABLE game_rounds (
     game_id               UUID NOT NULL REFERENCES games (id),
     wallet_id             UUID NOT NULL REFERENCES wallets (id),
     currency              TEXT NOT NULL REFERENCES currencies (code),
-    rtp_profile_id        UUID REFERENCES rtp_profiles (id),
+    rtp_basis_points      INTEGER NOT NULL,
     status                TEXT NOT NULL DEFAULT 'open',
     stake_minor           BIGINT NOT NULL,
     win_minor             BIGINT,
@@ -441,8 +413,8 @@ CREATE INDEX audit_logs_entity ON audit_logs (entity_type, entity_id);
 ```
 
 The actions that must appear here: wallet credit and debit, deposit approval and
-rejection, account status change, game creation and status change, RTP profile creation,
-edit, and activation, and a password reset carried out on someone's behalf.
+rejection, account status change, game creation and status change, a game's RTP switch,
+and a password reset carried out on someone's behalf.
 
 ### 4.9 `game_favorites`
 
@@ -635,9 +607,10 @@ Round persistence and its lifecycle rules are platform work. Outcome generation 
 and cannot be invented here.
 
 Opening a round binds it to an account, a game, a wallet, and a currency, records the
-active `rtp_profile_id` at that moment, and debits the wager as a `wager` movement in the
-same transaction. A round captures its profile at creation: activating a different
-profile five seconds later does not touch a round already open.
+game's `rtp_basis_points` at that moment under the game row's lock, and debits the wager
+as a `wager` movement in the same transaction. A round captures its return at creation:
+switching the game five seconds later does not touch a round already open. A game whose
+return is unset, or set to a value its engine no longer ships, opens no round.
 
 Settlement credits a `win` movement when the payout is positive and closes the round:
 
@@ -674,29 +647,18 @@ process.
 Players read their own rounds through `GET /api/rounds` and `GET /api/rounds/{id}`;
 operators read all of them through `GET /api/admin/rounds`.
 
-## 11. RTP profiles
+## 11. The game's return
 
-This package owns profile metadata, the activation rule, and scheduling. It owns no
-probability, no weight table, and no paytable.
+`internal/game` owns the switch and nothing else about RTP. It owns no probability, no
+weight table, and no paytable, and it never claims an observed or theoretical return:
+the engine ships the options, and the console can only choose among them.
 
-It creates a `draft` profile with a name, a version, and a target in basis points within
-the schema's range; edits a draft; lists profiles for a game; records every change in the
-audit log; and schedules a profile that is already `verified`. It never marks a profile
-verified, never claims an observed or theoretical RTP, never invents a probability table,
-and never activates a profile against a game that does not implement it.
-
-`POST /api/admin/rtp-profiles/{id}/activate` answers `RTP_PROFILE_NOT_VERIFIED` for any
-profile that is not verified. Activation takes the game row lock first so two operators
-queue instead of deadlocking, moves the profile previously in force back to `verified`
-so it stays a version to revert to, and refuses a target at or above 100% without an end
-time. An open-ended activation becomes the game's default. A timed activation requires a
-different verified default; a database-backed reconciler restores it at expiry, and round
-opening performs the same reconciliation inside its transaction before binding a profile.
-Nothing in this package can set `verified`: verification means an engine implements the
-profile and a simulation measured the result.
-
-A schedule has an optional start and end and reverts to the game's default profile when
-it ends. Activation, scheduling, and reversion each write an audit row.
+`PUT /api/admin/games/{id}/rtp` locks the game row, checks the value against the
+options the game's engine reports for its slug, writes `games.rtp_basis_points`, and
+records `game.rtp_change` with the before and after values. The switch takes effect on
+the next round and holds until the next switch; there is no schedule, no default, and
+no reverter. Setting the value already in force changes nothing and writes no audit
+row. A game no engine on the server plays has no options and refuses every value.
 
 ## 12. Manual deposits
 

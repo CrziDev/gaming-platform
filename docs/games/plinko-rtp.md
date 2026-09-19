@@ -1,10 +1,10 @@
 # Plinko RTP
 
-> §1–§9 are the model, derived from the supplied `state.js`, `physics.js`, and
+> §1–§8 are the model, derived from the supplied `state.js`, `physics.js`, and
 > `logic.js`; their figures are theoretical. The mathematics is written in floating
 > point for readability; weights, multipliers, and rates are stored and applied as
-> integers (weights, hundredths, basis points). §10 is the checked-in baseline profile
-> and §11 its verification evidence.
+> integers (weights, hundredths, basis points). §9 is the four shipped options with
+> their verification evidence.
 
 ## 1. The two controls
 
@@ -242,153 +242,190 @@ Most of the tuning still comes from the distribution. For lower targets on some
 high-row / low-risk tables, larger multiplier changes are unavoidable because the
 table's floor is already above the target.
 
-## 9. What a profile records
+## 9. Shipped options
 
-Each RTP profile is a verified combination of:
+The engine ships exactly four returns — 90%, 95%, 105%, and 110% — each an immutable
+configuration in `backend/internal/engine/plinko/`, addressed by the reference a settled
+round records in `engine_reference` and chosen by the basis points an operator sets on
+the game. A game's row holds only that number; the tables never leave the binary.
 
-```text
-Rows
-Risk level
-Target RTP
-Slot probability distribution
-Multiplier table
-Calculated theoretical RTP
-```
-
-The server uses the active profile to select the authoritative slot and payout. Before a
-profile is used, its theoretical RTP is calculated and a sufficiently large automated
-simulation confirms that observed results converge on the target.
-
-## 10. Baseline profile v1 — `plinko/v1/9600`
-
-The first checked-in configuration, `backend/internal/engine/plinko/profile_v1.go`,
-addressed by the `engine_config_ref` `plinko/v1/9600`. Target 9600 basis points on
-every board. Weights are integers, the centre slot at 1 000 000 000 and each other
-slot at `decay ^ distance` of it, rounded; the decay itself is never evaluated at
-runtime. `TheoreticalBasisPoints` returns exactly 9600 for all 27 boards and a test
-asserts it.
+Each option carries a table for every board. Weights are integers, the centre slot at
+1 000 000 000 and each other slot at `decay ^ distance` of it, rounded; the decay itself
+is never evaluated at runtime. `profiles_test.go` asserts that `TheoreticalBasisPoints`
+returns exactly the option's basis points on all 27 boards of every option, and that
+the multipliers depart from the supplied paytable only on the boards listed below.
 
 The weights are derived, not typed:
 
 ```text
-cd backend && go run ./cmd/gameverify solve -config plinko/v1/9600 -target 9600
+cd backend && go run ./cmd/gameverify solve -config plinko/9500
 ```
 
-bisects the decay per board until the integer model lands on the target, and a test
-in `cmd/gameverify` asserts the checked-in weights are what it produces. `solve` reads
-the profile through `ProfileByRef`, which validates every table, so a new profile is
-first checked in with its multipliers and symmetric placeholder weights — all `1` —
-then `solve` prints the weights that replace them.
+bisects the decay per board until the integer model lands on the option's basis points
+and prints the complete table literal, and a test in `cmd/gameverify` asserts every
+checked-in option's weights are what it produces. `solve` reads the option through
+`ProfileByRef`, which validates every table, so a new option is first checked in with
+its multipliers and symmetric placeholder weights — all `1` — then `solve` prints the
+literal that replaces them.
 
-The multipliers are the supplied paytable, except where a board's floor blocks the
-target (§7). From 11 rows, every low-risk board has a centre of 1.0× or 1.1×, so its
-centre moves to 0.9× — the value the supplied 9- and 10-row low boards already use —
-and its first ring to 1.0×. Moving only the centre would need 73–81% of balls on one
-slot to reach 96% on the even boards; the ring change keeps the distribution in the
-character of the supplied 0.24 decay, which puts 61% on the centre of an even board.
+The multipliers are the supplied paytable except where a board's floor blocks the
+target (§7): a weighted average can never fall below the smallest multiplier, so a
+target at or below the floor moves the centre, and the first ring where the centre
+alone would leave the distribution far more peaked than the supplied 0.24 decay
+(61% on the centre of an even board). Centre share is the probability of the middle
+slot, or of the middle pair on an odd board.
 
-| Rows | Risk | Decay | Centre share | Multipliers changed | Theoretical |
-|---:|---|---:|---:|---|---:|
-| 8 | low | 0.3462 | 48.9% | — | 9600 |
-| 8 | normal | 0.3145 | 52.4% | — | 9600 |
-| 8 | high | 0.3312 | 50.5% | — | 9600 |
-| 9 | low | 0.2268 | 38.7% | — | 9600 |
-| 9 | normal | 0.2677 | 36.7% | — | 9600 |
-| 9 | high | 0.2952 | 35.3% | — | 9600 |
-| 10 | low | 0.2280 | 62.9% | — | 9600 |
-| 10 | normal | 0.3696 | 46.2% | — | 9600 |
-| 10 | high | 0.3612 | 47.1% | — | 9600 |
-| 11 | low | 0.2815 | 35.9% | centre 1× → 0.9×, ring 1.1× → 1.0× | 9600 |
-| 11 | normal | 0.3528 | 32.4% | — | 9600 |
-| 11 | high | 0.3456 | 32.8% | — | 9600 |
-| 12 | low | 0.2283 | 62.8% | centre 1× → 0.9×, ring 1.1× → 1.0× | 9600 |
-| 12 | normal | 0.3969 | 43.3% | — | 9600 |
-| 12 | high | 0.3799 | 45.0% | — | 9600 |
-| 13 | low | 0.2808 | 36.0% | centre 1.1× → 0.9×, ring 1.2× → 1.0× | 9600 |
-| 13 | normal | 0.3775 | 31.2% | — | 9600 |
-| 13 | high | 0.3739 | 31.3% | — | 9600 |
-| 14 | low | 0.2112 | 65.1% | centre 1.1× → 0.9×, ring 1.2× → 1.0× | 9600 |
-| 14 | normal | 0.4025 | 42.6% | — | 9600 |
-| 14 | high | 0.3984 | 43.1% | — | 9600 |
-| 15 | low | 0.2615 | 36.9% | centre 1.1× → 0.9×, ring 1.2× → 1.0× | 9600 |
-| 15 | normal | 0.4023 | 29.9% | — | 9600 |
-| 15 | high | 0.3855 | 30.7% | — | 9600 |
-| 16 | low | 0.1913 | 67.9% | centre 1.1× → 0.9×, ring 1.2× → 1.0× | 9600 |
-| 16 | normal | 0.4146 | 41.4% | — | 9600 |
-| 16 | high | 0.3598 | 47.1% | — | 9600 |
+Evidence: `make simulate-plinko` plays every board of every option through the
+production `Pick` and `Payout` path with the secure `crypto/rand` source at a 100
+minor-unit stake, boards in parallel, and reports the observed return as total wins
+over total stakes. A board passes when its theoretical return equals the option's basis
+points exactly and its observed return is within ±100 basis points of it; `±3σ` is
+three standard errors of the observed figure, the width the sample cannot resolve
+below. The 16-row high board pays 500× on a slot drawn about once in 5 000 rounds, so
+10⁸ rounds per board holds every board's ±3σ under 40 basis points. A shipped option
+never changes; a correction is a new reference, and an option whose evidence is
+withdrawn leaves the set.
 
-Centre share is the probability of the middle slot (the middle pair on an odd board).
+### `plinko/9000` — 90%
 
-The host configures the board from `GET /api/games/{slug}/manifest`, so the frame labels
-those six boards' centre and ring buckets with the profile's values. Only the demo
-fixture (`frontend/src/features/gameplay/multipliers.ts`) keeps the supplied values; the
-amount paid and shown on landing always comes from the server.
+`backend/internal/engine/plinko/profile_9000.go`. The target sits below the supplied floor on more boards than any other option. 9- and 10-row low boards have a 0.9× centre, so it moves to 0.8×; from 11 rows the low boards have a 1.0× or 1.1× centre and a 1.1× or 1.2× ring, and moving the centre alone would put 76–78% of balls on one slot of an even board, so the ring comes down a step as well. 8 of 27 boards depart from the supplied paytable.
 
-Every figure above is theoretical; §11 is the simulation evidence for it.
+Simulated on 2026-09-20: 100,000,000 rounds per board at 100 minor units, 27 boards in 1m9.376s; 2,700,000,000 rounds in all, observed 9000 bp against 9000 bp. Every board passed.
 
-## 11. Verification evidence — `plinko/v1/9600`
+| Rows | Risk | Decay | Centre share | Multipliers changed | Observed | Δ target | ±3σ |
+|---:|---|---:|---:|---|---:|---:|---:|
+| 8 | low | 0.2319 | 62.41% | — | 9000 | +0 | 0 |
+| 8 | normal | 0.2824 | 56.11% | — | 9001 | +1 | 2 |
+| 8 | high | 0.3165 | 52.17% | — | 8998 | -2 | 5 |
+| 9 | low | 0.2642 | 73.68% | centre 0.9× → 0.8× | 9000 | +0 | 1 |
+| 9 | normal | 0.2255 | 77.50% | — | 8999 | -1 | 2 |
+| 9 | high | 0.2787 | 72.25% | — | 9000 | +0 | 5 |
+| 10 | low | 0.2339 | 62.11% | centre 0.9× → 0.8× | 9000 | +0 | 0 |
+| 10 | normal | 0.3426 | 49.08% | — | 8997 | -3 | 3 |
+| 10 | high | 0.3488 | 48.41% | — | 9003 | +3 | 7 |
+| 11 | low | 0.3485 | 65.27% | ring 1.1× → 0.9×, centre 1× → 0.8× | 9000 | +0 | 1 |
+| 11 | normal | 0.3250 | 67.58% | — | 9001 | +1 | 3 |
+| 11 | high | 0.3333 | 66.76% | — | 9003 | +3 | 8 |
+| 12 | low | 0.2957 | 54.38% | ring 1.1× → 0.9×, centre 1× → 0.8× | 8999 | -1 | 1 |
+| 12 | normal | 0.3748 | 45.54% | — | 9001 | +1 | 4 |
+| 12 | high | 0.3696 | 46.09% | — | 8999 | -1 | 10 |
+| 13 | low | 0.3458 | 65.46% | ring 1.2× → 0.9×, centre 1.1× → 0.8× | 9000 | +0 | 1 |
+| 13 | normal | 0.3529 | 64.75% | — | 9001 | +1 | 4 |
+| 13 | high | 0.3645 | 63.61% | — | 8997 | -3 | 13 |
+| 14 | low | 0.2781 | 56.49% | ring 1.2× → 0.9×, centre 1.1× → 0.8× | 9000 | +0 | 1 |
+| 14 | normal | 0.3824 | 44.71% | — | 8999 | -1 | 4 |
+| 14 | high | 0.3909 | 43.82% | — | 8996 | -4 | 17 |
+| 15 | low | 0.3251 | 67.50% | ring 1.2× → 0.9×, centre 1.1× → 0.8× | 9000 | +0 | 1 |
+| 15 | normal | 0.3838 | 61.65% | — | 8999 | -1 | 5 |
+| 15 | high | 0.3784 | 62.19% | — | 8993 | -7 | 21 |
+| 16 | low | 0.2532 | 59.60% | ring 1.2× → 0.9×, centre 1.1× → 0.8× | 9000 | +0 | 1 |
+| 16 | normal | 0.3993 | 42.95% | — | 8997 | -3 | 6 |
+| 16 | high | 0.3535 | 47.77% | — | 9001 | +1 | 27 |
 
-Method: `gameverify simulate`, which plays every board through the production `Pick`
-and `Payout` path with the secure `crypto/rand` source at a 100 minor-unit stake,
-boards in parallel, and reports the observed return as total wins over total stakes.
+### `plinko/9500` — 95%
 
-```text
-cd backend && go run ./cmd/gameverify simulate -config plinko/v1/9600
-```
+`backend/internal/engine/plinko/profile_9500.go`. The six low-risk boards from 11 rows have a 1.0× or 1.1× floor. Their centre moves to 0.9× and their first ring to 1.0×, the same edit the retired 96% configuration used. 6 of 27 boards depart from the supplied paytable.
 
-Acceptance: the theoretical return of every board equals the target exactly, and every
-board's observed return is within ±100 basis points of it. `±3σ` is three standard
-errors of that board's observed return at this sample size — the resolution the run
-has, reported so the tolerance can be judged against it; it is rounded to whole basis
-points, so `0` means under half a point, and an observed figure is itself rounded half
-up, so a `+1` beside a `0` band is the integer resolution, not a miss. The 16-row high board pays
-500× on a 0.013% slot, which is why 10⁸ rounds per board is the default: at 10⁶ its
-noise band (±286 bp) is wider than the tolerance and a run that size cannot judge it.
+Simulated on 2026-09-20: 100,000,000 rounds per board at 100 minor units, 27 boards in 1m9.717s; 2,700,000,000 rounds in all, observed 9499 bp against 9500 bp. Every board passed.
 
-Run on 2026-09-19 with Go 1.26.4 on linux/amd64, engine `plinko/v1/9600`,
-100 000 000 rounds per board, 2 700 000 000 in all, in 1m19s:
+| Rows | Risk | Decay | Centre share | Multipliers changed | Observed | Δ target | ±3σ |
+|---:|---|---:|---:|---|---:|---:|---:|
+| 8 | low | 0.3282 | 50.87% | — | 9500 | +0 | 1 |
+| 8 | normal | 0.3093 | 52.99% | — | 9498 | -2 | 2 |
+| 8 | high | 0.3288 | 50.81% | — | 9498 | -2 | 6 |
+| 9 | low | 0.1970 | 80.32% | — | 9500 | +0 | 0 |
+| 9 | normal | 0.2611 | 73.98% | — | 9500 | +0 | 2 |
+| 9 | high | 0.2925 | 70.90% | — | 9502 | +2 | 6 |
+| 10 | low | 0.1982 | 66.92% | — | 9500 | +0 | 0 |
+| 10 | normal | 0.3652 | 46.66% | — | 9499 | -1 | 3 |
+| 10 | high | 0.3592 | 47.30% | — | 9506 | +6 | 8 |
+| 11 | low | 0.2524 | 74.78% | ring 1.1× → 1×, centre 1× → 0.9× | 9499 | -1 | 0 |
+| 11 | normal | 0.3485 | 65.27% | — | 9502 | +2 | 3 |
+| 11 | high | 0.3436 | 65.75% | — | 9500 | +0 | 9 |
+| 12 | low | 0.1985 | 66.88% | ring 1.1× → 1×, centre 1× → 0.9× | 9500 | +0 | 0 |
+| 12 | normal | 0.3934 | 43.63% | — | 9500 | +0 | 4 |
+| 12 | high | 0.3783 | 45.18% | — | 9498 | -2 | 11 |
+| 13 | low | 0.2524 | 74.76% | ring 1.2× → 1×, centre 1.1× → 0.9× | 9500 | +0 | 0 |
+| 13 | normal | 0.3737 | 62.70% | — | 9500 | +0 | 4 |
+| 13 | high | 0.3724 | 62.82% | — | 9500 | +0 | 13 |
+| 14 | low | 0.1836 | 68.98% | ring 1.2× → 1×, centre 1.1× → 0.9× | 9500 | +0 | 0 |
+| 14 | normal | 0.3994 | 42.96% | — | 9501 | +1 | 5 |
+| 14 | high | 0.3972 | 43.18% | — | 9492 | -8 | 18 |
+| 15 | low | 0.2349 | 76.51% | ring 1.2× → 1×, centre 1.1× → 0.9× | 9500 | +0 | 0 |
+| 15 | normal | 0.3994 | 60.10% | — | 9497 | -3 | 6 |
+| 15 | high | 0.3843 | 61.60% | — | 9495 | -5 | 22 |
+| 16 | low | 0.1672 | 71.34% | ring 1.2× → 1×, centre 1.1× → 0.9× | 9500 | +0 | 0 |
+| 16 | normal | 0.4122 | 41.65% | — | 9501 | +1 | 7 |
+| 16 | high | 0.3588 | 47.20% | — | 9481 | -19 | 29 |
 
-| Rows | Risk | Theoretical | Observed | Δ target | ±3σ | Within tolerance |
-|---:|---|---:|---:|---:|---:|---|
-| 8 | low | 9600 | 9599 | -1 | 1 | yes |
-| 8 | normal | 9600 | 9600 | +0 | 2 | yes |
-| 8 | high | 9600 | 9602 | +2 | 6 | yes |
-| 9 | low | 9600 | 9600 | +0 | 0 | yes |
-| 9 | normal | 9600 | 9600 | +0 | 2 | yes |
-| 9 | high | 9600 | 9601 | +1 | 6 | yes |
-| 10 | low | 9600 | 9601 | +1 | 0 | yes |
-| 10 | normal | 9600 | 9602 | +2 | 3 | yes |
-| 10 | high | 9600 | 9598 | -2 | 8 | yes |
-| 11 | low | 9600 | 9600 | +0 | 0 | yes |
-| 11 | normal | 9600 | 9599 | -1 | 3 | yes |
-| 11 | high | 9600 | 9596 | -4 | 9 | yes |
-| 12 | low | 9600 | 9600 | +0 | 0 | yes |
-| 12 | normal | 9600 | 9598 | -2 | 4 | yes |
-| 12 | high | 9600 | 9594 | -6 | 11 | yes |
-| 13 | low | 9600 | 9600 | +0 | 0 | yes |
-| 13 | normal | 9600 | 9595 | -5 | 4 | yes |
-| 13 | high | 9600 | 9599 | -1 | 13 | yes |
-| 14 | low | 9600 | 9600 | +0 | 0 | yes |
-| 14 | normal | 9600 | 9602 | +2 | 5 | yes |
-| 14 | high | 9600 | 9601 | +1 | 18 | yes |
-| 15 | low | 9600 | 9600 | +0 | 0 | yes |
-| 15 | normal | 9600 | 9600 | +0 | 6 | yes |
-| 15 | high | 9600 | 9593 | -7 | 22 | yes |
-| 16 | low | 9600 | 9600 | +0 | 0 | yes |
-| 16 | normal | 9600 | 9600 | +0 | 7 | yes |
-| 16 | high | 9600 | 9611 | +11 | 29 | yes |
+### `plinko/10500` — 105%
 
-Observed over all boards: **9600 bp** against a 9600 bp target.
+`backend/internal/engine/plinko/profile_10500.go`. The low-risk boards from 13 rows have a 1.1× floor, above the target. Their centre moves to 1.0×; on the single-centre 14- and 16-row boards the centre alone would put 87% of balls on one slot, so their ring moves to 1.1× as well. 4 of 27 boards depart from the supplied paytable.
 
-`gameverify verify -profile <id>` repeats this against a draft `rtp_profiles` row whose
-`engine_config_ref` is this configuration and, only when every board passes, records
-`theoretical_basis_points`, `observed_basis_points`, `verification_method`,
-`sample_size`, and `verified_at` on the row and moves it to `verified`, audited as
-`rtp_profile.verify` under the system actor. It is the only path to `verified`; no
-HTTP route can reach it. Activation is then the ordinary admin action.
+Simulated on 2026-09-20: 100,000,000 rounds per board at 100 minor units, 27 boards in 1m8.298s; 2,700,000,000 rounds in all, observed 10500 bp against 10500 bp. Every board passed.
 
-`make seed` provisions the same profile for development — `Baseline` v1 for `plinko`,
-target 9600, `plinko/v1/9600`, active and the game's default — carrying the evidence
-above (`backend/cmd/seed/profiles.go`) so a development database plays exactly the
-configuration this section verified. That is a fixture, like the seeded administrator:
-a production profile is verified by `gameverify verify` and activated by an operator.
+| Rows | Risk | Decay | Centre share | Multipliers changed | Observed | Δ target | ±3σ |
+|---:|---|---:|---:|---|---:|---:|---:|
+| 8 | low | 0.4966 | 35.05% | — | 10500 | +0 | 1 |
+| 8 | normal | 0.3594 | 47.55% | — | 10500 | +0 | 3 |
+| 8 | high | 0.3521 | 48.31% | — | 10502 | +2 | 6 |
+| 9 | low | 0.4292 | 57.92% | — | 10500 | +0 | 1 |
+| 9 | normal | 0.3212 | 68.12% | — | 10500 | +0 | 3 |
+| 9 | high | 0.3179 | 68.43% | — | 10501 | +1 | 6 |
+| 10 | low | 0.4219 | 40.98% | — | 10500 | +0 | 1 |
+| 10 | normal | 0.4058 | 42.54% | — | 10499 | -1 | 4 |
+| 10 | high | 0.3785 | 45.28% | — | 10499 | -1 | 9 |
+| 11 | low | 0.2744 | 72.59% | — | 10499 | -1 | 0 |
+| 11 | normal | 0.3888 | 61.33% | — | 10501 | +1 | 4 |
+| 11 | high | 0.3625 | 63.89% | — | 10502 | +2 | 10 |
+| 12 | low | 0.2227 | 63.58% | — | 10500 | +0 | 0 |
+| 12 | normal | 0.4259 | 40.41% | — | 10500 | +0 | 5 |
+| 12 | high | 0.3942 | 43.54% | — | 10499 | -1 | 12 |
+| 13 | low | 0.2122 | 78.79% | centre 1.1× → 1× | 10500 | +0 | 0 |
+| 13 | normal | 0.4087 | 59.24% | — | 10498 | -2 | 5 |
+| 13 | high | 0.3870 | 61.38% | — | 10491 | -9 | 14 |
+| 14 | low | 0.2026 | 66.30% | ring 1.2× → 1.1×, centre 1.1× → 1× | 10500 | +0 | 0 |
+| 14 | normal | 0.4286 | 40.06% | — | 10500 | +0 | 6 |
+| 14 | high | 0.4088 | 42.01% | — | 10504 | +4 | 20 |
+| 15 | low | 0.1985 | 80.15% | centre 1.1× → 1× | 10500 | +0 | 0 |
+| 15 | normal | 0.4263 | 57.43% | — | 10499 | -1 | 7 |
+| 15 | high | 0.3953 | 60.51% | — | 10481 | -19 | 23 |
+| 16 | low | 0.1809 | 69.36% | ring 1.2× → 1.1×, centre 1.1× → 1× | 10500 | +0 | 0 |
+| 16 | normal | 0.4347 | 39.43% | — | 10502 | +2 | 8 |
+| 16 | high | 0.3684 | 46.16% | — | 10515 | +15 | 31 |
+
+### `plinko/11000` — 110%
+
+`backend/internal/engine/plinko/profile_11000.go`. The low-risk boards from 13 rows have a 1.1× floor, equal to the target, which no positive-weight distribution can reach. Their centre moves to 1.0×. 4 of 27 boards depart from the supplied paytable.
+
+Simulated on 2026-09-20: 100,000,000 rounds per board at 100 minor units, 27 boards in 1m9.542s; 2,700,000,000 rounds in all, observed 11000 bp against 11000 bp. Every board passed.
+
+| Rows | Risk | Decay | Centre share | Multipliers changed | Observed | Δ target | ±3σ |
+|---:|---|---:|---:|---|---:|---:|---:|
+| 8 | low | 0.5750 | 29.33% | — | 11000 | +0 | 1 |
+| 8 | normal | 0.3829 | 45.16% | — | 11001 | +1 | 3 |
+| 8 | high | 0.3632 | 47.15% | — | 11001 | +1 | 7 |
+| 9 | low | 0.5161 | 50.23% | — | 11000 | +0 | 1 |
+| 9 | normal | 0.3474 | 65.60% | — | 11000 | +0 | 3 |
+| 9 | high | 0.3296 | 67.30% | — | 10996 | -4 | 7 |
+| 10 | low | 0.5000 | 34.04% | — | 11000 | +0 | 1 |
+| 10 | normal | 0.4242 | 40.77% | — | 11000 | +0 | 4 |
+| 10 | high | 0.3876 | 44.35% | — | 10997 | -3 | 9 |
+| 11 | low | 0.4023 | 60.02% | — | 11000 | +0 | 1 |
+| 11 | normal | 0.4065 | 59.62% | — | 11000 | +0 | 4 |
+| 11 | high | 0.3713 | 63.04% | — | 11005 | +5 | 10 |
+| 12 | low | 0.3623 | 46.87% | — | 11000 | +0 | 1 |
+| 12 | normal | 0.4404 | 39.02% | — | 11001 | +1 | 5 |
+| 12 | high | 0.4016 | 42.79% | — | 11002 | +2 | 13 |
+| 13 | low | 0.3484 | 65.20% | centre 1.1× → 1× | 11000 | +0 | 1 |
+| 13 | normal | 0.4239 | 57.75% | — | 11003 | +3 | 5 |
+| 13 | high | 0.3937 | 60.72% | — | 11002 | +2 | 15 |
+| 14 | low | 0.2610 | 58.61% | centre 1.1× → 1× | 11000 | +0 | 0 |
+| 14 | normal | 0.4415 | 38.82% | — | 10998 | -2 | 6 |
+| 14 | high | 0.4142 | 41.47% | — | 10987 | -13 | 20 |
+| 15 | low | 0.3235 | 67.66% | centre 1.1× → 1× | 11001 | +1 | 1 |
+| 15 | normal | 0.4381 | 56.27% | — | 10999 | -1 | 7 |
+| 15 | high | 0.4004 | 60.00% | — | 11000 | +0 | 24 |
+| 16 | low | 0.2339 | 62.09% | centre 1.1× → 1× | 11000 | +0 | 0 |
+| 16 | normal | 0.4447 | 38.47% | — | 11001 | +1 | 9 |
+| 16 | high | 0.3729 | 45.68% | — | 11001 | +1 | 33 |

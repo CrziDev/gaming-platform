@@ -9,7 +9,7 @@ describe('the Plinko manifest schema', () => {
   it('parses the served shape into a table keyed by rows and risk', () => {
     const parsed = plinkoManifestSchema.parse(plinkoManifest())
 
-    expect(parsed.rtp_profile_id).toBe('rtp-demo-plinko')
+    expect(parsed.rtp_basis_points).toBe(9500)
     expect(parsed.table[8].normal).toEqual(PLINKO_MULTIPLIERS_HUNDREDTHS[8].normal)
     expect(parsed.table[16].high).toHaveLength(17)
   })
@@ -44,7 +44,10 @@ describe('the Plinko manifest schema', () => {
     expect(plinkoManifestSchema.safeParse(zero).success).toBe(false)
   })
 
-  it('refuses a manifest that does not name its profile', () => {
-    expect(plinkoManifestSchema.safeParse({ ...plinkoManifest(), rtp_profile_id: '' }).success).toBe(false)
+  it('refuses a manifest that does not name its return', () => {
+    const unnamed: Partial<ReturnType<typeof plinkoManifest>> = { ...plinkoManifest() }
+    delete unnamed.rtp_basis_points
+    expect(plinkoManifestSchema.safeParse(unnamed).success).toBe(false)
+    expect(plinkoManifestSchema.safeParse({ ...plinkoManifest(), rtp_basis_points: 0 }).success).toBe(false)
   })
 })

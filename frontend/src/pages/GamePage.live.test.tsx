@@ -31,14 +31,14 @@ const page = {
 
 // A manifest whose default board differs from the bundled table at the centre,
 // so a configure can only have come from the server.
-function servedManifest(profileId: string, centre: number): PlinkoManifest {
+function servedManifest(basisPoints: number, centre: number): PlinkoManifest {
   const manifest = plinkoManifest()
-  manifest.rtp_profile_id = profileId
+  manifest.rtp_basis_points = basisPoints
   manifest.multipliers_hundredths['8']!.normal![4] = centre
   return manifest
 }
 
-function settledRound(profileId: string): PlayRoundResponse {
+function settledRound(basisPoints: number): PlayRoundResponse {
   const at = '2026-09-19T12:00:00Z'
   return {
     round: {
@@ -46,7 +46,7 @@ function settledRound(profileId: string): PlayRoundResponse {
       game_id: plinko.id,
       game_slug: 'plinko',
       game_name: plinko.name,
-      rtp_profile_id: profileId,
+      rtp_basis_points: basisPoints,
       status: 'settled',
       stake_minor: 100,
       win_minor: 50,
@@ -93,7 +93,7 @@ describe('Plinko against a server without the play endpoint', () => {
     const user = userEvent.setup()
     const fetchMock = stubFetchRoutes({
       ...page,
-      'GET /games/plinko/manifest': { status: 200, body: servedManifest('profile-a', 55) },
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest(9500, 55) },
       'POST /games/plinko/rounds': { status: 404, body: { error: 'Not found' } },
     })
     renderApp('/game/plinko')
@@ -128,7 +128,7 @@ describe('Plinko without a manifest', () => {
       ...page,
       'GET /games/plinko/manifest': [
         { status: 404, body: { error: 'Game not found' } },
-        { status: 200, body: servedManifest('profile-a', 55) },
+        { status: 200, body: servedManifest(9500, 55) },
       ],
     })
     renderApp('/game/plinko')
@@ -152,7 +152,7 @@ describe('Plinko without a manifest', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it("shows the server's reason when no profile is active", async () => {
+  it("shows the server's reason when no RTP is set", async () => {
     stubFetchRoutes({
       ...page,
       'GET /games/plinko/manifest': {
@@ -171,16 +171,16 @@ describe('Plinko without a manifest', () => {
   })
 })
 
-describe('Plinko when the active profile changes mid-session', () => {
-  it('refetches the manifest after a round settled on another profile and reconfigures once the ball lands', async () => {
+describe('Plinko when the RTP changes mid-session', () => {
+  it('refetches the manifest after a round settled at another return and reconfigures once the ball lands', async () => {
     const user = userEvent.setup()
     const fetchMock = stubFetchRoutes({
       ...page,
       'GET /games/plinko/manifest': [
-        { status: 200, body: servedManifest('profile-a', 55) },
-        { status: 200, body: servedManifest('profile-b', 60) },
+        { status: 200, body: servedManifest(9500, 55) },
+        { status: 200, body: servedManifest(10500, 60) },
       ],
-      'POST /games/plinko/rounds': { status: 200, body: settledRound('profile-b') },
+      'POST /games/plinko/rounds': { status: 200, body: settledRound(10500) },
     })
     const { queryClient } = renderApp('/game/plinko')
 
@@ -194,7 +194,7 @@ describe('Plinko when the active profile changes mid-session', () => {
     await waitFor(() => expect(manifestRequests(fetchMock)).toHaveLength(2))
     // The new table has arrived, but the ball is still falling on the old board.
     await waitFor(() =>
-      expect(queryClient.getQueryData(['game-manifest', 'plinko'])).toMatchObject({ rtp_profile_id: 'profile-b' }),
+      expect(queryClient.getQueryData(['game-manifest', 'plinko'])).toMatchObject({ rtp_basis_points: 10500 }),
     )
     expect(screen.getByRole('radio', { name: '8' })).toHaveAttribute('aria-disabled', 'true')
     expect(posted(post, 'configure')).toHaveLength(1)
@@ -210,7 +210,7 @@ describe('the history under the Plinko board', () => {
   it("lists the player's own settled rounds on the game and refetches them when a ball lands", async () => {
     const user = userEvent.setup()
     const earlier: Round = {
-      ...settledRound('profile-a').round,
+      ...settledRound(9500).round,
       id: 'round-live-0',
       stake_minor: 200,
       win_minor: 340,
@@ -221,8 +221,8 @@ describe('the history under the Plinko board', () => {
     const fetchMock = stubFetchRoutes({
       ...page,
       'GET /rounds': { status: 200, body: { rows: [earlier], total: 1, page: 1, size: 20, pages: 1 } },
-      'GET /games/plinko/manifest': { status: 200, body: servedManifest('profile-a', 55) },
-      'POST /games/plinko/rounds': { status: 200, body: settledRound('profile-a') },
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest(9500, 55) },
+      'POST /games/plinko/rounds': { status: 200, body: settledRound(9500) },
     })
     renderApp('/game/plinko')
 
@@ -249,7 +249,7 @@ describe('the history under the Plinko board', () => {
     stubFetchRoutes({
       ...page,
       'GET /rounds': { status: 400, body: { error: 'One or more fields are invalid' } },
-      'GET /games/plinko/manifest': { status: 200, body: servedManifest('profile-a', 55) },
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest(9500, 55) },
     })
     renderApp('/game/plinko')
 
@@ -272,7 +272,7 @@ describe('the favorite toggle against the server', () => {
     })
     const fetchMock = stubFetchRoutes({
       ...page,
-      'GET /games/plinko/manifest': { status: 200, body: servedManifest('profile-a', 55) },
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest(9500, 55) },
       'GET /favorites': [favoritePage([]), favoritePage([plinko]), favoritePage([])],
       'PUT /games/plinko/favorite': { status: 204 },
       'DELETE /games/plinko/favorite': { status: 204 },

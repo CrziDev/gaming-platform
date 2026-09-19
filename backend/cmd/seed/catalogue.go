@@ -13,11 +13,14 @@ const upsertCategory = `
 	   SET name       = EXCLUDED.name,
 	       sort_order = EXCLUDED.sort_order`
 
+// A development fixture: the seed resets an integrated game's return to the
+// option listed below, the way it resets the admin password. Production picks a
+// return through the console.
 const upsertGame = `
 	INSERT INTO games (
 		slug, name, description, category_slug, provider, status, integration,
-		currency, min_wager_minor, max_wager_minor, wager_step_minor)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	ON CONFLICT (slug) DO UPDATE
 	   SET name             = EXCLUDED.name,
 	       description      = EXCLUDED.description,
@@ -29,17 +32,17 @@ const upsertGame = `
 	       min_wager_minor  = EXCLUDED.min_wager_minor,
 	       max_wager_minor  = EXCLUDED.max_wager_minor,
 	       wager_step_minor = EXCLUDED.wager_step_minor,
+	       rtp_basis_points = EXCLUDED.rtp_basis_points,
 	       thumbnail_path   = NULL,
 	       updated_at       = now()`
 
 // The slug the integrated title replaced; a development database that still has
-// it converges on the new row unless rounds or RTP profiles reference the old one,
-// in which case the row stays rather than the seed failing on their foreign keys.
+// it converges on the new row unless rounds reference the old one, in which case
+// the row stays rather than the seed failing on their foreign key.
 const deleteLegacyPlinko = `
 	DELETE FROM games
 	 WHERE slug = 'plinko-drop'
-	   AND NOT EXISTS (SELECT 1 FROM game_rounds WHERE game_rounds.game_id = games.id)
-	   AND NOT EXISTS (SELECT 1 FROM rtp_profiles WHERE rtp_profiles.game_id = games.id)`
+	   AND NOT EXISTS (SELECT 1 FROM game_rounds WHERE game_rounds.game_id = games.id)`
 
 type category struct {
 	slug      string
@@ -63,6 +66,8 @@ type game struct {
 	integration string
 	currency    string
 	wagers      wagerRange
+	// One of the engine's options for an integrated game; zero leaves it unset.
+	rtpBasisPoints int
 }
 
 const (
@@ -93,7 +98,7 @@ var games = []game{
 	{slug: "aurora-dice", name: "Aurora Dice", description: "Roll over or under a target you choose and set your own odds.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
 	{slug: "vault-break", name: "Vault Break", description: "Crack the combination one dial at a time and stop before the alarm.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
 	{slug: "mine-sweep", name: "Mine Sweep", description: "Reveal safe tiles on a 5×5 grid and cash out before you hit a mine.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
-	{slug: "plinko", name: "Plinko", description: "Drop a ball through the pegs and land on a multiplier.", category: "originals", provider: inHouse, status: "active", integration: "integrated", currency: "PHP", wagers: originalWagers},
+	{slug: "plinko", name: "Plinko", description: "Drop a ball through the pegs and land on a multiplier.", category: "originals", provider: inHouse, status: "active", integration: "integrated", currency: "PHP", wagers: originalWagers, rtpBasisPoints: 9500},
 	{slug: "coin-flip", name: "Coin Flip", description: "Heads or tails, double or nothing, streak as far as you dare.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
 	{slug: "hi-lo-ladder", name: "Hi-Lo Ladder", description: "Call the next card higher or lower and climb the payout ladder.", category: "originals", provider: inHouse, status: "active", integration: "supported", currency: "PHP", wagers: originalWagers},
 	{slug: "keno-nights", name: "Keno Nights", description: "Pick up to ten numbers and watch twenty draw.", category: "originals", provider: inHouse, status: "maintenance", integration: "supported", currency: "PHP", wagers: originalWagers},
@@ -131,9 +136,13 @@ func seedCatalogue(ctx context.Context, tx *sql.Tx) error {
 	}
 
 	for _, g := range games {
+		var rtp *int
+		if g.rtpBasisPoints != 0 {
+			rtp = &g.rtpBasisPoints
+		}
 		_, err := tx.ExecContext(ctx, upsertGame,
 			g.slug, g.name, g.description, g.category, g.provider, g.status, g.integration,
-			g.currency, g.wagers.min, g.wagers.max, g.wagers.step)
+			g.currency, g.wagers.min, g.wagers.max, g.wagers.step, rtp)
 		if err != nil {
 			return fmt.Errorf("seed: upsert game %s: %w", g.slug, err)
 		}
@@ -141,6 +150,5 @@ func seedCatalogue(ctx context.Context, tx *sql.Tx) error {
 	if _, err := tx.ExecContext(ctx, deleteLegacyPlinko); err != nil {
 		return fmt.Errorf("seed: remove legacy plinko-drop: %w", err)
 	}
-
-	return seedProfiles(ctx, tx)
+	return nil
 }

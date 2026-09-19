@@ -36,7 +36,7 @@ const consoleRoutes: [string, string][] = [
   ['/admin/rounds', 'Game rounds'],
   ['/admin/games', 'Games'],
   ['/admin/games/gm-001', 'Configuration'],
-  ['/admin/rtp', 'RTP profiles'],
+  ['/admin/rtp', 'RTP'],
   ['/admin/audit', 'Audit logs'],
   ['/admin/settings', 'Settings'],
 ]

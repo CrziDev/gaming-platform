@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -2026,10 +2027,11 @@ func registerAdmin(t *testing.T, db *sql.DB, base, email string) (*http.Client, 
 
 type adminGameBody struct {
 	catalogueGame
-	Integration          string `json:"integration"`
-	ActiveRTPBasisPoints *int   `json:"active_rtp_basis_points"`
-	Rounds30d            int    `json:"rounds_30d"`
-	UpdatedAt            string `json:"updated_at"`
+	Integration    string `json:"integration"`
+	RTPBasisPoints *int   `json:"rtp_basis_points"`
+	RTPOptions     []int  `json:"rtp_options"`
+	Rounds30d      int    `json:"rounds_30d"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
 func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
@@ -2102,7 +2104,7 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'game' AND entity_id = $1`, created.ID)
 	})
-	if created.ID == "" || created.Status != "draft" || created.Integration != "unreviewed" || created.CategoryName != "Test Category A "+suffix || created.ActiveRTPBasisPoints != nil || created.Rounds30d != 0 {
+	if created.ID == "" || created.Status != "draft" || created.Integration != "unreviewed" || created.CategoryName != "Test Category A "+suffix || created.RTPBasisPoints != nil || created.RTPOptions == nil || len(created.RTPOptions) != 0 || created.Rounds30d != 0 {
 		t.Fatalf("unexpected created game: %+v", created)
 	}
 	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/games", newGame); status != http.StatusConflict || !bytes.Contains(body, []byte(`"slug"`)) {
@@ -2209,194 +2211,88 @@ func fetchAdminGames(t *testing.T, client *http.Client, url string) struct {
 	return page
 }
 
-type rtpProfileBody struct {
-	ID                string  `json:"id"`
-	GameID            string  `json:"game_id"`
-	GameName          string  `json:"game_name"`
-	Name              string  `json:"name"`
-	Version           int     `json:"version"`
-	TargetBasisPoints int     `json:"target_basis_points"`
-	Status            string  `json:"status"`
-	EngineConfigRef   string  `json:"engine_config_ref"`
-	EffectiveFrom     *string `json:"effective_from"`
-	EffectiveUntil    *string `json:"effective_until"`
-	IsDefault         bool    `json:"is_default"`
-	CreatedBy         string  `json:"created_by"`
-	CreatedByName     string  `json:"created_by_display_name"`
-}
-
-func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
+func TestAdminGameRTPIsSetFromTheEngineOptionsAndAudited(t *testing.T) {
 	db := requireDB(t)
 	_, _, suffix := seedCatalogueFixture(t, db)
+	createPlinko(t, db)
 	base, playerClient := newServer(t, db)
 	if status, body := register(t, playerClient, base); status != http.StatusCreated {
 		t.Fatalf("register player: want 201, got %d (%s)", status, body)
 	}
 	adminClient, adminID := registerAdmin(t, db, base, "rtp-admin-"+suffix+"@example.com")
 
-	var gameID string
-	if err := db.QueryRow(`SELECT id::text FROM games WHERE slug = $1`, "test-a-zebra-"+suffix).Scan(&gameID); err != nil {
+	var plinkoID, fixtureID string
+	if err := db.QueryRow(`SELECT id::text FROM games WHERE slug = 'plinko'`).Scan(&plinkoID); err != nil {
+		t.Fatalf("find plinko: %v", err)
+	}
+	if err := db.QueryRow(`SELECT id::text FROM games WHERE slug = $1`, "test-a-zebra-"+suffix).Scan(&fixtureID); err != nil {
 		t.Fatalf("find fixture game: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'rtp_profile' AND entity_id IN (SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid)`, gameID)
-		_, _ = db.Exec(`DELETE FROM rtp_profiles WHERE game_id = ($1::text)::uuid`, gameID)
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'game' AND entity_id IN ($1, $2)`, plinkoID, fixtureID)
 	})
-	profilesPath := base + "/api/admin/games/" + gameID + "/rtp-profiles"
-	draft := map[string]any{"name": strings.Repeat("界", 80), "version": 1, "target_basis_points": 9600, "engine_config_ref": "cfg-" + suffix}
+	rtpPath := func(id string) string { return base + "/api/admin/games/" + id + "/rtp" }
 
-	if status, body := send(t, playerClient, http.MethodPost, profilesPath, draft); status != http.StatusForbidden {
-		t.Fatalf("player draft: want 403, got %d (%s)", status, body)
+	if status, body := send(t, playerClient, http.MethodPut, rtpPath(plinkoID), map[string]any{"rtp_basis_points": 9500}); status != http.StatusForbidden {
+		t.Fatalf("player: want 403, got %d (%s)", status, body)
 	}
-	if status, body := send(t, playerClient, http.MethodGet, base+"/api/admin/rtp-profiles", nil); status != http.StatusForbidden {
-		t.Fatalf("player list: want 403, got %d (%s)", status, body)
+	status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/games/"+plinkoID, nil)
+	var plinko adminGameBody
+	if err := json.Unmarshal(body, &plinko); status != http.StatusOK || err != nil {
+		t.Fatalf("get plinko: %d %v (%s)", status, err, body)
 	}
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/games/00000000-0000-4000-8000-000000000000/rtp-profiles", draft); status != http.StatusNotFound {
-		t.Fatalf("draft for unknown game: want 404, got %d (%s)", status, body)
+	if plinko.RTPBasisPoints == nil || *plinko.RTPBasisPoints != 9500 || !slices.Equal(plinko.RTPOptions, []int{9000, 9500, 10500, 11000}) {
+		t.Fatalf("plinko rtp %v options %v", plinko.RTPBasisPoints, plinko.RTPOptions)
 	}
-	for name, tc := range map[string]struct {
-		change map[string]any
-		field  string
+
+	for name, c := range map[string]struct {
+		id    string
+		body  any
+		field string
 	}{
-		"target below range": {map[string]any{"target_basis_points": 4999}, "target_basis_points"},
-		"target above range": {map[string]any{"target_basis_points": 20001}, "target_basis_points"},
-		"zero version":       {map[string]any{"version": 0}, "version"},
-		"blank name":         {map[string]any{"name": ""}, "name"},
-		"status in body":     {map[string]any{"status": "verified"}, ""},
+		"not an option":         {plinkoID, map[string]any{"rtp_basis_points": 9700}, "rtp_basis_points"},
+		"game without engine":   {fixtureID, map[string]any{"rtp_basis_points": 9500}, "rtp_basis_points"},
+		"missing value":         {plinkoID, map[string]any{}, "rtp_basis_points"},
+		"unknown field refused": {plinkoID, map[string]any{"rtp_basis_points": 9500, "effective_until": "2030-01-01T00:00:00Z"}, ""},
 	} {
-		t.Run("draft rejects "+name, func(t *testing.T) {
-			body := map[string]any{}
-			for key, value := range draft {
-				body[key] = value
-			}
-			for key, value := range tc.change {
-				body[key] = value
-			}
-			status, response := send(t, adminClient, http.MethodPost, profilesPath, body)
-			if status != http.StatusBadRequest {
-				t.Fatalf("want 400, got %d (%s)", status, response)
-			}
-			if tc.field != "" && !bytes.Contains(response, []byte(`"`+tc.field+`"`)) {
-				t.Fatalf("field %s missing from %s", tc.field, response)
-			}
-		})
+		status, body := send(t, adminClient, http.MethodPut, rtpPath(c.id), c.body)
+		if status != http.StatusBadRequest {
+			t.Fatalf("%s: want 400, got %d (%s)", name, status, body)
+		}
+		var failure struct {
+			Fields map[string]string `json:"fields"`
+		}
+		if c.field != "" && (json.Unmarshal(body, &failure) != nil || failure.Fields[c.field] == "") {
+			t.Fatalf("%s: want fields.%s, got %s", name, c.field, body)
+		}
+	}
+	if status, body := send(t, adminClient, http.MethodPut, rtpPath("00000000-0000-0000-0000-000000000000"), map[string]any{"rtp_basis_points": 9500}); status != http.StatusNotFound {
+		t.Fatalf("unknown game: want 404, got %d (%s)", status, body)
 	}
 
-	status, body := send(t, adminClient, http.MethodPost, profilesPath, draft)
-	if status != http.StatusCreated {
-		t.Fatalf("create draft: want 201, got %d (%s)", status, body)
+	set := func(basisPoints int) adminGameBody {
+		t.Helper()
+		status, body := send(t, adminClient, http.MethodPut, rtpPath(plinkoID), map[string]any{"rtp_basis_points": basisPoints})
+		var updated adminGameBody
+		if err := json.Unmarshal(body, &updated); status != http.StatusOK || err != nil || updated.RTPBasisPoints == nil || *updated.RTPBasisPoints != basisPoints {
+			t.Fatalf("set %d: %d %v (%s)", basisPoints, status, err, body)
+		}
+		return updated
 	}
-	var created rtpProfileBody
-	if err := json.Unmarshal(body, &created); err != nil {
-		t.Fatalf("decode draft: %v (%s)", err, body)
-	}
-	if created.Status != "draft" || created.GameID != gameID || created.GameName != "Zebra Test "+suffix || created.CreatedBy != adminID || created.CreatedByName != "Operator" || created.EngineConfigRef != "cfg-"+suffix {
-		t.Fatalf("unexpected draft: %+v", created)
-	}
-	if status, body := send(t, adminClient, http.MethodPost, profilesPath, draft); status != http.StatusConflict || !bytes.Contains(body, []byte(`"version"`)) {
-		t.Fatalf("duplicate name and version: want 409 naming version, got %d (%s)", status, body)
-	}
+	set(9000)
+	set(9000)
+	set(11000)
 
-	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 9400, "version": 2})
-	if status != http.StatusOK || !bytes.Contains(body, []byte(`"target_basis_points":9400`)) || !bytes.Contains(body, []byte(`"version":2`)) {
-		t.Fatalf("edit draft: want 200 with the new target, got %d (%s)", status, body)
+	_, body = send(t, adminClient, http.MethodGet, base+"/api/games/plinko/manifest", nil)
+	var manifest struct {
+		RTPBasisPoints int `json:"rtp_basis_points"`
 	}
-	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 9700}); status != http.StatusOK || !bytes.Contains(body, []byte(`"target_basis_points":9700`)) {
-		t.Fatalf("edit draft to a target off the round numbers: want 200, got %d (%s)", status, body)
-	}
-	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 4999}); status != http.StatusBadRequest {
-		t.Fatalf("edit draft to a target below range: want 400, got %d (%s)", status, body)
-	}
-
-	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+created.ID+"/activate", nil)
-	if status != http.StatusConflict || !bytes.Contains(body, []byte(`"code":"RTP_PROFILE_NOT_VERIFIED"`)) {
-		t.Fatalf("activate draft: want 409 RTP_PROFILE_NOT_VERIFIED, got %d (%s)", status, body)
-	}
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/00000000-0000-4000-8000-000000000000/activate", nil); status != http.StatusNotFound {
-		t.Fatalf("activate unknown: want 404, got %d (%s)", status, body)
-	}
-
-	// Nothing in the platform can verify a profile; only the engine work does.
-	// The rows below stand in for that evidence so the activation path itself is
-	// exercised: the game lock, the swap of the profile in force, and the audit.
-	var verifiedID, promoID string
-	if err := db.QueryRow(`INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, observed_basis_points, verified_at, created_by)
-		VALUES (($1::text)::uuid, 'Verified', 1, 9600, 'verified', 9598, now(), ($2::text)::uuid) RETURNING id::text`, gameID, adminID).Scan(&verifiedID); err != nil {
-		t.Fatalf("insert verified profile: %v", err)
-	}
-	if err := db.QueryRow(`INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, observed_basis_points, verified_at, created_by)
-		VALUES (($1::text)::uuid, 'Promo', 1, 10200, 'verified', 10190, now(), ($2::text)::uuid) RETURNING id::text`, gameID, adminID).Scan(&promoID); err != nil {
-		t.Fatalf("insert promo profile: %v", err)
-	}
-	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+verifiedID, map[string]any{"name": "Edited"}); status != http.StatusBadRequest {
-		t.Fatalf("edit verified profile: want 400, got %d (%s)", status, body)
-	}
-	until := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_until": until}); status != http.StatusConflict || !bytes.Contains(body, []byte(`"code":"RTP_DEFAULT_REQUIRED"`)) {
-		t.Fatalf("activate timed profile without default: want 409 RTP_DEFAULT_REQUIRED, got %d (%s)", status, body)
-	}
-
-	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+verifiedID+"/activate", nil)
-	if status != http.StatusOK || !bytes.Contains(body, []byte(`"status":"active"`)) {
-		t.Fatalf("activate verified: want 200 active, got %d (%s)", status, body)
-	}
-	var activeDefault rtpProfileBody
-	if err := json.Unmarshal(body, &activeDefault); err != nil || !activeDefault.IsDefault {
-		t.Fatalf("open-ended activation should establish the default: err=%v (%s)", err, body)
-	}
-	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/games/"+gameID, nil)
-	if status != http.StatusOK || !bytes.Contains(body, []byte(`"active_rtp_basis_points":9600`)) {
-		t.Fatalf("game should report the active profile: got %d (%s)", status, body)
-	}
-
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", nil); status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"effective_until"`)) {
-		t.Fatalf("activate negative margin without an end: want 400 naming effective_until, got %d (%s)", status, body)
-	}
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_from": until, "effective_until": until}); status != http.StatusBadRequest {
-		t.Fatalf("activate with an end not after the start: want 400, got %d (%s)", status, body)
-	}
-	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_until": until})
-	if status != http.StatusOK || !bytes.Contains(body, []byte(`"effective_until":"`+until+`"`)) {
-		t.Fatalf("activate promo with an end: want 200 with the schedule, got %d (%s)", status, body)
-	}
-	var activePromotion rtpProfileBody
-	if err := json.Unmarshal(body, &activePromotion); err != nil || activePromotion.IsDefault {
-		t.Fatalf("timed activation should not replace the default: err=%v (%s)", err, body)
-	}
-
-	var previous, active int
-	if err := db.QueryRow(`SELECT count(*) FILTER (WHERE id = ($1::text)::uuid AND status = 'verified'), count(*) FILTER (WHERE status = 'active') FROM rtp_profiles WHERE game_id = ($2::text)::uuid`, verifiedID, gameID).Scan(&previous, &active); err != nil {
-		t.Fatalf("count profiles: %v", err)
-	}
-	if previous != 1 || active != 1 {
-		t.Fatalf("after replacing the active profile: previous back to verified=%d active=%d, want 1/1", previous, active)
-	}
-
-	status, body = send(t, adminClient, http.MethodGet, profilesPath, nil)
-	if status != http.StatusOK {
-		t.Fatalf("list for game: want 200, got %d (%s)", status, body)
-	}
-	var forGame []rtpProfileBody
-	if err := json.Unmarshal(body, &forGame); err != nil || len(forGame) != 3 {
-		t.Fatalf("list for game: want 3 profiles, got %d err=%v (%s)", len(forGame), err, body)
-	}
-	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/rtp-profiles?game_id="+gameID+"&status=active", nil)
-	if status != http.StatusOK {
-		t.Fatalf("global list: want 200, got %d (%s)", status, body)
-	}
-	var global struct {
-		Rows  []rtpProfileBody `json:"rows"`
-		Total int              `json:"total"`
-	}
-	if err := json.Unmarshal(body, &global); err != nil || global.Total != 1 || global.Rows[0].ID != promoID {
-		t.Fatalf("global list filtered to the active profile: got total=%d err=%v (%s)", global.Total, err, body)
-	}
-	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/rtp-profiles?game_id=nope", nil); status != http.StatusBadRequest {
-		t.Fatalf("global list bad game_id: want 400, got %d (%s)", status, body)
+	if err := json.Unmarshal(body, &manifest); err != nil || manifest.RTPBasisPoints != 11000 {
+		t.Fatalf("manifest after the switch: %s", body)
 	}
 
 	var actions []string
-	rows, err := db.Query(`SELECT action FROM audit_logs WHERE entity_type = 'rtp_profile' AND actor_user_id = ($1::text)::uuid ORDER BY created_at ASC`, adminID)
+	rows, err := db.Query(`SELECT action || ':' || COALESCE(before_data->>'rtp_basis_points', '-') || '>' || (after_data->>'rtp_basis_points') FROM audit_logs WHERE entity_type = 'game' AND entity_id = $1 AND actor_user_id = ($2::text)::uuid ORDER BY created_at ASC`, plinkoID, adminID)
 	if err != nil {
 		t.Fatalf("query audit: %v", err)
 	}
@@ -2408,7 +2304,7 @@ func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
 		}
 		actions = append(actions, action)
 	}
-	if strings.Join(actions, ",") != "rtp_profile.create,rtp_profile.update,rtp_profile.update,rtp_profile.activate,rtp_profile.activate" {
+	if strings.Join(actions, ",") != "game.rtp_change:9500>9000,game.rtp_change:9000>11000" {
 		t.Fatalf("audit actions: got %v", actions)
 	}
 }

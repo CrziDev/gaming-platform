@@ -61,7 +61,7 @@ func Play(ctx context.Context, db *sql.DB, eng Engine, in PlayInput) (PlayResult
 	}
 	defer tx.Rollback()
 
-	opened, err := openTx(ctx, tx, OpenInput{
+	opened, err := openTx(ctx, tx, eng.Options(), OpenInput{
 		RoundKey: "play:" + in.UserID + ":" + key, UserID: in.UserID, GameID: in.GameID,
 		StakeMinor: in.StakeMinor, Currency: in.Currency,
 	})
@@ -70,9 +70,6 @@ func Play(ctx context.Context, db *sql.DB, eng Engine, in PlayInput) (PlayResult
 	}
 	if !opened.Created {
 		return replay(ctx, tx, opened.Round, params)
-	}
-	if opened.EngineConfigRef == "" {
-		return PlayResult{}, ErrProfileUnavailable
 	}
 
 	outcome, err := eng.Play(engine.Input{ConfigRef: opened.EngineConfigRef, Params: params, StakeMinor: in.StakeMinor})

@@ -5,15 +5,12 @@ export type {
   DepositReview,
   GameInput,
   GamePatch,
-  RtpDraftInput,
-  RtpSchedule,
   UserFilter,
   WalletAdjustment,
 } from './api'
-export { createGameSchema, gameStatuses, rtpDraftSchema } from './schemas'
-export type { GameFormInput, RtpDraftFormInput } from './schemas'
+export { createGameSchema, gameStatuses } from './schemas'
+export type { GameFormInput } from './schemas'
 export {
-  useActivateRtpProfile,
   useAdjustWallet,
   useAdminGame,
   useAdminGames,
@@ -27,16 +24,13 @@ export {
   useAuditEntries,
   useConsoleAlerts,
   useCreateGame,
-  useCreateRtpProfile,
   useDashboard,
   useDepositQueue,
-  useGameRtpProfiles,
   useReviewDeposit,
-  useRtpProfiles,
+  useSetGameRtp,
   useSetUserStatus,
   useStaff,
   useUpdateGame,
-  useUpdateRtpProfile,
   useUserAdjustments,
   useUserCounts,
   useUserDeposits,

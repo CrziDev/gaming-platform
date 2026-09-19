@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -52,7 +53,7 @@ type response struct {
 	GameID               string  `json:"game_id"`
 	GameSlug             string  `json:"game_slug"`
 	GameName             string  `json:"game_name"`
-	RTPProfileID         string  `json:"rtp_profile_id"`
+	RTPBasisPoints       int     `json:"rtp_basis_points"`
 	Status               string  `json:"status"`
 	StakeMinor           int64   `json:"stake_minor"`
 	WinMinor             *int64  `json:"win_minor"`
@@ -184,21 +185,17 @@ func (h *Handler) Manifest(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	profile, err := activeProfile(r.Context(), h.db, item.ID)
-	if errors.Is(err, ErrProfileUnavailable) || (err == nil && profile.EngineConfigRef == "") {
+	option, ok := optionFor(eng.Options(), item.RTPBasisPoints)
+	if !ok {
 		httpx.WriteCodedError(w, http.StatusConflict, "That game is not available right now", "GAME_UNAVAILABLE")
 		return
 	}
+	manifest, err := eng.Manifest(option.Ref)
 	if err != nil {
 		h.internal(w, r, err)
 		return
 	}
-	manifest, err := eng.Manifest(profile.EngineConfigRef)
-	if err != nil {
-		h.internal(w, r, err)
-		return
-	}
-	body, err := withProfileID(manifest, profile.ID)
+	body, err := withBasisPoints(manifest, option.BasisPoints)
 	if err != nil {
 		h.internal(w, r, err)
 		return
@@ -206,19 +203,15 @@ func (h *Handler) Manifest(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, body)
 }
 
-// withProfileID names the profile a manifest describes, so a client can tell
-// from a settled round's rtp_profile_id that the table it holds is no longer
+// withBasisPoints names the return a manifest describes, so a client can tell
+// from a settled round's rtp_basis_points that the table it holds is no longer
 // the one rounds settle on.
-func withProfileID(manifest json.RawMessage, profileID string) (map[string]json.RawMessage, error) {
+func withBasisPoints(manifest json.RawMessage, basisPoints int) (map[string]json.RawMessage, error) {
 	var body map[string]json.RawMessage
 	if err := json.Unmarshal(manifest, &body); err != nil {
 		return nil, fmt.Errorf("round: decode manifest: %w", err)
 	}
-	id, err := json.Marshal(profileID)
-	if err != nil {
-		return nil, fmt.Errorf("round: encode profile id: %w", err)
-	}
-	body["rtp_profile_id"] = id
+	body["rtp_basis_points"] = json.RawMessage(strconv.Itoa(basisPoints))
 	return body, nil
 }
 
@@ -316,7 +309,7 @@ func newResponse(item Record) response {
 	}
 	return response{
 		ID: item.ID, GameID: item.GameID, GameSlug: item.GameSlug, GameName: item.GameName,
-		RTPProfileID: item.RTPProfileID, Status: item.Status, StakeMinor: item.StakeMinor,
+		RTPBasisPoints: item.RTPBasisPoints, Status: item.Status, StakeMinor: item.StakeMinor,
 		WinMinor: item.WinMinor, MultiplierHundredths: item.MultiplierHundredths,
 		Currency: item.Currency, StartedAt: item.StartedAt.UTC().Format(time.RFC3339), SettledAt: settledAt,
 	}

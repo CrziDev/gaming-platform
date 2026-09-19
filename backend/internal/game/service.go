@@ -179,5 +179,6 @@ func snapshot(g Game) map[string]any {
 		"slug": g.Slug, "name": g.Name, "description": g.Description, "category_slug": g.CategorySlug,
 		"provider": g.Provider, "status": g.Status, "currency": g.Currency,
 		"min_wager_minor": g.MinWagerMinor, "max_wager_minor": g.MaxWagerMinor, "wager_step_minor": g.WagerStepMinor,
+		"rtp_basis_points": g.RTPBasisPoints,
 	}
 }

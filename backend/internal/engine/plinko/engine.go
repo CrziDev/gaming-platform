@@ -15,6 +15,10 @@ func New() Engine {
 	return Engine{}
 }
 
+func (Engine) Options() []engine.Option {
+	return Options()
+}
+
 type result struct {
 	Rows int  `json:"rows"`
 	Risk Risk `json:"risk"`

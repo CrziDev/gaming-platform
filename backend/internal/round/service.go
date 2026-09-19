@@ -7,22 +7,21 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
+	"github.com/gaming-platform/backend/internal/engine"
 	"github.com/gaming-platform/backend/internal/money"
 	"github.com/gaming-platform/backend/internal/notification"
-	"github.com/gaming-platform/backend/internal/rtp"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
-func Open(ctx context.Context, db *sql.DB, in OpenInput) (Round, error) {
+func Open(ctx context.Context, db *sql.DB, options []engine.Option, in OpenInput) (Round, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return Round{}, fmt.Errorf("round: begin open: %w", err)
 	}
 	defer tx.Rollback()
 
-	opened, err := openTx(ctx, tx, in)
+	opened, err := openTx(ctx, tx, options, in)
 	if err != nil {
 		return Round{}, err
 	}
@@ -44,8 +43,10 @@ type opening struct {
 // openTx binds a round and debits its wager inside the caller's transaction.
 // It locks the wallet before it rechecks the round key, so two requests sharing
 // a key serialize there and the second sees the first's committed round. A
-// replay returns that round with Created false and writes nothing.
-func openTx(ctx context.Context, tx *sql.Tx, in OpenInput) (opening, error) {
+// replay returns that round with Created false and writes nothing. The game
+// row is locked before its return is read, so a round never binds to a return
+// an operator is changing underneath it.
+func openTx(ctx context.Context, tx *sql.Tx, options []engine.Option, in OpenInput) (opening, error) {
 	in.RoundKey = strings.TrimSpace(in.RoundKey)
 	if in.RoundKey == "" {
 		return opening{}, ErrRoundKeyRequired
@@ -98,15 +99,12 @@ func openTx(ctx context.Context, tx *sql.Tx, in OpenInput) (opening, error) {
 	if !validWager(config, in.StakeMinor) {
 		return opening{}, ErrInvalidWager
 	}
-	if _, err := rtp.RevertExpiredForGameTx(ctx, tx, in.GameID, time.Now().UTC()); err != nil {
-		return opening{}, fmt.Errorf("round: reconcile RTP profile: %w", err)
-	}
-	profile, err := activeProfile(ctx, tx, in.GameID)
-	if err != nil {
-		return opening{}, err
+	option, ok := optionFor(options, config.RTPBasisPoints)
+	if !ok {
+		return opening{}, ErrProfileUnavailable
 	}
 
-	opened, created, err := insertOpen(ctx, tx, in, walletID, currency, profile.ID)
+	opened, created, err := insertOpen(ctx, tx, in, walletID, currency, option.BasisPoints)
 	if err != nil {
 		return opening{}, err
 	}
@@ -130,7 +128,7 @@ func openTx(ctx context.Context, tx *sql.Tx, in OpenInput) (opening, error) {
 	if err != nil {
 		return opening{}, err
 	}
-	return opening{Round: opened, EngineConfigRef: profile.EngineConfigRef, Created: true}, nil
+	return opening{Round: opened, EngineConfigRef: option.Ref, Created: true}, nil
 }
 
 func validWager(config gameConfig, stakeMinor int64) bool {

@@ -10,19 +10,19 @@ import (
 )
 
 func TestRunSimulationCoversEveryBoardAndAgreesWithTheory(t *testing.T) {
-	profile, err := plinko.ProfileByRef("plinko/v1/9600")
+	profile, err := plinko.ProfileByRef("plinko/9500")
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := runSimulation(profile, 9600, 20_000, 100, 10_000)
+	result, err := runSimulation(profile, 9500, 20_000, 100, 10_000)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Boards) != 27 || result.SampleSize != 27*20_000 || result.TheoreticalBasisPoints != 9600 {
+	if len(result.Boards) != 27 || result.SampleSize != 27*20_000 || result.TheoreticalBasisPoints != 9500 {
 		t.Fatalf("report = %+v", result)
 	}
 	for _, board := range result.Boards {
-		if board.TheoreticalBasisPoints != 9600 || board.StakeMinor != 20_000*100 || board.NoiseBasisPoints <= 0 {
+		if board.TheoreticalBasisPoints != 9500 || board.StakeMinor != 20_000*100 || board.NoiseBasisPoints <= 0 {
 			t.Fatalf("board %+v", board)
 		}
 		if board.ObservedBasisPoints < 5000 || board.ObservedBasisPoints > 20000 {
@@ -35,7 +35,7 @@ func TestRunSimulationCoversEveryBoardAndAgreesWithTheory(t *testing.T) {
 }
 
 func TestReportFailsBoardsOffTargetOrOutsideTolerance(t *testing.T) {
-	profile, err := plinko.ProfileByRef("plinko/v1/9600")
+	profile, err := plinko.ProfileByRef("plinko/9500")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,9 +44,9 @@ func TestReportFailsBoardsOffTargetOrOutsideTolerance(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(offTarget.failures()) != 27 {
-		t.Fatalf("a 9700 target must fail every 9600 board, failed %d", len(offTarget.failures()))
+		t.Fatalf("a 9700 target must fail every 9500 board, failed %d", len(offTarget.failures()))
 	}
-	tight, err := runSimulation(profile, 9600, 1_000, 100, 0)
+	tight, err := runSimulation(profile, 9500, 1_000, 100, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,12 +61,12 @@ func TestReportFailsBoardsOffTargetOrOutsideTolerance(t *testing.T) {
 }
 
 func TestRunSimulationRefusesBadArguments(t *testing.T) {
-	profile, err := plinko.ProfileByRef("plinko/v1/9600")
+	profile, err := plinko.ProfileByRef("plinko/9500")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for name, args := range map[string][3]int64{"no rounds": {0, 100, 100}, "no stake": {10, 0, 100}, "negative tolerance": {10, 100, -1}} {
-		if _, err := runSimulation(profile, 9600, args[0], args[1], int(args[2])); err == nil {
+		if _, err := runSimulation(profile, 9500, args[0], args[1], int(args[2])); err == nil {
 			t.Fatalf("%s: expected an error", name)
 		}
 	}

@@ -26,9 +26,10 @@ const (
 )
 
 type Handler struct {
-	db     *sql.DB
-	logger *slog.Logger
-	now    func() time.Time
+	db      *sql.DB
+	logger  *slog.Logger
+	options engineOptions
+	now     func() time.Time
 }
 
 type response struct {
@@ -51,10 +52,11 @@ type response struct {
 
 type adminResponse struct {
 	response
-	Integration          string `json:"integration"`
-	ActiveRTPBasisPoints *int   `json:"active_rtp_basis_points"`
-	Rounds30d            int    `json:"rounds_30d"`
-	UpdatedAt            string `json:"updated_at"`
+	Integration    string `json:"integration"`
+	RTPBasisPoints *int   `json:"rtp_basis_points"`
+	RTPOptions     []int  `json:"rtp_options"`
+	Rounds30d      int    `json:"rounds_30d"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
 type categoryResponse struct {
@@ -77,6 +79,10 @@ type createBody struct {
 	WagerStepMinor int64  `json:"wager_step_minor"`
 }
 
+type rtpBody struct {
+	RTPBasisPoints *int `json:"rtp_basis_points"`
+}
+
 type patchBody struct {
 	Name           *string `json:"name"`
 	Description    *string `json:"description"`
@@ -89,8 +95,8 @@ type patchBody struct {
 	WagerStepMinor *int64  `json:"wager_step_minor"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
-	return &Handler{db: db, logger: logger, now: time.Now}
+func NewHandler(db *sql.DB, logger *slog.Logger, options engineOptions) *Handler {
+	return &Handler{db: db, logger: logger, options: options, now: time.Now}
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -235,7 +241,7 @@ func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request, _ user.User)
 	now := h.now()
 	result := make([]adminResponse, 0, len(games))
 	for _, item := range games {
-		result = append(result, newAdminResponse(item, now))
+		result = append(result, h.newAdminResponse(item, now))
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))
 }
@@ -254,7 +260,7 @@ func (h *Handler) AdminGet(w http.ResponseWriter, r *http.Request, _ user.User) 
 		h.internal(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, newAdminResponse(item, h.now()))
+	httpx.WriteJSON(w, http.StatusOK, h.newAdminResponse(item, h.now()))
 }
 
 func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request, actor user.User) {
@@ -294,7 +300,7 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request, actor user
 		h.internal(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusCreated, newAdminResponse(created, h.now()))
+	httpx.WriteJSON(w, http.StatusCreated, h.newAdminResponse(created, h.now()))
 }
 
 func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request, actor user.User) {
@@ -368,7 +374,33 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request, actor user
 		h.internal(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, newAdminResponse(updated, h.now()))
+	httpx.WriteJSON(w, http.StatusOK, h.newAdminResponse(updated, h.now()))
+}
+
+func (h *Handler) AdminSetRTP(w http.ResponseWriter, r *http.Request, actor user.User) {
+	if !httpx.IsUUID(r.PathValue("id")) {
+		httpx.WriteError(w, http.StatusNotFound, "Game not found")
+		return
+	}
+	var body rtpBody
+	if !httpx.ReadJSON(w, r, &body) {
+		return
+	}
+	if body.RTPBasisPoints == nil {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"rtp_basis_points": "Choose one of the game's RTP options"})
+		return
+	}
+	updated, err := SetRTP(r.Context(), h.db, h.options, actor.ID, r.PathValue("id"), *body.RTPBasisPoints)
+	switch {
+	case errors.Is(err, ErrNoGame):
+		httpx.WriteError(w, http.StatusNotFound, "Game not found")
+	case errors.Is(err, ErrRTPNotOffered):
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"rtp_basis_points": "Choose one of the game's RTP options"})
+	case err != nil:
+		h.internal(w, r, err)
+	default:
+		httpx.WriteJSON(w, http.StatusOK, h.newAdminResponse(updated, h.now()))
+	}
 }
 
 func (h *Handler) writeRuleError(w http.ResponseWriter, err error) bool {
@@ -445,13 +477,14 @@ func newResponse(item Game, now time.Time) response {
 	}
 }
 
-func newAdminResponse(item AdminGame, now time.Time) adminResponse {
+func (h *Handler) newAdminResponse(item AdminGame, now time.Time) adminResponse {
 	return adminResponse{
-		response:             newResponse(item.Game, now),
-		Integration:          item.Integration,
-		ActiveRTPBasisPoints: item.ActiveRTPBasisPoints,
-		Rounds30d:            item.Rounds30d,
-		UpdatedAt:            item.UpdatedAt.UTC().Format(time.RFC3339),
+		response:       newResponse(item.Game, now),
+		Integration:    item.Integration,
+		RTPBasisPoints: item.RTPBasisPoints,
+		RTPOptions:     rtpOptions(h.options, item.Slug),
+		Rounds30d:      item.Rounds30d,
+		UpdatedAt:      item.UpdatedAt.UTC().Format(time.RFC3339),
 	}
 }
 

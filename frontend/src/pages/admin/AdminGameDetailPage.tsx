@@ -1,29 +1,24 @@
-import { ChevronLeft, Pencil, Plus } from 'lucide-react'
+import { ChevronLeft, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
-import type { RtpProfile } from '@/api/types'
-import { ActiveRtp } from '@/components/admin/ActiveRtp'
 import { Button } from '@/components/ui/Button'
 import { Panel } from '@/components/ui/Panel'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { StatCard } from '@/components/ui/StatCard'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { useAdminGame, useGameRtpProfiles } from '@/features/admin'
+import { useAdminGame } from '@/features/admin'
 import { formatCount, formatDate, formatPercent } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
 import { adminPaths } from '@/routes/paths'
 
 import { GameFormDialog } from './GameFormDialog'
-import { RtpProfileDialog } from './RtpProfileDialog'
 
 export function AdminGameDetailPage() {
   const { id = '' } = useParams()
   const gameQuery = useAdminGame(id)
-  const profilesQuery = useGameRtpProfiles(id)
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<{ open: boolean; profile?: RtpProfile }>({ open: false })
 
   if (gameQuery.isPending) {
     return <SkeletonRows count={5} />
@@ -53,8 +48,6 @@ export function AdminGameDetailPage() {
     )
   }
 
-  const profiles = profilesQuery.data ?? []
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -74,10 +67,7 @@ export function AdminGameDetailPage() {
       </div>
 
       <div className="grid gap-3.5 sm:grid-cols-2 wide:grid-cols-4">
-        <StatCard
-          label="Active RTP"
-          value={game.active_rtp_basis_points === null ? '—' : formatPercent(game.active_rtp_basis_points)}
-        />
+        <StatCard label="RTP" value={game.rtp_basis_points === null ? '—' : formatPercent(game.rtp_basis_points)} />
         <StatCard label="Rounds 30d" value={formatCount(game.rounds_30d)} />
         <StatCard label="Category" value={game.category_name} />
         <StatCard label="Provider" value={game.provider} />
@@ -122,60 +112,23 @@ export function AdminGameDetailPage() {
         </Panel>
       </div>
 
-      <Panel
-        title="RTP profiles"
-        action={
-          <Button size="sm" variant="secondary" onClick={() => setDraft({ open: true })}>
-            <Plus aria-hidden size={14} strokeWidth={2} />
-            New draft
-          </Button>
-        }
-        bodyClassName="flex flex-col gap-2.5 p-5"
-      >
-        {profilesQuery.isPending ? (
-          <SkeletonRows count={2} />
-        ) : profilesQuery.isError ? (
-          <p className="text-sm text-danger">The profiles could not be loaded.</p>
-        ) : profiles.length === 0 ? (
-          <p className="text-sm text-ink-mute">No profile has been drafted for this game.</p>
-        ) : (
-          profiles.map((profile) => (
-            <div
-              key={profile.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-input bg-surface-1 px-3.5 py-3"
-            >
-              <span className="flex items-center gap-3">
-                <ActiveRtp basisPoints={profile.target_basis_points} size="lg" />
-                <span className="flex flex-col">
-                  <span className="text-[13px] text-ink-soft">
-                    {profile.name} <span className="font-mono text-ink-mute">v{profile.version}</span>
-                  </span>
-                  <span className="text-[12px] text-ink-mute">
-                    {profile.created_by_display_name || 'System'} · {formatDate(profile.created_at)}
-                  </span>
-                </span>
-                <StatusBadge status={profile.status} />
-              </span>
-              {profile.status === 'draft' ? (
-                <Button size="sm" variant="ghost" onClick={() => setDraft({ open: true, profile })}>
-                  Edit draft
-                </Button>
-              ) : null}
-            </div>
-          ))
-        )}
-        <Link to={adminPaths.rtp} className="pt-1 text-[13px] text-accent-ink hover:text-accent-hi">
-          Open RTP profiles →
-        </Link>
-      </Panel>
+      {game.rtp_options.length > 0 ? (
+        <Panel title="RTP" bodyClassName="flex flex-col gap-2.5 p-5">
+          <Row label="Playing at">
+            <span className="font-mono tnum">
+              {game.rtp_basis_points === null ? 'not set' : formatPercent(game.rtp_basis_points)}
+            </span>
+          </Row>
+          <Row label="Options">
+            <span className="font-mono tnum">{game.rtp_options.map((option) => formatPercent(option)).join(' · ')}</span>
+          </Row>
+          <Link to={adminPaths.rtp} className="pt-1 text-[13px] text-accent-ink hover:text-accent-hi">
+            Change on the RTP page →
+          </Link>
+        </Panel>
+      ) : null}
 
       <GameFormDialog open={editing} game={game} onClose={() => setEditing(false)} />
-      <RtpProfileDialog
-        open={draft.open}
-        game={game}
-        {...(draft.profile ? { profile: draft.profile } : {})}
-        onClose={() => setDraft({ open: false })}
-      />
     </div>
   )
 }

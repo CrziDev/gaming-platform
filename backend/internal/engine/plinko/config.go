@@ -84,16 +84,18 @@ type tableKey struct {
 	Risk Risk
 }
 
-// Profile is one immutable engine configuration, addressed by the
-// engine_config_ref an RTP profile row records. It carries a table for every
-// rows and risk combination a player may choose.
+// Profile is one immutable engine configuration: the return it is built to
+// produce, in basis points, and a table for every rows and risk combination a
+// player may choose. A settled round records its Ref, so a shipped profile's
+// tables never change; a correction is a new profile under a new Ref.
 type Profile struct {
-	Ref    string
-	tables map[tableKey]Table
+	Ref         string
+	BasisPoints int
+	tables      map[tableKey]Table
 }
 
-func NewProfile(ref string, tables map[Params]Table) (Profile, error) {
-	profile := Profile{Ref: ref, tables: make(map[tableKey]Table, len(tables))}
+func NewProfile(ref string, basisPoints int, tables map[Params]Table) (Profile, error) {
+	profile := Profile{Ref: ref, BasisPoints: basisPoints, tables: make(map[tableKey]Table, len(tables))}
 	for params, table := range tables {
 		profile.tables[tableKey{Rows: params.Rows, Risk: params.Risk}] = table
 	}
@@ -117,6 +119,9 @@ func (p Profile) Table(params Params) (Table, error) {
 func (p Profile) Validate() error {
 	if p.Ref == "" {
 		return fmt.Errorf("%w: profile has no reference", engine.ErrInvalidConfig)
+	}
+	if p.BasisPoints <= 0 {
+		return fmt.Errorf("%w: %s has no return", engine.ErrInvalidConfig, p.Ref)
 	}
 	for rows := MinRows; rows <= MaxRows; rows++ {
 		for _, risk := range Risks {

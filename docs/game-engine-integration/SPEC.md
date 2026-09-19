@@ -111,7 +111,7 @@ gaming-platform/
 |           |-- random_test.go                  new; deterministic test source
 |           `-- <game-slug>/
 |               |-- engine.go                   new; engine implementation
-|               |-- config.go                   new; immutable profile configuration
+|               |-- config.go                   new; immutable option configuration
 |               |-- rules.go                    new; outcome rules
 |               |-- payout.go                   new; integer payout calculation
 |               |-- manifest.go                 optional public game parameters
@@ -121,8 +121,8 @@ gaming-platform/
 |-- database/
 |   `-- migrations/
 |       |-- 000008_create_games.*.sql            existing foundation
-|       |-- 000009_create_rtp_profiles.*.sql     existing foundation
 |       |-- 000010_create_game_rounds.*.sql      existing foundation
+|       |-- 000017_replace_rtp_profiles_with_game_rtp.*.sql   the game's return as one column
 |       `-- NNNNNN_<required_change>.*.sql       conditional after source review
 |
 |-- frontend/
@@ -159,14 +159,14 @@ gaming-platform/
 |-- docs/
 |   `-- games/
 |       |-- <game-slug>-runtime.md               build and runtime instructions, with the section 3 assessment
-|       `-- <game-slug>-rtp.md                   RTP model, profiles, and verification evidence
+|       `-- <game-slug>-rtp.md                   RTP model, shipped options, and verification evidence
 |
 |-- Makefile                                     modified if game build tasks are needed
 `-- frontend/dist/games/<game-slug>/             generated deployment output
 ```
 
 Generated build output and dependencies remain untracked. Supplied source, licences,
-engine code, tests, immutable profile configuration, and verification documentation are
+engine code, tests, immutable option configuration, and verification documentation are
 tracked.
 
 The `Engine` interface belongs in the consuming `round` package. Concrete engines live
@@ -181,7 +181,7 @@ what the round orchestrator needs:
 - stable game identity;
 - configuration validation;
 - supported public parameters;
-- supported immutable RTP profiles;
+- the immutable RTP options it ships, ascending;
 - authoritative outcome and payout generation for a wager.
 
 The engine returns a safe result to the round package. The round package owns database
@@ -194,7 +194,7 @@ player requests play
     -> authenticate and authorize
     -> resolve the registered game engine
     -> validate game status, currency, wager, and public parameters
-    -> snapshot the active verified profile
+    -> snapshot the return the game is set to, under the game row's lock
     -> lock wallet, debit wager, write ledger row, and create round
     -> produce the authoritative engine outcome
     -> settle the round once and credit any win
@@ -243,29 +243,32 @@ selection uses integer weights, and payout multiplication checks overflow before
 wallet movement is attempted. Any rounding behavior must be explicit, shared, and
 included in RTP verification.
 
-## 9. RTP profiles and verification
+## 9. RTP options and verification
 
-An RTP database row is metadata. The immutable engine configuration referenced by that
-row produces the actual return.
+An engine ships a fixed set of returns, each an immutable configuration compiled into the
+server: the option's basis points and every table a player can choose. A game's database
+row records only which option it plays at. There is no RTP metadata row, and nothing in
+the database can make a percentage true.
 
-Each verified profile records:
+Each shipped option carries:
 
-- game and profile version;
-- target and theoretical RTP in basis points;
-- immutable engine configuration reference;
-- verification method and sample size;
-- observed RTP and verification time.
+- its basis points and the immutable configuration reference a settled round records;
+- an exact theoretical return, proved by a test from the production rules for every
+  board the option offers;
+- simulation evidence in the game's RTP document: sample size, observed return,
+  tolerance, runtime, and the date it was run.
 
-A verified profile is never edited in place. Changes create a new version. Every round
-captures the active profile when it opens, so later activation cannot alter that round.
+A shipped option's tables never change. A correction is a new configuration reference,
+and an option whose evidence is withdrawn leaves the set. Every round captures the
+return it opened at, so a later switch cannot alter that round.
 
-Before a profile can become verified:
+Before an option ships:
 
-1. Calculate theoretical RTP from the production rules.
+1. Calculate the theoretical return from the production rules and pin it in a test.
 2. Run a headless simulation through the production outcome path.
-3. Record the sample size, observed RTP, tolerance or confidence information, runtime,
-   and engine version.
-4. Reject verification when the evidence does not match the configured target.
+3. Record the sample size, observed return, tolerance, runtime, and engine reference in
+   the game's RTP document.
+4. Do not ship an option whose evidence does not match its basis points.
 
 ## 10. Failure and recovery rules
 
@@ -277,7 +280,7 @@ The implementation must safely handle:
 - a lost response followed by a retry;
 - duplicate settlement;
 - invalid or missing engine configuration;
-- an RTP profile changing while a round is open;
+- the game's return changing while a round is open;
 - an engine or animation failure.
 
 Database uniqueness, wallet row locks, idempotent ledger movements, legal round state
@@ -308,7 +311,7 @@ For every game:
 4. Choose the transaction and recovery strategy.
 5. Define the minimal engine contract from the audited behavior.
 6. Implement deterministic rules and payout tests.
-7. Implement one verified baseline profile.
+7. Implement the shipped RTP options, each proved exactly and simulated.
 8. Add the authenticated round endpoint and engine registry entry.
 9. Integrate the generic host and browser bridge.
 10. Adapt the game animation to the server result.
@@ -329,7 +332,7 @@ A game is integrated when:
 - unfinished rounds have a tested recovery rule;
 - source, runtime assumptions, and external dependencies are documented;
 - supported browsers pass integration checks;
-- RTP profiles are exposed only after mathematical and simulation verification;
+- RTP options ship only after mathematical and simulation verification;
 - the catalogue reports the title as integrated only after all requirements pass.
 
 If critical source, outcome logic, vendor dependencies, licensing, or RTP mathematics

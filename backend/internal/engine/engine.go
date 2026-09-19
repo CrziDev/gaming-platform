@@ -2,9 +2,16 @@ package engine
 
 import "encoding/json"
 
-// Input is what a round hands an engine: the configuration the round's RTP
-// profile references, the player's public parameters as sent, and the stake
-// already debited. The engine validates the first two itself.
+// Option is one return an engine can play, as the operator picks it: the
+// basis points the console offers and the immutable configuration behind them.
+type Option struct {
+	Ref         string
+	BasisPoints int
+}
+
+// Input is what a round hands an engine: the configuration behind the game's
+// chosen return, the player's public parameters as sent, and the stake already
+// debited. The engine validates the first two itself.
 type Input struct {
 	ConfigRef  string
 	Params     json.RawMessage

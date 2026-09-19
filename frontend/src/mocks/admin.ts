@@ -6,7 +6,6 @@ import type {
   AuditEntry,
   ConsoleAlert,
   DashboardSummary,
-  RtpProfile,
   Wallet,
 } from '@/api/types'
 
@@ -31,7 +30,7 @@ export const dashboardSummary: DashboardSummary = {
 export const consoleAlerts: ConsoleAlert[] = [
   { id: 'al-1', tone: 'warning', message: '1 deposit waiting over 20 min', href: '/admin/deposits' },
   { id: 'al-2', tone: 'neutral', message: 'Skyline Crash disabled by operator', href: '/admin/games' },
-  { id: 'al-3', tone: 'danger', message: 'Aurora Dice RTP set to 102% · ends 18:00', href: '/admin/rtp' },
+  { id: 'al-3', tone: 'danger', message: 'Aurora Dice playing at 105%', href: '/admin/rtp' },
 ]
 
 const firstNames = ['juan', 'ana', 'dee', 'kris', 'mia', 'leo', 'noel', 'rita', 'sam', 'tess']
@@ -256,9 +255,9 @@ export const auditEntries: AuditEntry[] = [
     id: 'au-3',
     created_at: hoursAgo(3),
     operator: 'A. Reyes',
-    action: 'rtp.activate',
+    action: 'game.rtp_change',
     entity: 'aurora-dice',
-    detail: 'Set Aurora Dice RTP 102% until 18:00',
+    detail: 'Changed Aurora Dice (aurora-dice) RTP from 95.00% to 105.00%',
   },
   {
     id: 'au-4',
@@ -278,54 +277,18 @@ export const auditEntries: AuditEntry[] = [
   },
 ]
 
+// Plinko is the one integrated game and carries the engine's four options; the
+// first fixture game runs above 100% so the danger reading has something to show.
+const PLINKO_OPTIONS = [9_000, 9_500, 10_500, 11_000]
+
 export const adminGames: AdminGame[] = games.map((game, index) => ({
   ...game,
-  integration: index === 2 ? 'under_review' : 'supported',
-  active_rtp_basis_points: [10_200, 9_400, 9_600][index] ?? null,
+  integration: game.slug === 'plinko' ? 'integrated' : index === 2 ? 'under_review' : 'supported',
+  rtp_basis_points: game.slug === 'plinko' ? 9_500 : index === 0 ? 10_500 : index === 1 ? 9_500 : null,
+  rtp_options: game.slug === 'plinko' || index === 0 ? PLINKO_OPTIONS : [],
   rounds_30d: [18_420, 12_880, 6_140][index] ?? 0,
   updated_at: game.created_at,
 }))
-
-const profile = (
-  id: string,
-  game: AdminGame,
-  name: string,
-  version: number,
-  target: number,
-  status: RtpProfile['status'],
-  operator: string,
-  created: string,
-  until: string | null = null,
-  isDefault = status === 'active' && until === null,
-): RtpProfile => ({
-  id,
-  game_id: game.id,
-  game_slug: game.slug,
-  game_name: game.name,
-  name,
-  version,
-  target_basis_points: target,
-  status,
-  engine_config_ref: '',
-  theoretical_basis_points: status === 'draft' ? null : target,
-  observed_basis_points: status === 'draft' ? null : target,
-  verified_at: status === 'draft' ? null : created,
-  effective_from: null,
-  effective_until: until,
-  is_default: isDefault,
-  created_by: '',
-  created_by_display_name: operator,
-  created_at: created,
-  updated_at: created,
-})
-
-export const rtpProfiles: RtpProfile[] = [
-  profile('rtp-1', adminGames[0]!, 'Promo', 1, 10_200, 'active', 'A. Reyes', hoursAgo(3), hoursAgo(-6)),
-  profile('rtp-2', adminGames[0]!, 'Standard', 1, 9_400, 'verified', 'A. Reyes', daysAgo(4), null, true),
-  profile('rtp-3', adminGames[1]!, 'Standard', 1, 9_400, 'active', 'R. Cruz', daysAgo(12)),
-  profile('rtp-4', adminGames[2]!, 'Standard', 1, 9_600, 'retired', 'R. Cruz', daysAgo(40)),
-  profile('rtp-5', adminGames[2]!, 'Standard', 2, 9_600, 'draft', 'R. Cruz', daysAgo(2)),
-]
 
 export const staffAccounts = [
   { id: 'st-1', name: 'R. Cruz', email: 'r.cruz@ops.example.com', role: 'Operator', enabled: true },

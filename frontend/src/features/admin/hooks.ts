@@ -4,10 +4,8 @@ import type { AccountStatus } from '@/api/types'
 import type { Currency } from '@/lib/money'
 
 import {
-  activateRtpProfile,
   adjustWallet,
   createGame,
-  createRtpProfile,
   fetchAdminGame,
   fetchAdminGames,
   fetchAdminPaymentMethods,
@@ -18,8 +16,6 @@ import {
   fetchConsoleAlerts,
   fetchDashboard,
   fetchDepositQueue,
-  fetchGameRtpProfiles,
-  fetchRtpProfiles,
   fetchStaff,
   fetchUser,
   fetchUserAdjustments,
@@ -29,13 +25,11 @@ import {
   fetchUserWallets,
   fetchUsers,
   reviewDeposit,
+  setGameRtp,
   setUserStatus,
   updateGame,
-  updateRtpProfile,
   type GameInput,
   type GamePatch,
-  type RtpDraftInput,
-  type RtpSchedule,
   type UserFilter,
 } from './api'
 
@@ -189,38 +183,10 @@ export function useAdminRounds(filter: Parameters<typeof fetchAdminRounds>[0], e
   })
 }
 
-export function useRtpProfiles() {
-  return useQuery({ queryKey: ['admin', 'rtp'], queryFn: fetchRtpProfiles })
-}
-
-export function useGameRtpProfiles(gameId: string) {
-  return useQuery({
-    queryKey: ['admin', 'rtp', 'game', gameId],
-    queryFn: () => fetchGameRtpProfiles(gameId),
-    enabled: gameId !== '',
-  })
-}
-
-export function useCreateRtpProfile() {
+export function useSetGameRtp() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ gameId, input }: { gameId: string; input: RtpDraftInput }) => createRtpProfile(gameId, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
-  })
-}
-
-export function useUpdateRtpProfile() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: Partial<RtpDraftInput> }) => updateRtpProfile(id, patch),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
-  })
-}
-
-export function useActivateRtpProfile() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, schedule }: { id: string; schedule: RtpSchedule }) => activateRtpProfile(id, schedule),
+    mutationFn: ({ gameId, basisPoints }: { gameId: string; basisPoints: number }) => setGameRtp(gameId, basisPoints),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
 }

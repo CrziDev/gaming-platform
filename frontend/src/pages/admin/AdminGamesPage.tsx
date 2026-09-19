@@ -84,10 +84,10 @@ export function AdminGamesPage() {
             },
             {
               key: 'rtp',
-              header: 'Active RTP',
+              header: 'RTP',
               align: 'right',
               width: '130px',
-              cell: (row) => <ActiveRtp basisPoints={row.active_rtp_basis_points} />,
+              cell: (row) => <ActiveRtp basisPoints={row.rtp_basis_points} />,
             },
             {
               key: 'status',
@@ -100,7 +100,7 @@ export function AdminGamesPage() {
             <RecordCard
               onClick={() => void navigate(adminPaths.game(row.id))}
               title={row.name}
-              meta={`${row.category_name} · ${row.active_rtp_basis_points === null ? 'no active profile' : formatPercent(row.active_rtp_basis_points)}`}
+              meta={`${row.category_name} · ${row.rtp_basis_points === null ? 'no RTP set' : formatPercent(row.rtp_basis_points)}`}
               aside={<StatusBadge status={row.status} />}
             />
           )}

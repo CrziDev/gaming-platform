@@ -214,10 +214,10 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
           idempotencyKey: crypto.randomUUID(),
         })
 
-        // A round settled on another profile means the table on screen is stale.
+        // A round settled at another return means the table on screen is stale.
         // The refetched manifest reconfigures the board once every ball has landed;
         // this ball still drops, because its drop carries its own settled result.
-        if (response.round.rtp_profile_id !== served.rtp_profile_id) {
+        if (response.round.rtp_basis_points !== served.rtp_basis_points) {
           void queryClient.invalidateQueries({ queryKey: gameManifestQueryKey(slug) })
         }
 

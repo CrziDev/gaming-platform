@@ -227,7 +227,7 @@ export const rounds: Round[] = transactions
           ? 'skyline-crash'
           : 'vault-break',
       game_name: stake.label.replace('Stake · ', ''),
-      rtp_profile_id: 'rtp-demo-9600',
+      rtp_basis_points: 9500,
       status: 'settled' as const,
       stake_minor: stakeAmount,
       win_minor: win?.amount_minor ?? 0,

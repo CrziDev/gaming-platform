@@ -12,7 +12,8 @@ export type PlinkoTable = Record<PlinkoRows, Record<PlinkoRisk, readonly number[
 
 // The supplied paytable, in integer hundredths (1.7× is 170). It is the demo fixture's
 // table only: the live board is configured from `GET /api/games/{slug}/manifest`, and
-// the active profile differs from this on six low-risk boards (docs/games/plinko-rtp.md §10).
+// every shipped RTP option differs from this on some low-risk boards
+// (docs/games/plinko-rtp.md §9).
 export const PLINKO_MULTIPLIERS_HUNDREDTHS: PlinkoTable = {
   8: {
     low: [200, 150, 120, 100, 80, 100, 120, 150, 200],

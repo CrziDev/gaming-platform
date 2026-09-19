@@ -19,7 +19,7 @@ const weightScale = 1e9
 func solve(args []string) error {
 	flags := flag.NewFlagSet("solve", flag.ContinueOnError)
 	ref := flags.String("config", "", "engine configuration reference whose multipliers to solve for")
-	target := flags.Int("target", 9600, "return to reach, in basis points")
+	target := flags.Int("target", 0, "return to reach, in basis points; the configuration's own by default")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -30,11 +30,16 @@ func solve(args []string) error {
 	if err != nil {
 		return err
 	}
+	if *target == 0 {
+		*target = profile.BasisPoints
+	}
 	return writeSolution(os.Stdout, profile, *target)
 }
 
+// writeSolution reports every board's decay and centre share, then the complete
+// map[Params]Table literal to paste into the profile's file.
 func writeSolution(w io.Writer, profile plinko.Profile, target int) error {
-	fmt.Fprintf(w, "%s at %d basis points\n\n| Rows | Risk | Decay | Weights |\n| ---: | --- | ---: | --- |\n", profile.Ref, target)
+	fmt.Fprintf(w, "%s at %d basis points\n\n| Rows | Risk | Decay | Centre share |\n| ---: | --- | ---: | ---: |\n", profile.Ref, target)
 	var literal strings.Builder
 	for rows := plinko.MinRows; rows <= plinko.MaxRows; rows++ {
 		for _, risk := range plinko.Risks {
@@ -47,12 +52,26 @@ func writeSolution(w io.Writer, profile plinko.Profile, target int) error {
 			if err != nil {
 				return fmt.Errorf("%d rows %s: %w", rows, risk, err)
 			}
-			fmt.Fprintf(w, "| %d | %s | %.4f | `%s` |\n", rows, risk, decay, joinInt64(weights))
-			fmt.Fprintf(&literal, "\t{Rows: %d, Risk: Risk%s}: {\n\t\tWeights: []int64{%s},\n", rows, strings.ToUpper(string(risk[:1]))+string(risk[1:]), joinInt64(weights))
+			fmt.Fprintf(w, "| %d | %s | %.4f | %.2f%% |\n", rows, risk, decay, centreShare(weights))
+			fmt.Fprintf(&literal, "\t{Rows: %d, Risk: Risk%s}: {\n\t\tWeights:               []int64{%s},\n\t\tMultipliersHundredths: []int{%s},\n\t},\n",
+				rows, strings.ToUpper(string(risk[:1]))+string(risk[1:]), joinInt64(weights), joinInt(table.MultipliersHundredths))
 		}
 	}
-	fmt.Fprintf(w, "\nGo literal weights:\n\n%s", literal.String())
+	fmt.Fprintf(w, "\nGo literal:\n\n%s", literal.String())
 	return nil
+}
+
+// centreShare is the probability of the centre slot, or of the two centre
+// slots together on a board with an even number of them, in percent.
+func centreShare(weights []int64) float64 {
+	var total, centre int64
+	for i, weight := range weights {
+		total += weight
+		if 2*i == len(weights)-1 || 2*i == len(weights)-2 || 2*i == len(weights) {
+			centre += weight
+		}
+	}
+	return 100 * float64(centre) / float64(total)
 }
 
 // solveWeights bisects the decay in (0, 1) until the integer model returns the
@@ -87,6 +106,14 @@ func decayWeights(slots int, decay float64) []int64 {
 }
 
 func joinInt64(values []int64) string {
+	parts := make([]string, len(values))
+	for i, value := range values {
+		parts[i] = fmt.Sprint(value)
+	}
+	return strings.Join(parts, ", ")
+}
+
+func joinInt(values []int) string {
 	parts := make([]string, len(values))
 	for i, value := range values {
 		parts[i] = fmt.Sprint(value)

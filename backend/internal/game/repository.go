@@ -30,10 +30,9 @@ type AdminFilter struct {
 const gameColumns = `
 	g.id::text, g.slug, g.name, COALESCE(g.description, ''), g.category_slug, c.name,
 	g.provider, g.status, g.integration, g.currency, g.min_wager_minor, g.max_wager_minor, g.wager_step_minor,
-	COALESCE(g.thumbnail_path, ''), g.created_at, g.updated_at`
+	COALESCE(g.thumbnail_path, ''), g.rtp_basis_points, g.created_at, g.updated_at`
 
 const adminColumns = gameColumns + `,
-	(SELECT p.target_basis_points FROM rtp_profiles p WHERE p.game_id = g.id AND p.status = 'active'),
 	(SELECT count(*) FROM game_rounds r WHERE r.game_id = g.id AND r.started_at >= now() - interval '30 days')`
 
 const catalogueWhere = `
@@ -335,34 +334,41 @@ type scanner interface {
 
 func scanGame(row scanner) (Game, error) {
 	var item Game
+	var rtp sql.NullInt64
 	err := row.Scan(
 		&item.ID, &item.Slug, &item.Name, &item.Description, &item.CategorySlug, &item.CategoryName,
 		&item.Provider, &item.Status, &item.Integration, &item.Currency, &item.MinWagerMinor, &item.MaxWagerMinor, &item.WagerStepMinor,
-		&item.ThumbnailPath, &item.CreatedAt, &item.UpdatedAt,
+		&item.ThumbnailPath, &rtp, &item.CreatedAt, &item.UpdatedAt,
 	)
 	if err != nil {
 		return Game{}, err
 	}
+	item.RTPBasisPoints = basisPointsOf(rtp)
 	return item, nil
 }
 
 func scanAdminGame(row scanner) (AdminGame, error) {
 	var item AdminGame
-	var activeRTP sql.NullInt64
+	var rtp sql.NullInt64
 	err := row.Scan(
 		&item.ID, &item.Slug, &item.Name, &item.Description, &item.CategorySlug, &item.CategoryName,
 		&item.Provider, &item.Status, &item.Integration, &item.Currency, &item.MinWagerMinor, &item.MaxWagerMinor, &item.WagerStepMinor,
-		&item.ThumbnailPath, &item.CreatedAt, &item.UpdatedAt,
-		&activeRTP, &item.Rounds30d,
+		&item.ThumbnailPath, &rtp, &item.CreatedAt, &item.UpdatedAt,
+		&item.Rounds30d,
 	)
 	if err != nil {
 		return AdminGame{}, err
 	}
-	if activeRTP.Valid {
-		basisPoints := int(activeRTP.Int64)
-		item.ActiveRTPBasisPoints = &basisPoints
-	}
+	item.RTPBasisPoints = basisPointsOf(rtp)
 	return item, nil
+}
+
+func basisPointsOf(value sql.NullInt64) *int {
+	if !value.Valid {
+		return nil
+	}
+	basisPoints := int(value.Int64)
+	return &basisPoints
 }
 
 func isUniqueViolation(err error) bool {

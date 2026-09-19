@@ -61,7 +61,7 @@ const multiplierTable = z.array(safeInteger.positive())
 // length — and the parsed form is the table the session reads by rows and risk.
 export const plinkoManifestSchema = z
   .object({
-    rtp_profile_id: z.string().min(1),
+    rtp_basis_points: z.number().int().positive(),
     rows: z.array(z.number().int()),
     risks: z.array(z.string()),
     multipliers_hundredths: z.record(z.string(), z.record(z.string(), multiplierTable)),
@@ -84,7 +84,7 @@ export const plinkoManifestSchema = z
       }
       table[rows] = byRisk as Record<PlinkoRisk, readonly number[]>
     }
-    return { rtp_profile_id: manifest.rtp_profile_id, table: table as PlinkoTable }
+    return { rtp_basis_points: manifest.rtp_basis_points, table: table as PlinkoTable }
   })
 
 export type PlinkoBoards = z.infer<typeof plinkoManifestSchema>
@@ -97,7 +97,7 @@ export const playRoundResponseSchema: z.ZodType<PlayRoundResponse> = z.object({
     game_id: z.string(),
     game_slug: z.string(),
     game_name: z.string(),
-    rtp_profile_id: z.string(),
+    rtp_basis_points: safeInteger,
     status: z.enum(['open', 'settled', 'cancelled', 'failed']),
     stake_minor: safeInteger,
     win_minor: safeInteger.nullable(),

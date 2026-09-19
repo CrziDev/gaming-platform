@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,7 +21,6 @@ const (
 	defaultRounds    = 100_000_000
 	defaultStake     = 100
 	defaultTolerance = 100
-	method           = "simulation"
 )
 
 type boardResult struct {
@@ -66,28 +66,50 @@ func (r report) failures() []boardResult {
 
 func simulate(args []string) error {
 	flags := flag.NewFlagSet("simulate", flag.ContinueOnError)
-	ref := flags.String("config", "", "engine configuration reference to simulate")
-	target := flags.Int("target", 9600, "return the configuration is meant to produce, in basis points")
+	ref := flags.String("config", "", "engine configuration reference to simulate; every option by default")
+	target := flags.Int("target", 0, "return the configuration is meant to produce, in basis points; its own by default")
 	rounds := flags.Int64("rounds", defaultRounds, "rounds to play on every board")
 	stake := flags.Int64("stake", defaultStake, "stake per round in minor units")
 	tolerance := flags.Int("tolerance", defaultTolerance, "largest accepted distance from the target, in basis points")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
+	var profiles []plinko.Profile
 	if *ref == "" {
-		return errors.New("simulate: -config is required")
+		for _, option := range plinko.Options() {
+			profile, err := plinko.ProfileByRef(option.Ref)
+			if err != nil {
+				return err
+			}
+			profiles = append(profiles, profile)
+		}
+	} else {
+		profile, err := plinko.ProfileByRef(*ref)
+		if err != nil {
+			return err
+		}
+		profiles = append(profiles, profile)
 	}
-	profile, err := plinko.ProfileByRef(*ref)
-	if err != nil {
-		return err
+	var failed []string
+	for i, profile := range profiles {
+		want := *target
+		if want == 0 {
+			want = profile.BasisPoints
+		}
+		result, err := runSimulation(profile, want, *rounds, *stake, *tolerance)
+		if err != nil {
+			return err
+		}
+		if i > 0 {
+			fmt.Fprintln(os.Stdout)
+		}
+		writeReport(os.Stdout, result)
+		if failures := result.failures(); len(failures) > 0 {
+			failed = append(failed, fmt.Sprintf("%s: %d of %d boards are outside %d bp of %d bp", profile.Ref, len(failures), len(result.Boards), *tolerance, want))
+		}
 	}
-	result, err := runSimulation(profile, *target, *rounds, *stake, *tolerance)
-	if err != nil {
-		return err
-	}
-	writeReport(os.Stdout, result)
-	if failures := result.failures(); len(failures) > 0 {
-		return fmt.Errorf("simulate: %d of %d boards are outside %d bp of %d bp", len(failures), len(result.Boards), *tolerance, *target)
+	if len(failed) > 0 {
+		return fmt.Errorf("simulate: %s", strings.Join(failed, "; "))
 	}
 	return nil
 }

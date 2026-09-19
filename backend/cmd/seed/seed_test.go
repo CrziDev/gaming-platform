@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gaming-platform/backend/internal/engine/plinko"
 	"github.com/gaming-platform/backend/internal/testdb"
@@ -41,91 +40,56 @@ func beginSeed(t *testing.T, db *sql.DB) (context.Context, *sql.Tx) {
 	return ctx, tx
 }
 
-type seededProfile struct {
-	ID                     string
-	EngineConfigRef        string
-	TargetBasisPoints      int
-	TheoreticalBasisPoints int
-	ObservedBasisPoints    int
-	VerificationMethod     string
-	SampleSize             int64
-	VerifiedAt             time.Time
-}
-
-func activeProfiles(t *testing.T, ctx context.Context, tx *sql.Tx, gameID string) []seededProfile {
-	t.Helper()
-	rows, err := tx.QueryContext(ctx, `
-		SELECT id::text, engine_config_ref, target_basis_points, theoretical_basis_points, observed_basis_points, verification_method, sample_size, verified_at
-		  FROM rtp_profiles
-		 WHERE game_id = ($1::text)::uuid AND status = 'active'`, gameID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []seededProfile
-	for rows.Next() {
-		var p seededProfile
-		if err := rows.Scan(&p.ID, &p.EngineConfigRef, &p.TargetBasisPoints, &p.TheoreticalBasisPoints, &p.ObservedBasisPoints, &p.VerificationMethod, &p.SampleSize, &p.VerifiedAt); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, p)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	return out
-}
-
-// resolveConfig is the engine lookup a round would make for the seeded
-// reference; a fixture whose reference no engine knows would fail every round.
-func resolveConfig(t *testing.T, gameSlug, ref string) {
-	t.Helper()
+// offersRTP is the lookup a round would make for the seeded return; a fixture
+// set to a return no engine ships would fail every round.
+func offersRTP(gameSlug string, basisPoints int) bool {
 	switch gameSlug {
 	case "plinko":
-		if _, err := plinko.ProfileByRef(ref); err != nil {
-			t.Fatalf("%s: %v", gameSlug, err)
-		}
+		_, ok := plinko.ProfileByBasisPoints(basisPoints)
+		return ok
 	default:
-		t.Fatalf("%s: no engine resolves its seeded configuration", gameSlug)
+		return false
 	}
 }
 
-func TestSeedCatalogueLeavesEachIntegratedGameOneResolvableActiveDefault(t *testing.T) {
+func TestSeedCatalogueGivesEachIntegratedGameAReturnItsEngineOffers(t *testing.T) {
 	db := openSeedTestDB(t)
 	ctx, tx := beginSeed(t, db)
 
-	for _, want := range profiles {
-		var gameID, integration, status string
-		var defaultID sql.NullString
-		if err := tx.QueryRowContext(ctx, `SELECT id::text, integration, status, default_rtp_profile_id::text FROM games WHERE slug = $1`, want.gameSlug).
-			Scan(&gameID, &integration, &status, &defaultID); err != nil {
-			t.Fatalf("%s: %v", want.gameSlug, err)
+	read := func() map[string]sql.NullInt64 {
+		rows, err := tx.QueryContext(ctx, `SELECT slug, rtp_basis_points FROM games WHERE integration = 'integrated' AND status = 'active'`)
+		if err != nil {
+			t.Fatal(err)
 		}
-		if integration != "integrated" || status != "active" {
-			t.Fatalf("%s: integration %q status %q", want.gameSlug, integration, status)
+		defer rows.Close()
+		out := map[string]sql.NullInt64{}
+		for rows.Next() {
+			var slug string
+			var rtp sql.NullInt64
+			if err := rows.Scan(&slug, &rtp); err != nil {
+				t.Fatal(err)
+			}
+			out[slug] = rtp
 		}
-		active := activeProfiles(t, ctx, tx, gameID)
-		if len(active) != 1 {
-			t.Fatalf("%s: %d active profiles", want.gameSlug, len(active))
+		return out
+	}
+	first := read()
+	if len(first) == 0 {
+		t.Fatal("no integrated game was seeded")
+	}
+	for slug, rtp := range first {
+		if !rtp.Valid || !offersRTP(slug, int(rtp.Int64)) {
+			t.Fatalf("%s: seeded return %v is not one its engine offers", slug, rtp)
 		}
-		got := active[0]
-		resolveConfig(t, want.gameSlug, got.EngineConfigRef)
-		if got.EngineConfigRef != want.engineConfigRef || got.TargetBasisPoints != want.targetBasisPoints ||
-			got.TheoreticalBasisPoints != want.theoreticalBasisPoints || got.ObservedBasisPoints != want.observedBasisPoints ||
-			got.VerificationMethod != want.verificationMethod || got.SampleSize != want.sampleSize || got.VerifiedAt.IsZero() {
-			t.Fatalf("%s: seeded %+v, want %+v", want.gameSlug, got, want)
-		}
-		if !defaultID.Valid || defaultID.String != got.ID {
-			t.Fatalf("%s: default profile %v, active %s", want.gameSlug, defaultID, got.ID)
-		}
-
-		if err := seedCatalogue(ctx, tx); err != nil {
-			t.Fatalf("second seed: %v", err)
-		}
-		again := activeProfiles(t, ctx, tx, gameID)
-		if len(again) != 1 || again[0].ID != got.ID || !again[0].VerifiedAt.Equal(got.VerifiedAt) {
-			t.Fatalf("%s: a second seed changed the active profile: %+v", want.gameSlug, again)
-		}
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE games SET rtp_basis_points = NULL WHERE slug = 'plinko'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := seedCatalogue(ctx, tx); err != nil {
+		t.Fatalf("second seed: %v", err)
+	}
+	if again := read(); again["plinko"] != first["plinko"] {
+		t.Fatalf("a second seed left plinko at %v, want %v restored", again["plinko"], first["plinko"])
 	}
 }
 
@@ -159,16 +123,23 @@ func TestSeedCatalogueRemovesTheLegacyPlinkoOnlyWhenNothingReferencesIt(t *testi
 	if err := tx.QueryRowContext(ctx, insertLegacy).Scan(&referenced); err != nil {
 		t.Fatal(err)
 	}
+	var userID, walletID string
+	if err := tx.QueryRowContext(ctx, `INSERT INTO users (email, password_hash, display_name) VALUES ('seed-legacy@example.com', 'test-hash', 'Legacy') RETURNING id::text`).Scan(&userID); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.QueryRowContext(ctx, `INSERT INTO wallets (user_id, currency) VALUES (($1::text)::uuid, 'PHP') RETURNING id::text`, userID).Scan(&walletID); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status)
-		VALUES (($1::text)::uuid, 'Draft', 1, 9600, 'draft')`, referenced); err != nil {
+		INSERT INTO game_rounds (round_key, user_id, game_id, wallet_id, currency, rtp_basis_points, stake_minor)
+		VALUES ('seed-legacy-round', ($1::text)::uuid, ($2::text)::uuid, ($3::text)::uuid, 'PHP', 9600, 100)`, userID, referenced, walletID); err != nil {
 		t.Fatal(err)
 	}
 	if err := seedCatalogue(ctx, tx); err != nil {
-		t.Fatalf("seed with a legacy row that has a profile: %v", err)
+		t.Fatalf("seed with a legacy row that has a round: %v", err)
 	}
 	if legacyCount() != 1 {
-		t.Fatal("a plinko-drop row with an RTP profile was removed")
+		t.Fatal("a plinko-drop row with a round was removed")
 	}
 }
 

@@ -13,7 +13,7 @@ import (
 )
 
 func newTestHandler() *Handler {
-	return NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
 }
 
 func TestListRejectsInvalidFiltersBeforeTouchingTheDatabase(t *testing.T) {

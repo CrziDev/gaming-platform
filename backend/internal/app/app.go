@@ -16,7 +16,6 @@ import (
 	"github.com/gaming-platform/backend/internal/httpx"
 	"github.com/gaming-platform/backend/internal/notification"
 	"github.com/gaming-platform/backend/internal/round"
-	"github.com/gaming-platform/backend/internal/rtp"
 	"github.com/gaming-platform/backend/internal/user"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
@@ -29,13 +28,13 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub) http.Handle
 		LoginsPerMinute: cfg.LoginsPerMinute,
 	})
 	currencyHandler := currency.NewHandler(db, logger)
-	gameHandler := game.NewHandler(db, logger)
-	rtpHandler := rtp.NewHandler(db, logger)
+	engines := round.Engines{"plinko": plinko.New()}
+	gameHandler := game.NewHandler(db, logger, engines)
 	walletHandler := wallet.NewHandler(db, logger)
 	depositHandler := deposit.NewHandler(db, logger, cfg.ProofDir)
 	dashboardHandler := dashboard.NewHandler(db, logger)
 	auditHandler := audit.NewHandler(db, logger)
-	roundHandler := round.NewHandler(db, logger, round.Engines{"plinko": plinko.New()}, cfg.BigWinMultiplierHundredths)
+	roundHandler := round.NewHandler(db, logger, engines, cfg.BigWinMultiplierHundredths)
 	notificationHandler := notification.NewHandler(db, logger)
 	chatHandler := chat.NewHandler(db, logger, hub, chat.Config{MessagesPerMinute: cfg.ChatMessagesPerMinute, AllowedOrigins: cfg.AllowedOrigins})
 	player, admin := authHandler.Player, authHandler.Admin
@@ -84,11 +83,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub) http.Handle
 	mux.HandleFunc("POST /api/admin/games", admin(gameHandler.AdminCreate))
 	mux.HandleFunc("GET /api/admin/games/{id}", admin(gameHandler.AdminGet))
 	mux.HandleFunc("PATCH /api/admin/games/{id}", admin(gameHandler.AdminUpdate))
-	mux.HandleFunc("GET /api/admin/games/{id}/rtp-profiles", admin(rtpHandler.AdminListForGame))
-	mux.HandleFunc("POST /api/admin/games/{id}/rtp-profiles", admin(rtpHandler.AdminCreate))
-	mux.HandleFunc("GET /api/admin/rtp-profiles", admin(rtpHandler.AdminList))
-	mux.HandleFunc("PATCH /api/admin/rtp-profiles/{id}", admin(rtpHandler.AdminUpdate))
-	mux.HandleFunc("POST /api/admin/rtp-profiles/{id}/activate", admin(rtpHandler.AdminActivate))
+	mux.HandleFunc("PUT /api/admin/games/{id}/rtp", admin(gameHandler.AdminSetRTP))
 	mux.HandleFunc("GET /api/admin/audit-logs", admin(withoutAccount(auditHandler.List)))
 	mux.HandleFunc("GET /api/admin/dashboard", admin(dashboardHandler.Get))
 	mux.HandleFunc("/", notFound)

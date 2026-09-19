@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gaming-platform/backend/internal/chat"
-	"github.com/gaming-platform/backend/internal/rtp"
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver with database/sql
 )
 
@@ -29,17 +28,6 @@ func Run(ctx context.Context, logger *slog.Logger, cfg Config) error {
 		slog.Bool("cookie_secure", cfg.CookieSecure),
 		slog.Duration("ttl", cfg.SessionTTL),
 		slog.Any("allowed_origins", cfg.AllowedOrigins))
-
-	workerCtx, stopWorkers := context.WithCancel(ctx)
-	workerDone := make(chan struct{})
-	go func() {
-		defer close(workerDone)
-		rtp.RunReverter(workerCtx, db, logger, 30*time.Second)
-	}()
-	defer func() {
-		stopWorkers()
-		<-workerDone
-	}()
 
 	hub := chat.NewHub()
 	server := &http.Server{
