@@ -46,7 +46,7 @@ func createWalletTestUser(t *testing.T, db *sql.DB) string {
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM audit_logs WHERE actor_user_id = ($1::text)::uuid`, id)
-		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, id)
+		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid OR actor_user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM wallets WHERE user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM users WHERE id = ($1::text)::uuid`, id)
 	})

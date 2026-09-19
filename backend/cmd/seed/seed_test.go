@@ -170,3 +170,73 @@ func TestSeedCatalogueRemovesTheLegacyPlinkoOnlyWhenNothingReferencesIt(t *testi
 		t.Fatal("a plinko-drop row with an RTP profile was removed")
 	}
 }
+
+func TestSeedPlayersFundsEachWalletOnceThroughTheLedger(t *testing.T) {
+	db := openSeedTestDB(t)
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback() })
+
+	const adminEmail = "seed-test-owner@example.com"
+	adminID, err := seedAdmin(ctx, tx, adminEmail, "seed-test-password", "Owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fundWallets(ctx, tx, adminID, adminID, adminOpeningMinor); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := seedPlayers(ctx, tx, adminEmail, adminID, "seed-test-password"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := seedPlayers(ctx, tx, adminEmail, adminID, "seed-test-password"); err != nil {
+		t.Fatalf("second seed: %v", err)
+	}
+
+	balance := func(email, currency string) (int64, int) {
+		var got int64
+		var movements int
+		if err := tx.QueryRowContext(ctx, `
+			SELECT w.balance_minor, (SELECT count(*) FROM wallet_transactions t WHERE t.wallet_id = w.id)
+			  FROM wallets w JOIN users u ON u.id = w.user_id
+			 WHERE u.email = $1 AND w.currency = $2`, email, currency).Scan(&got, &movements); err != nil {
+			t.Fatalf("%s %s: %v", email, currency, err)
+		}
+		return got, movements
+	}
+
+	for _, p := range players {
+		for currency, want := range p.openingMinor {
+			got, movements := balance(p.email, currency)
+			if got != want || movements != 1 {
+				t.Fatalf("%s %s: balance %d after %d movements, want %d after 1", p.email, currency, got, movements, want)
+			}
+		}
+	}
+	for currency, want := range adminOpeningMinor {
+		if got, movements := balance(adminEmail, currency); got != want || movements != 1 {
+			t.Fatalf("admin %s: balance %d after %d movements, want %d after 1", currency, got, movements, want)
+		}
+	}
+
+	var unfunded int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT count(*) FROM wallets w JOIN users u ON u.id = w.user_id
+		 WHERE u.email = 'tess.ocampo@example.com'`).Scan(&unfunded); err != nil {
+		t.Fatal(err)
+	}
+	if unfunded != 0 {
+		t.Fatalf("the closed player was given %d wallets", unfunded)
+	}
+
+	var actor string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT DISTINCT actor_user_id::text FROM wallet_transactions WHERE idempotency_key = $1`, openingBalanceKey).Scan(&actor); err != nil {
+		t.Fatal(err)
+	}
+	if actor != adminID {
+		t.Fatalf("opening balances were credited by %s, want the admin %s", actor, adminID)
+	}
+}

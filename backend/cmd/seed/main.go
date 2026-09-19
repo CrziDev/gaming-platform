@@ -74,7 +74,11 @@ func run() error {
 		return err
 	}
 
-	playerCount, err := seedPlayers(ctx, tx, adminEmail, playerPassword)
+	if err := fundWallets(ctx, tx, adminID, adminID, adminOpeningMinor); err != nil {
+		return fmt.Errorf("seed: admin: %w", err)
+	}
+
+	playerCount, err := seedPlayers(ctx, tx, adminEmail, adminID, playerPassword)
 	if err != nil {
 		return err
 	}
@@ -88,7 +92,7 @@ func run() error {
 	}
 
 	fmt.Printf("seeded admin %s (%s)\n", adminEmail, adminID)
-	fmt.Printf("seeded %d players\n", playerCount)
+	fmt.Printf("seeded %d players with opening balances\n", playerCount)
 	fmt.Printf("seeded %d categories, %d games, and %d RTP profiles\n", len(categories), len(games), len(profiles))
 	return nil
 }

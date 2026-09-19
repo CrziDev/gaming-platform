@@ -123,7 +123,7 @@ func ListAdminTransactions(ctx context.Context, db *sql.DB, filter AdminTransact
 
 const walletColumns = `id::text, user_id::text, currency, balance_minor, status, created_at, updated_at`
 
-func provision(ctx context.Context, tx *sql.Tx, userID string) error {
+func ProvisionTx(ctx context.Context, tx *sql.Tx, userID string) error {
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO wallets (user_id, currency)
 		SELECT ($1::text)::uuid, code FROM currencies WHERE enabled = true
@@ -140,7 +140,7 @@ func List(ctx context.Context, db *sql.DB, userID string) ([]Wallet, error) {
 		return nil, fmt.Errorf("wallet: begin provision: %w", err)
 	}
 	defer tx.Rollback()
-	if err := provision(ctx, tx, userID); err != nil {
+	if err := ProvisionTx(ctx, tx, userID); err != nil {
 		return nil, err
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT `+walletColumns+` FROM wallets WHERE user_id = ($1::text)::uuid ORDER BY currency`, userID)
@@ -164,7 +164,7 @@ func Get(ctx context.Context, db *sql.DB, userID, currency string) (Wallet, erro
 		return Wallet{}, fmt.Errorf("wallet: begin provision: %w", err)
 	}
 	defer tx.Rollback()
-	if err := provision(ctx, tx, userID); err != nil {
+	if err := ProvisionTx(ctx, tx, userID); err != nil {
 		return Wallet{}, err
 	}
 	var w Wallet
@@ -250,7 +250,7 @@ func Adjust(ctx context.Context, db *sql.DB, actorID, userID, currency, directio
 	}
 	defer tx.Rollback()
 
-	if err := provision(ctx, tx, userID); err != nil {
+	if err := ProvisionTx(ctx, tx, userID); err != nil {
 		return Transaction{}, err
 	}
 	result, err := MoveTx(ctx, tx, Movement{
