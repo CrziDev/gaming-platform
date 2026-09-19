@@ -32,7 +32,8 @@ shell loads `.env`; no application code reads a `.env` file.
 ## Rules
 
 Standards live in `.claude/rules/backend/` and `.claude/rules/frontend/`, one file per
-subject.
+subject. `.claude/rules/standards.md` says how a standard itself is changed: propose
+the amendment and wait for a decision before acting on it or editing the file.
 
 ## Commits
 
