@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -193,7 +194,28 @@ func (h *Handler) Manifest(w http.ResponseWriter, r *http.Request) {
 		h.internal(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, manifest)
+	body, err := withProfileID(manifest, profile.ID)
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, body)
+}
+
+// withProfileID names the profile a manifest describes, so a client can tell
+// from a settled round's rtp_profile_id that the table it holds is no longer
+// the one rounds settle on.
+func withProfileID(manifest json.RawMessage, profileID string) (map[string]json.RawMessage, error) {
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(manifest, &body); err != nil {
+		return nil, fmt.Errorf("round: decode manifest: %w", err)
+	}
+	id, err := json.Marshal(profileID)
+	if err != nil {
+		return nil, fmt.Errorf("round: encode profile id: %w", err)
+	}
+	body["rtp_profile_id"] = id
+	return body, nil
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request, account user.User) {

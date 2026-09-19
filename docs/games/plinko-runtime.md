@@ -29,8 +29,10 @@ and bet arithmetic, the bet and refill modals, the risk and rows pills, the play
 auto controls, and the toasts. The platform supplies the rest; auto play and the
 refill modal are not carried over.
 
-The paytable is `frontend/src/features/gameplay/multipliers.ts`, in integer hundredths.
-It stands in for the game manifest until the server serves the active profile's table.
+The board's table is the active profile's, read from `GET /api/games/{slug}/manifest`
+in integer hundredths. `frontend/src/features/gameplay/multipliers.ts` holds the supplied
+paytable as the demo fixture only; the live profile differs from it on six low-risk
+boards (`plinko-rtp.md` §10).
 
 ### Landing guard
 
@@ -55,14 +57,14 @@ dropped. `engine` is the part every game shares; `engine/plinko` is this game's 
 | File | Role |
 | --- | --- |
 | `engine/random.go` | `SecureSource` on `crypto/rand`, the only source a production round may draw from, and `WeightedIndex`, an unbiased draw over integer weights via `math/rand/v2` |
-| `engine/errors.go` | `ErrInvalidParams`, `ErrUnknownConfig`, `ErrInvalidConfig`, `ErrInvalidWeights`, shared so the round package maps them without importing a game |
+| `engine/errors.go` | `ErrInvalidParams`, `ErrUnknownConfig`, `ErrInvalidConfig`, `ErrInvalidWeights`, `ErrPayoutOverflow`, shared so the round package maps them without importing a game |
 | `plinko/config.go` | `Params` (rows 8–16, risk low/normal/high), `Table` (one board's slot weights and multipliers, symmetric), `Profile` (a table for every board, addressed by `engine_config_ref`) |
 | `plinko/supplied.go` | The vendor paytable in hundredths and the vendor `0.24` decay as integer weights — reference data for deriving and checking profiles, never played directly |
 | `plinko/rules.go` | `Pick` (a slot from a table) and `Payout` (`stake × multiplier / 100`, overflow-checked, truncating; exact under a wager step that is a multiple of 100) |
 | `plinko/rtp.go` | `TheoreticalBasisPoints` — `Σ w·m / Σ w` in integers; its tests reproduce every figure in `plinko-rtp.md` §5 |
 | `plinko/profile_v1.go` | The baseline configuration `plinko/v1/9600`: weights and multipliers for all 27 boards, `plinko-rtp.md` §10 |
 | `plinko/profiles.go` | `ProfileByRef`, the lookup an RTP profile row's `engine_config_ref` resolves through |
-| `plinko/engine.go` | `Engine.Play`: decodes the public parameters (unknown fields refused), resolves the configuration, picks the slot from the secure source, and returns the payout, multiplier, and `{rows, risk, slot}` |
+| `plinko/engine.go` | `Engine.Play`: decodes the public parameters (unknown fields refused), resolves the configuration, picks the slot from the secure source, and returns the payout, multiplier, and `{rows, risk, slot}`. `Engine.Manifest`: every board's multipliers for one configuration, never its weights |
 | `backend/cmd/seed/profiles.go` | The development fixture: `plinko` integrated in the catalogue with `Baseline` v1 verified, active, and default. `seed_test.go` runs the catalogue seed against the test database in a rolled-back transaction and asserts one active default whose `engine_config_ref` the engine resolves; CI also runs `make seed` after the suite |
 | `backend/cmd/gameverify` | Offline tooling: `solve` derives a profile's weights from its multipliers, `simulate` plays every board through the production `Pick` and `Payout` path, and `verify` does the same for a draft RTP profile row and marks it verified through `rtp.Verify` (`plinko-rtp.md` §11) |
 
@@ -71,8 +73,8 @@ Deterministic sources exist only in `_test.go` files; nothing at runtime can sel
 ### Round — `backend/internal/round/`
 
 `engine.go` declares the `Engine` interface the round package consumes — `Play(engine.Input)
-(engine.Outcome, error)` and nothing more — and `Engines`, the slug-to-engine map the
-route table builds. `play.go` is the orchestration. Plinko has no decision between the
+(engine.Outcome, error)` and `Manifest(configRef string) (json.RawMessage, error)` — and
+`Engines`, the slug-to-engine map the route table builds. `play.go` is the orchestration. Plinko has no decision between the
 stake and the result, so a round is **one transaction**: `openTx` locks the wallet,
 binds the round to the active profile and debits the wager; the engine decides; `settleTx`
 credits any win and closes the round; then everything commits or nothing does. There is
@@ -81,8 +83,12 @@ exists for this game. `Open`, `Settle`, `Cancel`, and `Fail` remain for engines 
 need two phases.
 
 `handler.go` mounts it as `POST /api/games/{slug}/rounds` and serves
-`GET /api/games/{slug}/manifest`, the active configuration's public parameters; both
-answer 404 for a slug with no engine in the registry `internal/app` builds. The
+`GET /api/games/{slug}/manifest`, the active configuration's public parameters plus
+`rtp_profile_id`, the profile they belong to; both answer 404 for a slug with no engine
+in the registry `internal/app` builds, and the manifest answers 409 `GAME_UNAVAILABLE`
+with no active profile. The manifest reads the active row as it stands, while a round
+reverts an expired timed profile first, so for up to one reverter tick (30 s) the
+manifest can describe a profile no round will play; the host closes that gap below. The
 idempotency key is scoped to the player (`play:<user>:<key>`). A retry returns the
 committed round and its display result as long as it asks for the same stake and
 parameters; a different stake or parameters under the same key is a conflict. The
@@ -101,7 +107,9 @@ the SPA.
 
 `frontend/src/components/game/GameHost.tsx` embeds the frame and overlays the platform
 chrome. `frontend/src/features/gameplay/` owns the protocol (`schemas.ts`, `bridge.ts`),
-the round request (`api.ts`), the page session (`session.ts`), and the Plinko controls.
+the manifest query and the round request (`api.ts`), the page session (`session.ts`),
+and the Plinko controls. The manifest is validated before it configures anything: every
+board the controls offer must be present with exactly rows + 1 positive integers.
 `GamePage` wires them; a slug with no module in `registry.ts`
 keeps the display-slot placeholder.
 
@@ -125,9 +133,12 @@ rejected.
 
 1. The iframe mounts and the host waits ten seconds for `ready`; silence is the error
    state with a retry that remounts the frame.
-2. `ready` is answered with `configure`, which builds the board and hides the splash.
+2. `ready` is answered with `configure` once the manifest has loaded, which builds the
+   board and hides the splash; until then the host shows the loading state and Place
+   bet is disabled. A manifest 404 or 409 is the error state with a retry that refetches
+   it and remounts the frame; no bet is offered against a table the player cannot see.
    A second `ready` is a reloaded frame: the host settles everything outstanding and
-   configures again.
+   configures again. The host sends only a board the frame does not already have.
 3. Place bet calls the round request. In the demo `src/mocks/plinko.ts` settles it
    with the supplied game's slot weights; outside the demo it is
    `POST /api/games/{slug}/rounds` with an `Idempotency-Key`, served by
@@ -137,14 +148,20 @@ rejected.
    flight. The wallet, rounds, and transactions are refetched when the frame reports
    `landed`, or eight seconds later regardless, so an animation can never hide a
    settled round.
+5. Every settled round names its `rtp_profile_id`. When it is not the manifest's, the
+   host refetches the manifest and reconfigures the board with the new table once no
+   ball is in flight; the ball that revealed the change still drops, since its `drop`
+   carries its own multiplier and label. The board can therefore show a superseded
+   profile's table for at most one round after an activation or a reverter tick.
 
 Sound is remembered per browser under `game.sound`; rows and risk under
 `game.plinko.rows` and `game.plinko.risk`.
 
 ## Demo-only fixtures
 
-The fixture engine and the fixture Plinko catalogue entry never reach a production
-bundle.
+The fixture engine, the fixture manifest (`plinkoManifest` in `src/mocks/plinko.ts`, the
+supplied paytable under the demo profile id), and the fixture Plinko catalogue entry
+never reach a production bundle.
 
 ## Checks
 

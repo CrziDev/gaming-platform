@@ -316,9 +316,10 @@ character of the supplied 0.24 decay, which puts 61% on the centre of an even bo
 
 Centre share is the probability of the middle slot (the middle pair on an odd board).
 
-Until the host reads the active table from the server, the frame labels those six
-boards' centre buckets with the supplied values (`frontend/src/features/gameplay/
-multipliers.ts`); the amount paid and shown on landing always comes from the server.
+The host configures the board from `GET /api/games/{slug}/manifest`, so the frame labels
+those six boards' centre and ring buckets with the profile's values. Only the demo
+fixture (`frontend/src/features/gameplay/multipliers.ts`) keeps the supplied values; the
+amount paid and shown on landing always comes from the server.
 
 Every figure above is theoretical; §11 is the simulation evidence for it.
 

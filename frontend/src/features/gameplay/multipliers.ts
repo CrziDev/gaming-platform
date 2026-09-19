@@ -8,9 +8,12 @@ export type PlinkoParams = { rows: PlinkoRows; risk: PlinkoRisk }
 
 export const DEFAULT_PLINKO_PARAMS: PlinkoParams = { rows: 8, risk: 'normal' }
 
-// The supplied paytable, in integer hundredths (1.7× is 170). It stands in for the
-// game manifest until the server serves the active profile's table.
-export const PLINKO_MULTIPLIERS_HUNDREDTHS: Record<PlinkoRows, Record<PlinkoRisk, readonly number[]>> = {
+export type PlinkoTable = Record<PlinkoRows, Record<PlinkoRisk, readonly number[]>>
+
+// The supplied paytable, in integer hundredths (1.7× is 170). It is the demo fixture's
+// table only: the live board is configured from `GET /api/games/{slug}/manifest`, and
+// the active profile differs from this on six low-risk boards (docs/games/plinko-rtp.md §10).
+export const PLINKO_MULTIPLIERS_HUNDREDTHS: PlinkoTable = {
   8: {
     low: [200, 150, 120, 100, 80, 100, 120, 150, 200],
     normal: [600, 300, 170, 110, 50, 110, 170, 300, 600],

@@ -186,6 +186,9 @@ function BetControls({
   const toast = useToast()
   const currency = balance?.currency ?? 'PHP'
   const busy = session?.playing ?? false
+  // A title with an engine offers a bet only once its board is configured from the
+  // server's manifest; the host overlay says why while it is not.
+  const offered = session ? session.canPlay : true
 
   // The server accepts only min + n × step, so the selector can only produce that.
   // A stake is player input rather than a financial outcome, but an input the server
@@ -268,7 +271,7 @@ function BetControls({
         </div>
       )}
 
-      <Button variant="play" size="lg" fullWidth onClick={place} disabled={busy}>
+      <Button variant="play" size="lg" fullWidth onClick={place} disabled={busy || !offered}>
         PLACE BET
       </Button>
 

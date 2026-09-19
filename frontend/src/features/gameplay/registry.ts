@@ -2,7 +2,7 @@ import { createElement, type ComponentType } from 'react'
 
 import { recentBets } from '@/mocks/plinko'
 
-import { DEFAULT_PLINKO_PARAMS, plinkoMultipliers, type PlinkoParams } from './multipliers'
+import { DEFAULT_PLINKO_PARAMS, type PlinkoParams, type PlinkoTable } from './multipliers'
 import { PlinkoControls, type GameControlsProps } from './PlinkoControls'
 import { PlinkoHistory } from './PlinkoHistory'
 
@@ -16,7 +16,8 @@ export type GameModule = {
   Controls: ComponentType<GameControlsProps<PlinkoParams>>
   // Rendered under the board and panel. Static fixture rows until rounds feed it.
   History: ComponentType
-  multipliers: (params: PlinkoParams) => readonly number[]
+  // Reads one board out of the manifest's table; the table itself is the server's.
+  multipliers: (table: PlinkoTable, params: PlinkoParams) => readonly number[]
 }
 
 const plinko: GameModule = {
@@ -26,7 +27,7 @@ const plinko: GameModule = {
   defaultParams: DEFAULT_PLINKO_PARAMS,
   Controls: PlinkoControls,
   History: () => createElement(PlinkoHistory, { bets: recentBets }),
-  multipliers: (params) => plinkoMultipliers(params.rows, params.risk),
+  multipliers: (table, params) => table[params.rows][params.risk],
 }
 
 const gameModules: Readonly<Record<string, GameModule>> = { plinko }

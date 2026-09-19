@@ -151,6 +151,15 @@ export type PlayRoundResponse = {
   wallet: Wallet
 }
 
+// The active profile's public parameters for an integrated game, and the id of the
+// profile they describe. Plinko's are its boards; the table is keyed by rows then risk.
+export type PlinkoManifest = {
+  rtp_profile_id: string
+  rows: number[]
+  risks: string[]
+  multipliers_hundredths: Record<string, Record<string, number[]>>
+}
+
 export type AdminRound = Round & {
   user_id: string
   user_email: string

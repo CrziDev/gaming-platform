@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import type { PlayRoundResponse } from '@/api/types'
 
-import { PLINKO_RISKS, PLINKO_ROWS } from './multipliers'
+import { PLINKO_RISKS, PLINKO_ROWS, type PlinkoRisk, type PlinkoTable } from './multipliers'
 
 export const PROTOCOL_VERSION = 1 as const
 
@@ -53,6 +53,41 @@ export type HostMessage = z.infer<typeof hostMessageSchema>
 
 const safeInteger = z.number().int().refine((value) => Number.isSafeInteger(value), 'Outside the exact integer range')
 const currency = z.enum(['PHP', 'USD'])
+
+const multiplierTable = z.array(safeInteger.positive())
+
+// The manifest is validated before it configures a board. Every board the controls
+// offer must be present with exactly rows + 1 slots — the frame rejects any other
+// length — and the parsed form is the table the session reads by rows and risk.
+export const plinkoManifestSchema = z
+  .object({
+    rtp_profile_id: z.string().min(1),
+    rows: z.array(z.number().int()),
+    risks: z.array(z.string()),
+    multipliers_hundredths: z.record(z.string(), z.record(z.string(), multiplierTable)),
+  })
+  .transform((manifest, ctx) => {
+    const table: Partial<PlinkoTable> = {}
+    for (const rows of PLINKO_ROWS) {
+      const byRisk: Partial<Record<PlinkoRisk, readonly number[]>> = {}
+      for (const risk of PLINKO_RISKS) {
+        const slots = manifest.multipliers_hundredths[String(rows)]?.[risk]
+        if (slots === undefined || slots.length !== rows + 1) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['multipliers_hundredths', String(rows), risk],
+            message: `Expected ${rows + 1} multipliers`,
+          })
+          continue
+        }
+        byRisk[risk] = slots
+      }
+      table[rows] = byRisk as Record<PlinkoRisk, readonly number[]>
+    }
+    return { rtp_profile_id: manifest.rtp_profile_id, table: table as PlinkoTable }
+  })
+
+export type PlinkoBoards = z.infer<typeof plinkoManifestSchema>
 
 // The live response is validated before it touches state: a round with a float
 // for money or a slot outside the board would otherwise be animated as if true.

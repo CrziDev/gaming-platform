@@ -226,7 +226,7 @@ func TestManifestHandler(t *testing.T) {
 		handler.Manifest(recorder, request)
 		return recorder.Code, recorder.Body.String()
 	}
-	if code, body := manifest(slug); code != http.StatusOK || strings.TrimSpace(body) != `{"config":"test:v1"}` {
+	if code, body := manifest(slug); code != http.StatusOK || strings.TrimSpace(body) != `{"config":"test:v1","rtp_profile_id":"`+fixture.ProfileID+`"}` {
 		t.Fatalf("manifest: %d %s", code, body)
 	}
 	if code, _ := manifest("nothing"); code != http.StatusNotFound {

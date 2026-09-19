@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { plinkoManifest } from '@/mocks/plinko'
 import { wallets } from '@/mocks/wallet'
 import { renderApp, stubFetchRoutes, userBody } from '@/test-utils'
 
@@ -83,7 +84,7 @@ describe('the Plinko game page', () => {
     }
     expect(configure.rows).toBe(8)
     expect(configure.risk).toBe('normal')
-    expect(configure.multipliers_hundredths).toHaveLength(9)
+    expect(configure.multipliers_hundredths).toEqual(plinkoManifest().multipliers_hundredths['8']?.normal)
     expect(configure.sound).toBe(true)
     expect(screen.queryByRole('status', { name: 'Loading Plinko' })).not.toBeInTheDocument()
 

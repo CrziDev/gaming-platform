@@ -1,8 +1,13 @@
 import { ApiError } from '@/api/client'
-import type { PlayRoundResponse, Round } from '@/api/types'
+import type { PlayRoundResponse, PlinkoManifest, Round } from '@/api/types'
 import type { PlinkoParams } from '@/features/gameplay/multipliers'
 import type { PlinkoBet } from '@/features/gameplay/PlinkoHistory'
-import { plinkoMultipliers } from '@/features/gameplay/multipliers'
+import {
+  PLINKO_MULTIPLIERS_HUNDREDTHS,
+  PLINKO_RISKS,
+  PLINKO_ROWS,
+  plinkoMultipliers,
+} from '@/features/gameplay/multipliers'
 import type { Currency } from '@/lib/money'
 
 import { minutesAgo } from './clock'
@@ -32,6 +37,19 @@ export function pickPlinkoSlot(rows: number, random: () => number = Math.random)
     if (roll <= acc) return i
   }
   return Math.floor(middle)
+}
+
+export const DEMO_PLINKO_PROFILE_ID = 'rtp-demo-plinko'
+
+// The demo's manifest: the supplied paytable in the wire shape the server serves.
+export function plinkoManifest(): PlinkoManifest {
+  const multipliers_hundredths: PlinkoManifest['multipliers_hundredths'] = {}
+  for (const rows of PLINKO_ROWS) {
+    const byRisk: Record<string, number[]> = {}
+    for (const risk of PLINKO_RISKS) byRisk[risk] = [...PLINKO_MULTIPLIERS_HUNDREDTHS[rows][risk]]
+    multipliers_hundredths[String(rows)] = byRisk
+  }
+  return { rtp_profile_id: DEMO_PLINKO_PROFILE_ID, rows: [...PLINKO_ROWS], risks: [...PLINKO_RISKS], multipliers_hundredths }
 }
 
 export type PlinkoSettlement = {
@@ -78,7 +96,7 @@ export function settlePlinkoRound(input: PlinkoSettlement, random: () => number 
     game_id: game.id,
     game_slug: game.slug,
     game_name: game.name,
-    rtp_profile_id: 'rtp-demo-plinko',
+    rtp_profile_id: DEMO_PLINKO_PROFILE_ID,
     status: 'settled',
     stake_minor: input.stake_minor,
     win_minor: win,

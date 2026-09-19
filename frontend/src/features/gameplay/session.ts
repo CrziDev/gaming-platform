@@ -9,13 +9,14 @@ import { formatMoney, money, type Currency } from '@/lib/money'
 import { useRememberedChoice } from '@/lib/remembered'
 
 import { createGameBridge, frameOriginOf, type GameBridge } from './bridge'
-import { useGameSound, usePlayRound } from './hooks'
-import { PLINKO_RISKS, PLINKO_ROWS, type PlinkoParams } from './multipliers'
+import { gameManifestQueryKey, useGameManifest, useGameSound, usePlayRound } from './hooks'
+import { PLINKO_RISKS, PLINKO_ROWS, type PlinkoParams, type PlinkoRisk, type PlinkoRows } from './multipliers'
 import type { GameModule } from './registry'
-import { PROTOCOL_VERSION, type FrameMessage } from './schemas'
+import { PROTOCOL_VERSION, type FrameMessage, type PlinkoBoards } from './schemas'
 
 const READY_TIMEOUT_MS = 10_000
 const SETTLE_FALLBACK_MS = 8_000
+const NOT_ON_THIS_SERVER = 'Plinko is not available on this server yet.'
 
 export type GameSession = {
   attachFrame: Ref<HTMLIFrameElement | null>
@@ -24,6 +25,9 @@ export type GameSession = {
   setParams: (params: PlinkoParams) => void
   canChangeParams: boolean
   inFlight: number
+  // False until the server's manifest has configured the board; a bet is never
+  // offered against a table the player cannot see.
+  canPlay: boolean
   play: (stakeMinor: number) => Promise<void>
   playing: boolean
   sound: boolean
@@ -39,15 +43,37 @@ type GameSessionOptions = {
 
 const rowChoices = PLINKO_ROWS.map(String)
 
+type Board = { rows: PlinkoRows; risk: PlinkoRisk; multipliers: readonly number[] }
+
+function sameBoard(a: Board, b: Board): boolean {
+  return (
+    a.rows === b.rows &&
+    a.risk === b.risk &&
+    a.multipliers.length === b.multipliers.length &&
+    a.multipliers.every((value, index) => value === b.multipliers[index])
+  )
+}
+
+function manifestFailure(error: Error): string {
+  if (error instanceof ApiError && error.status === 404) return NOT_ON_THIS_SERVER
+  return error.message
+}
+
 // Runs one game page: the frame's lifecycle, the bridge, and every round from
-// request to landing. The server settles a round before the
-// ball is dropped; this hook only decides when the settled truth is refetched,
-// which is when the ball lands or, failing that, a few seconds later.
+// request to landing. The board is configured from the server's manifest and the
+// server settles a round before the ball is dropped; this hook only decides when
+// the settled truth is refetched, which is when the ball lands or, failing that,
+// a few seconds later.
 export function useGameSession({ module, slug, currency, onShortfall }: GameSessionOptions): GameSession {
   const queryClient = useQueryClient()
   const toast = useToast()
   const mutation = usePlayRound()
   const [sound, setSound] = useGameSound()
+  const manifest = useGameManifest(slug, module !== null)
+  // An error after data removes the table too: the server no longer offers
+  // what the board shows.
+  const boards: PlinkoBoards | null = manifest.isError ? null : (manifest.data ?? null)
+  const table = boards?.table ?? null
 
   // A callback ref, so the bridge is built when the iframe actually mounts —
   // which is after the game loads, and again after every retry.
@@ -55,6 +81,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   const attachFrame = useCallback((node: HTMLIFrameElement | null) => setIframe(node), [])
   const bridgeRef = useRef<GameBridge | null>(null)
   const pendingRef = useRef(new Map<string, number>())
+  const sentRef = useRef<Board | null>(null)
 
   const [status, setStatus] = useState<GameFrameStatus>('loading')
   const [frameKey, setFrameKey] = useState(0)
@@ -71,9 +98,9 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
 
   // Handlers read the latest values through this ref. It is synced in a layout
   // effect so a click that follows a render can never see the previous frame state.
-  const latest = useRef({ params, sound, status, module })
+  const latest = useRef({ params, sound, status, module, boards })
   useLayoutEffect(() => {
-    latest.current = { params, sound, status, module }
+    latest.current = { params, sound, status, module, boards }
   })
 
   const settle = useCallback(
@@ -95,17 +122,24 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
     for (const roundId of Array.from(pendingRef.current.keys())) settle(roundId)
   }, [settle])
 
+  // Sends the board the frame does not already have. Nothing is sent without a
+  // manifest, and a new table waits while a ball is falling: the pending map is
+  // read directly so a ready that follows settleAll sees it already empty.
   const configure = useCallback(() => {
-    const { params: current, sound: enabled, module: active } = latest.current
-    if (!active) return
-    bridgeRef.current?.send({
-      v: PROTOCOL_VERSION,
-      type: 'configure',
-      rows: current.rows,
-      risk: current.risk,
-      multipliers_hundredths: [...active.multipliers(current)],
-      sound: enabled,
-    })
+    const { params: current, sound: enabled, module: active, boards: served } = latest.current
+    if (!active || !served || pendingRef.current.size > 0) return
+    const board: Board = { rows: current.rows, risk: current.risk, multipliers: active.multipliers(served.table, current) }
+    if (sentRef.current && sameBoard(sentRef.current, board)) return
+    const delivered =
+      bridgeRef.current?.send({
+        v: PROTOCOL_VERSION,
+        type: 'configure',
+        rows: board.rows,
+        risk: board.risk,
+        multipliers_hundredths: [...board.multipliers],
+        sound: enabled,
+      }) ?? false
+    if (delivered) sentRef.current = board
   }, [])
 
   useEffect(() => {
@@ -117,6 +151,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
           // A second ready is a reloaded frame: whatever was falling is gone, and
           // every round it carried was settled before it was dropped.
           settleAll()
+          sentRef.current = null
           setStatus('ready')
           setFrameError(undefined)
           configure()
@@ -158,7 +193,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
 
   useEffect(() => {
     if (status === 'ready') configure()
-  }, [status, params.rows, params.risk, configure])
+  }, [status, params.rows, params.risk, table, inFlight, configure])
 
   useEffect(() => {
     if (status === 'ready') bridgeRef.current?.send({ v: PROTOCOL_VERSION, type: 'set_sound', enabled: sound })
@@ -166,8 +201,8 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
 
   const play = useCallback(
     async (stakeMinor: number) => {
-      const { status: frameStatus, module: active, params: current } = latest.current
-      if (!active) return
+      const { status: frameStatus, module: active, params: current, boards: served } = latest.current
+      if (!active || !served) return
 
       try {
         const response = await mutation.mutateAsync({
@@ -177,6 +212,13 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
           params: current,
           idempotencyKey: crypto.randomUUID(),
         })
+
+        // A round settled on another profile means the table on screen is stale.
+        // The refetched manifest reconfigures the board once every ball has landed;
+        // this ball still drops, because its drop carries its own settled result.
+        if (response.round.rtp_profile_id !== served.rtp_profile_id) {
+          void queryClient.invalidateQueries({ queryKey: gameManifestQueryKey(slug) })
+        }
 
         const roundId = response.round.id
         const slot = response.result.slot
@@ -213,13 +255,13 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
           return
         }
         if (error instanceof ApiError && error.status === 404) {
-          toast.push('Plinko is not available on this server yet.', 'danger')
+          toast.push(NOT_ON_THIS_SERVER, 'danger')
           return
         }
         toast.push(error instanceof Error ? error.message : 'The round could not be placed.', 'danger')
       }
     },
-    [currency, mutation, onShortfall, settle, slug, toast],
+    [currency, mutation, onShortfall, queryClient, settle, slug, toast],
   )
 
   const setParams = useCallback(
@@ -230,20 +272,30 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
     [rememberRisk, rememberRows],
   )
 
+  const { isError: manifestFailed, refetch: refetchManifest } = manifest
   const retry = useCallback(() => {
     settleAll()
     setStatus('loading')
     setFrameError(undefined)
     setFrameKey((key) => key + 1)
-  }, [settleAll])
+    if (manifestFailed) void refetchManifest()
+  }, [settleAll, manifestFailed, refetchManifest])
+
+  // The frame is only as ready as its manifest: a manifest failure is the error
+  // state whatever the frame said, and a frame that is ready waits as loading
+  // until the manifest has configured it.
+  const frame: GameSession['frame'] = manifest.isError
+    ? { status: 'error', key: frameKey, error: manifestFailure(manifest.error), retry }
+    : { status: manifest.isPending && status === 'ready' ? 'loading' : status, key: frameKey, error: frameError, retry }
 
   return {
     attachFrame,
-    frame: { status, key: frameKey, error: frameError, retry },
+    frame,
     params,
     setParams,
     canChangeParams: inFlight === 0,
     inFlight,
+    canPlay: table !== null,
     play,
     playing: mutation.isPending,
     sound,
