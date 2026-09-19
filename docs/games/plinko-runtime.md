@@ -110,7 +110,8 @@ chrome. `frontend/src/features/gameplay/` owns the protocol (`schemas.ts`, `brid
 the manifest query and the round request (`api.ts`), the page session (`session.ts`),
 the Plinko controls, and the bets feed under the board (`PlinkoHistory.tsx`): the
 player's own recent rounds on the game, read through the wallet feature's
-`useRecentRounds` from `GET /api/rounds?game_id=`. The manifest is validated before it
+`useRecentRounds` from `GET /api/rounds?game_id=`, with a one-line empty state until the
+first bet settles. The manifest is validated before it
 configures anything: every board the controls offer must be present with exactly
 rows + 1 positive integers.
 `GamePage` wires them; a slug with no module in `registry.ts`

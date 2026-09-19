@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import type { Round } from '@/api/types'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
@@ -61,6 +63,15 @@ type PlinkoHistoryProps = {
   gameId: string
 }
 
+function Feed({ children }: { children: ReactNode }) {
+  return (
+    <section aria-label="Your recent bets" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
+      <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Your recent bets</h2>
+      {children}
+    </section>
+  )
+}
+
 // The player's own recent rounds on this game, under the board. The session
 // refetches rounds when a ball lands, so a bet appears here as it is revealed.
 export function PlinkoHistory({ gameId }: PlinkoHistoryProps) {
@@ -68,10 +79,9 @@ export function PlinkoHistory({ gameId }: PlinkoHistoryProps) {
 
   if (query.isPending) {
     return (
-      <section aria-label="Your recent bets" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
-        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Your recent bets</h2>
+      <Feed>
         <SkeletonRows count={3} />
-      </section>
+      </Feed>
     )
   }
 
@@ -86,11 +96,16 @@ export function PlinkoHistory({ gameId }: PlinkoHistoryProps) {
   }
 
   const bets = query.data.map(toBet).filter((bet): bet is PlinkoBet => bet !== null)
-  if (bets.length === 0) return null
+  if (bets.length === 0) {
+    return (
+      <Feed>
+        <p className="text-[13px] text-ink-mute text-pretty">Your bets on this game appear here as they settle.</p>
+      </Feed>
+    )
+  }
 
   return (
-    <section aria-label="Your recent bets" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
-      <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Your recent bets</h2>
+    <Feed>
       <RecordTable
         label="Your recent bets"
         columns={columns}
@@ -104,6 +119,6 @@ export function PlinkoHistory({ gameId }: PlinkoHistoryProps) {
           />
         )}
       />
-    </section>
+    </Feed>
   )
 }

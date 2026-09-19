@@ -149,8 +149,9 @@ describe('the Plinko game page', () => {
     expect(screen.queryByRole('tab', { name: 'My Activity' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Rules' })).not.toBeInTheDocument()
     expect(screen.queryByText(/^More Originals/)).not.toBeInTheDocument()
-    // No fixture round belongs to Plinko, so there is no feed until the player bets.
-    await waitFor(() => expect(screen.queryByRole('region', { name: 'Your recent bets' })).not.toBeInTheDocument())
+    // No fixture round belongs to Plinko, so the feed only says where bets will go.
+    expect(await screen.findByText('Your bets on this game appear here as they settle.')).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Your recent bets' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
     await waitFor(() => expect(lastDrop(post)).toBeDefined())
