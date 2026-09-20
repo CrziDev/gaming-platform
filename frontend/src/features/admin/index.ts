@@ -1,19 +1,22 @@
 export { ADMIN_PAGE_SIZE, adminDepositProofUrl, reasonOptions } from './api'
 export type {
   AdminTransactionFilter,
+  AdminDepositFilter,
   AdminRoundFilter,
   DepositReview,
   GameInput,
   GamePatch,
+  PaymentMethodInput,
   UserFilter,
   WalletAdjustment,
 } from './api'
-export { createGameSchema, gameStatuses } from './schemas'
-export type { GameFormInput } from './schemas'
+export { createGameSchema, gameStatuses, paymentMethodSchema } from './schemas'
+export type { GameFormInput, PaymentMethodFormInput } from './schemas'
 export {
   useAdjustWallet,
   useAdminGame,
   useAdminGames,
+  useAdminDeposits,
   useAdminPaymentMethods,
   useAdminRounds,
   useAdminRtpConfiguration,
@@ -23,14 +26,15 @@ export {
   useAdminUsers,
   useAllCategories,
   useAuditEntries,
-  useConsoleAlerts,
+  useConsoleSearch,
+  useCreatePaymentMethod,
   useCreateGame,
   useDashboard,
   useDepositQueue,
   useReviewDeposit,
   useSetGameRtp,
   useSetUserStatus,
-  useStaff,
+  useUpdatePaymentMethod,
   useUpdateGame,
   useUserAdjustments,
   useUserCounts,

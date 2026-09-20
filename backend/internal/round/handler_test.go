@@ -84,7 +84,7 @@ func TestAdminRoundListAppliesEveryFilter(t *testing.T) {
 	from := url.QueryEscape(item.StartedAt.Add(-time.Minute).UTC().Format(time.RFC3339))
 	to := url.QueryEscape(item.StartedAt.Add(time.Minute).UTC().Format(time.RFC3339))
 	target := "/api/admin/rounds?page=1&size=20&user_id=" + fixture.UserID +
-		"&game_id=" + fixture.GameID + "&status=open&currency=PHP&from=" + from + "&to=" + to
+		"&game_id=" + fixture.GameID + "&status=open&currency=PHP&from=" + from + "&to=" + to + "&search=" + item.ID[:8]
 	request := httptest.NewRequest(http.MethodGet, target, nil)
 	recorder := httptest.NewRecorder()
 	NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0).AdminList(recorder, request, user.User{Role: "admin"})

@@ -2,20 +2,16 @@ import { Globe, LifeBuoy } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
 
+import { FutureDevelopmentRow } from './FutureDevelopmentRow'
 import { NavList } from './NavList'
 import { playerNav } from './nav'
-import { railLabel, railMode, railRow, railWidth } from './rail'
+import { railMode, railWidth } from './rail'
 import { RailSearch } from './RailSearch'
 import { useShell } from './ShellContext'
 
 export function Sidebar() {
   const { rail } = useShell()
   const mode = railMode(rail)
-
-  const footerRow = cn(
-    'flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13px] text-ink-mute transition-colors duration-[120ms] hover:text-ink-soft lg:min-h-8',
-    railRow[mode],
-  )
 
   return (
     <aside
@@ -34,15 +30,8 @@ export function Sidebar() {
       <div className="flex-1" />
 
       <div className="flex flex-col gap-px">
-        <a href="https://support.example.com" target="_blank" rel="noreferrer" className={footerRow}>
-          <LifeBuoy aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
-          <span className={railLabel[mode]}>Support</span>
-        </a>
-
-        <button type="button" className={footerRow}>
-          <Globe aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
-          <span className={railLabel[mode]}>English</span>
-        </button>
+        <FutureDevelopmentRow icon={LifeBuoy} label="Support" mode={mode} placement="right" />
+        <FutureDevelopmentRow icon={Globe} label="English" mode={mode} placement="right" />
       </div>
     </aside>
   )

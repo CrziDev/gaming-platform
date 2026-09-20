@@ -46,3 +46,13 @@ export function createGameSchema(currency: Currency) {
 }
 
 export type GameFormInput = z.infer<ReturnType<typeof createGameSchema>>
+
+export const paymentMethodSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a name').max(120, 'Use at most 120 characters'),
+  description: z.string().trim().max(1000, 'Use at most 1000 characters'),
+  pay_to: z.string().trim().min(1, 'Enter pay-to details').max(500, 'Use at most 500 characters'),
+  reference_required: z.boolean(),
+  enabled: z.boolean(),
+})
+
+export type PaymentMethodFormInput = z.infer<typeof paymentMethodSchema>

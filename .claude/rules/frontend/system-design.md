@@ -184,9 +184,12 @@ navigation; icon-only is permitted for header utilities at 44px targets on touch
 
 ## Motion
 
-Hover states only: a background swap, or a 120ms opacity fade for the tile Play overlay.
-No transforms, no scale-on-hover, no entrance animation, no loops — a loading skeleton
-is a static block. `prefers-reduced-motion` is honoured.
+Hover states are a background swap, or a 120ms opacity fade for the tile Play overlay.
+A transient popover — a box that appears in answer to a tap and dismisses itself — may
+enter with one opacity fade plus a translate of at most 6px lasting at most 180ms, and
+leave the same way. Nothing else moves: no scale, no scale-on-hover, no entrance
+animation on page content, no loops — a loading skeleton is a static block.
+`prefers-reduced-motion` is honoured.
 
 ## Breakpoints
 
@@ -218,5 +221,5 @@ Nothing ever emits a horizontal page scrollbar.
 - **`accent-press`** — hover is the only interactive state.
 - **`radius-sheet` (20px)** and full-pill controls — nothing is rounder than 12px except
   an avatar or a dot.
-- **Pulsing skeletons, scale-on-hover, the header blur** — no loops, no transforms, no
-  glass.
+- **Pulsing skeletons, scale-on-hover, the header blur** — no loops, no scale
+  transforms, no glass.

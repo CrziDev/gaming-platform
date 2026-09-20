@@ -601,6 +601,15 @@ func TestAdminUsersSupportsPagingSearchAndStatus(t *testing.T) {
 	if err := json.Unmarshal(body, &page); err != nil || page.Total != 1 || len(page.Rows) != 1 || page.Rows[0].Email != "suspended@example.com" {
 		t.Fatalf("unexpected id search: page=%+v err=%v (%s)", page, err, body)
 	}
+
+	status, body = send(t, adminClient, http.MethodGet,
+		base+"/api/admin/users?role=admin&search="+testEmail, nil)
+	if status != http.StatusOK {
+		t.Fatalf("role-filtered list: want 200, got %d (%s)", status, body)
+	}
+	if err := json.Unmarshal(body, &page); err != nil || page.Total != 1 || len(page.Rows) != 1 || page.Rows[0].Email != testEmail {
+		t.Fatalf("unexpected role-filtered list: page=%+v err=%v (%s)", page, err, body)
+	}
 }
 
 func TestAdminUsersRejectsInvalidPagingAndStatus(t *testing.T) {
@@ -616,6 +625,7 @@ func TestAdminUsersRejectsInvalidPagingAndStatus(t *testing.T) {
 		"?page=0",
 		"?size=101",
 		"?status=unknown",
+		"?role=unknown",
 	}
 	for _, query := range tests {
 		status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/users"+query, nil)
@@ -1146,6 +1156,74 @@ func TestPaymentMethodsRequireASession(t *testing.T) {
 	}
 }
 
+func TestAdminPaymentMethodManagementRequiresAdminAndPersistsChanges(t *testing.T) {
+	db := requireDB(t)
+	base, anonymous := newServer(t, db)
+
+	status, body := send(t, anonymous, http.MethodGet, base+"/api/admin/payment-methods", nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("anonymous list: want 401, got %d (%s)", status, body)
+	}
+
+	player := clientWithCookies(t)
+	status, body = send(t, player, http.MethodPost, base+"/api/register", map[string]string{
+		"email": "method-player@example.com", "password": testPassword, "display_name": "Method Player",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("register player: want 201, got %d (%s)", status, body)
+	}
+	status, body = send(t, player, http.MethodGet, base+"/api/admin/payment-methods", nil)
+	if status != http.StatusForbidden {
+		t.Fatalf("player list: want 403, got %d (%s)", status, body)
+	}
+
+	admin, _ := registerAdmin(t, db, base, "method-admin@example.com")
+	status, body = send(t, admin, http.MethodGet, base+"/api/admin/payment-methods", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"name":"GCash"`)) || !bytes.Contains(body, []byte(`"enabled":false`)) {
+		t.Fatalf("admin list: got %d (%s)", status, body)
+	}
+
+	name := "Bank Transfer Test"
+	status, body = send(t, admin, http.MethodPost, base+"/api/admin/payment-methods", map[string]any{
+		"name": name, "description": "Send a bank transfer", "pay_to": "Account 123",
+		"reference_required": true, "enabled": false,
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("create method: want 201, got %d (%s)", status, body)
+	}
+	var created struct {
+		ID      string `json:"id"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := json.Unmarshal(body, &created); err != nil || created.ID == "" || created.Enabled {
+		t.Fatalf("decode created method: method=%+v err=%v (%s)", created, err, body)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'payment_method' AND entity_id = $1`, created.ID)
+		_, _ = db.Exec(`DELETE FROM payment_methods WHERE id = ($1::text)::uuid`, created.ID)
+	})
+
+	status, body = send(t, admin, http.MethodPost, base+"/api/admin/payment-methods", map[string]any{
+		"name": strings.ToLower(name), "description": "Duplicate", "pay_to": "Account 456",
+		"reference_required": false, "enabled": false,
+	})
+	if status != http.StatusConflict || !bytes.Contains(body, []byte(`"name":"Already taken"`)) {
+		t.Fatalf("duplicate method: want 409 field error, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, admin, http.MethodPatch, base+"/api/admin/payment-methods/"+created.ID, map[string]any{
+		"enabled": true, "pay_to": "Account 789",
+	})
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"enabled":true`)) || !bytes.Contains(body, []byte(`"pay_to":"Account 789"`)) {
+		t.Fatalf("update method: got %d (%s)", status, body)
+	}
+
+	var audits int
+	if err := db.QueryRow(`SELECT count(*) FROM audit_logs WHERE entity_type = 'payment_method' AND entity_id = $1`, created.ID).Scan(&audits); err != nil || audits != 2 {
+		t.Fatalf("payment method audits: count=%d err=%v", audits, err)
+	}
+}
+
 func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	db := requireDB(t)
 	enableTestPaymentMethod(t, db)
@@ -1325,6 +1403,13 @@ func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	}
 	if queuePage.Total != 1 || len(queuePage.Rows) != 1 || queuePage.Rows[0].ID != created.ID {
 		t.Fatalf("unexpected filtered deposit page: %+v", queuePage)
+	}
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/deposits?page=1&size=5&status=all&search="+created.ID[:8], nil)
+	if status != http.StatusOK {
+		t.Fatalf("search deposits: want 200, got %d (%s)", status, body)
+	}
+	if err := json.Unmarshal(body, &queuePage); err != nil || queuePage.Total != 1 || len(queuePage.Rows) != 1 || queuePage.Rows[0].ID != created.ID {
+		t.Fatalf("unexpected deposit search: page=%+v err=%v (%s)", queuePage, err, body)
 	}
 	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/deposits?status=unknown", nil); status != http.StatusBadRequest {
 		t.Fatalf("invalid deposit status filter: want 400, got %d (%s)", status, body)

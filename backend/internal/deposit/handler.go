@@ -35,6 +35,34 @@ type methodResponse struct {
 	ReferenceRequired bool   `json:"reference_required"`
 }
 
+type adminMethodResponse struct {
+	ID                string `json:"id"`
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	PayTo             string `json:"pay_to"`
+	ReferenceRequired bool   `json:"reference_required"`
+	Enabled           bool   `json:"enabled"`
+	SortOrder         int    `json:"sort_order"`
+	CreatedAt         string `json:"created_at"`
+	UpdatedAt         string `json:"updated_at"`
+}
+
+type adminMethodCreateBody struct {
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	PayTo             string `json:"pay_to"`
+	ReferenceRequired *bool  `json:"reference_required"`
+	Enabled           *bool  `json:"enabled"`
+}
+
+type adminMethodPatchBody struct {
+	Name              *string `json:"name"`
+	Description       *string `json:"description"`
+	PayTo             *string `json:"pay_to"`
+	ReferenceRequired *bool   `json:"reference_required"`
+	Enabled           *bool   `json:"enabled"`
+}
+
 type requestResponse struct {
 	ID          string  `json:"id"`
 	Reference   string  `json:"reference"`
@@ -73,6 +101,111 @@ func (h *Handler) Methods(w http.ResponseWriter, r *http.Request, _ user.User) {
 		})
 	}
 	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) AdminMethods(w http.ResponseWriter, r *http.Request, _ user.User) {
+	items, err := ListAdminMethods(r.Context(), h.db)
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	result := make([]adminMethodResponse, 0, len(items))
+	for _, item := range items {
+		result = append(result, newAdminMethodResponse(item))
+	}
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) AdminCreateMethod(w http.ResponseWriter, r *http.Request, actor user.User) {
+	var body adminMethodCreateBody
+	if !httpx.ReadJSON(w, r, &body) {
+		return
+	}
+	body.Name = strings.TrimSpace(body.Name)
+	body.Description = strings.TrimSpace(body.Description)
+	body.PayTo = strings.TrimSpace(body.PayTo)
+	fields := validateAdminMethod(body.Name, body.Description, body.PayTo)
+	if body.ReferenceRequired == nil {
+		fields["reference_required"] = "Choose whether a payment reference is required"
+	}
+	if body.Enabled == nil {
+		fields["enabled"] = "Choose whether the payment method is enabled"
+	}
+	if len(fields) > 0 {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", fields)
+		return
+	}
+
+	created, err := CreatePaymentMethod(r.Context(), h.db, actor.ID, PaymentMethodInput{
+		Name: body.Name, Description: body.Description, PayTo: body.PayTo,
+		ReferenceRequired: *body.ReferenceRequired, Enabled: *body.Enabled,
+	})
+	if errors.Is(err, ErrMethodNameTaken) {
+		httpx.WriteJSON(w, http.StatusConflict, httpx.ErrorResponse{Error: "That payment method name is already taken", Fields: map[string]string{"name": "Already taken"}})
+		return
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, newAdminMethodResponse(created))
+}
+
+func (h *Handler) AdminUpdateMethod(w http.ResponseWriter, r *http.Request, actor user.User) {
+	if !httpx.IsUUID(r.PathValue("id")) {
+		httpx.WriteError(w, http.StatusNotFound, "Payment method not found")
+		return
+	}
+	var body adminMethodPatchBody
+	if !httpx.ReadJSON(w, r, &body) {
+		return
+	}
+	if body.Name == nil && body.Description == nil && body.PayTo == nil && body.ReferenceRequired == nil && body.Enabled == nil {
+		httpx.WriteError(w, http.StatusBadRequest, "No payment method changes were supplied")
+		return
+	}
+	patch := PaymentMethodPatch{ReferenceRequired: body.ReferenceRequired, Enabled: body.Enabled}
+	fields := map[string]string{}
+	if body.Name != nil {
+		value := strings.TrimSpace(*body.Name)
+		patch.Name = &value
+		if value == "" || utf8.RuneCountInString(value) > 120 {
+			fields["name"] = "Name must be between 1 and 120 characters"
+		}
+	}
+	if body.Description != nil {
+		value := strings.TrimSpace(*body.Description)
+		patch.Description = &value
+		if utf8.RuneCountInString(value) > 1000 {
+			fields["description"] = "Description must be at most 1000 characters"
+		}
+	}
+	if body.PayTo != nil {
+		value := strings.TrimSpace(*body.PayTo)
+		patch.PayTo = &value
+		if value == "" || utf8.RuneCountInString(value) > 500 {
+			fields["pay_to"] = "Pay-to details must be between 1 and 500 characters"
+		}
+	}
+	if len(fields) > 0 {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", fields)
+		return
+	}
+
+	updated, err := UpdatePaymentMethod(r.Context(), h.db, actor.ID, r.PathValue("id"), patch)
+	if errors.Is(err, ErrNotFound) {
+		httpx.WriteError(w, http.StatusNotFound, "Payment method not found")
+		return
+	}
+	if errors.Is(err, ErrMethodNameTaken) {
+		httpx.WriteJSON(w, http.StatusConflict, httpx.ErrorResponse{Error: "That payment method name is already taken", Fields: map[string]string{"name": "Already taken"}})
+		return
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, newAdminMethodResponse(updated))
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request, account user.User) {
@@ -280,7 +413,7 @@ func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request, _ user.User)
 		status = ""
 	}
 	items, total, err := ListAdmin(r.Context(), h.db, AdminListFilter{
-		Page: query.Page, Size: query.Size, UserID: query.UserID, Status: status,
+		Page: query.Page, Size: query.Size, UserID: query.UserID, Status: status, Search: query.Search,
 	})
 	if err != nil {
 		h.internal(w, r, err)
@@ -401,6 +534,28 @@ func newRequestResponse(item Request) requestResponse {
 		reason = &item.Reason
 	}
 	return requestResponse{ID: item.ID, Reference: item.Reference, MethodID: item.MethodID, MethodName: item.MethodName, AmountMinor: item.AmountMinor, Currency: item.Currency, Status: item.Status, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339), ReviewedAt: reviewedAt, Reason: reason}
+}
+
+func newAdminMethodResponse(item PaymentMethod) adminMethodResponse {
+	return adminMethodResponse{
+		ID: item.ID, Name: item.Name, Description: item.Description, PayTo: item.PayTo,
+		ReferenceRequired: item.ReferenceRequired, Enabled: item.Enabled, SortOrder: item.SortOrder,
+		CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339), UpdatedAt: item.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+func validateAdminMethod(name, description, payTo string) map[string]string {
+	fields := map[string]string{}
+	if name == "" || utf8.RuneCountInString(name) > 120 {
+		fields["name"] = "Name must be between 1 and 120 characters"
+	}
+	if utf8.RuneCountInString(description) > 1000 {
+		fields["description"] = "Description must be at most 1000 characters"
+	}
+	if payTo == "" || utf8.RuneCountInString(payTo) > 500 {
+		fields["pay_to"] = "Pay-to details must be between 1 and 500 characters"
+	}
+	return fields
 }
 
 func (h *Handler) internal(w http.ResponseWriter, r *http.Request, err error) {

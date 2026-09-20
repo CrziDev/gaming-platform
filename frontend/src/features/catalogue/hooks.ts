@@ -1,12 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
-  fetchBigWins,
   fetchCategories,
   fetchFavorites,
   fetchGame,
   fetchGames,
-  fetchPromotions,
   fetchRecentlyPlayed,
   setFavorite,
   type GameFilters,
@@ -14,14 +12,6 @@ import {
 
 export function useCategories() {
   return useQuery({ queryKey: ['categories'], queryFn: fetchCategories })
-}
-
-export function useBigWins() {
-  return useQuery({ queryKey: ['big-wins'], queryFn: fetchBigWins })
-}
-
-export function usePromotions() {
-  return useQuery({ queryKey: ['promotions'], queryFn: fetchPromotions })
 }
 
 export function useRecentlyPlayed(enabled: boolean) {

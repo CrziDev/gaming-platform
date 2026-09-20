@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -158,6 +158,71 @@ describe('the navigation rail', () => {
 
     expect(screen.getByRole('link', { name: 'Wallet' })).toHaveAttribute('href', '/wallet')
     expect(screen.getByRole('link', { name: 'History' })).toHaveAttribute('href', '/history')
+  })
+})
+
+describe('Support and English', () => {
+  it('answer a tap in the rail with a Future development notice that Escape dismisses', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': guest })
+
+    renderApp('/')
+
+    const rail = await screen.findByRole('complementary', { name: 'Main navigation' })
+    const support = within(rail).getByRole('button', { name: 'Support' })
+    const english = within(rail).getByRole('button', { name: 'English' })
+    expect(within(rail).queryByText(/future development/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+
+    await user.click(support)
+    expect(support).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Future development')
+    expect(rail).not.toContainElement(screen.getByRole('tooltip'))
+
+    await user.keyboard('{Escape}')
+    expect(support).toHaveAttribute('aria-expanded', 'false')
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument())
+
+    await user.click(english)
+    expect(english).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Future development')
+  })
+
+  it('close the notice on a tap elsewhere and on their own after a moment', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': guest })
+
+    renderApp('/')
+
+    const rail = await screen.findByRole('complementary', { name: 'Main navigation' })
+    const support = within(rail).getByRole('button', { name: 'Support' })
+
+    await user.click(support)
+    expect(screen.getByRole('tooltip')).toBeInTheDocument()
+    await user.click(screen.getByRole('main'))
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument())
+
+    await user.click(support)
+    expect(screen.getByRole('tooltip')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument(), { timeout: 3500 })
+    expect(support).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('answer a tap in the drawer the same way', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': guest })
+    vi.stubGlobal('matchMedia', () => ({ matches: false }))
+
+    renderApp('/')
+
+    await user.click(await screen.findByRole('button', { name: 'Toggle navigation' }))
+    const rail = screen.getByRole('complementary', { name: 'Main navigation' })
+    const support = screen.getAllByRole('button', { name: 'Support' }).find((button) => !rail.contains(button))!
+    expect(support).toBeInTheDocument()
+
+    await user.click(support)
+    expect(support).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Future development')
   })
 })
 

@@ -39,10 +39,11 @@ const roundReadWhere = `
 	  AND ($3 = '' OR r.status = $3)
 	  AND ($4 = '' OR r.currency = $4)
 	  AND ($5::timestamptz IS NULL OR r.started_at >= $5::timestamptz)
-	  AND ($6::timestamptz IS NULL OR r.started_at <= $6::timestamptz)`
+	  AND ($6::timestamptz IS NULL OR r.started_at <= $6::timestamptz)
+	  AND ($7 = '' OR position(lower($7) in lower(r.id::text)) > 0)`
 
 func List(ctx context.Context, db *sql.DB, filter ReadFilter) ([]Record, int, error) {
-	args := []any{filter.UserID, filter.GameID, filter.Status, filter.Currency, filter.From, filter.To}
+	args := []any{filter.UserID, filter.GameID, filter.Status, filter.Currency, filter.From, filter.To, filter.Search}
 	var total int
 	if err := db.QueryRowContext(ctx, `SELECT count(*)`+roundReadFrom+roundReadWhere, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("round: count read list: %w", err)
@@ -51,7 +52,7 @@ func List(ctx context.Context, db *sql.DB, filter ReadFilter) ([]Record, int, er
 	offset := int64(filter.Page-1) * int64(filter.Size)
 	rows, err := db.QueryContext(ctx, `SELECT `+roundReadColumns+roundReadFrom+roundReadWhere+`
 		ORDER BY r.started_at DESC, r.id DESC
-		LIMIT $7 OFFSET $8`, append(args, filter.Size, offset)...)
+		LIMIT $8 OFFSET $9`, append(args, filter.Size, offset)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("round: read list: %w", err)
 	}

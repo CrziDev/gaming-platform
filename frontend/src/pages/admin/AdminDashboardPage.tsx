@@ -10,9 +10,8 @@ import { SkeletonRows } from '@/components/ui/Skeleton'
 import { StatCard } from '@/components/ui/StatCard'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { SegmentedTrack } from '@/components/ui/Tabs'
-import { useAuditEntries, useConsoleAlerts, useDashboard, useDepositQueue } from '@/features/admin'
+import { useAuditEntries, useDashboard, useDepositQueue } from '@/features/admin'
 import { useCurrencies } from '@/features/wallet'
-import { cn } from '@/lib/cn'
 import { formatClock, formatCount, formatDuration, formatPercent } from '@/lib/format'
 import { formatDate } from '@/lib/format'
 import { formatMoney, money, type Currency } from '@/lib/money'
@@ -25,14 +24,12 @@ export function AdminDashboardPage() {
   const currenciesQuery = useCurrencies()
   const summaryQuery = useDashboard(currency)
   const queueQuery = useDepositQueue(1, 6)
-  const alertsQuery = useConsoleAlerts()
   const auditQuery = useAuditEntries(1, 4)
   const [reviewing, setReviewing] = useState<AdminDeposit | null>(null)
 
   const summary = summaryQuery.data
   const queue = queueQuery.data?.rows ?? []
   const currencies = currenciesQuery.data ?? []
-  const alerts = alertsQuery.data ?? []
   const audit = auditQuery.data?.rows ?? []
   const pendingMeta = summary
     ? `${formatMoney(money(summary.pending_held_minor, summary.currency), { decimals: 'trim' })} held${summary.oldest_pending_at ? ` · oldest ${formatDuration(summary.oldest_pending_at)}` : ''}`
@@ -188,41 +185,6 @@ export function AdminDashboardPage() {
         </section>
 
         <div className="flex flex-col gap-5">
-          {alerts.length > 0 ? (
-            <section className="flex flex-col gap-3">
-              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
-                Needs attention
-              </h2>
-              <ul className="flex flex-col gap-0.5">
-                {alerts.map((alert) => (
-                  <li key={alert.id}>
-                    <Link
-                      to={alert.href}
-                      className={cn(
-                        'flex min-h-11 items-center gap-3 rounded-tile px-3 text-[13px]',
-                        alert.tone === 'warning' && 'bg-warning/10',
-                        alert.tone === 'danger' && 'bg-danger/10',
-                        alert.tone === 'neutral' && 'bg-surface-1',
-                      )}
-                    >
-                      <span
-                        aria-hidden
-                        className={cn(
-                          'size-2 shrink-0 rounded-full',
-                          alert.tone === 'warning' && 'bg-warning',
-                          alert.tone === 'danger' && 'bg-danger',
-                          alert.tone === 'neutral' && 'bg-ink-mute',
-                        )}
-                      />
-                      <span className="flex-1 text-ink-soft">{alert.message}</span>
-                      <span className="text-[12px] text-accent-ink">View</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
           <section className="flex flex-col gap-3">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">

@@ -13,23 +13,23 @@ As of 2026-09-20, authentication, password recovery and change, wallets, the wal
 public catalogue, favorites, Plinko rounds and the manifest, live chat, notifications,
 paginated admin users, admin user details and status operations, wallet adjustments,
 admin transactions, deposit review, the audit log, the dashboard summary, game
-administration, RTP switching and inspection, and round history use real APIs in every
-application build. Fixture-backed reads exist only in component tests; application
-builds render the empty state for surfaces without a service rather than fabricated
-content. A page stays unchecked while any of its visible data sources has no server.
+administration, RTP switching and inspection, round history, payment-method
+administration, and console search use real APIs in every application build. Features
+without a service are visibly marked Future Development rather than showing fixture data
+or controls that cannot save. A page stays unchecked while its primary feature has no
+server.
 
-Audited against the frontend on 2026-09-20: every route below exists, every data hook
-on every page was traced to its adapter in `features/*/api.ts`, and all 202 frontend
-tests pass. React state-update warnings remain and are tracked in the master checklist.
+Audited against the frontend on 2026-09-20: every route below exists and every data hook
+on every page was traced to its adapter in `features/*/api.ts`.
 
 ## Public and player pages
 
-- [ ] **Lobby** — `/` (catalogue, categories, featured banner, and the signed-in player's recently-played row are real; big wins and promotions have no service and are hidden in application builds)
+- [x] **Lobby** — `/` (catalogue, categories, featured banner, and the signed-in player's recently-played row are real; the banner features the first playable game — Plinko — with its own landscape art, and the tile shows Plinko's thumbnail; big wins is a placeholder strip marked Future Development and promotions is a Future Development section)
 - [x] **Game catalogue** — `/games` (real catalogue with category and search)
 - [x] **Hot games** — `/games/hot` (active games with a settled round in the trailing seven days, ranked by settled rounds, distinct players, and latest play)
 - [x] **New games** — `/games/new` (real thirty-day `new` flag from the catalogue)
 - [x] **Favorites** — `/favorites` (authentication required; the player's real favourites, newest first, active games only)
-- [ ] **Promotions** — `/promotions` (no service; empty in application builds)
+- [ ] **Promotions** — `/promotions` (explicit Future Development page; no promotion service yet)
 - [x] **Sign in** — `/login` (opens the real sign-in flow)
 - [x] **Register** — `/register` (opens the real registration flow)
 - [x] **Forgot password** — `/forgot` (real indistinguishable reset request, including the explicitly unavailable delivery state)
@@ -38,7 +38,7 @@ tests pass. React state-update warnings remain and are tracked in the master che
 - [x] **Wallet** — `/wallet` (authentication required; real balance, currency switch sheet, open request list, and recent ledger)
 - [x] **Deposit** — `/wallet/deposit` (real methods, limits, proof upload, and submission)
 - [x] **Deposit status** — `/wallet/deposit/:id` (real player-owned request; no cancellation)
-- [ ] **Cash out** — `/wallet/cash-out` (authentication required; honest unavailable state until the withdrawal API exists)
+- [ ] **Cash out** — `/wallet/cash-out` (authentication required; explicit Future Development state until the withdrawal API exists)
 - [x] **Transaction history** — `/history` (real paginated transactions and rounds with date filters, and a server-reported deposited / staked / returned strip per currency for the chosen range)
 - [x] **Account** — `/account` (authentication required; account and wallets are read-only, the real password form rotates every session while preserving this browser, and no player status is fabricated)
 - [x] **Not found** — `*` (tested application 404 state)
@@ -56,14 +56,14 @@ means the server is behind it.
 - [x] **Console deposit badge** — the pending total from the real queue
 - [x] **Live chat rail** — the real room from `GET /api/chat/messages`, posts through `POST /api/chat/messages` with the server's `429` shown inline, and a WebSocket at `/api/chat/socket` whose `message` event re-reads the room and whose `presence` event drives the online count; reconnects with backoff
 - [x] **Notifications bell** — every signed-in player's real notifications from `GET /api/notifications`, re-read every minute and when a round lands; deposit approved, deposit rejected with its reason, and big wins; "Mark all read" posts to `/api/notifications/read`
-- [ ] **Support link** — rail and drawer point at `https://support.example.com`; the destination is a placeholder
-- [ ] **Language selector** — rail and drawer show an "English" button with no handler; there is one language
-- [ ] **Console search box** — the admin top bar's "Search player, ref or round id" input has no handler and no endpoint
+- [ ] **Support** — rail and drawer rows open a brief Future Development notice when tapped; no destination is advertised
+- [ ] **Language selector** — rail and drawer rows open a brief Future Development notice when tapped; there is no inert selector
+- [x] **Console search box** — debounced, keyboard-accessible typeahead across real player, deposit, and round APIs; selecting a result opens the player detail or a filtered all-status deposit/round page
 
 ## Admin pages
 
 - [x] **Admin sign in** — `/admin/login` (real shared session API and admin route guard; a signed-in admin is sent straight to the dashboard)
-- [x] **Dashboard** — `/admin` (currency-scoped summary with today's hold against the stake-weighted expected return, a per-game activity table, queue and activity log are real; alerts have no service and are hidden in application builds)
+- [x] **Dashboard** — `/admin` (currency-scoped summary with today's hold against the stake-weighted expected return, a per-game activity table, queue and activity log are real; the fixture-only console alert panel was removed and player notifications are unchanged)
 - [x] **Deposits** — `/admin/deposits` (real pending review queue and approve/reject actions with the private proof image)
 - [x] **Users** — `/admin/users` (real paging, search, and status filters)
 - [x] **User details** — `/admin/users/:id` (real account, wallets, deposits, rounds, adjustments, and status operations)
@@ -71,14 +71,15 @@ means the server is behind it.
 - [x] **Rounds** — `/admin/rounds` (real filtering and pagination across round records)
 - [x] **Games** — `/admin/games` (real list in every status; create dialog; the contract's `status`, `category`, and `search` filters are not yet exposed in the UI)
 - [x] **Game details** — `/admin/games/:id` (real game, edit dialog, the return in force and the engine's options)
+- [ ] **Promotions** — `/admin/promotions` (explicit Future Development page; no promotion administration service yet)
 - [x] **RTP** — `/admin/rtp` (one row per game with options, a select of the engine's returns, a confirmation that reads in danger at or above 100%, real `PUT /api/admin/games/{id}/rtp`)
 - [x] **RTP configuration** — `/admin/rtp/:id` (read-only inspection of each engine option by board, including the configuration reference, target and theoretical RTP, multipliers, and normalized slot chances from `GET /api/admin/games/{id}/rtp-configuration`)
 - [x] **Audit log** — `/admin/audit` (real paginated append-only feed)
-- [ ] **Settings** — `/admin/settings` (Payment methods and Staff have no management service and show an explanatory empty state in application builds; Limits and Platform are static forms whose Save, Add method, and Invite staff buttons have no handler and no contract)
+- [x] **Settings** — `/admin/settings` (payment methods have real list/create/edit/enable/disable APIs and audit entries; Staff, Limits, and Platform are explicit Future Development panels without inert controls)
 
 ## Coverage
 
-- Public and player routes: 18 (15 backed by the server)
-- Admin routes: 14 (12 backed by the server)
+- Public and player routes: 18 (16 backed by the server)
+- Admin routes: 14 (13 backed by the server)
 - Total frontend routes: 32
-- Shell features: 11 (8 backed by the server)
+- Shell features: 11 (9 backed by the server)

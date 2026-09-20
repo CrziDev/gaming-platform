@@ -62,7 +62,7 @@ describe('the wallet page', () => {
     await user.click(main.getByRole('link', { name: 'Cash out' }))
 
     expect(await main.findByRole('heading', { level: 1, name: 'Cash out' })).toBeInTheDocument()
-    expect(main.getByText(/isn.t available yet/i)).toBeInTheDocument()
+    expect(main.getByText('Future development')).toBeInTheDocument()
     expect(main.queryByRole('textbox')).not.toBeInTheDocument()
     expect(main.queryByRole('spinbutton')).not.toBeInTheDocument()
     expect(main.getAllByRole('link', { name: 'Back to wallet' })).toHaveLength(2)

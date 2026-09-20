@@ -25,11 +25,11 @@ const (
 const invalidCredentials = "Email or password is incorrect"
 
 type Config struct {
-	CookieName               string
-	CookieSecure             bool
-	SessionTTL               time.Duration
-	LoginsPerMinute          int
-	PasswordResetSender      PasswordResetSender
+	CookieName          string
+	CookieSecure        bool
+	SessionTTL          time.Duration
+	LoginsPerMinute     int
+	PasswordResetSender PasswordResetSender
 }
 
 type Handler struct {
@@ -190,9 +190,15 @@ func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request, _ user.User
 		})
 		return
 	}
+	if query.Role != "" && query.Role != "player" && query.Role != "admin" {
+		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{
+			"role": "Role must be player or admin",
+		})
+		return
+	}
 
 	accounts, total, err := user.List(r.Context(), h.db, user.ListFilter{
-		Page: query.Page, Size: query.Size, Search: query.Search, Status: query.Status,
+		Page: query.Page, Size: query.Size, Search: query.Search, Status: query.Status, Role: query.Role,
 	})
 	if err != nil {
 		h.internal(w, r, err)

@@ -67,7 +67,7 @@ dependency order: `000001` `users` · `000002` `auth_sessions` · `000003`
 `deposit_requests` · `000013` `audit_logs` · `000014` `game_favorites` · `000015`
 `chat_messages` · `000016` `notifications` · `000017` replaces `rtp_profiles` with
 `games.rtp_basis_points` · `000018` adds the partial recent-settlement index used by the
-hot-game ranking.
+hot-game ranking · `000019` adds the case-insensitive unique payment-method name index.
 
 ### 4.1 Accounts and sessions
 
@@ -356,6 +356,9 @@ INSERT INTO payment_methods (
 ) VALUES
     ('GCash', 'Send your payment to the GCash account shown below.', 'To be supplied', true, false, 10),
     ('Maya', 'Send your payment to the Maya account shown below.', 'To be supplied', true, false, 20);
+
+CREATE UNIQUE INDEX payment_methods_name_key
+    ON payment_methods (lower(btrim(name)));
 
 CREATE TABLE deposit_requests (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -674,7 +677,9 @@ one transaction. The internal `Open`, `Settle`, `Cancel`, and `Fail` operations 
 for engines whose audited recovery design requires two phases.
 
 Players read their own rounds through `GET /api/rounds` and `GET /api/rounds/{id}`;
-operators read all of them through `GET /api/admin/rounds`.
+operators read all of them through `GET /api/admin/rounds`. The operator list accepts
+`search` as a case-insensitive partial round-ID match for the console typeahead and its
+filtered destination page.
 
 ## 11. The game's return
 
@@ -734,6 +739,23 @@ directory. Only an administrator can retrieve it through
 `GET /api/admin/deposits/{id}/proof`. The `proof_path` column stores only that private,
 server-generated filename.
 
+Payment methods are operational data, not compile-time configuration. Migration
+`000011` creates the table and seeds GCash and Maya as disabled records so every
+environment starts with the same two safe placeholders without advertising unfinished
+pay-to details to players. Operators manage every record through
+`GET /api/admin/payment-methods`, `POST /api/admin/payment-methods`, and
+`PATCH /api/admin/payment-methods/{id}`. Names are unique without regard to case, and
+create, edit, enable, and disable actions are written to the audit log in the same
+transaction. There is intentionally no delete route: disabling blocks new deposits
+while preserving historical deposit references.
+
+`GET /api/admin/deposits` accepts `search` as a case-insensitive partial payment-reference
+or deposit-ID match, including with `status=all`. The admin console combines that query
+with the existing searchable account list filtered to `role=player` and the round-ID
+search concurrently after a 250 ms debounce; this fan-out keeps ownership and
+authorization in the three existing services instead of introducing a duplicate
+cross-domain search index.
+
 ## 13. Audit trail
 
 One append-only insert, taking the acting account, an action, the entity, and the before
@@ -774,7 +796,7 @@ cause is logged; the response is the failure shape.
 ## 16. Pagination and filtering
 
 `internal/httpx` owns the page shape and the parsing of `page`, `size`,
-`search`, `status`, `type`, `currency`, `game_id`, `from`, and `to`. Default size 20,
+`search`, `status`, `role`, `type`, `currency`, `game_id`, `from`, and `to`. Default size 20,
 maximum 100, and no unbounded list endpoint anywhere.
 
 Every column a list filters or orders on is indexed, and the total comes from a counting

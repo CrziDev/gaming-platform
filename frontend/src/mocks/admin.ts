@@ -5,7 +5,6 @@ import type {
   AdminUser,
   Adjustment,
   AuditEntry,
-  ConsoleAlert,
   DashboardSummary,
   Wallet,
 } from '@/api/types'
@@ -70,12 +69,6 @@ export const dashboardSummary: DashboardSummary = {
   ],
   currency: 'PHP',
 }
-
-export const consoleAlerts: ConsoleAlert[] = [
-  { id: 'al-1', tone: 'warning', message: '1 deposit waiting over 20 min', href: '/admin/deposits' },
-  { id: 'al-2', tone: 'neutral', message: 'Skyline Crash disabled by operator', href: '/admin/games' },
-  { id: 'al-3', tone: 'danger', message: 'Aurora Dice playing at 105%', href: '/admin/rtp' },
-]
 
 const firstNames = ['juan', 'ana', 'dee', 'kris', 'mia', 'leo', 'noel', 'rita', 'sam', 'tess']
 const lastNames = ['martinez', 'rivera', 'tan', 'severino', 'lopez', 'cruz', 'reyes', 'diaz', 'uy', 'go']
@@ -381,9 +374,3 @@ function choose(n: number, k: number): number {
   for (let i = 1; i <= k; i += 1) result = (result * (n - i + 1)) / i
   return result
 }
-
-export const staffAccounts = [
-  { id: 'st-1', name: 'R. Cruz', email: 'r.cruz@ops.example.com', role: 'Operator', enabled: true },
-  { id: 'st-2', name: 'A. Reyes', email: 'a.reyes@ops.example.com', role: 'Owner', enabled: true },
-  { id: 'st-3', name: 'M. Villa', email: 'm.villa@ops.example.com', role: 'Operator', enabled: false },
-]

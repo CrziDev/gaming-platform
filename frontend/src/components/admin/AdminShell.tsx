@@ -1,4 +1,4 @@
-import { LogOut, Search, Settings, X } from 'lucide-react'
+import { LogOut, Settings, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 
@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn'
 import { adminPaths } from '@/routes/paths'
 
 import { adminNav } from './adminNav'
+import { AdminConsoleSearch } from './AdminConsoleSearch'
 
 export function AdminShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -78,15 +79,7 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
       <div className="flex-1" />
 
-      <label className="hidden min-w-70 items-center gap-2.5 rounded-input bg-inset px-2.5 lg:flex">
-        <Search aria-hidden size={15} strokeWidth={1.5} className="text-ink-mute" />
-        <input
-          type="search"
-          placeholder="Search player, ref or round id"
-          aria-label="Search the console"
-          className="min-h-[34px] flex-1 bg-transparent text-[13px] text-ink-soft placeholder:text-ink-mute focus:outline-none"
-        />
-      </label>
+      <AdminConsoleSearch />
 
       {operator ? (
         <div className="flex items-center gap-2">

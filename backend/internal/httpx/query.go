@@ -20,6 +20,7 @@ type Query struct {
 	Size     int
 	Search   string
 	Status   string
+	Role     string
 	Type     string
 	Currency string
 	Category string
@@ -46,6 +47,7 @@ func ReadQuery(w http.ResponseWriter, r *http.Request) (Query, bool) {
 		Size:     DefaultPageSize,
 		Search:   strings.TrimSpace(values.Get("search")),
 		Status:   strings.TrimSpace(values.Get("status")),
+		Role:     strings.TrimSpace(values.Get("role")),
 		Type:     strings.TrimSpace(values.Get("type")),
 		Currency: strings.ToUpper(strings.TrimSpace(values.Get("currency"))),
 		Category: strings.TrimSpace(values.Get("category")),

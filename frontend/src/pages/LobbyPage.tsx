@@ -4,19 +4,18 @@ import { BigWins } from '@/components/catalogue/BigWins'
 import { GameGrid, gameGrid } from '@/components/catalogue/GameGrid'
 import { GameRow } from '@/components/catalogue/GameRow'
 import { HeroBanner } from '@/components/catalogue/HeroBanner'
-import { Promotions } from '@/components/catalogue/Promotions'
+import { FutureDevelopment } from '@/components/ui/FutureDevelopment'
 import { SeeAll } from '@/components/ui/SeeAll'
 import { SkeletonGrid } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/States'
 import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import { useSession } from '@/features/auth'
 import {
-  useBigWins,
   useCategories,
   useGames,
-  usePromotions,
   useRecentlyPlayed,
 } from '@/features/catalogue'
+import { gameModuleFor } from '@/features/gameplay'
 import { paths } from '@/routes/paths'
 
 export function LobbyPage() {
@@ -26,8 +25,11 @@ export function LobbyPage() {
   const categoriesQuery = useCategories()
   const featuredQuery = useGames({ category: 'all', search: '', sort: 'name' })
   const gamesQuery = useGames({ category, search: '', sort: 'name' })
-  const winsQuery = useBigWins()
-  const promotionsQuery = usePromotions()
+  // The banner promotes a title that actually plays here, the first with a registered
+  // module, and falls back to the first title by name while none is listed.
+  const featured =
+    featuredQuery.data?.find((game) => gameModuleFor(game.slug) !== null) ??
+    featuredQuery.data?.[0]
 
   const tabs: TabItem<string>[] = [
     { id: 'all', label: 'All games' },
@@ -37,9 +39,9 @@ export function LobbyPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <HeroBanner featured={featuredQuery.data?.[0]} />
+      <HeroBanner featured={featured} />
 
-      <BigWins wins={winsQuery.data ?? []} />
+      <BigWins />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
@@ -66,7 +68,10 @@ export function LobbyPage() {
         )}
       </section>
 
-      <Promotions promotions={promotionsQuery.data ?? []} />
+      <section className="flex flex-col gap-2.5">
+        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Promotions</h2>
+        <FutureDevelopment />
+      </section>
 
       {user && recentlyPlayedQuery.isPending ? (
         <SkeletonGrid count={4} className={gameGrid} />

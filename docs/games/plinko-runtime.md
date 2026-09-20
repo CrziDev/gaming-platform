@@ -77,11 +77,31 @@ reset reports every live ball first. The frame never pays on a physical position
 
 ### Palette
 
-Pegs `ink-mute`, `accent-ink` on contact. Ball `ink`. Dropper `surface-2` over `panel`.
-Buckets are flat bands by distance from the centre: edge `gold`/`on-gold`, next ring
-`accent`/`on-accent`, inner `surface-3`/`ink-soft`, and any bucket below 1× muted on
-`surface-3`. The landing bucket lifts a few pixels for 260 ms with an `ink` outline and
-the host's result label is drawn above it in `win`. No gradients, shadows, or glows.
+The platform tokens plus the supplied game's own hues, declared once in `css/plinko.css`
+and mirrored in `frontend/src/features/gameplay/plinkoPalette.ts`. Pegs `ink-mute`,
+`--plinko-peg-hit` at 1.25× radius on contact. Ball `--plinko-ball`. Dropper `surface-2`
+over `panel`. Buckets are flat bands by distance from the centre: red at the edge where
+the pay is highest, then orange, purple, teal, lavender. The landing bucket lifts a few
+pixels for 260 ms with an `ink` outline and the host's result label is drawn above it in
+`win`. No gradients, shadows, or glows.
+
+### Art — `games/plinko/art/`
+
+| File | Role |
+| --- | --- |
+| `thumbnail.svg` | The 3:4 catalogue tile: the whole 8-row high-risk board, rendered to `frontend/src/assets/games/plinko.png` at 720×960 |
+| `banner.svg` | The landscape lobby banner: the lower rows of the 12-row high-risk board and its 13-bucket ribbon, sized to fill the panel at desktop widths; the narrowest two-column slot crops the outermost bucket pair. Rendered to `frontend/src/assets/banners/plinko.png` at 1400×760 |
+
+Both are drawn from the frame's own numbers — `getBoardConfig` and the peg grid in
+`js/physics.js`, `bucketBand` in `js/theme.js`, the tokens above, `formatMultiplier` in
+`js/ui.js` — on the multipliers of the seeded 95% option, so the art is the board a
+player sees. The folder sits beside `web/`, not inside it, so `frontend/vite/gameFrames.ts`
+never copies the sources into `dist`. Re-render with
+`rsvg-convert -w 720 thumbnail.svg -o …/games/plinko.png` and
+`rsvg-convert -w 1400 banner.svg -o …/banners/plinko.png`; the labels are set in IBM Plex
+Mono, which the renderer must be able to find. `frontend/src/lib/gameArt.ts` resolves both
+PNGs by slug, and the lobby banner features the first catalogue title with a module in
+`frontend/src/features/gameplay/registry.ts`.
 
 ## Server engine — `backend/internal/engine/`
 

@@ -6,6 +6,8 @@ import type { Currency } from '@/lib/money'
 import {
   adjustWallet,
   createGame,
+  createPaymentMethod,
+  fetchAdminDeposits,
   fetchAdminGame,
   fetchAdminGames,
   fetchAdminPaymentMethods,
@@ -14,10 +16,9 @@ import {
   fetchAdminRtpConfiguration,
   fetchAllCategories,
   fetchAuditEntries,
-  fetchConsoleAlerts,
+  fetchConsoleSearch,
   fetchDashboard,
   fetchDepositQueue,
-  fetchStaff,
   fetchUser,
   fetchUserAdjustments,
   fetchUserCounts,
@@ -29,8 +30,11 @@ import {
   setGameRtp,
   setUserStatus,
   updateGame,
+  updatePaymentMethod,
+  type AdminDepositFilter,
   type GameInput,
   type GamePatch,
+  type PaymentMethodInput,
   type UserFilter,
 } from './api'
 
@@ -39,10 +43,6 @@ export function useDashboard(currency: Currency) {
     queryKey: ['admin', 'dashboard', currency],
     queryFn: () => fetchDashboard(currency),
   })
-}
-
-export function useConsoleAlerts() {
-  return useQuery({ queryKey: ['admin', 'alerts'], queryFn: fetchConsoleAlerts })
 }
 
 export function useAuditEntries(page = 1, size?: number) {
@@ -56,6 +56,13 @@ export function useDepositQueue(page = 1, size?: number) {
   return useQuery({
     queryKey: ['admin', 'deposit-queue', page, size],
     queryFn: () => fetchDepositQueue(page, size),
+  })
+}
+
+export function useAdminDeposits(filter: AdminDepositFilter) {
+  return useQuery({
+    queryKey: ['admin', 'deposits', filter],
+    queryFn: () => fetchAdminDeposits(filter),
   })
 }
 
@@ -205,10 +212,36 @@ export function useSetGameRtp() {
   })
 }
 
-export function useStaff() {
-  return useQuery({ queryKey: ['admin', 'staff'], queryFn: fetchStaff })
-}
-
 export function useAdminPaymentMethods() {
   return useQuery({ queryKey: ['admin', 'payment-methods'], queryFn: fetchAdminPaymentMethods })
+}
+
+export function useCreatePaymentMethod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createPaymentMethod,
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'payment-methods'] }),
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+    ]),
+  })
+}
+
+export function useUpdatePaymentMethod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<PaymentMethodInput> }) => updatePaymentMethod({ id, patch }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'payment-methods'] }),
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+    ]),
+  })
+}
+
+export function useConsoleSearch(query: string) {
+  return useQuery({
+    queryKey: ['admin', 'search', query],
+    queryFn: ({ signal }) => fetchConsoleSearch(query, signal),
+    enabled: query.trim().length >= 2,
+  })
 }

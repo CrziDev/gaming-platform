@@ -65,6 +65,7 @@ type ReadFilter struct {
 	Currency string
 	From     *time.Time
 	To       *time.Time
+	Search   string
 }
 
 type OpenInput struct {

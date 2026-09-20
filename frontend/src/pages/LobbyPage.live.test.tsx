@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { liveShellStubs, renderApp, stubFetchRoutes, stubWebSocket, userBody } from '@/test-utils'
+import { errorBody, liveShellStubs, renderApp, stubFetchRoutes, stubWebSocket, userBody } from '@/test-utils'
 
 vi.mock('@/api/mode', () => ({ testFixturesEnabled: false }))
 
@@ -48,5 +48,25 @@ describe('the lobby against a live server', () => {
     const recent = await screen.findByRole('list', { name: 'Recently Played' })
     expect(within(recent).getAllByRole('listitem')).toHaveLength(1)
     expect(within(recent).getByRole('link', { name: /Plinko/ })).toHaveAttribute('href', '/game/plinko')
+  })
+
+  it('features the first title by name when no playable game is listed', async () => {
+    stubFetchRoutes({
+      ...liveShellStubs,
+      'GET /me': { status: 401, body: errorBody('Authentication is required') },
+      'GET /categories': { status: 200, body: [] },
+      'GET /games': {
+        status: 200,
+        body: page([
+          { ...game, id: '1f2e3d4c-5b6a-4798-8a9b-0c1d2e3f4a5b', slug: 'vault-break', name: 'Vault Break' },
+          { ...game, id: '2a3b4c5d-6e7f-4801-9a0b-1c2d3e4f5a6b', slug: 'aurora-dice', name: 'Aurora Dice' },
+        ]),
+      },
+    })
+
+    renderApp('/')
+
+    const hero = (await screen.findByRole('heading', { level: 1, name: 'Vault Break' })).closest('section')!
+    expect(within(hero).getByText('banner artwork')).toBeInTheDocument()
   })
 })

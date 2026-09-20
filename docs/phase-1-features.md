@@ -12,10 +12,11 @@ the read-only RTP configuration inspector landed. This status is based on reacha
 routes, repository/service code, frontend transport code, and automated tests—not on
 the presence of a table or a fixture-backed screen alone.
 
-Fixture-only surfaces (big wins, promotions, console alerts, staff) render only in
-component tests. Every application build
-uses the server API; unsupported reads return nothing and their sections do not render,
-so local development and deployments never show a fabricated win, promotion, or alert.
+Unsupported product surfaces are now labelled **Future Development** instead of rendering
+fixtures or inert controls. This applies to promotions, big wins, cash-out, staff,
+deposit limits, platform settings, support, and language selection. The former console
+alert panel was removed; it was an operator-dashboard fixture, not the persisted player
+notification system.
 
 ## Current state
 
@@ -29,9 +30,8 @@ so local development and deployments never show a fabricated win, promotion, or 
 - [x] Player payment-method and deposit-request APIs are backed by PostgreSQL.
 - [x] Admin deposit review APIs credit or reject requests atomically with audit entries.
 - [x] The currency-scoped admin dashboard summary is backed by PostgreSQL.
-- [ ] Define, implement, or explicitly remove the remaining unsupported product surfaces:
-  promotions, big wins, console alerts, staff, and settings. Application builds already use HTTP for supported features and return
-  no fixture data for unsupported reads.
+- [x] Explicitly mark unsupported product surfaces as Future Development and remove the
+  fixture-only console alert panel and inert controls.
 - [ ] Financial services and their PostgreSQL concurrency tests are complete (wallets,
   adjustments, deposits, and rounds are; cash-out has no contract yet, §1).
 - [x] The platform satisfies the pre-engine readiness gate in this document (§16).
@@ -139,11 +139,13 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Define the wallet-summary response. `GET /api/transactions/summary` reports
   deposited, staked, and returned per wallet for the requested window, and the history
   page renders one row of cards per currency from it; the client sums nothing.
-- [ ] Define or remove fixture-only console alerts (hidden in application builds meanwhile).
-- [ ] Decide whether staff-account management is Phase 1; the admin UI currently reads
-  fixture staff accounts.
-- [x] Define admin payment-method management endpoints, or make payment methods
-  seed/configuration-only for Phase 1.
+- [x] Remove fixture-only console alerts. These were dashboard action prompts and were
+  unrelated to the real player notification feed.
+- [x] Defer staff-account management and label its settings tab Future Development.
+- [x] Implement database-backed admin payment-method list, create, edit, enable, and
+  disable operations with audit entries. GCash and Maya remain the two migration-seeded
+  starting records; disabled methods stay visible to operators but cannot accept a new
+  player deposit.
 - [x] Add the proof-upload HTTP contract, limits, and error behavior if screenshot upload
   remains in Phase 1.
 - [ ] Reconcile every frontend response type with the API resource and page shapes
@@ -156,16 +158,16 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Keep lobby rows derived from platform data unless merchandising configuration is
   explicitly added to scope; recently played comes from the player's distinct latest
   rounds and hot comes from seven days of settled-round activity.
-- [ ] Decide whether the v2 lobby's remaining merchandising surfaces — big wins and
-  promotions — are Phase 1. They are test fixtures today and hidden in application
-  builds. The new and hot shelves are real.
+- [x] Defer the v2 lobby's remaining merchandising surfaces — big wins and promotions —
+  and label them Future Development. The new and hot shelves remain real.
 - [x] Favorites and the live chat rail are Phase 1 and built: `game_favorites` with
   `GET /api/favorites` and idempotent `PUT`/`DELETE /api/games/{slug}/favorite`;
   `chat_messages` with the public room read, the rate-limited post, and the WebSocket
   push at `GET /api/chat/socket`.
-- [ ] Decide what the Support link, the language selector, and the console search box
-  do in Phase 1. The link points at a placeholder host, the "English" button and the
-  "Search player, ref or round id" input have no handler, and none has a contract.
+- [x] Mark Support and language selection Future Development. Implement the admin console
+  search as a 250 ms debounced typeahead (minimum two characters, five results per group)
+  across player name/email/ID, payment reference/deposit ID, and round ID. Selecting a
+  result opens the player or a filtered all-status deposit/round list.
 
 ## 2. Foundations and schema
 
@@ -193,7 +195,7 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Move response, error, JSON, and pagination helpers to `internal/httpx`.
 - [x] Use the API's resource, error, and page shapes consistently on every route.
 - [x] Return the standard not-found response for every unknown path.
-- [x] Implement common parsing for page, size, search, status, type, currency, game,
+- [x] Implement common parsing for page, size, search, status, role, type, currency, game,
   and date filters.
 - [x] Enforce a default page size of 20 and maximum of 100.
 - [x] Add `GET /api/currencies` for enabled currency metadata.
@@ -336,8 +338,13 @@ These features do not require an engine.
   the seed now uses whole units too).
 - [x] Audit game creation and status changes.
 - [x] Reject a wager when its game is not active.
-- [ ] Replace fixture art with reviewed game thumbnails when assets arrive (the tile
-  renders `frontend/src/assets/games/<slug>.png` or `thumbnail_url` when present).
+- [x] Plinko's art is rendered from the game's own geometry and palette: the 3:4 tile at
+  `frontend/src/assets/games/plinko.png` and the landscape lobby banner at
+  `frontend/src/assets/banners/plinko.png`, from the SVG sources in `games/plinko/art/`.
+  The tile renders `assets/games/<slug>.*` or `thumbnail_url` when present; the banner
+  renders `assets/banners/<slug>.*`, then the thumbnail, then the placeholder.
+- [ ] Art for the remaining catalogue titles when assets arrive; they keep the
+  placeholder slot until then.
 - [x] A real game launches only through an engine registered for its slug in
   `internal/app`; Plinko passed the engine gate and launches, and every other catalogue
   title answers `404` to a round and keeps the display-slot placeholder.

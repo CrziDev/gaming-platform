@@ -60,22 +60,6 @@ export type Game = {
   created_at: string
 }
 
-export type BigWin = {
-  id: string
-  username: string
-  game_slug: string
-  amount_minor: number
-  currency: Currency
-  created_at: string
-}
-
-export type Promotion = {
-  id: string
-  kicker: string
-  title: string
-  subtitle: string
-}
-
 export type ChatMessage = {
   id: string
   display_name: string
@@ -191,6 +175,12 @@ export type PaymentMethod = {
   enabled: boolean
 }
 
+export type AdminPaymentMethod = PaymentMethod & {
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
 export type NotificationKind = 'deposit_approved' | 'deposit_rejected' | 'round_win'
 
 export type Notification = {
@@ -261,13 +251,6 @@ export type AdminRtpConfiguration = {
     theoretical_rtp_basis_points: number
     slots: AdminRtpSlot[]
   }
-}
-
-export type ConsoleAlert = {
-  id: string
-  tone: 'warning' | 'danger' | 'neutral'
-  message: string
-  href: string
 }
 
 export type DashboardGameActivity = {

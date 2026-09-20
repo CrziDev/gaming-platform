@@ -4,6 +4,7 @@ import type { Game } from '@/api/types'
 import { GameArt } from '@/components/catalogue/GameArt'
 import { buttonStyles } from '@/components/ui/Button'
 import { useAuthIntent, useSession } from '@/features/auth'
+import { bannerArtUrl } from '@/lib/gameArt'
 import { formatMoney, money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
@@ -67,7 +68,11 @@ export function HeroBanner({ featured }: { featured: Game | undefined }) {
           </div>
         </div>
 
-        <GameArt caption="banner artwork" className="hidden min-h-[158px] self-stretch rounded-input @rail:flex" />
+        <GameArt
+          src={bannerArtUrl(featured)}
+          caption="banner artwork"
+          className="hidden min-h-[158px] self-stretch rounded-input @rail:flex"
+        />
       </div>
     </section>
   )

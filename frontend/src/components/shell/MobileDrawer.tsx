@@ -4,13 +4,11 @@ import { Link } from 'react-router'
 
 import { paths } from '@/routes/paths'
 
+import { FutureDevelopmentRow } from './FutureDevelopmentRow'
 import { NavList } from './NavList'
 import { playerNav } from './nav'
 import { RailSearch } from './RailSearch'
 import { useShell } from './ShellContext'
-
-const footerRow =
-  'flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13px] text-ink-mute hover:text-ink-soft'
 
 export function MobileDrawer() {
   const { drawerOpen, setDrawerOpen } = useShell()
@@ -62,14 +60,8 @@ export function MobileDrawer() {
         </nav>
 
         <div className="flex flex-col gap-px p-2">
-          <a href="https://support.example.com" target="_blank" rel="noreferrer" className={footerRow}>
-            <LifeBuoy aria-hidden size={16} strokeWidth={1.5} />
-            Support
-          </a>
-          <button type="button" className={footerRow}>
-            <Globe aria-hidden size={16} strokeWidth={1.5} />
-            English
-          </button>
+          <FutureDevelopmentRow icon={LifeBuoy} label="Support" placement="above" />
+          <FutureDevelopmentRow icon={Globe} label="English" placement="above" />
         </div>
       </div>
     </div>

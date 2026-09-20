@@ -297,7 +297,7 @@ func readFilter(w http.ResponseWriter, r *http.Request, admin bool) (ReadFilter,
 	}
 	return ReadFilter{
 		Page: query.Page, Size: query.Size, UserID: query.UserID, GameID: query.GameID,
-		Status: query.Status, Currency: query.Currency, From: query.From, To: query.To,
+		Status: query.Status, Currency: query.Currency, From: query.From, To: query.To, Search: query.Search,
 	}, true
 }
 
