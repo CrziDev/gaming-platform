@@ -53,3 +53,19 @@ make test         # migrates and uses only TEST_DATABASE_URL (a *_test database)
 ```
 
 `make help` lists every target. Ports: web 5173, API 8080, PostgreSQL 5432.
+
+## Password-reset email
+
+Email delivery is disabled by default, so local reset requests return `503`. For a
+deployment using Resend, configure:
+
+```dotenv
+EMAIL_DELIVERY_PROVIDER=resend
+PUBLIC_WEB_URL=https://play.example.com
+RESEND_API_KEY=re_...
+RESEND_FROM=HeziBet <security@example.com>
+```
+
+`PUBLIC_WEB_URL` must be HTTPS and `RESEND_FROM` must be a valid, verified sender. The
+server fails startup when enabled delivery is incomplete or invalid. Reset links expire
+after 30 minutes; the API stores only their SHA-256 hashes.

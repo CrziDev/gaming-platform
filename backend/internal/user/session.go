@@ -79,6 +79,10 @@ func RevokeSession(ctx context.Context, db *sql.DB, tokenHash []byte) error {
 	return nil
 }
 
+func RevokeSessionsTx(ctx context.Context, tx *sql.Tx, userID string) error {
+	return revokeSessionsTx(ctx, tx, userID)
+}
+
 func revokeSessionsTx(ctx context.Context, tx *sql.Tx, userID string) error {
 	if _, err := tx.ExecContext(ctx, revokeUserSessionsSQL, userID); err != nil {
 		return fmt.Errorf("user: revoke sessions: %w", err)

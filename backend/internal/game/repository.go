@@ -153,6 +153,91 @@ const favoritesWhere = `
 	JOIN game_categories c ON c.slug = g.category_slug
 	WHERE f.user_id = ($1::text)::uuid AND g.status = 'active'`
 
+const hotCatalogueWhere = `
+	FROM games g
+	JOIN game_categories c ON c.slug = g.category_slug
+	JOIN (
+		SELECT game_id, count(*) AS round_count, count(DISTINCT user_id) AS player_count,
+		       max(started_at) AS last_played_at
+		FROM game_rounds
+		WHERE status = 'settled' AND started_at >= $3
+		GROUP BY game_id
+	) hot ON hot.game_id = g.id
+	WHERE g.status = 'active'
+	  AND ($1 = '' OR g.category_slug = $1)
+	  AND ($2 = ''
+	    OR position(lower($2) in lower(g.name)) > 0
+	    OR position(lower($2) in lower(c.name)) > 0
+	    OR position(lower($2) in lower(g.provider)) > 0)`
+
+func ListHotCatalogue(ctx context.Context, db *sql.DB, filter CatalogueFilter, since time.Time) ([]Game, int, error) {
+	var total int
+	if err := db.QueryRowContext(ctx, `SELECT count(*)`+hotCatalogueWhere, filter.Category, filter.Search, since).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("game: count hot catalogue: %w", err)
+	}
+
+	offset := int64(filter.Page-1) * int64(filter.Size)
+	rows, err := db.QueryContext(ctx, `SELECT `+gameColumns+hotCatalogueWhere+`
+		ORDER BY hot.round_count DESC, hot.player_count DESC, hot.last_played_at DESC, g.slug ASC
+		LIMIT $4 OFFSET $5`, filter.Category, filter.Search, since, filter.Size, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("game: list hot catalogue: %w", err)
+	}
+	defer rows.Close()
+
+	games := make([]Game, 0)
+	for rows.Next() {
+		item, err := scanGame(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("game: scan hot game: %w", err)
+		}
+		item.Hot = true
+		games = append(games, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("game: hot catalogue rows: %w", err)
+	}
+	return games, total, nil
+}
+
+const recentlyPlayedWhere = `
+	FROM games g
+	JOIN game_categories c ON c.slug = g.category_slug
+	JOIN (
+		SELECT game_id, max(started_at) AS last_played_at
+		FROM game_rounds
+		WHERE user_id = ($1::text)::uuid
+		GROUP BY game_id
+	) recent ON recent.game_id = g.id
+	WHERE g.status = 'active'`
+
+func ListRecentlyPlayed(ctx context.Context, db *sql.DB, userID string, page, size int) ([]Game, int, error) {
+	var total int
+	if err := db.QueryRowContext(ctx, `SELECT count(*)`+recentlyPlayedWhere, userID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("game: count recently played: %w", err)
+	}
+	offset := int64(page-1) * int64(size)
+	rows, err := db.QueryContext(ctx, `SELECT `+gameColumns+recentlyPlayedWhere+`
+		ORDER BY recent.last_played_at DESC, g.slug ASC LIMIT $2 OFFSET $3`, userID, size, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("game: list recently played: %w", err)
+	}
+	defer rows.Close()
+
+	games := make([]Game, 0)
+	for rows.Next() {
+		item, err := scanGame(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("game: scan recently played game: %w", err)
+		}
+		games = append(games, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("game: recently played rows: %w", err)
+	}
+	return games, total, nil
+}
+
 func ListFavorites(ctx context.Context, db *sql.DB, userID string, page, size int) ([]Game, int, error) {
 	var total int
 	if err := db.QueryRowContext(ctx, `SELECT count(*)`+favoritesWhere, userID).Scan(&total); err != nil {

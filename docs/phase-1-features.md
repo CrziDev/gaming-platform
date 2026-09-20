@@ -12,15 +12,15 @@ the read-only RTP configuration inspector landed. This status is based on reacha
 routes, repository/service code, frontend transport code, and automated tests—not on
 the presence of a table or a fixture-backed screen alone.
 
-Fixture-only surfaces (big wins, promotions, the recently-played lobby row, the hot
-shelf, console alerts, staff) render only in component tests. Every application build
+Fixture-only surfaces (big wins, promotions, console alerts, staff) render only in
+component tests. Every application build
 uses the server API; unsupported reads return nothing and their sections do not render,
 so local development and deployments never show a fabricated win, promotion, or alert.
 
 ## Current state
 
 - [x] PostgreSQL schema and reversible migrations exist for every Phase 1 table.
-- [x] Registration, login, logout, session lookup, and development admin seeding exist.
+- [x] Registration, login, logout, session lookup, password recovery and change, and development admin seeding exist.
 - [x] The player and admin interfaces exist and can be exercised with deterministic
   component-test fixtures.
 - [x] Shared application routing, HTTP helpers, and filter pagination are in place.
@@ -30,8 +30,7 @@ so local development and deployments never show a fabricated win, promotion, or 
 - [x] Admin deposit review APIs credit or reject requests atomically with audit entries.
 - [x] The currency-scoped admin dashboard summary is backed by PostgreSQL.
 - [ ] Define, implement, or explicitly remove the remaining unsupported product surfaces:
-  promotions, big wins, the recently-played row, the hot shelf, console alerts, staff,
-  and settings. Application builds already use HTTP for supported features and return
+  promotions, big wins, console alerts, staff, and settings. Application builds already use HTTP for supported features and return
   no fixture data for unsupported reads.
 - [ ] Financial services and their PostgreSQL concurrency tests are complete (wallets,
   adjustments, deposits, and rounds are; cash-out has no contract yet, §1).
@@ -56,10 +55,13 @@ inventing an outcome.
   and add a rounds section to the user detail page.
 - [x] Cover the required round lifecycle and read-route tests in §8.
 
-Deferred by decision on 2026-09-12: password reset and change (`POST /api/password-reset`,
-`/password-reset/confirm`, `/password`). The `password_reset_tokens` table exists and
-`/forgot` and `/reset` already call the contracted endpoints; the open question is how a
-reset token reaches the player.
+## Completed slice: account security
+
+Completed on 2026-09-20. Password reset uses direct Resend HTTPS delivery when enabled,
+stores only 32-byte token hashes for 30 minutes, and keeps account existence private.
+Reset confirmation and authenticated password change atomically replace every old
+session with one for the initiating browser. The Account page remains read-only apart
+from its password form and no longer fabricates player status.
 
 ## Completed slice: game administration and the game's return
 
@@ -151,11 +153,12 @@ decision must update the API contract, frontend types, and implementation togeth
   carries a `label`, `reference`, `status`, and `round_id` the server does not send;
   `Round`, `WalletSummary`, `ChatMessage`, and `Notification` are reconciled with their
   endpoints).
-- [x] Keep lobby rows client-derived unless merchandising configuration is explicitly
-  added to scope.
-- [ ] Decide whether the v2 lobby's merchandising surfaces — big wins, promotions, and the
-  hot shelf — are Phase 1. They are test fixtures today and hidden in application builds. The
-  new shelf is real: a game is `new` for thirty days after it is added.
+- [x] Keep lobby rows derived from platform data unless merchandising configuration is
+  explicitly added to scope; recently played comes from the player's distinct latest
+  rounds and hot comes from seven days of settled-round activity.
+- [ ] Decide whether the v2 lobby's remaining merchandising surfaces — big wins and
+  promotions — are Phase 1. They are test fixtures today and hidden in application
+  builds. The new and hot shelves are real.
 - [x] Favorites and the live chat rail are Phase 1 and built: `game_favorites` with
   `GET /api/favorites` and idempotent `PUT`/`DELETE /api/games/{slug}/favorite`;
   `chat_messages` with the public room read, the rate-limited post, and the WebSocket
@@ -218,21 +221,20 @@ decision must update the API contract, frontend types, and implementation togeth
 
 ### Remaining accounts work
 
-- [ ] Request a password reset without revealing whether the email exists.
-- [ ] Deliver reset tokens through a production-ready email mechanism.
-- [ ] Confirm a password reset with a hashed, expiring, single-use token.
-- [ ] Revoke all other sessions after a successful password reset.
-- [ ] Change password using the current password.
-- [ ] Revoke all other sessions after a password change.
+- [x] Request a password reset without revealing whether the email exists.
+- [x] Deliver reset tokens through Resend's HTTPS API.
+- [x] Confirm a password reset with a hashed, expiring, single-use token.
+- [x] Revoke all old sessions and replace the confirming browser's session after a successful password reset.
+- [x] Change password using the current password.
+- [x] Revoke all old sessions and replace the submitting browser's session after a password change.
 - [x] Return a paginated, searchable, status-filtered admin user list.
 - [x] Return an individual admin user detail record.
 - [x] Suspend and reinstate accounts.
 - [x] Make suspension effective on the account's next request.
 - [x] Audit every operator account-status change.
 - [ ] Define and implement the player profile fields that can be edited, if profile
-  editing remains in Phase 1 (the Account page has no edit control today, and its
-  Status badge is a hardcoded "Active" because the player account body carries no
-  status).
+  editing remains in Phase 1. The Account page intentionally keeps identity read-only,
+  and account status remains an administrator-owned concern.
 - [x] Test anonymous, player, admin, suspended, and closed-account boundaries.
 
 ## 4. Wallets and immutable ledger
@@ -441,17 +443,15 @@ and can never make a percentage true on its own.
 ### Public and player routes
 
 - [ ] Lobby `/` is backed by the real catalogue and player history where applicable (the
-  catalogue, categories, and featured banner are real; the recently-played row is still
-  fixture-only although round history now exists to derive it, and big wins and
+  catalogue, categories, featured banner, and recently-played row are real; big wins and
   promotions are fixture-only).
 - [x] Game catalogue `/games` is backed by the real catalogue API.
 - [x] Sign in `/login` uses the real session API.
 - [x] Registration `/register` uses the real account API.
-- [ ] Forgot password `/forgot` uses the real reset-request API (the page calls the
-  contracted endpoint and reports that reset is unavailable while the server answers
-  `404`).
-- [ ] Reset password `/reset` uses the real reset-confirmation API (same: wired to the
-  contract, honest until the server implements it).
+- [x] Forgot password `/forgot` uses the real indistinguishable reset-request API and
+  reports the explicit disabled-delivery state.
+- [x] Reset password `/reset` validates and confirms the real reset token, recovers from
+  invalid links, and installs the returned session on success.
 - [x] Game host `/game/:slug` loads real metadata, the game's own wallet, and recent rounds,
   and safely reports unavailable games; the favorite toggle writes to the server.
 - [x] Wallet `/wallet` uses real wallets and balances.
@@ -459,13 +459,14 @@ and can never make a percentage true on its own.
 - [x] Deposit status `/wallet/deposit/:id` uses the real player-owned request.
 - [x] History `/history` uses real transaction and round history with server-side paging
   and date filters.
-- [ ] Account `/account` uses real account and password operations (account and wallets
-  are real; the password change control is absent until `POST /api/password` exists,
-  and the Status badge is hardcoded).
+- [x] Account `/account` uses real account, wallet, and password-change operations;
+  identity stays read-only and the page does not fabricate account status.
 - [x] New `/games/new` is backed by the real catalogue's thirty-day `new` flag.
 - [x] Favorites `/favorites` lists the player's real favourites from `GET /api/favorites`.
-- [ ] Hot `/games/hot` and Promotions `/promotions` have no service and are hidden in
-  application builds; see contract alignment.
+- [x] Hot `/games/hot` ranks active games by settled-round activity in the trailing seven
+  days, with distinct players and latest activity as tie-breakers.
+- [ ] Promotions `/promotions` has no service and is hidden in application builds; the
+  console navigation exposes a table marked Future Development.
 - [x] Not found `*` presents the intended application state.
 
 ### Admin routes
@@ -484,6 +485,8 @@ and can never make a percentage true on its own.
 - [x] Games `/admin/games` uses real catalogue administration (the contract's `status`,
   `category`, and `search` filters are not yet exposed in the UI).
 - [x] Game details `/admin/games/:id` uses real game metadata and shows the return.
+- [x] Promotions `/admin/promotions` is intentionally a Future Development placeholder;
+  it does not fabricate campaign data or controls before a service contract exists.
 - [x] RTP `/admin/rtp` switches a game's return only among the engine's options.
 - [x] RTP configuration `/admin/rtp/:id` reads the chosen option and board from the
   guarded engine configuration endpoint without changing the option in force.
@@ -549,7 +552,7 @@ Built with Plinko as the first title; `docs/games/plinko-runtime.md` records the
 - [ ] Re-check resource ownership in services that access money or private records.
 - [x] Return `404` rather than revealing another player's wallet, deposit, or round.
 - [ ] Validate all identifiers, enums, money, timestamps, and pagination input.
-- [ ] Keep passwords, hashes, raw session/reset tokens, proof contents, and RNG state out
+- [x] Keep passwords, hashes, raw session/reset tokens, proof contents, and RNG state out
   of logs.
 - [ ] Configure secure cookies and trusted origins for production.
 - [ ] Review rate limiting for a multi-instance deployment.

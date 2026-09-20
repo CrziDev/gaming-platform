@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 
 import {
   adminLogin,
+  changePassword,
   confirmPasswordReset,
   fetchCurrentUser,
   login,
@@ -79,7 +80,23 @@ export function useRequestPasswordReset() {
 }
 
 export function useConfirmPasswordReset() {
-  return useMutation({ mutationFn: confirmPasswordReset })
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: confirmPasswordReset,
+    onSuccess: (user) => {
+      clearSessionExpired()
+      dropGuestQueries(queryClient)
+      queryClient.setQueryData(sessionQueryKey, user)
+    },
+  })
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: changePassword,
+    onSuccess: clearSessionExpired,
+  })
 }
 
 // Anything fetched before the session changed was scoped to the old identity:

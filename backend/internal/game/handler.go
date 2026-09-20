@@ -113,8 +113,8 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if query.Sort != "" && query.Sort != SortName && query.Sort != SortNewest {
 		fields["sort"] = "Sort must be name or newest"
 	}
-	if query.Flag != "" && query.Flag != FlagNew {
-		fields["flag"] = "Flag must be new"
+	if query.Flag != "" && query.Flag != FlagHot && query.Flag != FlagNew {
+		fields["flag"] = "Flag must be hot or new"
 	}
 	if len(fields) > 0 {
 		httpx.WriteFieldErrors(w, "One or more filters are invalid", fields)
@@ -127,7 +127,14 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		since := NewSince(now)
 		filter.NewSince = &since
 	}
-	games, total, err := ListCatalogue(r.Context(), h.db, filter)
+	var games []Game
+	var total int
+	var err error
+	if query.Flag == FlagHot {
+		games, total, err = ListHotCatalogue(r.Context(), h.db, filter, HotSince(now))
+	} else {
+		games, total, err = ListCatalogue(r.Context(), h.db, filter)
+	}
 	if err != nil {
 		h.internal(w, r, err)
 		return
@@ -163,6 +170,24 @@ func (h *Handler) Favorites(w http.ResponseWriter, r *http.Request, account user
 		return
 	}
 	games, total, err := ListFavorites(r.Context(), h.db, account.ID, query.Page, query.Size)
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	now := h.now()
+	result := make([]response, 0, len(games))
+	for _, item := range games {
+		result = append(result, newResponse(item, now))
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPage(result, total, query.Page, query.Size))
+}
+
+func (h *Handler) RecentlyPlayed(w http.ResponseWriter, r *http.Request, account user.User) {
+	query, ok := httpx.ReadQuery(w, r)
+	if !ok {
+		return
+	}
+	games, total, err := ListRecentlyPlayed(r.Context(), h.db, account.ID, query.Page, query.Size)
 	if err != nil {
 		h.internal(w, r, err)
 		return

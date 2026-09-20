@@ -47,7 +47,7 @@ in the handler at the same time. A client never matches on `error` text.
 | `SELF_STATUS_CHANGE` | 409 | Refuse an administrator changing their own status |
 | `ACCOUNT_CLOSED` | 409 | Keep a closed account terminal |
 
-A `400`, `401`, `403`, `404`, `413`, `429`, or `500` carries no code: the status is the
+A `400`, `401`, `403`, `404`, `413`, `429`, `500`, or `503` carries no code: the status is the
 whole answer, and `fields` handles input-specific rejection.
 
 ## Lists
@@ -75,10 +75,27 @@ one game's RTP options — is a plain array.
 | `POST` | `/api/login` | `200` + the account | `400` missing input · `401` bad credentials · `403` account not active |
 | `POST` | `/api/logout` | `204` | — |
 | `GET` | `/api/me` | `200` + the account | `401` no session |
+| `POST` | `/api/password-reset` | `204`, whether the active account exists or not | `400` invalid email · `429` · `503` delivery disabled |
+| `POST` | `/api/password-reset/confirm` | `200` + the account, signed in with the new password | `400` invalid password or unusable link · `429` |
+| `POST` | `/api/password` | `204`, with the submitting browser's session rotated | `400` invalid current or new password · `401` · `429` |
 
-`/api/register` and `/api/login` are rate limited per client by
-`LOGIN_ATTEMPTS_PER_MINUTE`, and `POST /api/chat/messages` per account by
-`CHAT_MESSAGES_PER_MINUTE`.
+Registration, login, reset request, reset confirmation, and password change share the
+per-client `LOGIN_ATTEMPTS_PER_MINUTE` budget. `POST /api/chat/messages` is limited per
+account by `CHAT_MESSAGES_PER_MINUTE`.
+
+A reset request takes `{ "email" }`. Disabled email delivery answers `503` before an
+account lookup; otherwise an active, inactive, or unknown account is publicly the same
+empty `204`. Provider failures are logged but remain a `204`, so they cannot disclose an
+account. A delivered reset link is `/reset?token=...`, expires after 30 minutes, and a
+new request supersedes every older unused link for that account.
+
+Reset confirmation takes `{ "token", "password" }`. Unknown, malformed, expired, used,
+superseded, and inactive-account tokens share one generic `400`. Success changes the
+password, consumes the token, revokes every existing session, creates one replacement
+session for the confirming browser, and returns the ordinary account body. Authenticated
+password change takes `{ "current_password", "password" }`; success performs the same
+session replacement for the submitting browser. Failed credentials, validation, and
+tokens change neither the password nor any session.
 
 ### Player
 
@@ -91,8 +108,9 @@ one game's RTP options — is a plain array.
 | `GET` | `/api/transactions` | `200` + a page of the player's movements; accepts `currency`, `type`, `from`, `to` | `400` invalid filter · `401` · `404` unknown currency |
 | `GET` | `/api/transactions/summary` | `200` + one summary per wallet the player holds; accepts `currency`, `from`, `to` | `400` invalid filter · `401` · `404` unknown currency |
 | `GET` | `/api/categories` | `200` + every category with its active-game count and availability | — |
-| `GET` | `/api/games` | `200` + a page of active games; accepts `category`, `search`, `sort=name\|newest`, `flag=new` | `400` invalid filter |
+| `GET` | `/api/games` | `200` + a page of active games; accepts `category`, `search`, `sort=name\|newest`, `flag=new\|hot`; hot ranks settled-round activity from the trailing seven days | `400` invalid filter |
 | `GET` | `/api/games/{slug}` | `200` + the game | `404` not active or unknown |
+| `GET` | `/api/recent-games` | `200` + a page of the player's distinct active games, ordered by their latest round | `401` |
 | `GET` | `/api/favorites` | `200` + a page of the player's favourite games, newest first; active games only | `401` |
 | `PUT` | `/api/games/{slug}/favorite` | `204`, and again `204` when it already was one | `401` · `404` not active or unknown |
 | `DELETE` | `/api/games/{slug}/favorite` | `204`, and again `204` when it was not one | `401` · `404` not active or unknown |

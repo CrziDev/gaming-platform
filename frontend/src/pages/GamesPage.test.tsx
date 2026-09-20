@@ -75,4 +75,19 @@ describe('the catalogue against a live server', () => {
     const grid = await screen.findByRole('list', { name: 'Game catalogue' })
     expect(within(grid).getAllByRole('listitem')).toHaveLength(1)
   })
+
+  it('renders the server-ranked hot shelf', async () => {
+    stubFetchRoutes({
+      ...liveShellStubs,
+      'GET /me': guest,
+      'GET /categories': { status: 200, body: [] },
+      'GET /games': { status: 200, body: page([{ ...game, flags: ['hot'] }]) },
+    })
+
+    renderApp('/games/hot')
+
+    const grid = await screen.findByRole('list', { name: 'Hot games' })
+    expect(within(grid).getByText('Aurora Dice')).toBeInTheDocument()
+    expect(within(grid).getByText('hot')).toBeInTheDocument()
+  })
 })

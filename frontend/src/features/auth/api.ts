@@ -1,11 +1,7 @@
 import { ApiError, api } from '@/api/client'
-import { mockRequest } from '@/api/mock'
-import { testFixturesEnabled } from '@/api/mode'
 import type { User } from '@/api/types'
 
-import type { AdminLoginInput, LoginInput, RegisterInput } from './schemas'
-
-const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
+import type { AdminLoginInput, ChangePasswordInput, LoginInput, RegisterInput } from './schemas'
 
 export async function register(input: RegisterInput): Promise<User> {
   return api.post<User>('/register', {
@@ -45,26 +41,23 @@ export async function fetchCurrentUser(): Promise<User | null> {
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  if (usingTestFixtures) {
-    await mockRequest(() => undefined, 400)
-    return
-  }
   await api.post<void>('/password-reset', { email })
 }
 
-export async function confirmPasswordReset(input: { token: string; password: string }): Promise<void> {
-  if (usingTestFixtures) {
-    await mockRequest(() => undefined, 400)
-    return
-  }
-  await api.post<void>('/password-reset/confirm', { token: input.token, password: input.password })
+export async function confirmPasswordReset(input: { token: string; password: string }): Promise<User> {
+  return api.post<User>('/password-reset/confirm', { token: input.token, password: input.password })
 }
 
-// The reset endpoints are in the contract but not yet on the server; a 404 is
-// the server saying so, and the player should hear that rather than a promise.
+export async function changePassword(input: ChangePasswordInput): Promise<void> {
+  await api.post<void>('/password', {
+    current_password: input.current_password,
+    password: input.password,
+  })
+}
+
 export function describeResetFailure(error: unknown): string {
-  if (error instanceof ApiError && error.status === 404) {
-    return 'Password reset is not available yet. Contact support to change your password.'
+  if (error instanceof ApiError && error.status === 503) {
+    return 'Password reset is unavailable right now. Try again later.'
   }
   if (error instanceof ApiError) {
     return error.message

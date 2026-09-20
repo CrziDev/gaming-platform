@@ -20,12 +20,21 @@ import (
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
-func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub) http.Handler {
+func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSenders ...auth.PasswordResetSender) http.Handler {
+	var resetSender auth.PasswordResetSender
+	if len(resetSenders) > 0 {
+		resetSender = resetSenders[0]
+	} else if cfg.EmailDeliveryProvider == "resend" {
+		resetSender = auth.NewResendSender(auth.ResendConfig{
+			APIKey: cfg.ResendAPIKey, From: cfg.ResendFrom, PublicWebURL: cfg.PublicWebURL,
+		})
+	}
 	authHandler := auth.NewHandler(db, logger, auth.Config{
-		CookieName:      cfg.CookieName,
-		CookieSecure:    cfg.CookieSecure,
-		SessionTTL:      cfg.SessionTTL,
-		LoginsPerMinute: cfg.LoginsPerMinute,
+		CookieName:          cfg.CookieName,
+		CookieSecure:        cfg.CookieSecure,
+		SessionTTL:          cfg.SessionTTL,
+		LoginsPerMinute:     cfg.LoginsPerMinute,
+		PasswordResetSender: resetSender,
 	})
 	currencyHandler := currency.NewHandler(db, logger)
 	engines := round.Engines{"plinko": plinko.New()}
@@ -43,11 +52,15 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub) http.Handle
 	mux.HandleFunc("POST /api/register", authHandler.Register)
 	mux.HandleFunc("POST /api/login", authHandler.Login)
 	mux.HandleFunc("POST /api/logout", authHandler.Logout)
+	mux.HandleFunc("POST /api/password-reset", authHandler.RequestPasswordReset)
+	mux.HandleFunc("POST /api/password-reset/confirm", authHandler.ConfirmPasswordReset)
 	mux.HandleFunc("GET /api/me", player(authHandler.Me))
+	mux.HandleFunc("POST /api/password", player(authHandler.ChangePassword))
 	mux.HandleFunc("GET /api/currencies", currencyHandler.List)
 	mux.HandleFunc("GET /api/categories", gameHandler.Categories)
 	mux.HandleFunc("GET /api/games", gameHandler.List)
 	mux.HandleFunc("GET /api/games/{slug}", gameHandler.Get)
+	mux.HandleFunc("GET /api/recent-games", player(gameHandler.RecentlyPlayed))
 	mux.HandleFunc("GET /api/favorites", player(gameHandler.Favorites))
 	mux.HandleFunc("PUT /api/games/{slug}/favorite", player(gameHandler.AddFavorite))
 	mux.HandleFunc("DELETE /api/games/{slug}/favorite", player(gameHandler.RemoveFavorite))

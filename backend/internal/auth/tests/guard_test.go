@@ -9,6 +9,7 @@ const anyID = "00000000-0000-4000-8000-000000000000"
 
 var playerRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/me"},
+	{http.MethodPost, "/api/password"},
 	{http.MethodGet, "/api/payment-methods"},
 	{http.MethodGet, "/api/deposits"},
 	{http.MethodGet, "/api/deposits/" + anyID},
@@ -18,6 +19,7 @@ var playerRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/wallets/PHP/transactions"},
 	{http.MethodGet, "/api/transactions"},
 	{http.MethodGet, "/api/transactions/summary"},
+	{http.MethodGet, "/api/recent-games"},
 	{http.MethodGet, "/api/favorites"},
 	{http.MethodPut, "/api/games/plinko/favorite"},
 	{http.MethodDelete, "/api/games/plinko/favorite"},

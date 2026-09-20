@@ -60,13 +60,6 @@ export type Game = {
   created_at: string
 }
 
-export type LobbyRow = {
-  id: string
-  title: string
-  category_slug: string | null
-  game_ids: string[]
-}
-
 export type BigWin = {
   id: string
   username: string

@@ -4,9 +4,8 @@ export {
   fetchFavorites,
   fetchGame,
   fetchGames,
-  fetchGamesByIds,
-  fetchLobbyRows,
   fetchPromotions,
+  fetchRecentlyPlayed,
   setFavorite,
 } from './api'
 export type { GameFilters } from './api'
@@ -17,8 +16,7 @@ export {
   useGame,
   useGameSearch,
   useGames,
-  useGamesByIds,
-  useLobbyRows,
   usePromotions,
+  useRecentlyPlayed,
   useSetFavorite,
 } from './hooks'

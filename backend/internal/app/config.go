@@ -4,6 +4,8 @@ import (
 	"errors"
 	"log/slog"
 	"math"
+	"net/mail"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +25,10 @@ type Config struct {
 	LoginsPerMinute            int
 	ChatMessagesPerMinute      int
 	BigWinMultiplierHundredths int
+	EmailDeliveryProvider      string
+	PublicWebURL               string
+	ResendAPIKey               string
+	ResendFrom                 string
 }
 
 // ConfigFromEnv reads every setting through lookup, which is os.Getenv in the
@@ -36,7 +42,7 @@ func ConfigFromEnv(lookup func(string) string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	return Config{
+	cfg := Config{
 		DatabaseURL:                databaseURL,
 		DatabaseMaxOpen:            envInt(lookup, "DATABASE_MAX_CONNS", 10),
 		DatabaseMaxIdle:            envInt(lookup, "DATABASE_MIN_CONNS", 1),
@@ -50,7 +56,38 @@ func ConfigFromEnv(lookup func(string) string) (Config, error) {
 		LoginsPerMinute:            envInt(lookup, "LOGIN_ATTEMPTS_PER_MINUTE", 10),
 		ChatMessagesPerMinute:      envInt(lookup, "CHAT_MESSAGES_PER_MINUTE", 20),
 		BigWinMultiplierHundredths: envInt(lookup, "BIG_WIN_MULTIPLIER_HUNDREDTHS", 1000),
-	}, nil
+		EmailDeliveryProvider:      strings.ToLower(strings.TrimSpace(env(lookup, "EMAIL_DELIVERY_PROVIDER", "disabled"))),
+		PublicWebURL:               strings.TrimSpace(env(lookup, "PUBLIC_WEB_URL", "http://localhost:5173")),
+		ResendAPIKey:               strings.TrimSpace(lookup("RESEND_API_KEY")),
+		ResendFrom:                 strings.TrimSpace(lookup("RESEND_FROM")),
+	}
+	if err := validateEmailDelivery(cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
+}
+
+func validateEmailDelivery(cfg Config) error {
+	switch cfg.EmailDeliveryProvider {
+	case "disabled":
+		return nil
+	case "resend":
+	default:
+		return errors.New("EMAIL_DELIVERY_PROVIDER must be disabled or resend")
+	}
+
+	publicURL, err := url.Parse(cfg.PublicWebURL)
+	if err != nil || publicURL.Scheme != "https" || publicURL.Host == "" || publicURL.User != nil || (publicURL.Path != "" && publicURL.Path != "/") || publicURL.RawQuery != "" || publicURL.Fragment != "" {
+		return errors.New("PUBLIC_WEB_URL must be an HTTPS origin without credentials, path, query, or fragment when Resend is enabled")
+	}
+	if !strings.HasPrefix(cfg.ResendAPIKey, "re_") || strings.ContainsAny(cfg.ResendAPIKey, " \t\r\n") {
+		return errors.New("RESEND_API_KEY must be a valid Resend API key when Resend is enabled")
+	}
+	from, err := mail.ParseAddress(cfg.ResendFrom)
+	if err != nil || from.Address == "" {
+		return errors.New("RESEND_FROM must be a valid email sender when Resend is enabled")
+	}
+	return nil
 }
 
 func LogLevel(value string) slog.Level {

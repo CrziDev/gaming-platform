@@ -14,26 +14,20 @@ import {
   useBigWins,
   useCategories,
   useGames,
-  useGamesByIds,
-  useLobbyRows,
   usePromotions,
+  useRecentlyPlayed,
 } from '@/features/catalogue'
-import type { LobbyRow as LobbyRowData } from '@/api/types'
 import { paths } from '@/routes/paths'
 
 export function LobbyPage() {
   const { data: user } = useSession()
   const [category, setCategory] = useState('all')
-  const rowsQuery = useLobbyRows(Boolean(user))
+  const recentlyPlayedQuery = useRecentlyPlayed(Boolean(user))
   const categoriesQuery = useCategories()
   const featuredQuery = useGames({ category: 'all', search: '', sort: 'name' })
   const gamesQuery = useGames({ category, search: '', sort: 'name' })
   const winsQuery = useBigWins()
   const promotionsQuery = usePromotions()
-
-  if (rowsQuery.isError) {
-    return <ErrorState message={rowsQuery.error.message} onRetry={() => void rowsQuery.refetch()} />
-  }
 
   const tabs: TabItem<string>[] = [
     { id: 'all', label: 'All games' },
@@ -74,21 +68,17 @@ export function LobbyPage() {
 
       <Promotions promotions={promotionsQuery.data ?? []} />
 
-      {rowsQuery.isPending ? (
+      {user && recentlyPlayedQuery.isPending ? (
         <SkeletonGrid count={4} className={gameGrid} />
-      ) : (
-        rowsQuery.data?.map((row) => <LobbyRow key={row.id} row={row} />)
-      )}
+      ) : user && recentlyPlayedQuery.isError ? (
+        <ErrorState
+          title="Recently played unavailable"
+          message={recentlyPlayedQuery.error.message}
+          onRetry={() => void recentlyPlayedQuery.refetch()}
+        />
+      ) : recentlyPlayedQuery.data && recentlyPlayedQuery.data.length > 0 ? (
+        <GameRow title="Recently Played" categorySlug={null} games={recentlyPlayedQuery.data} />
+      ) : null}
     </div>
   )
-}
-
-function LobbyRow({ row }: { row: LobbyRowData }) {
-  const gamesQuery = useGamesByIds(row.game_ids)
-  const games = gamesQuery.data ?? []
-
-  if (games.length === 0) {
-    return null
-  }
-  return <GameRow title={row.title} categorySlug={row.category_slug} games={games} />
 }

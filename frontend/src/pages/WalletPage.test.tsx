@@ -68,14 +68,14 @@ describe('the wallet page', () => {
     expect(main.getAllByRole('link', { name: 'Back to wallet' })).toHaveLength(2)
   })
 
-  it('lists every wallet on the account page and offers no unbuilt controls', async () => {
+  it('lists every wallet on the account page and exposes only the built security control', async () => {
     stubFetchRoutes({ 'GET /me': player })
 
     renderApp('/account')
 
     expect(await screen.findByText('₱5,250.00')).toBeInTheDocument()
     expect(screen.getByText('$142.50')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /change password/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument()
     expect(screen.queryByText(/nothing converts/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/fixed at registration/i)).not.toBeInTheDocument()
   })

@@ -152,4 +152,15 @@ func TestPlinkoRoundHTTPFlow(t *testing.T) {
 	if err := json.Unmarshal(raw, &page); err != nil || page.Total != 1 {
 		t.Fatalf("rounds: %s", raw)
 	}
+
+	_, raw = send(t, client, http.MethodGet, base+"/api/recent-games", nil)
+	var recent struct {
+		Rows []struct {
+			Slug string `json:"slug"`
+		} `json:"rows"`
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(raw, &recent); err != nil || recent.Total != 1 || len(recent.Rows) != 1 || recent.Rows[0].Slug != "plinko" {
+		t.Fatalf("recent games: %s (%v)", raw, err)
+	}
 }

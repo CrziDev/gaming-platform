@@ -66,7 +66,8 @@ dependency order: `000001` `users` · `000002` `auth_sessions` · `000003`
 `rtp_profiles` · `000010` `game_rounds` · `000011` `payment_methods` · `000012`
 `deposit_requests` · `000013` `audit_logs` · `000014` `game_favorites` · `000015`
 `chat_messages` · `000016` `notifications` · `000017` replaces `rtp_profiles` with
-`games.rtp_basis_points`.
+`games.rtp_basis_points` · `000018` adds the partial recent-settlement index used by the
+hot-game ranking.
 
 ### 4.1 Accounts and sessions
 
@@ -258,11 +259,14 @@ attached. The web app renders the flat placeholder slot regardless; switching it
 URL is the change that lands with the reviewed assets, not before.
 
 A game is `new` for thirty days after its row was created; the flag is computed from
-`created_at` on read and is never stored. `hot` has no definition until rounds exist.
+`created_at` on read and is never stored. The `hot` shelf contains active games with at
+least one settled round in the trailing seven days. It ranks them by settled-round count,
+then distinct players, latest round, and slug for a stable final tie-break.
 
-Categories are a table because the catalogue response names them. Lobby rows are not:
-they are assembled on the web side from the catalogue and the player's recent rounds.
-There is no merchandising configuration.
+Categories are a table because the catalogue response names them. Lobby rows are not
+merchandising configuration: the signed-in player's recent row reads active games from
+`GET /api/recent-games`, deduplicated by game and ordered by that player's latest round.
+There is no configurable merchandising service.
 
 ### 4.5 The game's return
 
@@ -503,11 +507,30 @@ timing, and a per-client rate limit on the credential endpoints.
 
 Password reset and change:
 
-- `POST /api/password-reset` — always `204`, whether or not the address is registered, and
-  in the same time either way.
-- `POST /api/password-reset/confirm` — single-use token, `400` on an expired, used, or
-  unknown one, and every other session on the account revoked on success.
-- `POST /api/password` — requires the current password, and revokes every other session.
+- `POST /api/password-reset` — when delivery is enabled, active, inactive, and unknown
+  addresses all receive the same empty `204` after a fixed minimum response window. An
+  active account is locked, every older unused link is superseded, and one hashed token
+  expiring in 30 minutes is inserted before delivery. Explicitly disabled delivery is a
+  generic `503` before account lookup; a provider failure is logged and remains `204`.
+- `POST /api/password-reset/confirm` — malformed, expired, used, superseded, unknown, and
+  inactive-account tokens share one `400`. A successful transaction changes the Argon2id
+  hash, consumes the token atomically, revokes every old session, creates one replacement
+  session for the confirming browser, and returns the ordinary account body.
+- `POST /api/password` — requires the current password and a valid new password. Its
+  transaction changes the hash, revokes every old session, and creates one replacement
+  for the submitting browser. A failed check changes neither passwords nor sessions.
+
+Reset secrets are random 32-byte values delivered only in the email link; only SHA-256
+hashes reach PostgreSQL. Delivery uses Resend's HTTPS send-email API with bearer
+authentication, text and HTML bodies, the reset record ID as its idempotency key, a
+bounded client timeout, and bounded retries for temporary failures. Configuration is
+`EMAIL_DELIVERY_PROVIDER=disabled|resend`, `PUBLIC_WEB_URL`, `RESEND_API_KEY`, and
+`RESEND_FROM`; Resend mode fails startup unless the public URL is HTTPS and every sender
+credential is valid. No password or raw session/reset secret is logged.
+
+These self-service operations do not create operator audit entries. Session rows retain
+their revocation timestamps; an eventual operator-initiated reset remains a separate,
+audited action.
 
 A session is revoked, never deleted, so when it ended stays on the record. One query
 resolves a session and joins the account's role and status, so a suspended account loses
@@ -580,13 +603,17 @@ operator who made an adjustment or the internal reason text.
 ## 9. Games
 
 `GET /api/games` is a page of the games whose status is `active`, with their category
-and wager configuration, filtered by `category`, `search`, `sort`, and `flag`.
+and wager configuration, filtered by `category`, `search`, `sort`, and `flag`. The
+`flag=hot` filter applies the seven-day activity ranking defined in §4.4 instead of the
+requested name/newest sort.
 `GET /api/games/{slug}` is one active game; any other status is `404`, the same answer as
 an unknown slug. `GET /api/categories` lists every category with its active-game count so
 the web app can hide an empty one. A signed-in player marks an active game as a
 favourite with `PUT /api/games/{slug}/favorite`, unmarks it with `DELETE`, and reads the
 marked games as a page through `GET /api/favorites`; both writes are idempotent and a
-game that is not active is `404` to them, as it is to the catalogue. An operator sees
+game that is not active is `404` to them, as it is to the catalogue. The same player reads
+their distinct active recently played games through `GET /api/recent-games`; another
+player's round history can never contribute to that page. An operator sees
 every game, including `draft`, `maintenance`, and `retired`, through
 `GET /api/admin/games`, and creates and edits them through the two admin routes.
 
@@ -801,6 +828,11 @@ credit and debit, rollback, row locking, idempotency, deposit approval, and sing
 settlement — against real PostgreSQL, because locking semantics are the thing under test.
 HTTP tests drive an `httptest` server with a cookie-keeping client for the session guard,
 the role guard, validation, and status mapping.
+
+Password tests additionally cover hashed 30-minute reset records, superseded links,
+identical invalid-token failures, concurrent single-use confirmation, full session
+rotation, disabled delivery without a database lookup, and Resend authentication,
+payloads, idempotency, retry, timeout, and secret-free failure handling.
 
 Database-backed tests read only `TEST_DATABASE_URL`, whose database name ends in
 `_test`, and skip when it is absent or unreachable. CI sets `REQUIRE_TEST_DATABASE=1` so

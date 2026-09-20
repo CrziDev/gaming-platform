@@ -6,9 +6,8 @@ import {
   fetchFavorites,
   fetchGame,
   fetchGames,
-  fetchGamesByIds,
-  fetchLobbyRows,
   fetchPromotions,
+  fetchRecentlyPlayed,
   setFavorite,
   type GameFilters,
 } from './api'
@@ -17,16 +16,16 @@ export function useCategories() {
   return useQuery({ queryKey: ['categories'], queryFn: fetchCategories })
 }
 
-export function useLobbyRows(signedIn: boolean) {
-  return useQuery({ queryKey: ['lobby', signedIn], queryFn: () => fetchLobbyRows(signedIn) })
-}
-
 export function useBigWins() {
   return useQuery({ queryKey: ['big-wins'], queryFn: fetchBigWins })
 }
 
 export function usePromotions() {
   return useQuery({ queryKey: ['promotions'], queryFn: fetchPromotions })
+}
+
+export function useRecentlyPlayed(enabled: boolean) {
+  return useQuery({ queryKey: ['recently-played'], queryFn: fetchRecentlyPlayed, enabled })
 }
 
 export function useGames(filters: GameFilters) {
@@ -61,8 +60,4 @@ export function useSetFavorite() {
     mutationFn: setFavorite,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['favorites'] }),
   })
-}
-
-export function useGamesByIds(ids: string[]) {
-  return useQuery({ queryKey: ['games', 'by-id', ids], queryFn: () => fetchGamesByIds(ids) })
 }

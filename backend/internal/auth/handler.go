@@ -25,10 +25,11 @@ const (
 const invalidCredentials = "Email or password is incorrect"
 
 type Config struct {
-	CookieName      string
-	CookieSecure    bool
-	SessionTTL      time.Duration
-	LoginsPerMinute int
+	CookieName               string
+	CookieSecure             bool
+	SessionTTL               time.Duration
+	LoginsPerMinute          int
+	PasswordResetSender      PasswordResetSender
 }
 
 type Handler struct {

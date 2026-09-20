@@ -1,4 +1,4 @@
-import type { BigWin, Category, Game, LobbyRow, Promotion } from '@/api/types'
+import type { BigWin, Category, Game, Promotion } from '@/api/types'
 
 import { daysAgo, minutesAgo } from './clock'
 
@@ -83,20 +83,6 @@ export const games: Game[] = [
 export const recentlyPlayedIds = ['gm-002', 'gm-003']
 
 export const favoriteIds = new Set<string>(['gm-001'])
-
-export function lobbyRows(signedIn: boolean): LobbyRow[] {
-  if (!signedIn || recentlyPlayedIds.length === 0) {
-    return []
-  }
-  return [
-    {
-      id: 'recently-played',
-      title: 'Recently Played',
-      category_slug: null,
-      game_ids: recentlyPlayedIds,
-    },
-  ]
-}
 
 const win = (
   id: string,

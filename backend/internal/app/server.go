@@ -28,6 +28,7 @@ func Run(ctx context.Context, logger *slog.Logger, cfg Config) error {
 		slog.Bool("cookie_secure", cfg.CookieSecure),
 		slog.Duration("ttl", cfg.SessionTTL),
 		slog.Any("allowed_origins", cfg.AllowedOrigins))
+	logger.Info("email delivery configured", slog.String("provider", cfg.EmailDeliveryProvider))
 
 	hub := chat.NewHub()
 	server := &http.Server{

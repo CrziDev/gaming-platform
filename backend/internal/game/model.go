@@ -29,9 +29,13 @@ const (
 	SortNewest = "newest"
 )
 
-const FlagNew = "new"
+const (
+	FlagHot = "hot"
+	FlagNew = "new"
+)
 
 const newWindow = 30 * 24 * time.Hour
+const hotWindow = 7 * 24 * time.Hour
 
 type Game struct {
 	ID             string
@@ -53,6 +57,7 @@ type Game struct {
 	RTPBasisPoints *int
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	Hot            bool
 }
 
 type AdminGame struct {
@@ -70,8 +75,15 @@ func NewSince(now time.Time) time.Time {
 	return now.Add(-newWindow)
 }
 
+func HotSince(now time.Time) time.Time {
+	return now.Add(-hotWindow)
+}
+
 func (g Game) Flags(now time.Time) []string {
-	flags := make([]string, 0, 1)
+	flags := make([]string, 0, 2)
+	if g.Hot {
+		flags = append(flags, FlagHot)
+	}
 	if !g.CreatedAt.Before(NewSince(now)) {
 		flags = append(flags, FlagNew)
 	}

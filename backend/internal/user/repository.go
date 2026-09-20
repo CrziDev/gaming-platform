@@ -26,6 +26,23 @@ const (
 		FROM users
 		WHERE id = ($1::text)::uuid`
 
+	selectUserByIDForUpdateSQL = `
+		SELECT id::text, email, password_hash, display_name, role, status, created_at
+		FROM users
+		WHERE id = ($1::text)::uuid
+		FOR UPDATE`
+
+	selectActiveUserByEmailForUpdateSQL = `
+		SELECT id::text, email, password_hash, display_name, role, status, created_at
+		FROM users
+		WHERE email = $1 AND status = 'active'
+		FOR UPDATE`
+
+	updatePasswordSQL = `
+		UPDATE users
+		SET password_hash = $1, updated_at = now()
+		WHERE id = ($2::text)::uuid`
+
 	countUsersSQL = `
 		SELECT count(*)
 		FROM users
@@ -125,6 +142,36 @@ func FindByID(ctx context.Context, db *sql.DB, id string) (User, error) {
 		return User{}, fmt.Errorf("user: find by id: %w", err)
 	}
 	return account, nil
+}
+
+func FindByIDForUpdateTx(ctx context.Context, tx *sql.Tx, id string) (User, error) {
+	return findForUpdate(ctx, tx, selectUserByIDForUpdateSQL, id)
+}
+
+func FindActiveByEmailForUpdateTx(ctx context.Context, tx *sql.Tx, email string) (User, error) {
+	return findForUpdate(ctx, tx, selectActiveUserByEmailForUpdateSQL, email)
+}
+
+func findForUpdate(ctx context.Context, tx *sql.Tx, query, value string) (User, error) {
+	var account User
+	err := tx.QueryRowContext(ctx, query, value).Scan(
+		&account.ID, &account.Email, &account.PasswordHash, &account.DisplayName,
+		&account.Role, &account.Status, &account.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return User{}, ErrNoUser
+	}
+	if err != nil {
+		return User{}, fmt.Errorf("user: lock account: %w", err)
+	}
+	return account, nil
+}
+
+func UpdatePasswordTx(ctx context.Context, tx *sql.Tx, userID, passwordHash string) error {
+	if _, err := tx.ExecContext(ctx, updatePasswordSQL, passwordHash, userID); err != nil {
+		return fmt.Errorf("user: update password: %w", err)
+	}
+	return nil
 }
 
 func List(ctx context.Context, db *sql.DB, filter ListFilter) ([]User, int, error) {
