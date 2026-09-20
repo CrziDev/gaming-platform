@@ -16,7 +16,7 @@ export function AdminShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-base">
+    <div className="flex h-full flex-col overflow-hidden bg-base">
       <AdminTopBar onOpenDrawer={() => setDrawerOpen(true)} />
 
       <div className="flex min-h-0 flex-1">

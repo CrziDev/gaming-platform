@@ -48,6 +48,24 @@
   color-scheme: dark;
 }
 
+/* The application shells own their scrolling. Keep the browser document at one
+   viewport so a shell cannot create a second, page-level scrollbar. Routes
+   outside a shell (password reset, admin sign-in, and error screens) can still
+   scroll through #root when their content is taller than the viewport. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+#root {
+  overflow-y: auto;
+}
+
 /* Scrollbars: a translucent thumb on no track and no buttons, faint at rest and
    stronger while its region is scrolling (`data-scrolling`, set by
    app/scrollbars.ts). Chromium and WebKit take the pseudo-element route, which

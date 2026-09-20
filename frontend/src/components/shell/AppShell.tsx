@@ -14,7 +14,7 @@ export function AppShell() {
   return (
     <ShellProvider>
       <SearchShortcut />
-      <div className="flex h-dvh flex-col overflow-hidden bg-base">
+      <div className="flex h-full flex-col overflow-hidden bg-base">
         <Header />
 
         <div className="@container flex min-h-0 flex-1">
