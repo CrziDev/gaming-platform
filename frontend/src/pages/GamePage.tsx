@@ -136,6 +136,7 @@ export function GamePage() {
           <GameHost
             ref={hostRef}
             name={game.name}
+            fullscreen={fullscreen}
             frame={
               module
                 ? {

@@ -50,9 +50,9 @@ export const physics = {
   },
 
   // Everything below the top offset scales with the peg spacing: the rows, the
-  // gap to the ribbon (55 units), the ribbon (30) and its label margin (8), all
-  // in units of spacing / 28. The board is width-driven, shrunk to fit the
-  // height exactly when it must, and centred when it need not.
+  // gap to the ribbon (28 units, one spacing unit), the ribbon (30) and its
+  // label margin (8), all in units of spacing / 28. The board is width-driven,
+  // shrunk to fit the height exactly when it must, and centred when it need not.
   getBoardConfig(rows, width, height) {
     const paddingX = width * (0.045 - (rows - 8) * 0.003)
     const usableWidth = width - paddingX * 2
@@ -60,7 +60,7 @@ export const physics = {
     let spacingX = usableWidth / (maxPegs - 1)
     let topOffset = Math.max(68, 110 - (rows - 8) * 4.5)
 
-    const perSpacing = (rows - 1) * 0.85 + 93 / 28
+    const perSpacing = (rows - 1) * 0.85 + 66 / 28
     const available = height * 0.985
     const needed = topOffset + spacingX * perSpacing
     if (needed > available) {
@@ -176,7 +176,7 @@ export const physics = {
     ctx.fill()
 
     const table = state.multipliers
-    const slotY = config.topOffset + (state.rows - 1) * config.spacingY + 55 * config.scale
+    const slotY = config.topOffset + (state.rows - 1) * config.spacingY + 28 * config.scale
     const slotWidth = config.spacingX * 0.94
     const slotHeight = 30 * config.scale
     const slotX = (width - (table.length - 1) * config.spacingX) / 2
