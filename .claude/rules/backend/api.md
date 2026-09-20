@@ -59,8 +59,9 @@ A paginated list is the page, and the page is the resource:
 ```
 
 Parameters are `page`, `size`, `search`, `status`, `type`, `currency`, `category`, `sort`,
-`flag`, `game_id`, `user_id`, `from`, `to`, as each endpoint supports them. Default size 20, maximum
-100. A list of rows that players or operators keep adding to is always a page. A list
+`flag`, `game_id`, `user_id`, `from`, `to`, `rtp_basis_points`, `rows`, and `risk`, as
+each endpoint supports them. Default size 20, maximum 100. A list of rows that players
+or operators keep adding to is always a page. A list
 bounded by configuration — currencies, categories, payment methods, a player's wallets,
 one game's RTP options — is a plain array.
 
@@ -215,6 +216,7 @@ session. Those two are omitted from the failure column.
 | `POST` | `/api/admin/games` | `201` + the game | `400` · `409` slug taken |
 | `PATCH` | `/api/admin/games/{id}` | `200` + the game | `400` · `404` |
 | `PUT` | `/api/admin/games/{id}/rtp` | `200` + the game; takes `rtp_basis_points` | `400` not one of the game's `rtp_options` · `404` |
+| `GET` | `/api/admin/games/{id}/rtp-configuration` | `200` + the engine's inspectable configuration; requires `rtp_basis_points`, `rows`, and `risk` | `400` invalid option or board · `404` game or inspectable configuration unavailable |
 | `GET` | `/api/admin/audit-logs` | `200` + a page of entries; accepts `user_id` (the actor), `type` (the action), `from`, `to` | `400` invalid filter |
 | `GET` | `/api/admin/dashboard?currency=PHP` | `200` + the summary for that currency | `400` missing or unknown currency |
 
@@ -237,6 +239,15 @@ round, holds until the next switch, and is audited as `game.rtp_change` with the
 before and after values. Setting the value already in force is `200` and writes no
 audit row. No route schedules a switch, and nothing in the database marks a return
 verified.
+
+`GET /api/admin/games/{id}/rtp-configuration` is read-only and does not change the
+option in force. For an engine that exposes an inspectable configuration, it returns
+`configuration_ref`, `rtp_basis_points`, the available `rows` and `risks`, and one
+`selected_board` containing its rows, risk, theoretical RTP, and slots. Each slot has
+`slot`, `multiplier_hundredths`, and `chance_thousandths_percent`; the normalized
+chances total exactly `100000` (100.000%). The engine calculates this projection from
+its compiled configuration. The endpoint does not expose raw draw weights. A game with
+no such RTP option is `400`; an engine without this optional capability is `404`.
 
 An admin round body adds `user_id`, `user_email`, `display_name`, and `wallet_id` to the
 player round resource.

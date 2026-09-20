@@ -9,18 +9,18 @@ Source of truth: `frontend/src/routes/AppRoutes.tsx` and
 
 ## Current backend coverage
 
-As of 2026-09-19, authentication, wallets, the wallet summary, manual deposits, the
+As of 2026-09-20, authentication, wallets, the wallet summary, manual deposits, the
 public catalogue, favorites, Plinko rounds and the manifest, live chat, notifications,
 paginated admin users, admin user details and status operations, wallet adjustments,
 admin transactions, deposit review, the audit log, the dashboard summary, game
-administration, RTP profiles, and round history use real APIs in every application
-build. Fixture-backed reads exist only in component tests; application builds render
-the empty state for surfaces without a service rather than fabricated content. A page
-stays unchecked while any of its visible data sources has no server.
+administration, RTP switching and inspection, and round history use real APIs in every
+application build. Fixture-backed reads exist only in component tests; application
+builds render the empty state for surfaces without a service rather than fabricated
+content. A page stays unchecked while any of its visible data sources has no server.
 
-Audited against the frontend on 2026-09-19: every route below exists, every data hook
-on every page was traced to its adapter in `features/*/api.ts`, and the 188 frontend
-tests pass.
+Audited against the frontend on 2026-09-20: every route below exists, every data hook
+on every page was traced to its adapter in `features/*/api.ts`, and all 190 frontend
+tests pass. React state-update warnings remain and are tracked in the master checklist.
 
 ## Public and player pages
 
@@ -72,12 +72,13 @@ means the server is behind it.
 - [x] **Games** — `/admin/games` (real list in every status; create dialog; the contract's `status`, `category`, and `search` filters are not yet exposed in the UI)
 - [x] **Game details** — `/admin/games/:id` (real game, edit dialog, the return in force and the engine's options)
 - [x] **RTP** — `/admin/rtp` (one row per game with options, a select of the engine's returns, a confirmation that reads in danger at or above 100%, real `PUT /api/admin/games/{id}/rtp`)
+- [x] **RTP configuration** — `/admin/rtp/:id` (read-only inspection of each engine option by board, including the configuration reference, target and theoretical RTP, multipliers, and normalized slot chances from `GET /api/admin/games/{id}/rtp-configuration`)
 - [x] **Audit log** — `/admin/audit` (real paginated append-only feed)
 - [ ] **Settings** — `/admin/settings` (Payment methods and Staff have no management service and show an explanatory empty state in application builds; Limits and Platform are static forms whose Save, Add method, and Invite staff buttons have no handler and no contract)
 
 ## Coverage
 
 - Public and player routes: 18 (11 backed by the server)
-- Admin routes: 12 (11 backed by the server)
-- Total frontend routes: 30
+- Admin routes: 13 (12 backed by the server)
+- Total frontend routes: 31
 - Shell features: 11 (8 backed by the server)

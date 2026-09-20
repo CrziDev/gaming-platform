@@ -565,11 +565,11 @@ debit as a credit of the same size.
 
 ## 8. Ledger reads
 
-A player reads their own wallet's movements through
-`GET /api/wallets/{currency}/transactions`, and the totals behind them through
-`GET /api/transactions/summary`, which returns one row per wallet — deposited, staked,
-and returned in the window — grouped in SQL by the wallet's currency so no figure can
-ever combine two of them. An operator reads every movement through
+A player reads their own movements through `GET /api/transactions`, narrows them to one
+wallet through `GET /api/wallets/{currency}/transactions`, and reads the totals behind
+them through `GET /api/transactions/summary`, which returns one row per wallet —
+deposited, staked, and returned in the window — grouped in SQL by the wallet's currency
+so no figure can ever combine two of them. An operator reads every movement through
 `GET /api/admin/transactions`, filtered by account, currency, kind, and date range.
 
 There is no endpoint that updates or deletes a ledger row, and no administrative override
@@ -597,9 +597,10 @@ against the form that produced it.
 
 A game whose status is not `active` refuses a round with `GAME_UNAVAILABLE`.
 
-There is no game-session endpoint. The host page gets what it needs from
-`GET /api/games/{slug}` and the wallet; whether an engine needs more than that is decided
-by the engine integration, and adding a route is a contract change.
+There is no stateful game-session endpoint. The host page gets catalogue and wager
+metadata from `GET /api/games/{slug}`, the balance from the wallet, and the public board
+configuration from `GET /api/games/{slug}/manifest`. Whether a future engine needs more
+than that is decided by its integration, and adding a route is a contract change.
 
 ## 10. Rounds
 
@@ -638,20 +639,21 @@ wallet row for the rest of the transaction; two concurrent round starts that eac
 that and then asked for `FOR UPDATE` would deadlock, and a player double-tapping spin is
 exactly that case. Opening a round therefore takes the wallet lock first, then inserts.
 
-Neither opening nor settling a round is a player-facing HTTP operation. A payout decides
-how much money moves, and a value the browser supplies is not something the server may
-act on; a round exists to be settled, so opening one before an engine can settle it would
-take a wager the platform cannot resolve. The engine calls this package directly, in
-process.
+Neither opening nor settling is exposed as a player-controlled HTTP operation. The
+player-facing `POST /api/games/{slug}/rounds` asks the round package to play one complete
+round through the registered engine; the server validates the public parameters,
+decides the payout, and returns the settled result. Plinko opens, plays, and settles in
+one transaction. The internal `Open`, `Settle`, `Cancel`, and `Fail` operations remain
+for engines whose audited recovery design requires two phases.
 
 Players read their own rounds through `GET /api/rounds` and `GET /api/rounds/{id}`;
 operators read all of them through `GET /api/admin/rounds`.
 
 ## 11. The game's return
 
-`internal/game` owns the switch and nothing else about RTP. It owns no probability, no
-weight table, and no paytable, and it never claims an observed or theoretical return:
-the engine ships the options, and the console can only choose among them.
+`internal/game` owns the switch and the guarded read endpoint for inspecting an engine
+configuration. It owns no probability, weight table, paytable, or RTP calculation: the
+engine ships the options and calculates the theoretical projection the console reads.
 
 `PUT /api/admin/games/{id}/rtp` locks the game row, checks the value against the
 options the game's engine reports for its slug, writes `games.rtp_basis_points`, and
@@ -659,6 +661,14 @@ records `game.rtp_change` with the before and after values. The switch takes eff
 the next round and holds until the next switch; there is no schedule, no default, and
 no reverter. Setting the value already in force changes nothing and writes no audit
 row. A game no engine on the server plays has no options and refuses every value.
+
+`GET /api/admin/games/{id}/rtp-configuration` is read-only. It resolves the requested
+`rtp_basis_points` to an engine configuration and asks that engine for one `rows` and
+`risk` board. Plinko returns the configuration reference, target and theoretical RTP,
+available boards, multipliers, and normalized chances at 0.001 percentage-point
+precision. The chances total exactly 100.000%; raw draw weights remain private to the
+engine. An unknown game or an engine without an inspectable configuration is `404`;
+an invalid option or board is `400`.
 
 ## 12. Manual deposits
 

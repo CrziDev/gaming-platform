@@ -1,4 +1,4 @@
-# Universal Game Integration Plan
+# Universal Game Integration Specification
 
 ## 1. Purpose
 
@@ -76,19 +76,20 @@ Recommendation: adapt / port critical logic / replace component / unsupported
 
 Do not begin the port before this assessment is complete.
 
-## 4. Likely repository structure
+## 4. Established repository structure
 
-The final names may change after source review, but an integrated game will normally use
-this structure. `<game-slug>` is a placeholder for any title.
+The first integration established this structure. A later source review may justify an
+additional game-specific file, but the ownership boundaries remain the same.
+`<game-slug>` is a placeholder for any title.
 
 ```text
 gaming-platform/
 |-- backend/
 |   |-- cmd/
 |   |   |-- server/
-|   |   |   `-- main.go                         existing
+|   |   |   `-- main.go                         server entry point
 |   |   `-- gameverify/
-|   |       `-- main.go                         new; offline RTP verification
+|   |       `-- main.go                         offline RTP verification
 |   |
 |   `-- internal/
 |       |-- app/
@@ -96,27 +97,25 @@ gaming-platform/
 |       |   `-- server.go                       modified if recovery worker is needed
 |       |
 |       |-- round/
-|       |   |-- model.go                        modified; play request and result
-|       |   |-- repository.go                   modified as required by engine state
-|       |   |-- service.go                      existing lifecycle, adapted as needed
-|       |   |-- handler.go                      modified; authenticated play endpoint
-|       |   |-- engine.go                       new; consumed Engine interface
-|       |   |-- play.go                         new; round and wallet orchestration
-|       |   |-- play_test.go                    new
+|       |   |-- model.go                        round and play result types
+|       |   |-- repository.go                   round persistence
+|       |   |-- service.go                      reusable lifecycle operations
+|       |   |-- handler.go                      reads, manifest, and authenticated play
+|       |   |-- engine.go                       consumed engine capabilities and registry
+|       |   |-- play.go                         round, engine, and wallet orchestration
+|       |   |-- play_test.go                    financial and retry tests
 |       |   `-- recovery.go                     conditional; unfinished-round recovery
 |       |
 |       `-- engine/
-|           |-- registry.go                     new; game slug to engine mapping
-|           |-- random.go                       new; production secure randomness
-|           |-- random_test.go                  new; deterministic test source
+|           |-- engine.go                       shared input, outcome, and option types
+|           |-- errors.go                       shared engine errors
+|           |-- random.go                       production secure randomness
+|           |-- random_test.go                  deterministic test source
 |           `-- <game-slug>/
-|               |-- engine.go                   new; engine implementation
-|               |-- config.go                   new; immutable option configuration
-|               |-- rules.go                    new; outcome rules
-|               |-- payout.go                   new; integer payout calculation
-|               |-- manifest.go                 optional public game parameters
-|               |-- engine_test.go              new
-|               `-- payout_test.go              new
+|               |-- engine.go                   engine implementation and projections
+|               |-- config.go                   immutable option configuration
+|               |-- rules.go                    outcome and payout rules
+|               `-- *_test.go                   rules, configuration, and RTP tests
 |
 |-- database/
 |   `-- migrations/
@@ -145,16 +144,14 @@ gaming-platform/
 |           |-- GamePage.tsx                     modified; replaces placeholder host
 |           `-- GamePage.test.tsx                new or expanded
 |
+|-- docs/games/source/<game-slug>/               untouched supplied source; ignored when its licence forbids redistribution
+|
 |-- games/
-|   `-- <game-slug>/
-|       |-- source/                              untouched supplied source
-|       |   |-- LICENSE                          retained when supplied
-|       |   `-- ...                              complete original project
-|       `-- web/                                 integrated browser version
-|           |-- index.html
-|           |-- bridge.*                         platform bridge adapter
-|           |-- assets/
-|           `-- ...                              adapted game files
+|   `-- <game-slug>/web/                         integrated browser version
+|       |-- index.html
+|       |-- bridge.*                             platform bridge adapter
+|       |-- assets/
+|       `-- ...                                  adapted game files
 |
 |-- docs/
 |   `-- games/
@@ -165,9 +162,11 @@ gaming-platform/
 `-- frontend/dist/games/<game-slug>/             generated deployment output
 ```
 
-Generated build output and dependencies remain untracked. Supplied source, licences,
-engine code, tests, immutable option configuration, and verification documentation are
-tracked.
+Generated build output and dependencies remain untracked. Engine code, tests, immutable
+option configuration, and verification documentation are tracked. Untouched supplied
+source and its licence are committed only when redistribution is permitted; otherwise
+the private source stays under `docs/games/source/<game-slug>/`, is ignored, and its
+location and licence limitation are recorded in the runtime document.
 
 The `Engine` interface belongs in the consuming `round` package. Concrete engines live
 under `internal/engine/<game-slug>` and remain flat; they do not add service or repository
@@ -175,17 +174,19 @@ layers unless the audited game genuinely requires them.
 
 ## 5. Engine contract
 
-The exact Go interface is finalized after the first source review. It should expose only
-what the round orchestrator needs:
-
-- stable game identity;
-- configuration validation;
-- supported public parameters;
-- the immutable RTP options it ships, ascending;
-- authoritative outcome and payout generation for a wager.
+The consumed `round.Engine` interface exposes only what the round orchestrator needs:
+the immutable RTP `Options` it ships in ascending order, `Play` for authoritative
+outcome and payout generation, and `Manifest` for player-safe public parameters. The
+slug-to-engine map in `round`, rather than the engine itself, supplies stable game
+identity.
 
 The engine returns a safe result to the round package. The round package owns database
 transactions, wallet movements, idempotency, and lifecycle transitions.
+
+An engine may additionally implement the narrow `AdminConfiguration` capability. It
+returns a read-only, operator-safe projection such as normalized chances and
+multipliers; it is deliberately outside the player manifest and never grants the
+console authority to supply or alter raw engine configuration.
 
 ## 6. Round lifecycle
 
@@ -211,7 +212,7 @@ unfinished round through a documented recovery path.
 
 ## 7. API and browser bridge
 
-The likely player write endpoint is:
+The player write endpoint is:
 
 ```text
 POST /api/games/{slug}/rounds
@@ -296,7 +297,8 @@ changes an already-settled financial result.
 - Atomic wager and win ledger tests.
 - Duplicate request and concurrent wallet tests.
 - Duplicate settlement and recovery/refund tests.
-- Profile snapshot and activation-race tests.
+- Configuration snapshot and activation-race tests.
+- Admin configuration authorization and projection tests when an engine exposes it.
 - Bridge origin, source-window, version, and schema tests.
 - Game-host loading, error, retry, and settled-result tests.
 - Target mobile and desktop browser checks.
@@ -305,7 +307,8 @@ changes an already-settled financial result.
 
 For every game:
 
-1. Commit the untouched supplied source separately.
+1. Preserve the untouched supplied source separately; commit it only when its licence
+   permits redistribution, otherwise keep it in the ignored private source directory.
 2. Run it exactly as supplied and document the build process.
 3. Complete the source and feasibility assessment.
 4. Choose the transaction and recovery strategy.

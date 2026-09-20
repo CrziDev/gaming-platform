@@ -95,10 +95,10 @@ dropped. `engine` is the part every game shares; `engine/plinko` is this game's 
 | `plinko/config.go` | `Params` (rows 8–16, risk low/normal/high), `Table` (one board's slot weights and multipliers, symmetric), `Profile` (one option: its basis points, its reference, and a table for every board) |
 | `plinko/supplied.go` | The vendor paytable in hundredths and the vendor `0.24` decay as integer weights — reference data for deriving and checking options, never played directly |
 | `plinko/rules.go` | `Pick` (a slot from a table) and `Payout` (`stake × multiplier / 100`, overflow-checked, truncating; exact under a wager step that is a multiple of 100) |
-| `plinko/rtp.go` | `TheoreticalBasisPoints` — `Σ w·m / Σ w` in integers; its tests reproduce every figure in `plinko-rtp.md` §5 |
+| `plinko/rtp.go` | `TheoreticalBasisPoints` — `Σ w·m / Σ w` in integers — and the largest-remainder projection that turns raw weights into normalized chances totaling 100.000%; its tests reproduce every figure in `plinko-rtp.md` §5 and pin the projection |
 | `plinko/profile_9000.go` … `profile_11000.go` | The four shipped options, `plinko/9000` to `plinko/11000`: weights and multipliers for all 27 boards each, `plinko-rtp.md` §9 |
 | `plinko/profiles.go` | The ordered option set: `Options`, `ProfileByBasisPoints` (what a game row's `rtp_basis_points` resolves through), and `ProfileByRef` (what a round's `engine_reference` resolves through). `profiles_test.go` pins every board of every option to its basis points exactly |
-| `plinko/engine.go` | `Engine.Options`: the shipped returns. `Engine.Play`: decodes the public parameters (unknown fields refused), resolves the configuration, picks the slot from the secure source, and returns the payout, multiplier, and `{rows, risk, slot}`. `Engine.Manifest`: every board's multipliers for one configuration, never its weights |
+| `plinko/engine.go` | `Engine.Options`: the shipped returns. `Engine.Play`: decodes the public parameters (unknown fields refused), resolves the configuration, picks the slot from the secure source, and returns the payout, multiplier, and `{rows, risk, slot}`. `Engine.Manifest`: every board's player-visible multipliers, never its weights. `Engine.AdminConfiguration`: one guarded board's reference, target and theoretical RTP, multipliers, and normalized chances, never its raw weights |
 | `backend/cmd/seed/catalogue.go` | The development fixture: `plinko` integrated in the catalogue at 95%, reset on every seed. `seed_test.go` runs the catalogue seed against the test database in a rolled-back transaction and asserts the seeded return is one the engine offers; CI also runs `make seed` after the suite |
 | `backend/cmd/gameverify` | Offline tooling: `solve` derives an option's weights from its multipliers and prints the complete table literal, and `simulate` plays every board of every option — or one — through the production `Pick` and `Payout` path (`plinko-rtp.md` §9) |
 
@@ -108,8 +108,9 @@ Deterministic sources exist only in `_test.go` files; nothing at runtime can sel
 
 `engine.go` declares the `Engine` interface the round package consumes —
 `Options() []engine.Option`, `Play(engine.Input) (engine.Outcome, error)`, and
-`Manifest(configRef string) (json.RawMessage, error)` — and `Engines`, the
-slug-to-engine map the route table builds and the game console reads options through.
+`Manifest(configRef string) (json.RawMessage, error)` — plus the optional
+`AdminConfiguration` capability, and `Engines`, the slug-to-engine map the route table
+builds and the game console reads through.
 `play.go` is the orchestration. Plinko has no decision between the stake and the
 result, so a round is **one transaction**: `openTx` locks the wallet, locks the game row,
 resolves its `rtp_basis_points` to the option that plays it, binds the round to that
@@ -130,6 +131,10 @@ committed round and its display result as long as it asks for the same stake and
 parameters; a different stake or parameters under the same key is a conflict. The
 parameters and the engine's result are stored in `result_data` as
 `{"params": …, "result": …}` and the engine and configuration in `engine_reference`.
+
+`internal/game` separately serves the guarded
+`GET /api/admin/games/{id}/rtp-configuration`, which resolves an operator-selected
+option and board through the same engine registry without changing the return in force.
 
 ## Serving
 

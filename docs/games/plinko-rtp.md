@@ -247,7 +247,9 @@ table's floor is already above the target.
 The engine ships exactly four returns — 90%, 95%, 105%, and 110% — each an immutable
 configuration in `backend/internal/engine/plinko/`, addressed by the reference a settled
 round records in `engine_reference` and chosen by the basis points an operator sets on
-the game. A game's row holds only that number; the tables never leave the binary.
+the game. A game's row holds only that number. Raw draw weights remain compiled into the
+binary; the player manifest exposes visible multipliers, and the guarded admin inspector
+exposes a normalized chance projection rather than the raw weights.
 
 Each option carries a table for every board. Weights are integers, the centre slot at
 1 000 000 000 and each other slot at `decay ^ distance` of it, rounded; the decay itself
@@ -267,6 +269,12 @@ checked-in option's weights are what it produces. `solve` reads the option throu
 `ProfileByRef`, which validates every table, so a new option is first checked in with
 its multipliers and symmetric placeholder weights — all `1` — then `solve` prints the
 literal that replaces them.
+
+`GET /api/admin/games/{id}/rtp-configuration` calculates the selected board's
+theoretical RTP from this exact table and presents each slot's multiplier and chance.
+Chances use largest-remainder apportionment at 0.001 percentage-point precision so the
+displayed values total exactly 100.000%. That rounded projection is for inspection only;
+production selection continues to draw from the compiled integer weights.
 
 The multipliers are the supplied paytable except where a board's floor blocks the
 target (§7): a weighted average can never fall below the smallest multiplier, so a

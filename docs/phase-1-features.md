@@ -7,10 +7,10 @@ wait for the actual games and their engines.
 Use `[x]` only when the implementation and its required tests are complete. A page that
 works only against frontend fixtures is not complete.
 
-Reconciled against `work` on 2026-09-19, after Plinko, favorites, live chat,
-notifications, and the wallet summary landed. This status is based on reachable routes,
-repository/service code, frontend transport code, and automated tests—not on the
-presence of a table or a fixture-backed screen alone.
+Reconciled against `work` on 2026-09-20, after the dashboard performance expansion and
+the read-only RTP configuration inspector landed. This status is based on reachable
+routes, repository/service code, frontend transport code, and automated tests—not on
+the presence of a table or a fixture-backed screen alone.
 
 Fixture-only surfaces (big wins, promotions, the recently-played lobby row, the hot
 shelf, console alerts, staff) render only in component tests. Every application build
@@ -21,19 +21,18 @@ so local development and deployments never show a fabricated win, promotion, or 
 
 - [x] PostgreSQL schema and reversible migrations exist for every Phase 1 table.
 - [x] Registration, login, logout, session lookup, and development admin seeding exist.
-- [x] The player and admin interfaces exist and can be exercised with mock data.
+- [x] The player and admin interfaces exist and can be exercised with deterministic
+  component-test fixtures.
 - [x] Shared application routing, HTTP helpers, and filter pagination are in place.
 - [x] Enabled currencies and paginated admin users have real platform APIs.
 - [x] Admin wallet adjustments and filtered admin transaction history have real APIs.
 - [x] Player payment-method and deposit-request APIs are backed by PostgreSQL.
 - [x] Admin deposit review APIs credit or reject requests atomically with audit entries.
 - [x] The currency-scoped admin dashboard summary is backed by PostgreSQL.
-- [ ] Platform APIs replace the remaining frontend mocks (auth, wallets, the wallet
-  summary, deposits, the dashboard, admin users, admin transactions, wallet adjustments,
-  audit reads, the public catalogue, game administration, the RTP switch, round reads,
-  Plinko rounds, favorites, live chat, and notifications default to HTTP; promotions,
-  big wins, the recently-played row, the hot shelf, console alerts, staff, and settings
-  remain fixture-backed or undefined).
+- [ ] Define, implement, or explicitly remove the remaining unsupported product surfaces:
+  promotions, big wins, the recently-played row, the hot shelf, console alerts, staff,
+  and settings. Application builds already use HTTP for supported features and return
+  no fixture data for unsupported reads.
 - [ ] Financial services and their PostgreSQL concurrency tests are complete (wallets,
   adjustments, deposits, and rounds are; cash-out has no contract yet, §1).
 - [x] The platform satisfies the pre-engine readiness gate in this document (§16).
@@ -64,17 +63,22 @@ reset token reaches the player.
 
 ## Completed slice: game administration and the game's return
 
-Completed on 2026-09-12; the return simplified on 2026-09-20. `internal/game` owns the
-admin list, detail, create, and patch routes and the one RTP switch. The profile
-subsystem (`internal/rtp`, drafts, offline verification rows, schedules, the reverter)
-was replaced by `games.rtp_basis_points`, one of the options the engine compiles in.
+Completed on 2026-09-12; the return simplified and its read-only inspector added on
+2026-09-20. `internal/game` owns the admin list, detail, create, and patch routes, the
+one RTP switch, and the guarded configuration projection it requests from the engine.
+The former profile subsystem (`internal/rtp`, drafts, offline verification rows,
+schedules, the reverter) was replaced by `games.rtp_basis_points`, one of the options
+the engine compiles in.
 
 - [x] `GET /api/admin/games`, `GET /api/admin/games/{id}`, `POST /api/admin/games`,
   `PATCH /api/admin/games/{id}` with whole-unit wager validation and audit entries.
 - [x] `PUT /api/admin/games/{id}/rtp`, refusing any value outside the engine's options
   and audited as `game.rtp_change`.
+- [x] `GET /api/admin/games/{id}/rtp-configuration`, returning the selected board's
+  theoretical RTP, multipliers, and normalized chances without exposing raw weights.
 - [x] Game create and edit forms, and the RTP page: one row per game, a select of its
-  options, and a confirmation that reads in danger at or above 100%.
+  options, a confirmation that reads in danger at or above 100%, and a read-only
+  configuration inspector.
 - [x] HTTP/PostgreSQL coverage for authorisation, validation, slug conflicts, catalogue
   visibility after a status change, the option check, the no-op repeat, and audit actions.
 
@@ -141,8 +145,9 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Add the proof-upload HTTP contract, limits, and error behavior if screenshot upload
   remains in Phase 1.
 - [ ] Reconcile every frontend response type with the API resource and page shapes
-  (`Game`, `Category`, `AdminGame`, and `RtpProfile` are reconciled; `Transaction`,
-  `AuditEntry`, and `AdminDeposit` are mapped in the adapter, and `Transaction` still
+  (`Game`, `Category`, `AdminGame`, and `AdminRtpConfiguration` are reconciled;
+  `Transaction`, `AuditEntry`, and `AdminDeposit` are mapped in the adapter, and
+  `Transaction` still
   carries a `label`, `reference`, `status`, and `round_id` the server does not send;
   `Round`, `WalletSummary`, `ChatMessage`, and `Notification` are reconciled with their
   endpoints).
@@ -383,24 +388,32 @@ and can never make a percentage true on its own.
 - [x] Record every switch in the audit log as `game.rtp_change` with before and after.
 - [x] Provide no platform operation that can add a return the engine does not ship, and
   no database column that claims one is verified.
-- [x] Do not claim theoretical or observed RTP in the platform: the engine's test pins
-  the theoretical figure and the game's RTP document records the simulation; the
-  console shows the basis points; the dashboard's ledger-derived figure is a separate
-  labelling item in §12.
+- [x] Keep RTP claims tied to their source: the guarded configuration inspector reports
+  the theoretical figure calculated from the compiled engine table, while the dashboard
+  derives effective and expected figures only from settled rounds. Simulation evidence
+  remains in the game's RTP document.
 
 ## 10. Frontend integration
 
 ### Shared behavior
 
-- [ ] Replace remaining fixture APIs with real HTTP calls while retaining deliberate test mocks.
+- [ ] Define, implement, or remove the remaining unsupported reads while retaining
+  deliberate component-test fixtures. Supported application features always use HTTP.
 - [x] Make non-mock mode the production default.
 - [ ] Validate runtime responses where an untrusted payload crosses into the app (the
   game frame's messages, the Plinko manifest, and the play response are validated with
   Zod; every other response is typed only).
 - [x] Handle standard API errors without matching human-readable error text (the wired
   deposit, review, adjustment, and status mutations act on status and `code`; the
-  remaining fixture-backed surfaces have no server errors to handle yet).
+  unsupported surfaces have no server operations to handle yet).
 - [ ] Provide consistent loading, empty, retry, validation, and unavailable states.
+- [ ] Bring `/admin/rtp/:id` into design-system compliance: use RTP-option terminology,
+  remove divider borders and the full-pill status treatment, and replace its
+  below-desktop horizontally scrolling table with the required responsive layout.
+- [ ] Make frontend checks warning-free: remove the current React `act(...)` test
+  warnings and six Fast Refresh lint warnings.
+- [ ] Decide whether to split the production JavaScript bundle or explicitly accept and
+  document the current Vite chunk-size warning.
 - [x] Invalidate wallet, deposit, transaction, round, and dashboard queries after the
   corresponding mutation (a deposit submission invalidates deposits and transactions;
   every console mutation invalidates the whole `admin` tree, and a game change the
@@ -472,6 +485,8 @@ and can never make a percentage true on its own.
   `category`, and `search` filters are not yet exposed in the UI).
 - [x] Game details `/admin/games/:id` uses real game metadata and shows the return.
 - [x] RTP `/admin/rtp` switches a game's return only among the engine's options.
+- [x] RTP configuration `/admin/rtp/:id` reads the chosen option and board from the
+  guarded engine configuration endpoint without changing the option in force.
 - [x] Audit log `/admin/audit` uses the real append-only audit feed.
 - [ ] Settings `/admin/settings` contains only settings backed by an agreed Phase 1
   contract (Payment methods and Staff have no management service and show an explanatory
@@ -513,8 +528,9 @@ Built with Plinko as the first title; `docs/games/plinko-runtime.md` records the
 - [x] Report approved deposits for the dashboard's fixed today period.
 - [x] Report staked and returned amounts only from authoritative ledger/round data.
 - [x] Report player and round counts.
-- [ ] Label RTP as target, theoretical, or observed; the dashboard currently labels the
-  ledger-derived observed value as “Effective”.
+- [ ] Label every RTP figure by its meaning. The inspector distinguishes target and
+  theoretical RTP; the dashboard currently abbreviates returned-over-staked as `RTP`
+  beside `expected` instead of naming it observed or effective.
 - [x] Provide player transaction and round history with paging and date filters.
 - [ ] Provide administrator search and filters across users, transactions, deposits,
   rounds, games, and audit entries.
@@ -681,7 +697,8 @@ Plinko `plinko/9000`, `plinko/9500`, `plinko/10500`, `plinko/11000`: simulated o
 - [ ] Every non-engine checklist item required for launch is complete or explicitly
   removed from scope.
 - [ ] The API contract, frontend types, and implementation agree.
-- [ ] No production player or admin workflow depends on mutable fixture data.
+- [x] No production player or admin workflow depends on mutable fixture data; fixture
+  branches are test-only and the production bundle contains no fixture content.
 - [ ] Required unit, HTTP, PostgreSQL concurrency, and end-to-end tests pass in CI.
 - [ ] PHP and USD remain isolated and no response aggregates them as one balance.
 - [ ] Every committed balance change has exactly one immutable ledger movement.
