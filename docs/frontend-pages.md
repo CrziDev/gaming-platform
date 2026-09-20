@@ -24,7 +24,7 @@ on every page was traced to its adapter in `features/*/api.ts`.
 
 ## Public and player pages
 
-- [x] **Lobby** — `/` (catalogue, categories, featured banner, and the signed-in player's recently-played row are real; the banner features the first playable game — Plinko — with its own landscape art, and the tile shows Plinko's thumbnail; big wins is a placeholder strip marked Future Development and promotions is a Future Development section)
+- [x] **Lobby** — `/` (catalogue, categories, featured banner, and the signed-in player's recently-played row are real; the banner features the first playable game — Plinko — with its art as the panel's background, and the tile shows Plinko's thumbnail; big wins is a placeholder strip marked Future Development and promotions is a Future Development section)
 - [x] **Game catalogue** — `/games` (real catalogue with category and search)
 - [x] **Hot games** — `/games/hot` (active games with a settled round in the trailing seven days, ranked by settled rounds, distinct players, and latest play)
 - [x] **New games** — `/games/new` (real thirty-day `new` flag from the catalogue)

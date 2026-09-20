@@ -1,133 +1,134 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
-  <rect width="1400" height="760" fill="#151b23"/>
-  <circle cx="606.6" cy="-501.75" r="13.54" fill="#8a99ad"/>
-  <circle cx="700" cy="-501.75" r="13.54" fill="#8a99ad"/>
-  <circle cx="793.4" cy="-501.75" r="13.54" fill="#8a99ad"/>
-  <circle cx="559.9" cy="-422.36" r="13.54" fill="#8a99ad"/>
-  <circle cx="653.3" cy="-422.36" r="13.54" fill="#8a99ad"/>
-  <circle cx="746.7" cy="-422.36" r="13.54" fill="#8a99ad"/>
-  <circle cx="840.1" cy="-422.36" r="13.54" fill="#8a99ad"/>
-  <circle cx="513.2" cy="-342.97" r="13.54" fill="#8a99ad"/>
-  <circle cx="606.6" cy="-342.97" r="13.54" fill="#8a99ad"/>
-  <circle cx="700" cy="-342.97" r="13.54" fill="#8a99ad"/>
-  <circle cx="793.4" cy="-342.97" r="13.54" fill="#8a99ad"/>
-  <circle cx="886.8" cy="-342.97" r="13.54" fill="#8a99ad"/>
-  <circle cx="466.5" cy="-263.58" r="13.54" fill="#8a99ad"/>
-  <circle cx="559.9" cy="-263.58" r="13.54" fill="#8a99ad"/>
-  <circle cx="653.3" cy="-263.58" r="13.54" fill="#8a99ad"/>
-  <circle cx="746.7" cy="-263.58" r="13.54" fill="#8a99ad"/>
-  <circle cx="840.1" cy="-263.58" r="13.54" fill="#8a99ad"/>
-  <circle cx="933.5" cy="-263.58" r="13.54" fill="#8a99ad"/>
-  <circle cx="419.8" cy="-184.19" r="13.54" fill="#8a99ad"/>
-  <circle cx="513.2" cy="-184.19" r="13.54" fill="#8a99ad"/>
-  <circle cx="606.6" cy="-184.19" r="13.54" fill="#8a99ad"/>
-  <circle cx="700" cy="-184.19" r="13.54" fill="#8a99ad"/>
-  <circle cx="793.4" cy="-184.19" r="13.54" fill="#8a99ad"/>
-  <circle cx="886.8" cy="-184.19" r="13.54" fill="#8a99ad"/>
-  <circle cx="980.2" cy="-184.19" r="13.54" fill="#8a99ad"/>
-  <circle cx="373.1" cy="-104.8" r="13.54" fill="#8a99ad"/>
-  <circle cx="466.5" cy="-104.8" r="13.54" fill="#8a99ad"/>
-  <circle cx="559.9" cy="-104.8" r="13.54" fill="#8a99ad"/>
-  <circle cx="653.3" cy="-104.8" r="13.54" fill="#8a99ad"/>
-  <circle cx="746.7" cy="-104.8" r="13.54" fill="#8a99ad"/>
-  <circle cx="840.1" cy="-104.8" r="13.54" fill="#8a99ad"/>
-  <circle cx="933.5" cy="-104.8" r="13.54" fill="#8a99ad"/>
-  <circle cx="1026.9" cy="-104.8" r="13.54" fill="#8a99ad"/>
-  <circle cx="326.4" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="419.8" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="513.2" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="606.6" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="700" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="793.4" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="886.8" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="980.2" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="1073.6" cy="-25.41" r="13.54" fill="#8a99ad"/>
-  <circle cx="279.7" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="373.1" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="466.5" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="559.9" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="653.3" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="746.7" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="840.1" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="933.5" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="1026.9" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="1120.3" cy="53.98" r="13.54" fill="#8a99ad"/>
-  <circle cx="233" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="326.4" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="419.8" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="513.2" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="606.6" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="700" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="793.4" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="886.8" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="980.2" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="1073.6" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="1167" cy="133.37" r="13.54" fill="#8a99ad"/>
-  <circle cx="186.3" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="279.7" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="373.1" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="466.5" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="559.9" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="653.3" cy="212.76" r="16.93" fill="#ff4081"/>
-  <circle cx="746.7" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="840.1" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="933.5" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="1026.9" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="1120.3" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="1213.7" cy="212.76" r="13.54" fill="#8a99ad"/>
-  <circle cx="139.6" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="233" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="326.4" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="419.8" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="513.2" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="606.6" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="700" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="793.4" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="886.8" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="980.2" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="1073.6" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="1167" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="1260.4" cy="292.15" r="13.54" fill="#8a99ad"/>
-  <circle cx="92.9" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="186.3" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="279.7" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="373.1" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="466.5" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="559.9" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="653.3" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="746.7" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="840.1" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="933.5" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="1026.9" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="1120.3" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="1213.7" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <circle cx="1307.1" cy="371.54" r="13.54" fill="#8a99ad"/>
-  <rect x="95.7" y="555" width="87.8" height="100.07" rx="13.34" fill="#ff1e56"/>
-  <text x="139.6" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#f2f6fb">60×</text>
-  <rect x="189.1" y="555" width="87.8" height="100.07" rx="13.34" fill="#ff1e56"/>
-  <text x="233" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#f2f6fb">20×</text>
-  <rect x="282.5" y="555" width="87.8" height="100.07" rx="13.34" fill="#ff9e00"/>
-  <text x="326.4" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#f2f6fb">8×</text>
-  <rect x="375.9" y="555" width="87.8" height="100.07" rx="13.34" fill="#9d4edd"/>
-  <text x="419.8" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#f2f6fb">3×</text>
-  <rect x="469.3" y="555" width="87.8" height="100.07" rx="13.34" fill="#20e3b2"/>
-  <text x="513.2" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#0b3d33">1×</text>
-  <rect x="562.7" y="555" width="87.8" height="100.07" rx="13.34" fill="#ebdffd"/>
-  <text x="606.6" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#5d2682">0.4×</text>
-  <rect x="656.1" y="555" width="87.8" height="100.07" rx="13.34" fill="#ebdffd"/>
-  <text x="700" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#5d2682">0.2×</text>
-  <rect x="749.5" y="555" width="87.8" height="100.07" rx="13.34" fill="#ebdffd"/>
-  <text x="793.4" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#5d2682">0.4×</text>
-  <rect x="842.9" y="555" width="87.8" height="100.07" rx="13.34" fill="#20e3b2"/>
-  <text x="886.8" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#0b3d33">1×</text>
-  <rect x="936.3" y="555" width="87.8" height="100.07" rx="13.34" fill="#9d4edd"/>
-  <text x="980.2" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#f2f6fb">3×</text>
-  <rect x="1029.7" y="555" width="87.8" height="100.07" rx="13.34" fill="#ff9e00"/>
-  <text x="1073.6" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#f2f6fb">8×</text>
-  <rect x="1123.1" y="555" width="87.8" height="100.07" rx="13.34" fill="#ff1e56"/>
-  <text x="1167" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#f2f6fb">20×</text>
-  <rect x="1216.5" y="555" width="87.8" height="100.07" rx="13.34" fill="#ff1e56"/>
-  <text x="1260.4" y="615.24" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="28.35" text-anchor="middle" fill="#f2f6fb">60×</text>
-  <circle cx="681.56" cy="175.07" r="29.18" fill="#ff0a54"/>
-  <circle cx="1167" cy="505.81" r="29.18" fill="#ff0a54"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="600" viewBox="0 0 2000 600">
+  <rect width="2000" height="600" fill="#16202a"/>
+  <circle cx="1401.34" cy="-382.09" r="11.31" fill="#8a99ad"/>
+  <circle cx="1479.34" cy="-382.09" r="11.31" fill="#8a99ad"/>
+  <circle cx="1557.34" cy="-382.09" r="11.31" fill="#8a99ad"/>
+  <circle cx="1362.34" cy="-315.79" r="11.31" fill="#8a99ad"/>
+  <circle cx="1440.34" cy="-315.79" r="11.31" fill="#8a99ad"/>
+  <circle cx="1518.34" cy="-315.79" r="11.31" fill="#8a99ad"/>
+  <circle cx="1596.34" cy="-315.79" r="11.31" fill="#8a99ad"/>
+  <circle cx="1323.34" cy="-249.49" r="11.31" fill="#8a99ad"/>
+  <circle cx="1401.34" cy="-249.49" r="11.31" fill="#8a99ad"/>
+  <circle cx="1479.34" cy="-249.49" r="11.31" fill="#8a99ad"/>
+  <circle cx="1557.34" cy="-249.49" r="11.31" fill="#8a99ad"/>
+  <circle cx="1635.34" cy="-249.49" r="11.31" fill="#8a99ad"/>
+  <circle cx="1284.34" cy="-183.19" r="11.31" fill="#8a99ad"/>
+  <circle cx="1362.34" cy="-183.19" r="11.31" fill="#8a99ad"/>
+  <circle cx="1440.34" cy="-183.19" r="11.31" fill="#8a99ad"/>
+  <circle cx="1518.34" cy="-183.19" r="11.31" fill="#8a99ad"/>
+  <circle cx="1596.34" cy="-183.19" r="11.31" fill="#8a99ad"/>
+  <circle cx="1674.34" cy="-183.19" r="11.31" fill="#8a99ad"/>
+  <circle cx="1245.34" cy="-116.89" r="11.31" fill="#8a99ad"/>
+  <circle cx="1323.34" cy="-116.89" r="11.31" fill="#8a99ad"/>
+  <circle cx="1401.34" cy="-116.89" r="11.31" fill="#8a99ad"/>
+  <circle cx="1479.34" cy="-116.89" r="11.31" fill="#8a99ad"/>
+  <circle cx="1557.34" cy="-116.89" r="11.31" fill="#8a99ad"/>
+  <circle cx="1635.34" cy="-116.89" r="11.31" fill="#8a99ad"/>
+  <circle cx="1713.34" cy="-116.89" r="11.31" fill="#8a99ad"/>
+  <circle cx="1206.34" cy="-50.59" r="11.31" fill="#8a99ad"/>
+  <circle cx="1284.34" cy="-50.59" r="11.31" fill="#8a99ad"/>
+  <circle cx="1362.34" cy="-50.59" r="11.31" fill="#8a99ad"/>
+  <circle cx="1440.34" cy="-50.59" r="11.31" fill="#8a99ad"/>
+  <circle cx="1518.34" cy="-50.59" r="11.31" fill="#8a99ad"/>
+  <circle cx="1596.34" cy="-50.59" r="11.31" fill="#8a99ad"/>
+  <circle cx="1674.34" cy="-50.59" r="11.31" fill="#8a99ad"/>
+  <circle cx="1752.34" cy="-50.59" r="11.31" fill="#8a99ad"/>
+  <circle cx="1167.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1245.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1323.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1401.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1479.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1557.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1635.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1713.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1791.34" cy="15.71" r="11.31" fill="#8a99ad"/>
+  <circle cx="1128.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1206.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1284.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1362.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1440.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1518.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1596.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1674.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1752.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1830.34" cy="82.01" r="11.31" fill="#8a99ad"/>
+  <circle cx="1089.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1167.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1245.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1323.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1401.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1479.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1557.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1635.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1713.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1791.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1869.34" cy="148.31" r="11.31" fill="#8a99ad"/>
+  <circle cx="1050.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1128.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1206.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1284.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1362.34" cy="214.61" r="14.14" fill="#ff4081"/>
+  <circle cx="1440.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1518.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1596.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1674.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1752.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1830.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1908.34" cy="214.61" r="11.31" fill="#8a99ad"/>
+  <circle cx="1011.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1089.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1167.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1245.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1323.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1401.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1479.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1557.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1635.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1713.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1791.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1869.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="1947.34" cy="280.91" r="11.31" fill="#8a99ad"/>
+  <circle cx="972.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1050.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1128.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1206.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1284.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1362.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1440.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1518.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1596.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1674.34" cy="347.21" r="14.14" fill="#ff4081"/>
+  <circle cx="1752.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1830.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1908.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <circle cx="1986.34" cy="347.21" r="11.31" fill="#8a99ad"/>
+  <rect x="974.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ff1e56"/>
+  <text x="1011.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#f2f6fb">60×</text>
+  <rect x="1052.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ff1e56"/>
+  <text x="1089.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#f2f6fb">20×</text>
+  <rect x="1130.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ff9e00"/>
+  <text x="1167.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#f2f6fb">8×</text>
+  <rect x="1208.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#9d4edd"/>
+  <text x="1245.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#f2f6fb">3×</text>
+  <rect x="1286.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#20e3b2"/>
+  <text x="1323.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#0b3d33">1×</text>
+  <rect x="1364.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ebdffd"/>
+  <text x="1401.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#5d2682">0.4×</text>
+  <rect x="1442.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ebdffd"/>
+  <text x="1479.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#5d2682">0.2×</text>
+  <rect x="1520.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ebdffd"/>
+  <text x="1557.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#5d2682">0.4×</text>
+  <rect x="1598.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#20e3b2"/>
+  <text x="1635.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#0b3d33">1×</text>
+  <rect x="1676.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#9d4edd"/>
+  <text x="1713.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#f2f6fb">3×</text>
+  <rect x="1754.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ff9e00"/>
+  <text x="1791.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#f2f6fb">8×</text>
+  <rect x="1832.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ff1e56"/>
+  <text x="1869.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#f2f6fb">20×</text>
+  <rect x="1910.68" y="500.43" width="73.32" height="83.57" rx="11.14" fill="#ff1e56"/>
+  <text x="1947.34" y="550.74" font-family="'IBM Plex Mono', ui-monospace, monospace" font-weight="500" font-size="23.68" text-anchor="middle" fill="#f2f6fb">60×</text>
+  <circle cx="1698.04" cy="315.61" r="24.37" fill="#ff0a54"/>
+  <circle cx="1338.64" cy="183.01" r="24.37" fill="#ff0a54"/>
+  <circle cx="1245.34" cy="448.2" r="24.37" fill="#ff0a54"/>
 </svg>

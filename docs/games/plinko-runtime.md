@@ -90,7 +90,7 @@ pixels for 260 ms with an `ink` outline and the host's result label is drawn abo
 | File | Role |
 | --- | --- |
 | `thumbnail.svg` | The 3:4 catalogue tile: the whole 8-row high-risk board, rendered to `frontend/src/assets/games/plinko.png` at 720×960 |
-| `banner.svg` | The landscape lobby banner: the lower rows of the 12-row high-risk board and its 13-bucket ribbon, sized to fill the panel at desktop widths; the narrowest two-column slot crops the outermost bucket pair. Rendered to `frontend/src/assets/banners/plinko.png` at 1400×760 |
+| `banner.svg` | The lobby banner's background: the lower rows of the 12-row high-risk board and its 13-bucket ribbon on the `banner` ground, anchored to the right and bottom of a 2000×600 canvas so the panel keeps the ribbon at every width while its scrim fades the left into the text. Rendered to `frontend/src/assets/banners/plinko.png` |
 
 Both are drawn from the frame's own numbers — `getBoardConfig` and the peg grid in
 `js/physics.js`, `bucketBand` in `js/theme.js`, the tokens above, `formatMultiplier` in
@@ -98,7 +98,7 @@ Both are drawn from the frame's own numbers — `getBoardConfig` and the peg gri
 player sees. The folder sits beside `web/`, not inside it, so `frontend/vite/gameFrames.ts`
 never copies the sources into `dist`. Re-render with
 `rsvg-convert -w 720 thumbnail.svg -o …/games/plinko.png` and
-`rsvg-convert -w 1400 banner.svg -o …/banners/plinko.png`; the labels are set in IBM Plex
+`rsvg-convert -w 2000 banner.svg -o …/banners/plinko.png`; the labels are set in IBM Plex
 Mono, which the renderer must be able to find. `frontend/src/lib/gameArt.ts` resolves both
 PNGs by slug, and the lobby banner features the first catalogue title with a module in
 `frontend/src/features/gameplay/registry.ts`.

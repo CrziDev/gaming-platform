@@ -26,8 +26,10 @@ removed.
 
 ## Hard rules
 
-1. **No gradients** on backgrounds, buttons, text, or badges. Flat fills only. The single
-   exception is the bottom scrim on a game tile, the `tile-scrim` utility.
+1. **No gradients** on backgrounds, buttons, text, or badges. Flat fills only. The
+   exceptions are the two scrims that fade artwork into chrome so text over it stays
+   legible: `tile-scrim` at the bottom of a game tile and `banner-scrim` over the lobby
+   banner's artwork.
 2. **No borders as dividers.** Regions are separated by background step
    (`base` → `panel` → `surface-1` → `surface-2` → `surface-3`), never by a 1px line.
    There are no `line` tokens.
@@ -146,15 +148,17 @@ reveals a Play chip by a 120ms opacity fade — no scale.
 
 ## Placeholders
 
-Real art is not in yet. Every image slot is a flat `surface-3` block with a centred
-uppercase mono caption (`game art`, `banner artwork`). Keep the slot and the aspect
-ratio; swap the fill when assets land. Never a gradient, an SVG illustration, or an
-emoji.
+Until a title has art, its tile is a flat `surface-3` block with a centred uppercase
+mono caption (`game art`), and the lobby banner is the bare `banner` panel. Keep the slot
+and the aspect ratio; swap the fill when assets land. Never a gradient, an SVG
+illustration, or an emoji.
 
 ## Lobby composition (top to bottom)
 
-1. Banner on `banner` — text left, artwork slot right (`1.2fr / .8fr`), one column under
-   760px
+1. Banner on `banner` — the featured game's artwork is the panel's background, anchored
+   right and bottom under `banner-scrim`. At 760px and up the panel is 236px tall and the
+   text sits on the left half over a horizontal scrim; below that it is 300px tall and the
+   text sits above the art over a vertical one
 2. Big wins — horizontal snap row of 172px rows: avatar slot · username · ₱ disc · amount
 3. Category tabs — quiet chips, active = `surface-3`; `See all` pushed right
 4. Game grid
@@ -210,7 +214,8 @@ Nothing ever emits a horizontal page scrollbar.
 ## Retired in v2 and why
 
 - **Gradients** (game art, banner fades) — chrome must not compete with art; flat
-  placeholders until real assets land.
+  placeholders until real assets land. The banner fade came back as `banner-scrim` once
+  Plinko's art did, because it fades art into chrome rather than decorating chrome.
 - **`shadow-e1` / `shadow-e2` / `shadow-glow`** — elevation is background lightness.
 - **`line`, `line-strong`, `line-hover`** — dividers were the main source of visual
   noise; every region is now a background step.

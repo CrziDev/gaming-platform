@@ -67,6 +67,6 @@ describe('the lobby against a live server', () => {
     renderApp('/')
 
     const hero = (await screen.findByRole('heading', { level: 1, name: 'Vault Break' })).closest('section')!
-    expect(within(hero).getByText('banner artwork')).toBeInTheDocument()
+    expect(hero.querySelector('img')).toBeNull()
   })
 })
