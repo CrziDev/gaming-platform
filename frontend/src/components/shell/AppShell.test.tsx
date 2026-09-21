@@ -118,6 +118,23 @@ describe('the top bar for a player', () => {
 })
 
 describe('the navigation rail', () => {
+  it('rests collapsed and expands only while the player is interacting with it', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': guest })
+    window.localStorage.setItem('shell.rail', 'expanded')
+
+    renderApp('/')
+
+    const rail = await screen.findByRole('complementary', { name: 'Main navigation' })
+    expect(rail).toHaveClass('w-14')
+
+    await user.hover(rail)
+    expect(rail).toHaveClass('w-48')
+
+    await user.unhover(rail)
+    expect(rail).toHaveClass('w-14')
+  })
+
   it('lists Games, Hot, New, Favorites and Promotions in that order with nothing else', async () => {
     stubFetchRoutes({ 'GET /me': guest })
 

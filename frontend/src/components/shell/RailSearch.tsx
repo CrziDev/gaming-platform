@@ -49,6 +49,7 @@ export function RailSearch({ mode, onNavigate }: RailSearchProps) {
     <div className="flex flex-col gap-3">
       <button
         type="button"
+        onFocus={focusSearch}
         onClick={focusSearch}
         className={cn(
           'min-h-11 w-full items-center gap-2.5 rounded-input bg-inset px-2.5 text-[13px] text-ink-mute',

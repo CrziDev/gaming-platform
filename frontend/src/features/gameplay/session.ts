@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Ref } from 'react'
 
 import { ApiError } from '@/api/client'
+import type { Wallet } from '@/api/types'
 import type { GameFrameStatus } from '@/components/game/GameHost'
 import { useToast } from '@/components/ui/Toast'
 import { walletQueryKey } from '@/features/wallet'
@@ -29,6 +30,8 @@ export type GameSession = {
   // offered against a table the player cannot see.
   canPlay: boolean
   play: (stakeMinor: number) => Promise<void>
+  // True from the synchronously admitted click until its request fails or its
+  // ball settles; Plinko never offers a second round while this is true.
   playing: boolean
   sound: boolean
   setSound: (enabled: boolean) => void
@@ -44,6 +47,7 @@ type GameSessionOptions = {
 const rowChoices = PLINKO_ROWS.map(String)
 
 type Board = { rows: PlinkoRows; risk: PlinkoRisk; multipliers: readonly number[] }
+type PendingRound = { timer: number; wallet: Wallet }
 
 function sameBoard(a: Board, b: Board): boolean {
   return (
@@ -80,13 +84,17 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   const [iframe, setIframe] = useState<HTMLIFrameElement | null>(null)
   const attachFrame = useCallback((node: HTMLIFrameElement | null) => setIframe(node), [])
   const bridgeRef = useRef<GameBridge | null>(null)
-  const pendingRef = useRef(new Map<string, number>())
+  const pendingRef = useRef(new Map<string, PendingRound>())
+  // State drives the controls; the ref closes the same-render window in which
+  // several clicks could otherwise start several mutations before React paints.
+  const playLockedRef = useRef(false)
   const sentRef = useRef<Board | null>(null)
 
   const [status, setStatus] = useState<GameFrameStatus>('loading')
   const [frameKey, setFrameKey] = useState(0)
   const [frameError, setFrameError] = useState<string>()
   const [inFlight, setInFlight] = useState(0)
+  const [playLocked, setPlayLocked] = useState(false)
 
   const [rememberedRows, rememberRows] = useRememberedChoice(`game.${slug}.rows`, rowChoices)
   const [rememberedRisk, rememberRisk] = useRememberedChoice(`game.${slug}.risk`, PLINKO_RISKS)
@@ -103,20 +111,30 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
     latest.current = { params, sound, status, module, boards }
   })
 
+  const unlockPlay = useCallback(() => {
+    playLockedRef.current = false
+    setPlayLocked(false)
+  }, [])
+
   const settle = useCallback(
     (roundId: string) => {
       const pending = pendingRef.current
-      const timer = pending.get(roundId)
-      if (timer === undefined) return
-      window.clearTimeout(timer)
+      const round = pending.get(roundId)
+      if (round === undefined) return
+      window.clearTimeout(round.timer)
       pending.delete(roundId)
+      // Reveal the same authoritative wallet that committed with the round
+      // before another wager can be offered. The refetch catches any external
+      // wallet movement that happened while the ball was falling.
+      queryClient.setQueryData([...walletQueryKey, round.wallet.currency], round.wallet)
       setInFlight(pending.size)
+      if (pending.size === 0) unlockPlay()
       void queryClient.invalidateQueries({ queryKey: walletQueryKey })
       void queryClient.invalidateQueries({ queryKey: ['rounds'] })
       void queryClient.invalidateQueries({ queryKey: ['transactions'] })
       void queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
-    [queryClient],
+    [queryClient, unlockPlay],
   )
 
   const settleAll = useCallback(() => {
@@ -187,7 +205,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   useEffect(() => {
     const pending = pendingRef.current
     return () => {
-      for (const timer of pending.values()) window.clearTimeout(timer)
+      for (const round of pending.values()) window.clearTimeout(round.timer)
       pending.clear()
     }
   }, [])
@@ -203,7 +221,10 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   const play = useCallback(
     async (stakeMinor: number) => {
       const { status: frameStatus, module: active, params: current, boards: served } = latest.current
-      if (!active || !served) return
+      if (!active || !served || playLockedRef.current) return
+
+      playLockedRef.current = true
+      setPlayLocked(true)
 
       try {
         const response = await mutation.mutateAsync({
@@ -226,10 +247,10 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
         const multiplier = response.round.multiplier_hundredths
         const label = formatMoney(money(response.round.win_minor ?? 0, currency), { sign: 'always' })
 
-        pendingRef.current.set(
-          roundId,
-          window.setTimeout(() => settle(roundId), SETTLE_FALLBACK_MS),
-        )
+        pendingRef.current.set(roundId, {
+          timer: window.setTimeout(() => settle(roundId), SETTLE_FALLBACK_MS),
+          wallet: response.wallet,
+        })
         setInFlight(pendingRef.current.size)
 
         const dropped =
@@ -251,7 +272,9 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
           toast.push(`Round result: ${label}`)
         }
       } catch (error) {
+        unlockPlay()
         if (error instanceof ApiError && error.code === 'INSUFFICIENT_BALANCE') {
+          void queryClient.invalidateQueries({ queryKey: walletQueryKey })
           onShortfall()
           return
         }
@@ -262,7 +285,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
         toast.push(error instanceof Error ? error.message : 'Your bet could not be placed.', 'danger')
       }
     },
-    [currency, mutation, onShortfall, queryClient, settle, slug, toast],
+    [currency, mutation, onShortfall, queryClient, settle, slug, toast, unlockPlay],
   )
 
   const setParams = useCallback(
@@ -294,11 +317,11 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
     frame,
     params,
     setParams,
-    canChangeParams: inFlight === 0,
+    canChangeParams: !playLocked,
     inFlight,
     canPlay: table !== null,
     play,
-    playing: mutation.isPending,
+    playing: playLocked,
     sound,
     setSound,
   }

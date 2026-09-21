@@ -208,11 +208,16 @@ rejected.
    `round.Handler.Play` through the engine registered for the slug, and a 404 is
    reported as the game not being available on this server. Component tests settle
    against the deterministic fixture in `src/mocks/plinko.ts`.
-4. The settled result is sent as `drop`. Rows and risk are locked while any ball is in
-   flight. The wallet, rounds, and transactions are refetched when the frame reports
-   `landed`, or eight seconds later regardless, so an animation can never hide a
-   settled round; that refetch is what puts the round into the history under the board.
-5. Every settled round names its `rtp_basis_points`. When it is not the manifest's, the
+4. The first submitted bet synchronously locks Place bet, rows, and risk, so rapid
+   clicks cannot start a second round before React renders the disabled controls. The
+   lock remains through the request and the ball's flight; Plinko permits one active
+   ball per page session. A request error releases it without dropping a ball.
+5. The settled result is sent as `drop`. When the frame reports `landed`, the host
+   reveals the authoritative wallet returned with that round before unlocking, then
+   refetches the wallet, rounds, and transactions. The same settlement runs eight
+   seconds later if no landing arrives, so an animation can never hide a settled round;
+   that refetch is what puts the round into the history under the board.
+6. Every settled round names its `rtp_basis_points`. When it is not the manifest's, the
    host refetches the manifest and reconfigures the board with the new table once no
    ball is in flight; the ball that revealed the change still drops, since its `drop`
    carries its own multiplier and label. The board can therefore show a superseded

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -264,6 +265,45 @@ func TestPlayConcurrentDuplicatesSettleOneRound(t *testing.T) {
 		t.Fatalf("engine played %d times", eng.calls.Load())
 	}
 	if l := ledgerFor(t, fixture); l != (ledger{Rounds: 1, Wagers: 1, Wins: 1, Balance: 1_140}) {
+		t.Fatalf("ledger = %+v", l)
+	}
+}
+
+func TestPlayConcurrentDistinctRoundsNeverOverspendTheWallet(t *testing.T) {
+	db := openRoundTestDB(t)
+	fixture := createRoundFixture(t, db, 500)
+	eng := &stubEngine{outcome: engine.Outcome{WinMinor: 0, MultiplierHundredths: 0, Reference: "test/v1"}}
+
+	const attempts = 8
+	errs := make([]error, attempts)
+	var wg sync.WaitGroup
+	for i := range attempts {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, errs[i] = Play(context.Background(), db, eng, playInput(fixture, fmt.Sprintf("play-distinct-%d-%s", i, fixture.Suffix), 200))
+		}()
+	}
+	wg.Wait()
+
+	var settled, refused int
+	for i, err := range errs {
+		switch {
+		case err == nil:
+			settled++
+		case errors.Is(err, wallet.ErrInsufficientFunds):
+			refused++
+		default:
+			t.Fatalf("attempt %d: unexpected error: %v", i, err)
+		}
+	}
+	if settled != 2 || refused != attempts-settled {
+		t.Fatalf("settled %d and refused %d attempts, want 2 and %d", settled, refused, attempts-2)
+	}
+	if eng.calls.Load() != int32(settled) {
+		t.Fatalf("engine played %d times for %d settled rounds", eng.calls.Load(), settled)
+	}
+	if l := ledgerFor(t, fixture); l != (ledger{Rounds: 2, Wagers: 2, Balance: 100}) {
 		t.Fatalf("ledger = %+v", l)
 	}
 }

@@ -1,14 +1,14 @@
 import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
 
-import { useRemembered, useRememberedChoice } from '@/lib/remembered'
+import { useRemembered } from '@/lib/remembered'
 
 export type RailChoice = 'expanded' | 'collapsed'
 
-const railChoices = ['expanded', 'collapsed'] as const
-
 type ShellValue = {
-  rail: RailChoice | null
+  rail: RailChoice
   toggleRail: () => void
+  expandRail: () => void
+  collapseRail: () => void
   chatOpen: boolean
   setChatOpen: (open: boolean) => void
   drawerOpen: boolean
@@ -23,25 +23,27 @@ type ShellValue = {
 const ShellContext = createContext<ShellValue | null>(null)
 
 export function ShellProvider({ children }: { children: ReactNode }) {
-  const [rail, setRail] = useRememberedChoice('shell.rail', railChoices)
+  const [rail, setRail] = useState<RailChoice>('collapsed')
   const [chatOpen, setChatOpen] = useRemembered('shell.chat-open', true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [searchFocus, setSearchFocus] = useState(0)
 
   const toggleRail = useCallback(() => {
-    const expanded = rail === null ? railWideByDefault() : rail === 'expanded'
-    setRail(expanded ? 'collapsed' : 'expanded')
-  }, [rail, setRail])
+    setRail((current) => (current === 'expanded' ? 'collapsed' : 'expanded'))
+  }, [])
+
+  const expandRail = useCallback(() => setRail('expanded'), [])
+  const collapseRail = useCallback(() => setRail('collapsed'), [])
 
   const focusSearch = useCallback(() => {
     if (railVisible()) {
-      setRail('expanded')
+      expandRail()
     } else {
       setDrawerOpen(true)
     }
     setSearchFocus((count) => count + 1)
-  }, [setRail])
+  }, [expandRail])
 
   const searchFocused = useCallback(() => setSearchFocus(0), [])
 
@@ -49,6 +51,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
     () => ({
       rail,
       toggleRail,
+      expandRail,
+      collapseRail,
       chatOpen,
       setChatOpen,
       drawerOpen,
@@ -59,7 +63,19 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       focusSearch,
       searchFocused,
     }),
-    [rail, toggleRail, chatOpen, setChatOpen, drawerOpen, search, searchFocus, focusSearch, searchFocused],
+    [
+      rail,
+      toggleRail,
+      expandRail,
+      collapseRail,
+      chatOpen,
+      setChatOpen,
+      drawerOpen,
+      search,
+      searchFocus,
+      focusSearch,
+      searchFocused,
+    ],
   )
 
   return <ShellContext value={value}>{children}</ShellContext>
@@ -75,8 +91,4 @@ export function useShell(): ShellValue {
 
 export function railVisible(): boolean {
   return window.matchMedia('(min-width: 760px)').matches
-}
-
-function railWideByDefault(): boolean {
-  return window.matchMedia('(min-width: 900px)').matches
 }

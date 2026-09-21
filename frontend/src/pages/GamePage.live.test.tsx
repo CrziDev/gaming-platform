@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -88,6 +88,12 @@ function roundsRequests(fetchMock: ReturnType<typeof stubFetchRoutes>) {
   return fetchMock.mock.calls.filter(([input]) => new URL(String(input)).pathname.endsWith('/rounds'))
 }
 
+function playRequests(fetchMock: ReturnType<typeof stubFetchRoutes>) {
+  return fetchMock.mock.calls.filter(
+    ([input, init]) => init?.method === 'POST' && new URL(String(input)).pathname.endsWith('/games/plinko/rounds'),
+  )
+}
+
 describe('Plinko against a server without the play endpoint', () => {
   it('configures the board from the served manifest, reports the game as not available, and leaves the board idle', async () => {
     const user = userEvent.setup()
@@ -99,7 +105,7 @@ describe('Plinko against a server without the play endpoint', () => {
     renderApp('/game/plinko')
 
     const { iframe, post } = await openFrame()
-    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    act(() => frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' }))
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
     expect(posted(post, 'configure')[0]?.multipliers_hundredths).toEqual([600, 300, 170, 110, 55, 110, 170, 300, 600])
 
@@ -108,6 +114,7 @@ describe('Plinko against a server without the play endpoint', () => {
     expect(await screen.findByText("Plinko isn't available right now.")).toBeInTheDocument()
     expect(posted(post, 'drop')).toHaveLength(0)
     expect(screen.getByRole('radio', { name: '8' })).not.toHaveAttribute('aria-disabled')
+    expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
 
     const play = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')
     expect(play).toBeDefined()
@@ -118,6 +125,42 @@ describe('Plinko against a server without the play endpoint', () => {
       currency: 'PHP',
       params: { rows: 8, risk: 'normal' },
     })
+  })
+})
+
+describe('Plinko bet admission', () => {
+  it('submits one rapid click, stays locked through the drop, and reveals the committed wallet on landing', async () => {
+    const fetchMock = stubFetchRoutes({
+      ...page,
+      'GET /wallets/PHP': [
+        { status: 200, body: { currency: 'PHP', balance_minor: 100_000 } },
+        { status: 200, body: { currency: 'PHP', balance_minor: 99_950 } },
+      ],
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest(9500, 55) },
+      'POST /games/plinko/rounds': { status: 200, body: settledRound(9500) },
+    })
+    renderApp('/game/plinko')
+
+    const { iframe, post } = await openFrame()
+    act(() => frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' }))
+    await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
+    const placeBet = screen.getByRole('button', { name: 'PLACE BET' })
+
+    act(() => {
+      placeBet.click()
+      placeBet.click()
+      placeBet.click()
+    })
+
+    expect(placeBet).toBeDisabled()
+    await waitFor(() => expect(posted(post, 'drop')).toHaveLength(1))
+    expect(playRequests(fetchMock)).toHaveLength(1)
+    expect(placeBet).toBeDisabled()
+
+    act(() => frameSays(iframe, { v: 1, type: 'landed', round_id: 'round-live-1', slot: 4 }))
+
+    await waitFor(() => expect(placeBet).toBeEnabled())
+    expect(await screen.findByRole('link', { name: 'Wallet balance ₱999.50' })).toBeInTheDocument()
   })
 })
 

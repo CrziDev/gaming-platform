@@ -1,4 +1,5 @@
 import { Globe, LifeBuoy } from 'lucide-react'
+import { useRef } from 'react'
 
 import { cn } from '@/lib/cn'
 
@@ -10,12 +11,35 @@ import { RailSearch } from './RailSearch'
 import { useShell } from './ShellContext'
 
 export function Sidebar() {
-  const { rail } = useShell()
+  const { rail, expandRail, collapseRail } = useShell()
   const mode = railMode(rail)
+  const sidebar = useRef<HTMLElement>(null)
+  const pointerInside = useRef(false)
+
+  const collapseWithoutInteraction = () => {
+    if (!pointerInside.current && !sidebar.current?.contains(document.activeElement)) {
+      collapseRail()
+    }
+  }
 
   return (
     <aside
+      ref={sidebar}
       aria-label="Main navigation"
+      onPointerEnter={() => {
+        pointerInside.current = true
+        expandRail()
+      }}
+      onPointerLeave={() => {
+        pointerInside.current = false
+        collapseWithoutInteraction()
+      }}
+      onFocusCapture={expandRail}
+      onBlurCapture={(event) => {
+        if (!pointerInside.current && !event.currentTarget.contains(event.relatedTarget)) {
+          collapseRail()
+        }
+      }}
       className={cn(
         'hidden shrink-0 flex-col gap-3 overflow-y-auto bg-panel px-2 py-3 @rail:flex',
         railWidth[mode],

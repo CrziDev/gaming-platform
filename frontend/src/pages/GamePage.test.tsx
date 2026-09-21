@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -183,6 +183,28 @@ describe('the Plinko game page', () => {
     expect(php.balance_minor).not.toBe(startingBalance)
   })
 
+  it('accepts only one bet until its ball lands, including clicks before React rerenders', async () => {
+    const { iframe, post } = await readyBoard()
+    const before = rounds.length
+    const placeBet = screen.getByRole('button', { name: 'PLACE BET' })
+
+    act(() => {
+      placeBet.click()
+      placeBet.click()
+      placeBet.click()
+    })
+
+    expect(placeBet).toBeDisabled()
+    await waitFor(() => expect(lastDrop(post)).toBeDefined())
+    expect(rounds).toHaveLength(before + 1)
+    expect(placeBet).toBeDisabled()
+
+    const drop = lastDrop(post)!
+    frameSays(iframe, { v: 1, type: 'landed', round_id: drop.round_id, slot: drop.slot })
+
+    await waitFor(() => expect(placeBet).toBeEnabled())
+  })
+
   it('shows, once a round has landed, that round in the history', async () => {
     const user = userEvent.setup()
     const { iframe, post } = await readyBoard()
@@ -220,6 +242,7 @@ describe('the Plinko game page', () => {
     await waitFor(() => expect(screen.getByRole('radio', { name: '8' })).not.toHaveAttribute('aria-disabled'), {
       timeout: 3000,
     })
+    expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
   })
 
   it('treats a second ready as a reloaded frame and reconfigures it', async () => {

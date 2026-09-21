@@ -2,8 +2,8 @@ import type { RailChoice } from './ShellContext'
 
 export type RailMode = RailChoice | 'auto'
 
-export function railMode(rail: RailChoice | null): RailMode {
-  return rail ?? 'auto'
+export function railMode(rail: RailChoice): RailMode {
+  return rail
 }
 
 export const railWidth: Record<RailMode, string> = {
