@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { walletQueryKey } from '@/features/wallet'
 import { formatMoney, money, type Currency } from '@/lib/money'
 import { useRememberedChoice } from '@/lib/remembered'
+import { createUUID } from '@/lib/uuid'
 
 import { createGameBridge, frameOriginOf, type GameBridge } from './bridge'
 import { gameManifestQueryKey, useGameManifest, useGameSound, usePlayRound } from './hooks'
@@ -232,7 +233,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
           stake_minor: stakeMinor,
           currency,
           params: current,
-          idempotencyKey: crypto.randomUUID(),
+          idempotencyKey: createUUID(),
         })
 
         // A round settled at another return means the table on screen is stale.

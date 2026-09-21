@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/States'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/components/ui/Toast'
+import { createUUID } from '@/lib/uuid'
 import {
   createDepositSchema,
   fallbackDepositLimits,
@@ -44,7 +45,7 @@ export function DepositPage() {
   const [submitError, setSubmitError] = useState<string | undefined>(undefined)
   // One key per form, not per click: a retry after a dropped connection must
   // find the original request on the server instead of creating a second one.
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
+  const [idempotencyKey, setIdempotencyKey] = useState(() => createUUID())
   const currency = walletQuery.data?.currency ?? fallbackDepositLimits.currency
   const limits = limitsQuery.data ?? fallbackDepositLimits
   const schema = useMemo(() => createDepositSchema(currency, limits), [currency, limits])
@@ -105,7 +106,7 @@ export function DepositPage() {
       }
       // The server rejected this submission outright, so the next attempt is a
       // new request and needs its own key.
-      setIdempotencyKey(crypto.randomUUID())
+      setIdempotencyKey(createUUID())
       if (error.status === 413) {
         setProofError('The screenshot is too large. Use an image under 5 MB.')
         return
