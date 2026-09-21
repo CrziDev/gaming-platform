@@ -182,37 +182,57 @@ clean: ## Remove build output and installed tools
 
 ## --- Docker ----------------------------------------------------------------
 
+ENV_FILE ?= .env
+
+COMPOSE := docker compose --env-file $(ENV_FILE)
+
+# Read DATABASE_URL from whichever ENV_FILE was selected.
+DATABASE_URL := $(shell sed -n 's/^DATABASE_URL=//p' $(ENV_FILE))
+
+
 docker-up: ## Build and start all Docker services
-	docker compose up --build
+	$(COMPOSE) up --build
 
 docker-down: ## Stop Docker services but preserve data
-	docker compose down
+	$(COMPOSE) down
 
 docker-logs: ## Follow Docker logs
-	docker compose logs -f
+	$(COMPOSE) logs -f
 
 docker-ps: ## Show Docker service status
-	docker compose ps
+	$(COMPOSE) ps
+
 
 docker-migrate-up: ## Apply pending database migrations inside Docker
-	docker compose exec api /migrate \
+	$(COMPOSE) run --rm \
+		--entrypoint /migrate \
+		api \
 		-path /migrations \
 		-database "$(DATABASE_URL)" up
 
 docker-migrate-down: ## Roll back the latest migration inside Docker
-	docker compose exec api /migrate \
+	$(COMPOSE) run --rm \
+		--entrypoint /migrate \
+		api \
 		-path /migrations \
 		-database "$(DATABASE_URL)" down 1
 
 docker-migrate-version: ## Show current migration version
-	docker compose exec api /migrate \
+	$(COMPOSE) run --rm \
+		--entrypoint /migrate \
+		api \
 		-path /migrations \
 		-database "$(DATABASE_URL)" version
 
+
 docker-bootstrap: ## Create required initial application data
-	docker compose exec api /seed bootstrap
+	$(COMPOSE) run --rm \
+		--entrypoint /seed \
+		api bootstrap
 
 docker-seed-demo: ## Add development/demo data
-	docker compose exec api /seed demo
+	$(COMPOSE) run --rm \
+		--entrypoint /seed \
+		api demo
 
 docker-seed: docker-bootstrap docker-seed-demo ## Bootstrap and add demo data
