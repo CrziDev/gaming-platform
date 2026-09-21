@@ -108,6 +108,7 @@ tokens change neither the password nor any session.
 | `GET` | `/api/transactions` | `200` + a page of the player's movements; accepts `currency`, `type`, `from`, `to` | `400` invalid filter · `401` · `404` unknown currency |
 | `GET` | `/api/transactions/summary` | `200` + one summary per wallet the player holds; accepts `currency`, `from`, `to` | `400` invalid filter · `401` · `404` unknown currency |
 | `GET` | `/api/categories` | `200` + every category with its active-game count and availability | — |
+| `GET` | `/api/announcements` | `200` + a page of enabled, unexpired announcements, newest first | — |
 | `GET` | `/api/games` | `200` + a page of active games; accepts `category`, `search`, `sort=name\|newest`, `flag=new\|hot`; hot ranks settled-round activity from the trailing seven days | `400` invalid filter |
 | `GET` | `/api/games/{slug}` | `200` + the game | `404` not active or unknown |
 | `GET` | `/api/recent-games` | `200` + a page of the player's distinct active games, ordered by their latest round | `401` |
@@ -237,6 +238,10 @@ session. Those two are omitted from the failure column.
 | `GET` | `/api/admin/games/{id}/rtp-configuration` | `200` + the engine's inspectable configuration; requires `rtp_basis_points`, `rows`, and `risk` | `400` invalid option or board · `404` game or inspectable configuration unavailable |
 | `GET` | `/api/admin/audit-logs` | `200` + a page of entries; accepts `user_id` (the actor), `type` (the action), `from`, `to` | `400` invalid filter |
 | `GET` | `/api/admin/dashboard?currency=PHP` | `200` + the summary for that currency | `400` missing or unknown currency |
+| `GET` | `/api/admin/announcements` | `200` + a page of announcements, newest first | — |
+| `POST` | `/api/admin/announcements` | `201` + the announcement | `400` invalid text or end time |
+| `PUT` | `/api/admin/announcements/{id}` | `200` + the announcement | `400` invalid text or end time · `404` |
+| `PATCH` | `/api/admin/announcements/{id}/status` | `200` + the announcement; takes `enabled` | `400` ended announcement · `404` |
 
 An admin game body is the catalogue body plus `integration`, `rtp_basis_points` (null
 until an operator sets one), `rtp_options` (the returns the game's engine ships,
@@ -269,6 +274,14 @@ no such RTP option is `400`; an engine without this optional capability is `404`
 
 An admin round body adds `user_id`, `user_email`, `display_name`, and `wallet_id` to the
 player round resource.
+
+An announcement is plain, single-line `text` of 1–280 Unicode characters. Its nullable
+`ends_at` makes it permanent when null; otherwise it is public only before that UTC
+instant and while `enabled` is true. Creation publishes immediately. Content replacement
+does not change enabled state, and an ended announcement must first receive a future end
+time or become permanent before it can be enabled. Create, update, and status changes are
+audited; time passing writes no audit row. Public rows carry `id`, `text`, `ends_at`, and
+`created_at`; administrator rows also carry `enabled` and `updated_at`.
 
 The dashboard summary is one currency's day. Its deposit figures come from
 `deposit_requests`; its play figures — `staked_today_minor`, `returned_today_minor`,

@@ -17,6 +17,7 @@ import { PromotionsPage } from '@/pages/PromotionsPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { WalletPage } from '@/pages/WalletPage'
 import { AdminAuditPage } from '@/pages/admin/AdminAuditPage'
+import { AdminAnnouncementsPage } from '@/pages/admin/AdminAnnouncementsPage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
 import { AdminDepositsPage } from '@/pages/admin/AdminDepositsPage'
 import { AdminGameDetailPage } from '@/pages/admin/AdminGameDetailPage'
@@ -54,6 +55,7 @@ export function AppRoutes() {
           <Route path={adminPaths.games} element={<AdminGamesPage />} />
           <Route path="/admin/games/:id" element={<AdminGameDetailPage />} />
           <Route path={adminPaths.promotions} element={<AdminPromotionsPage />} />
+          <Route path={adminPaths.announcements} element={<AdminAnnouncementsPage />} />
           <Route path={adminPaths.rtp} element={<AdminRtpPage />} />
           <Route path="/admin/rtp/:id" element={<AdminRtpConfigurationPage />} />
           <Route path={adminPaths.audit} element={<AdminAuditPage />} />

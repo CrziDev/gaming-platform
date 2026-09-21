@@ -191,8 +191,7 @@ navigation; icon-only is permitted for header utilities at 44px targets on touch
 Hover states are a background swap, or a 120ms opacity fade for the tile Play overlay.
 A transient popover — a box that appears in answer to a tap and dismisses itself — may
 enter with one opacity fade plus a translate of at most 6px lasting at most 180ms, and
-leave the same way. Nothing else moves: no scale, no scale-on-hover, no entrance
-animation on page content, no loops — a loading skeleton is a static block.
+leave the same way.
 `prefers-reduced-motion` is honoured.
 
 ## Breakpoints

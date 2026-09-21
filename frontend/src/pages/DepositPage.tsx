@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ChevronLeft } from 'lucide-react'
+import { Check, ChevronLeft, Clock3, Smartphone } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router'
@@ -161,9 +161,11 @@ export function DepositPage() {
     )
   }
 
+  const parsedAmount = parseMoneyInput(amount ?? '', currency)
+
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
-      <header className="flex items-center gap-3">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <header className="flex items-start gap-3">
         <Link
           to={paths.wallet}
           aria-label="Back to wallet"
@@ -171,68 +173,93 @@ export function DepositPage() {
         >
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
-        <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Deposit</h1>
-        {walletQuery.data ? (
-          <span className="ml-auto rounded-chip bg-inset px-2.5 py-1.5 font-mono text-[12.5px] font-medium tnum">
-            {formatMoney(money(walletQuery.data.balance_minor, currency), { decimals: 'trim' })}
-          </span>
-        ) : null}
+        <div className="flex flex-col gap-0.5 pt-0.5">
+          <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Deposit</h1>
+          <p className="text-[13px] text-ink-mute">
+            Send your payment, then submit the details for approval.
+          </p>
+        </div>
       </header>
 
-      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-7">
-        <section className="flex flex-col gap-3">
-          <span className="label-mono text-ink-mute">1 · Payment method</span>
+      <form
+        onSubmit={onSubmit}
+        noValidate
+        className="grid min-w-0 items-start gap-5 @rail-wide:grid-cols-[minmax(0,1fr)_18rem]"
+      >
+        <div className="flex min-w-0 flex-col gap-6 rounded-card bg-surface-1 p-4 sm:p-5">
+          <fieldset className="min-w-0 border-b border-white/5 pb-6">
+            <legend className="text-[14px] font-semibold text-ink-soft">Payment method</legend>
+            <p className="mt-0.5 text-[12.5px] text-ink-mute">
+              Choose the account you used to send your payment.
+            </p>
 
-          {soleMethod ? (
-            <div className="flex items-center gap-3 rounded-input bg-surface-1 p-3.5">
-              <span aria-hidden className="size-9 rounded-chip bg-surface-3" />
-              <span className="flex flex-col">
-                <span className="text-[13.5px] font-medium text-ink-soft">{soleMethod.name}</span>
-                <span className="text-[11.5px] text-ink-mute">{soleMethod.description}</span>
-                <span className="font-mono text-[11.5px] text-ink-soft">Pay to {soleMethod.pay_to}</span>
-              </span>
-            </div>
-          ) : (
-            <fieldset className="flex flex-col gap-2">
-              <legend className="sr-only">Payment method</legend>
-              {methods.map((method) => (
-                <label
-                  key={method.id}
-                  className={cn(
-                    'flex min-h-14 cursor-pointer items-center gap-3 rounded-input p-3.5',
-                    'transition-colors duration-[120ms]',
-                    selectedMethod === method.id ? 'bg-accent/12' : 'bg-surface-1 hover:bg-surface-2',
-                  )}
-                >
-                  <input type="radio" value={method.id} className="sr-only" {...register('method_id')} />
-                  <span aria-hidden className="size-9 rounded-chip bg-surface-3" />
-                  <span className="flex flex-1 flex-col">
-                    <span className="text-[13.5px] font-medium text-ink-soft">{method.name}</span>
-                    <span className="text-[11.5px] text-ink-mute">{method.description}</span>
-                    <span className="font-mono text-[11.5px] text-ink-soft">Pay to {method.pay_to}</span>
-                  </span>
-                  <span
-                    aria-hidden
+            <div className="mt-3 flex min-w-0 flex-col gap-2">
+              {methods.map((method) => {
+                const selected = selectedMethod === method.id
+                return (
+                  <label
+                    key={method.id}
                     className={cn(
-                      'size-5 rounded-full',
-                      selectedMethod === method.id ? 'bg-accent' : 'bg-surface-3',
+                      'flex min-h-18 min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-input border p-3.5',
+                      'transition-colors duration-[120ms] focus-within:ring-2 focus-within:ring-accent-ink',
+                      selected
+                        ? 'border-accent/60 bg-accent/10'
+                        : 'border-transparent bg-inset hover:border-white/10 hover:bg-wash',
                     )}
-                  />
-                </label>
-              ))}
+                  >
+                    <input type="radio" value={method.id} className="sr-only" {...register('method_id')} />
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-chip',
+                        selected ? 'bg-accent/16 text-accent-ink' : 'bg-surface-3 text-ink-mute',
+                      )}
+                    >
+                      <Smartphone size={18} strokeWidth={1.6} />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                      <span className="truncate text-[13.5px] font-semibold text-ink-soft">
+                        {method.name}
+                      </span>
+                      <span className="truncate text-[12px] text-ink-mute">
+                        {method.description}
+                      </span>
+                      <span className="truncate font-mono text-[11.5px] text-ink-soft">
+                        Send to {method.pay_to}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'flex size-5 shrink-0 items-center justify-center rounded-full border',
+                        selected
+                          ? 'border-accent bg-accent text-on-accent'
+                          : 'border-surface-3 bg-transparent',
+                      )}
+                    >
+                      {selected ? <Check size={13} strokeWidth={2.5} /> : null}
+                    </span>
+                  </label>
+                )
+              })}
               {errors.method_id ? (
                 <p role="alert" className="text-[13px] text-danger">
                   {errors.method_id.message}
                 </p>
               ) : null}
-            </fieldset>
-          )}
-        </section>
+            </div>
+          </fieldset>
 
-        <section className="flex flex-col gap-3">
-          <span className="label-mono text-ink-mute">2 · Amount</span>
-
-          <Field label="Amount" htmlFor="amount" error={errors.amount?.message}>
+          <section className="flex flex-col gap-3 border-b border-white/5 pb-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <label htmlFor="amount" className="text-[14px] font-semibold text-ink-soft">
+                Amount
+              </label>
+              <span className="text-[11.5px] text-ink-mute">
+                {formatMoney(money(limits.min_minor, currency))}–
+                {formatMoney(money(limits.max_minor, currency))}
+              </span>
+            </div>
             <div className="flex min-h-14 items-center gap-2.5 rounded-input bg-inset px-3.5 focus-within:bg-wash">
               <span className="font-mono text-[20px] text-ink-mute">{currencySymbol(currency)}</span>
               <input
@@ -244,82 +271,141 @@ export function DepositPage() {
               />
               <span className="font-mono text-[11px] text-ink-mute">{currency}</span>
             </div>
-          </Field>
+            {errors.amount ? (
+              <p role="alert" className="text-[12.5px] text-danger">
+                {errors.amount.message}
+              </p>
+            ) : null}
 
-          <div className="grid grid-cols-4 gap-2">
-            {quickAmounts.map((value) => {
-              const label = formatMoney(money(value, currency), { symbol: false, decimals: 'trim' })
-              const active = parseMoneyInput(amount ?? '', currency) === value
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setValue('amount', label.replace(/,/g, ''), { shouldValidate: true })}
-                  className={cn(
-                    'min-h-11 rounded-chip font-mono text-[12.5px] transition-colors duration-[120ms] lg:min-h-8',
-                    active
-                      ? 'bg-accent font-semibold text-on-accent'
-                      : 'bg-inset text-ink-mute hover:bg-wash hover:text-ink-soft',
-                  )}
-                >
-                  {label}
-                </button>
-              )
-            })}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {quickAmounts.map((value) => {
+                const label = formatMoney(money(value, currency), { symbol: false, decimals: 'trim' })
+                const active = parsedAmount === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() =>
+                      setValue('amount', label.replace(/,/g, ''), { shouldValidate: true })
+                    }
+                    className={cn(
+                      'min-h-11 rounded-chip font-mono text-[12.5px] transition-colors duration-[120ms] lg:min-h-8',
+                      active
+                        ? 'bg-accent font-semibold text-on-accent'
+                        : 'bg-inset text-ink-mute hover:bg-wash hover:text-ink-soft',
+                    )}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-3 border-b border-white/5 pb-6">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="text-[14px] font-semibold text-ink-soft">
+                Reference number{selectedMethodDetails?.reference_required ? '' : ' (optional)'}
+              </h2>
+              <p className="text-[12.5px] text-ink-mute">
+                Use the transaction reference shown in your payment app.
+              </p>
+            </div>
+            <Field label="Reference" htmlFor="reference" error={errors.reference?.message}>
+              <Input
+                id="reference"
+                autoComplete="off"
+                placeholder="e.g. 1234 5678 9012"
+                className="font-mono"
+                {...register('reference')}
+              />
+            </Field>
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="text-[14px] font-semibold text-ink-soft">Proof of payment</h2>
+              <p className="text-[12.5px] text-ink-mute">
+                Upload a clear screenshot showing the completed payment.
+              </p>
+            </div>
+            <FileDrop
+              label="Upload screenshot"
+              hint="PNG or JPG · max 5 MB"
+              value={proof}
+              onChange={(file) => {
+                setProof(file)
+                setProofError(undefined)
+              }}
+              error={proofError}
+            />
+          </section>
+        </div>
+
+        <aside
+          aria-labelledby="deposit-summary-heading"
+          className="flex min-w-0 flex-col gap-4 rounded-card bg-surface-1 p-4 @rail-wide:sticky @rail-wide:top-3.5"
+        >
+          <h2 id="deposit-summary-heading" className="text-[14px] font-semibold text-ink-soft">
+            Deposit summary
+          </h2>
+          <dl className="flex flex-col gap-3 text-[12.5px]">
+            <SummaryRow label="Method" value={selectedMethodDetails?.name ?? 'Select a method'} />
+            <SummaryRow
+              label="Amount"
+              value={parsedAmount === null ? '—' : formatMoney(money(parsedAmount, currency))}
+              emphasis
+            />
+            <SummaryRow label="Send to" value={selectedMethodDetails?.pay_to ?? '—'} mono />
+          </dl>
+
+          <div className="flex gap-2.5 rounded-input bg-inset p-3 text-[12px] leading-relaxed text-ink-mute">
+            <Clock3 aria-hidden className="mt-0.5 shrink-0" size={15} strokeWidth={1.6} />
+            <p>Funds are added after approval, usually within 15 minutes.</p>
           </div>
 
-          <p className="text-[12px] text-ink-mute">
-            Min {formatMoney(money(limits.min_minor, currency))} · max{' '}
-            {formatMoney(money(limits.max_minor, currency))}{' '}
-            per request.
-          </p>
-        </section>
-
-        <section className="flex flex-col gap-3">
-          <span className="label-mono text-ink-mute">3 · Reference number</span>
-          <Field
-            label={`Reference${selectedMethodDetails?.reference_required ? '' : ' (optional)'}`}
-            htmlFor="reference"
-            error={errors.reference?.message}
-          >
-            <Input
-              id="reference"
-              autoComplete="off"
-              placeholder="Transaction ref from your app"
-              className="font-mono"
-              {...register('reference')}
-            />
-          </Field>
-        </section>
-
-        <section className="flex flex-col gap-3">
-          <span className="label-mono text-ink-mute">4 · Proof of payment</span>
-          <FileDrop
-            label="Upload screenshot"
-            hint="PNG or JPG · max 5 MB"
-            value={proof}
-            onChange={(file) => {
-              setProof(file)
-              setProofError(undefined)
-            }}
-            error={proofError}
-          />
-        </section>
-
-        <div className="flex flex-col gap-2.5">
-          {submitError ? (
-            <p role="alert" className="text-[13px] text-danger">
-              {submitError}
+          <div className="flex flex-col gap-2.5">
+            {submitError ? (
+              <p role="alert" className="text-[13px] text-danger">
+                {submitError}
+              </p>
+            ) : null}
+            <Button type="submit" fullWidth disabled={submitDeposit.isPending}>
+              {submitDeposit.isPending ? 'Submitting…' : 'Submit request'}
+            </Button>
+            <p className="text-center text-[11.5px] leading-relaxed text-ink-mute">
+              Review the details before submitting.
             </p>
-          ) : null}
-          <Button type="submit" fullWidth disabled={submitDeposit.isPending}>
-            {submitDeposit.isPending ? 'Submitting…' : 'Submit request'}
-          </Button>
-          <p className="text-center text-[12px] leading-relaxed text-ink-mute">
-            Funds are added once your request is approved, usually within 15 minutes.
-          </p>
-        </div>
+          </div>
+        </aside>
       </form>
+    </div>
+  )
+}
+
+function SummaryRow({
+  label,
+  value,
+  emphasis = false,
+  mono = false,
+}: {
+  label: string
+  value: string
+  emphasis?: boolean
+  mono?: boolean
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-3 last:border-0 last:pb-0">
+      <dt className="text-ink-mute">{label}</dt>
+      <dd
+        className={cn(
+          'max-w-[11rem] text-right text-ink-soft',
+          emphasis && 'font-mono text-[16px] font-semibold text-ink tnum',
+          mono && 'font-mono text-[11.5px]',
+        )}
+      >
+        {value}
+      </dd>
     </div>
   )
 }

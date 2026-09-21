@@ -45,6 +45,14 @@ function frameSays(iframe: HTMLIFrameElement, data: unknown) {
   )
 }
 
+function useMobileViewport() {
+  vi.stubGlobal('matchMedia', () => ({
+    matches: true,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }))
+}
+
 async function readyBoard() {
   const opened = await openPlinko()
   frameSays(opened.iframe, { v: 1, type: 'ready', game: 'plinko' })
@@ -104,6 +112,35 @@ describe('the Plinko game page', () => {
       'aria-selected',
       'true',
     )
+  })
+
+  it('uses an immersive mobile shell with an always-available wager dock and settings sheet', async () => {
+    useMobileViewport()
+    const user = userEvent.setup()
+    await readyBoard()
+
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Primary' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Main navigation' })).not.toBeInTheDocument()
+
+    const toolbar = screen.getByRole('navigation', { name: 'Game toolbar' })
+    expect(within(toolbar).getByRole('link', { name: 'Back to games' })).toHaveAttribute('href', '/games')
+    expect(within(toolbar).getByRole('heading', { name: 'Plinko' })).toBeInTheDocument()
+
+    const dock = screen.getByRole('region', { name: 'Bet controls' })
+    expect(within(dock).getByRole('link', { name: /Balance/ })).toHaveAttribute('href', '/wallet/deposit')
+    expect(within(dock).getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
+
+    await user.click(within(dock).getByRole('button', { name: /8 rows · Normal/ }))
+    const settings = screen.getByRole('dialog', { name: 'Bet settings' })
+    await user.click(within(settings).getByRole('button', { name: '2×' }))
+    await user.click(within(settings).getByRole('radio', { name: '12' }))
+    await user.click(within(settings).getByRole('tab', { name: 'High' }))
+    await user.click(within(settings).getByRole('button', { name: 'Done' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Bet settings' })).not.toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: /12 rows · High/ })).toBeInTheDocument()
+    expect(within(dock).getByText('₱2.00')).toBeInTheDocument()
   })
 
   it('reconfigures the board when rows or risk change', async () => {

@@ -65,8 +65,8 @@ export function FileDrop({
           onChange(event.dataTransfer.files[0] ?? null)
         }}
         className={cn(
-          'flex min-h-33 cursor-pointer flex-col items-center justify-center gap-2 rounded-input',
-          'px-4 py-6 text-center transition-colors duration-[120ms]',
+          'flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-input',
+          'px-4 py-4 text-center transition-colors duration-[120ms]',
           dragging ? 'bg-accent/12' : 'bg-inset hover:bg-wash',
         )}
       >

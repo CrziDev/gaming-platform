@@ -49,10 +49,12 @@ export const physics = {
     this.startGameLoop()
   },
 
-  // Everything below the top offset scales with the peg spacing: the rows, the
-  // gap to the ribbon (28 units, one spacing unit), the ribbon (30) and its
-  // label margin (8), all in units of spacing / 28. The board is width-driven,
-  // shrunk to fit the height exactly when it must, and centred when it need not.
+  // Everything below the top offset scales with the horizontal peg spacing:
+  // the gap to the ribbon (28 units, one spacing unit), the ribbon (30) and its
+  // label margin (8), all in units of spacing / 28. Surplus height spreads the
+  // peg rows instead of becoming empty space above and below the board. The
+  // vertical stretch is capped so unusually narrow canvases still look like a
+  // Plinko board; any height beyond that is centred around the board.
   getBoardConfig(rows, width, height) {
     const paddingX = width * (0.045 - (rows - 8) * 0.003)
     const usableWidth = width - paddingX * 2
@@ -60,23 +62,34 @@ export const physics = {
     let spacingX = usableWidth / (maxPegs - 1)
     let topOffset = Math.max(68, 110 - (rows - 8) * 4.5)
 
-    const perSpacing = (rows - 1) * 0.85 + 66 / 28
+    const minSpacingYRatio = 0.85
+    const maxSpacingYRatio = 1.25
+    const lowerBoardUnits = 66
+    const perSpacing = (rows - 1) * minSpacingYRatio + lowerBoardUnits / 28
     const available = height * 0.985
     const needed = topOffset + spacingX * perSpacing
     if (needed > available) {
       spacingX = (available - topOffset) / perSpacing
-    } else {
-      topOffset += (available - needed) / 2
+    }
+
+    const scale = spacingX / 28
+    const minSpacingY = spacingX * minSpacingYRatio
+    const maxSpacingY = spacingX * maxSpacingYRatio
+    const targetSpacingY = (available - topOffset - lowerBoardUnits * scale) / (rows - 1)
+    const spacingY = Math.max(minSpacingY, Math.min(maxSpacingY, targetSpacingY))
+    const usedHeight = topOffset + (rows - 1) * spacingY + lowerBoardUnits * scale
+    if (usedHeight < available) {
+      topOffset += (available - usedHeight) / 2
     }
 
     const pegRadius = spacingX * 0.145
     const gap = spacingX - 2 * pegRadius
     return {
       spacingX,
-      spacingY: spacingX * 0.85,
+      spacingY,
       pegRadius,
       ballRadius: (gap * 0.88) / 2,
-      scale: spacingX / 28,
+      scale,
       topOffset,
     }
   },

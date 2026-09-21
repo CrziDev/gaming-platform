@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/gaming-platform/backend/internal/announcement"
 	"github.com/gaming-platform/backend/internal/audit"
 	"github.com/gaming-platform/backend/internal/auth"
 	"github.com/gaming-platform/backend/internal/chat"
@@ -45,6 +46,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 	auditHandler := audit.NewHandler(db, logger)
 	roundHandler := round.NewHandler(db, logger, engines, cfg.BigWinMultiplierHundredths)
 	notificationHandler := notification.NewHandler(db, logger)
+	announcementHandler := announcement.NewHandler(db, logger)
 	chatHandler := chat.NewHandler(db, logger, hub, chat.Config{MessagesPerMinute: cfg.ChatMessagesPerMinute, AllowedOrigins: cfg.AllowedOrigins})
 	player, admin := authHandler.Player, authHandler.Admin
 
@@ -58,6 +60,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 	mux.HandleFunc("POST /api/password", player(authHandler.ChangePassword))
 	mux.HandleFunc("GET /api/currencies", currencyHandler.List)
 	mux.HandleFunc("GET /api/categories", gameHandler.Categories)
+	mux.HandleFunc("GET /api/announcements", announcementHandler.List)
 	mux.HandleFunc("GET /api/games", gameHandler.List)
 	mux.HandleFunc("GET /api/games/{slug}", gameHandler.Get)
 	mux.HandleFunc("GET /api/recent-games", player(gameHandler.RecentlyPlayed))
@@ -103,6 +106,10 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 	mux.HandleFunc("GET /api/admin/games/{id}/rtp-configuration", admin(gameHandler.AdminRTPConfiguration))
 	mux.HandleFunc("GET /api/admin/audit-logs", admin(withoutAccount(auditHandler.List)))
 	mux.HandleFunc("GET /api/admin/dashboard", admin(dashboardHandler.Get))
+	mux.HandleFunc("GET /api/admin/announcements", admin(announcementHandler.AdminList))
+	mux.HandleFunc("POST /api/admin/announcements", admin(announcementHandler.Create))
+	mux.HandleFunc("PUT /api/admin/announcements/{id}", admin(announcementHandler.Update))
+	mux.HandleFunc("PATCH /api/admin/announcements/{id}/status", admin(announcementHandler.SetStatus))
 	mux.HandleFunc("/", notFound)
 
 	return logAndRecover(logger, browserRules(cfg.AllowedOrigins, limitBody(cfg.MaxBodyBytes, mux)))

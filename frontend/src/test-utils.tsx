@@ -92,6 +92,7 @@ export function errorBody(message: string, fields?: Record<string, string>) {
 export const liveShellStubs = {
   'GET /chat/messages': { status: 200, body: { online: 0, messages: [] } },
   'GET /notifications': { status: 200, body: { rows: [], total: 0, page: 1, size: 20, pages: 1 } },
+  'GET /announcements': { status: 200, body: { rows: [], total: 0, page: 1, size: 100, pages: 1 } },
 } satisfies Record<string, StubResponse>
 
 // A WebSocket that never connects on its own; a test drives it by calling

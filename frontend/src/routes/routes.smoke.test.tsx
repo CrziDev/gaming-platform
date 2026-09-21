@@ -37,6 +37,7 @@ const consoleRoutes: [string, string][] = [
   ['/admin/games', 'Games'],
   ['/admin/games/gm-001', 'Configuration'],
   ['/admin/promotions', 'Future Development'],
+  ['/admin/announcements', 'Announcements'],
   ['/admin/rtp', 'RTP'],
   ['/admin/rtp/gm-004', 'Plinko configuration'],
   ['/admin/audit', 'Audit logs'],

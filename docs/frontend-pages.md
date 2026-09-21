@@ -56,6 +56,7 @@ means the server is behind it.
 - [x] **Console deposit badge** — the pending total from the real queue
 - [x] **Live chat rail** — the real room from `GET /api/chat/messages`, posts through `POST /api/chat/messages` with the server's `429` shown inline, and a WebSocket at `/api/chat/socket` whose `message` event re-reads the room and whose `presence` event drives the online count; reconnects with backoff
 - [x] **Notifications bell** — every signed-in player's real notifications from `GET /api/notifications`, re-read every minute and when a round lands; deposit approved, deposit rejected with its reason, and big wins; "Mark all read" posts to `/api/notifications/read`
+- [x] **Lobby announcements** — a public right-to-left ticker beneath the header combines every enabled, unexpired announcement newest first; it disappears when empty and becomes static under reduced-motion preferences
 - [ ] **Support** — rail and drawer rows open a brief Future Development notice when tapped; no destination is advertised
 - [ ] **Language selector** — rail and drawer rows open a brief Future Development notice when tapped; there is no inert selector
 - [x] **Console search box** — debounced, keyboard-accessible typeahead across real player, deposit, and round APIs; selecting a result opens the player detail or a filtered all-status deposit/round page
@@ -75,11 +76,12 @@ means the server is behind it.
 - [x] **RTP** — `/admin/rtp` (one row per game with options, a select of the engine's returns, a confirmation that reads in danger at or above 100%, real `PUT /api/admin/games/{id}/rtp`)
 - [x] **RTP configuration** — `/admin/rtp/:id` (read-only inspection of each engine option by board, including the configuration reference, target and theoretical RTP, multipliers, and normalized slot chances from `GET /api/admin/games/{id}/rtp-configuration`)
 - [x] **Audit log** — `/admin/audit` (real paginated append-only feed)
+- [x] **Announcements** — `/admin/announcements` (real paginated create, edit, enable, and disable management for permanent or end-dated lobby announcements)
 - [x] **Settings** — `/admin/settings` (payment methods have real list/create/edit/enable/disable APIs and audit entries; Staff, Limits, and Platform are explicit Future Development panels without inert controls)
 
 ## Coverage
 
 - Public and player routes: 18 (16 backed by the server)
-- Admin routes: 14 (13 backed by the server)
-- Total frontend routes: 32
-- Shell features: 11 (9 backed by the server)
+- Admin routes: 15 (14 backed by the server)
+- Total frontend routes: 33
+- Shell features: 12 (10 backed by the server)

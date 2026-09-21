@@ -53,7 +53,7 @@ func requireDB(t *testing.T) *sql.DB {
 		t.Skipf("skipping: no test database (%v)", dbErr)
 	}
 
-	if _, err := testDB.Exec(`TRUNCATE auth_sessions, users RESTART IDENTITY CASCADE`); err != nil {
+	if _, err := testDB.Exec(`TRUNCATE announcements, auth_sessions, users RESTART IDENTITY CASCADE`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 	return testDB

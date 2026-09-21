@@ -30,6 +30,7 @@ notification system.
 - [x] Player payment-method and deposit-request APIs are backed by PostgreSQL.
 - [x] Admin deposit review APIs credit or reject requests atomically with audit entries.
 - [x] The currency-scoped admin dashboard summary is backed by PostgreSQL.
+- [x] Public lobby announcements and their audited administrator lifecycle are backed by PostgreSQL.
 - [x] Explicitly mark unsupported product surfaces as Future Development and remove the
   fixture-only console alert panel and inert controls.
 - [ ] Financial services and their PostgreSQL concurrency tests are complete (wallets,
@@ -54,6 +55,20 @@ inventing an outcome.
 - [x] Wire the History rounds tab, `/admin/rounds`, and the game page's recent rounds,
   and add a rounds section to the user detail page.
 - [x] Cover the required round lifecycle and read-route tests in §8.
+
+## Completed slice: lobby announcements
+
+Completed on 2026-09-21. Operators create, edit, disable, and re-enable permanent or
+end-dated announcements from `/admin/announcements`; every change is audited. The public
+lobby combines enabled, unexpired messages in a right-to-left ticker and presents one
+static sequence when reduced motion is requested.
+
+- [x] Add paginated public and administrator announcement reads plus guarded create,
+  replace, and status endpoints.
+- [x] Expire dated announcements through the UTC read predicate without a scheduler or
+  unaudited background mutation.
+- [x] Cover validation, visibility, permissions, lifecycle auditing, route wiring, and
+  the accessible lobby presentation.
 
 ## Completed slice: account security
 

@@ -24,6 +24,7 @@ type ModalProps = {
   size?: ModalSize
   footer?: ReactNode
   children?: ReactNode
+  placement?: 'responsive' | 'bottom'
 }
 
 export function Modal({
@@ -34,6 +35,7 @@ export function Modal({
   size = 'md',
   footer,
   children,
+  placement = 'responsive',
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -87,7 +89,12 @@ export function Modal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex justify-center',
+        placement === 'bottom' ? 'items-end' : 'items-end sm:items-center',
+      )}
+    >
       <button
         type="button"
         aria-label="Close"
@@ -102,7 +109,8 @@ export function Modal({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          'relative flex max-h-[calc(100dvh-1.5rem)] w-full flex-col rounded-t-card bg-surface-1 sm:max-h-[calc(100dvh-3rem)] sm:rounded-card',
+          'relative flex max-h-[calc(100dvh-1.5rem)] w-full flex-col bg-surface-1 sm:max-h-[calc(100dvh-3rem)]',
+          placement === 'bottom' ? 'rounded-t-card' : 'rounded-t-card sm:rounded-card',
           sizes[size],
         )}
       >
@@ -124,7 +132,9 @@ export function Modal({
 
         {children ? <div className="flex-1 overflow-y-auto px-4 pb-4">{children}</div> : null}
 
-        {footer ? <footer className="px-4 pb-4">{footer}</footer> : null}
+        {footer ? (
+          <footer className="px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">{footer}</footer>
+        ) : null}
       </div>
     </div>,
     document.body,

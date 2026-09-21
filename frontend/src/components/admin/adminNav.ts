@@ -4,6 +4,7 @@ import {
   Gamepad2,
   Gift,
   LayoutDashboard,
+  Megaphone,
   Percent,
   Receipt,
   ScrollText,
@@ -29,6 +30,7 @@ export const adminNav: AdminNavItem[] = [
   { to: adminPaths.rounds, label: 'Game rounds', icon: Activity },
   { to: adminPaths.games, label: 'Games', icon: Gamepad2 },
   { to: adminPaths.promotions, label: 'Promotions', icon: Gift },
+  { to: adminPaths.announcements, label: 'Announcements', icon: Megaphone },
   { to: adminPaths.rtp, label: 'RTP', icon: Percent },
   { to: adminPaths.audit, label: 'Audit logs', icon: ScrollText },
 ]

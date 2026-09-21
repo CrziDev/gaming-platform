@@ -213,6 +213,18 @@ export type AuditEntry = {
   detail: string
 }
 
+export type Announcement = {
+  id: string
+  text: string
+  ends_at: string | null
+  created_at: string
+}
+
+export type AdminAnnouncement = Announcement & {
+  enabled: boolean
+  updated_at: string
+}
+
 export type AdminDeposit = DepositRequest & {
   user_id: string
   username: string

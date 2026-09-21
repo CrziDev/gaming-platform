@@ -155,6 +155,40 @@ body {
   animation: pop-exit 140ms var(--ease-standard) both;
 }
 
+@keyframes announcement-scroll {
+  from {
+    left: 100%;
+    transform: translateX(0);
+  }
+
+  to {
+    left: 0;
+    transform: translateX(-100%);
+  }
+}
+
+.announcement-marquee {
+  overflow: hidden;
+}
+
+.announcement-track {
+  position: relative;
+  display: flex;
+  width: max-content;
+  animation: announcement-scroll var(--announcement-duration) linear infinite;
+}
+
+.announcement-marquee:hover .announcement-track {
+  animation-play-state: paused;
+}
+
+/* The ticker floats at the top of the center shell column. Only reserve room
+   for it once active announcements have loaded, so an empty/error state does
+   not leave a blank strip above the page content. */
+.shell-content-column:has(> .announcement-ticker) > .shell-main {
+  padding-top: 3.375rem;
+}
+
 body {
   background-color: var(--color-base);
   color: var(--color-ink-soft);
@@ -204,5 +238,19 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .announcement-track {
+    left: 0;
+    display: block;
+    width: auto;
+    transform: none;
+    animation: none !important;
+  }
+
+  .announcement-group {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    white-space: normal;
   }
 }

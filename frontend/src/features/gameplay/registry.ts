@@ -11,6 +11,7 @@ export type GameModule = {
   aspect: 'portrait' | 'landscape'
   defaultParams: PlinkoParams
   Controls: ComponentType<GameControlsProps<PlinkoParams>>
+  summarizeParams: (params: PlinkoParams) => string
   // Reads one board out of the manifest's table; the table itself is the server's.
   multipliers: (table: PlinkoTable, params: PlinkoParams) => readonly number[]
 }
@@ -21,6 +22,7 @@ const plinko: GameModule = {
   aspect: 'portrait',
   defaultParams: DEFAULT_PLINKO_PARAMS,
   Controls: PlinkoControls,
+  summarizeParams: (params) => `${params.rows} rows · ${params.risk.charAt(0).toUpperCase()}${params.risk.slice(1)}`,
   multipliers: (table, params) => table[params.rows][params.risk],
 }
 

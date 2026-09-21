@@ -30,17 +30,17 @@ export function HeroBanner({ featured }: { featured: Game | undefined }) {
             decoding="async"
             className="absolute inset-0 size-full object-cover object-right-bottom"
           />
-          <div aria-hidden className="banner-scrim absolute inset-0 @rail:right-auto @rail:w-1/2 @rail:[--banner-scrim-angle:90deg]" />
+          <div aria-hidden className="banner-scrim absolute inset-0 @min-[640px]:right-auto @min-[640px]:w-1/2 @min-[640px]:[--banner-scrim-angle:90deg]" />
         </>
       ) : null}
 
-      <div className="relative flex min-h-[300px] flex-col items-start gap-2.5 p-[18px] @rail:min-h-[236px] @rail:max-w-[52%] @rail:justify-center @rail:px-6 @rail:py-[22px]">
+      <div className="relative flex min-h-[300px] flex-col items-start gap-2.5 p-[18px] @min-[640px]:min-h-[236px] @min-[640px]:max-w-[52%] @min-[640px]:justify-center @min-[640px]:px-6 @min-[640px]:py-[22px]">
         <span className="label-mono inline-flex items-center gap-1.5 text-accent-ink">
           <span aria-hidden className="size-[5px] rounded-full bg-accent-ink" />
           Featured
         </span>
 
-        <h1 className="text-[22px] leading-[1.1] font-semibold tracking-[-0.02em] text-ink text-balance @rail:text-[28px]">
+        <h1 className="text-[22px] leading-[1.1] font-semibold tracking-[-0.02em] text-ink text-balance @min-[640px]:text-[28px]">
           {featured.name}
         </h1>
 

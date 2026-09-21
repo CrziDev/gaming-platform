@@ -26,12 +26,24 @@ type GameHostProps = {
   // True while this host is the fullscreen element, so the frame can keep its
   // aspect ratio instead of stretching to whatever the screen's shape is.
   fullscreen?: boolean
+  // Fits the frame inside a height-constrained mobile stage instead of using
+  // the desktop host's fixed height at wider phone orientations.
+  fitAvailable?: boolean
 }
 
 // The one place a game renders. Without a frame it is the aspect-locked slot a
 // title without an engine still shows; with one it embeds the game page and
 // keeps the platform's chrome on top of it. It knows nothing about the bridge.
-export function GameHost({ name, className, ref, frame, frameRef, chrome, fullscreen = false }: GameHostProps) {
+export function GameHost({
+  name,
+  className,
+  ref,
+  frame,
+  frameRef,
+  chrome,
+  fullscreen = false,
+  fitAvailable = false,
+}: GameHostProps) {
   // A portrait board keeps its ratio on a phone; beside a bet panel it takes a
   // fixed height instead, and the game fits its board inside whatever it gets.
   const ratio = frame?.aspect === 'portrait' ? 'aspect-4/5' : 'aspect-4/3 wide:aspect-16/10'
@@ -40,7 +52,12 @@ export function GameHost({ name, className, ref, frame, frameRef, chrome, fullsc
     <section
       ref={ref}
       aria-label={`${name} game canvas`}
-      className={cn('relative', fullscreen && 'flex size-full items-center justify-center bg-base', className)}
+      className={cn(
+        'relative',
+        (fullscreen || fitAvailable) && 'flex size-full items-center justify-center',
+        fullscreen && 'bg-base [container-type:size]',
+        className,
+      )}
     >
       <div
         className={cn(
@@ -50,10 +67,14 @@ export function GameHost({ name, className, ref, frame, frameRef, chrome, fullsc
           // below it. Fullscreen keeps the ratio and lets the screen letterbox
           // instead of forcing the frame to fill a shape it wasn't drawn for.
           fullscreen
-            ? cn(ratio, 'h-auto max-h-full w-auto max-w-full')
+            ? frame?.aspect === 'portrait'
+              ? 'aspect-4/5 h-[min(100cqh,calc(100cqw*1.25))] max-h-full max-w-full rounded-card'
+              : 'aspect-4/3 w-[min(100cqw,calc(100cqh*1.3333))] max-h-full max-w-full rounded-card'
+            : fitAvailable
+              ? 'size-full rounded-card'
             : cn(
                 'w-full rounded-card',
-                frame?.aspect === 'portrait' ? 'aspect-4/5 @rail:aspect-auto @rail:h-[600px]' : ratio,
+                frame?.aspect === 'portrait' ? 'aspect-4/5 sm:aspect-auto sm:h-[600px]' : ratio,
               ),
         )}
       >

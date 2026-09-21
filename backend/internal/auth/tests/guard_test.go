@@ -49,6 +49,10 @@ var adminRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/admin/games/" + anyID + "/rtp-configuration?rtp_basis_points=9500&rows=8&risk=normal"},
 	{http.MethodGet, "/api/admin/audit-logs"},
 	{http.MethodGet, "/api/admin/dashboard?currency=PHP"},
+	{http.MethodGet, "/api/admin/announcements"},
+	{http.MethodPost, "/api/admin/announcements"},
+	{http.MethodPut, "/api/admin/announcements/" + anyID},
+	{http.MethodPatch, "/api/admin/announcements/" + anyID + "/status"},
 }
 
 func TestEveryGuardedRouteRefusesAnAnonymousRequest(t *testing.T) {
