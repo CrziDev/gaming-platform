@@ -1,5 +1,5 @@
 import { Globe, LifeBuoy } from 'lucide-react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { cn } from '@/lib/cn'
 
@@ -14,34 +14,37 @@ export function Sidebar() {
   const { rail, expandRail, collapseRail } = useShell()
   const mode = railMode(rail)
   const sidebar = useRef<HTMLElement>(null)
-  const pointerInside = useRef(false)
 
-  const collapseWithoutInteraction = () => {
-    if (!pointerInside.current && !sidebar.current?.contains(document.activeElement)) {
+  useEffect(() => {
+    if (rail !== 'expanded') {
+      return
+    }
+
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node) || sidebar.current?.contains(target)) {
+        return
+      }
+      if (target instanceof Element && target.closest('[data-navigation-toggle]')) {
+        return
+      }
       collapseRail()
     }
-  }
+
+    document.addEventListener('pointerdown', closeOnOutsidePress)
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePress)
+  }, [collapseRail, rail])
 
   return (
     <aside
       ref={sidebar}
       aria-label="Main navigation"
-      onPointerEnter={() => {
-        pointerInside.current = true
-        expandRail()
-      }}
-      onPointerLeave={() => {
-        pointerInside.current = false
-        collapseWithoutInteraction()
-      }}
+      onPointerEnter={expandRail}
       onFocusCapture={expandRail}
-      onBlurCapture={(event) => {
-        if (!pointerInside.current && !event.currentTarget.contains(event.relatedTarget)) {
-          collapseRail()
-        }
-      }}
+      data-state={mode}
       className={cn(
-        'hidden shrink-0 flex-col gap-3 overflow-y-auto bg-panel px-2 py-3 @rail:flex',
+        'hidden shrink-0 flex-col gap-3 overflow-x-clip overflow-y-auto bg-panel px-2 py-3 @rail:flex',
+        'transition-[width] duration-layout ease-standard motion-reduce:transition-none',
         railWidth[mode],
       )}
     >

@@ -66,7 +66,7 @@ export function FileDrop({
         }}
         className={cn(
           'flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-input',
-          'px-4 py-4 text-center transition-colors duration-[120ms]',
+          'px-4 py-4 text-center transition-colors duration-fast',
           dragging ? 'bg-accent/12' : 'bg-inset hover:bg-wash',
         )}
       >

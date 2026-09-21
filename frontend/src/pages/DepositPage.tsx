@@ -136,7 +136,7 @@ export function DepositPage() {
   })
 
   if (methodsQuery.isPending || walletQuery.isPending || limitsQuery.isPending) {
-    return <Skeleton className="h-96 rounded-card" />
+    return <DepositPageSkeleton />
   }
 
   if (methodsQuery.isError || walletQuery.isError || limitsQuery.isError) {
@@ -201,7 +201,7 @@ export function DepositPage() {
                     key={method.id}
                     className={cn(
                       'flex min-h-18 min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-input border p-3.5',
-                      'transition-colors duration-[120ms] focus-within:ring-2 focus-within:ring-accent-ink',
+                      'transition-colors duration-fast focus-within:ring-2 focus-within:ring-accent-ink',
                       selected
                         ? 'border-accent/60 bg-accent/10'
                         : 'border-transparent bg-inset hover:border-white/10 hover:bg-wash',
@@ -289,7 +289,7 @@ export function DepositPage() {
                       setValue('amount', label.replace(/,/g, ''), { shouldValidate: true })
                     }
                     className={cn(
-                      'min-h-11 rounded-chip font-mono text-[12.5px] transition-colors duration-[120ms] lg:min-h-8',
+                      'min-h-11 rounded-chip font-mono text-[12.5px] transition-colors duration-fast lg:min-h-8',
                       active
                         ? 'bg-accent font-semibold text-on-accent'
                         : 'bg-inset text-ink-mute hover:bg-wash hover:text-ink-soft',
@@ -379,6 +379,36 @@ export function DepositPage() {
           </div>
         </aside>
       </form>
+    </div>
+  )
+}
+
+function DepositPageSkeleton() {
+  return (
+    <div role="status" aria-label="Loading deposit form" className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <div className="flex items-center gap-3">
+        <Skeleton className="size-11 shrink-0" />
+        <div className="flex flex-1 flex-col gap-2">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-3 w-full max-w-72" />
+        </div>
+      </div>
+      <div className="grid items-start gap-5 @rail-wide:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="flex flex-col gap-6 rounded-card bg-surface-1 p-4 sm:p-5">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="flex flex-col gap-3">
+              <Skeleton className="h-4 w-32 bg-surface-2" />
+              <Skeleton className={cn(index === 0 ? 'h-18' : 'h-12', 'bg-surface-2')} />
+              {index === 1 ? <Skeleton className="h-8 w-full bg-surface-2" /> : null}
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-4 rounded-card bg-surface-1 p-4">
+          <Skeleton className="h-4 w-28 bg-surface-2" />
+          <Skeleton className="h-24 bg-surface-2" />
+          <Skeleton className="h-11 bg-surface-2" />
+        </div>
+      </div>
     </div>
   )
 }

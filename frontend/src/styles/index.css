@@ -34,6 +34,10 @@
   --radius-card: 12px;
 
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-standard: 180ms;
+  --duration-layout: 220ms;
+  --shadow-overlay: 0 16px 40px rgb(0 0 0 / 0.28), 0 2px 8px rgb(0 0 0 / 0.18);
 
   --breakpoint-chat: 720px;
   --breakpoint-rail: 760px;
@@ -147,22 +151,87 @@ body {
   }
 }
 
+@keyframes overlay-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes overlay-exit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialog-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes value-update {
+  from {
+    opacity: 0.45;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .pop-enter {
-  animation: pop-enter 160ms var(--ease-standard) both;
+  animation: pop-enter var(--duration-standard) var(--ease-standard) both;
 }
 
 .pop-exit {
-  animation: pop-exit 140ms var(--ease-standard) both;
+  animation: pop-exit var(--duration-fast) var(--ease-standard) both;
+}
+
+.overlay-enter {
+  animation: overlay-enter var(--duration-standard) var(--ease-standard) both;
+}
+
+.overlay-exit {
+  animation: overlay-exit var(--duration-fast) var(--ease-standard) both;
+}
+
+.dialog-enter {
+  animation: dialog-enter var(--duration-standard) var(--ease-standard) both;
+}
+
+.dialog-exit {
+  animation: dialog-exit var(--duration-fast) var(--ease-standard) both;
+}
+
+.value-update {
+  animation: value-update var(--duration-standard) var(--ease-standard) both;
+}
+
+.overlay-shadow {
+  box-shadow: var(--shadow-overlay);
 }
 
 @keyframes announcement-scroll {
   from {
-    left: 100%;
     transform: translateX(0);
   }
 
   to {
-    left: 0;
     transform: translateX(-100%);
   }
 }
@@ -172,10 +241,11 @@ body {
 }
 
 .announcement-track {
-  position: relative;
   display: flex;
   width: max-content;
+  padding-left: 100%;
   animation: announcement-scroll var(--announcement-duration) linear infinite;
+  will-change: transform;
 }
 
 .announcement-marquee:hover .announcement-track {
@@ -241,9 +311,9 @@ body {
   }
 
   .announcement-track {
-    left: 0;
     display: block;
     width: auto;
+    padding-left: 0;
     transform: none;
     animation: none !important;
   }

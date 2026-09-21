@@ -66,7 +66,7 @@ export function RecordTable<T>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={cn(
                   'bg-surface-1',
-                  onRowClick && 'cursor-pointer transition-colors duration-[120ms] hover:bg-surface-2',
+                  onRowClick && 'cursor-pointer transition-colors duration-fast hover:bg-surface-2 focus-within:bg-surface-2',
                 )}
               >
                 {columns.map((column) => (
@@ -147,7 +147,10 @@ export function RecordCard({
           onClick()
         }
       }}
-      className={cn(className, 'transition-colors duration-[120ms] hover:bg-surface-2')}
+      className={cn(
+        className,
+        'transition-[background-color,transform] duration-fast ease-standard hover:bg-surface-2 active:translate-y-px motion-reduce:transform-none',
+      )}
     >
       {content}
     </div>

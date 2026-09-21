@@ -253,7 +253,7 @@ function MobileGameBack() {
       to={paths.games}
       aria-label="Back to games"
       title="Back to games"
-      className="inline-flex size-11 shrink-0 items-center justify-center rounded-input text-ink-mute transition-colors duration-[120ms] ease-standard hover:bg-wash hover:text-ink-soft"
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-input text-ink-mute transition-colors duration-fast ease-standard hover:bg-wash hover:text-ink-soft"
     >
       <ChevronLeft aria-hidden size={18} strokeWidth={1.6} />
     </Link>
@@ -380,7 +380,7 @@ function BetControls({
       <>
         <section
           aria-label="Bet controls"
-          className="fixed bottom-0 z-40 border-t border-white/5 bg-panel p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-12px_32px_rgb(0_0_0/0.28)] sm:grid sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:items-center sm:gap-2 [left:env(safe-area-inset-left)] [right:env(safe-area-inset-right)]"
+          className="overlay-shadow fixed bottom-0 z-40 border-t border-white/5 bg-panel p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:grid sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:items-center sm:gap-2 [left:env(safe-area-inset-left)] [right:env(safe-area-inset-right)]"
         >
           <div className="mb-2 flex min-h-11 items-center justify-between gap-2 sm:mb-0">
             <Link
@@ -397,7 +397,7 @@ function BetControls({
               aria-haspopup="dialog"
               aria-expanded={settingsOpen}
               onClick={() => setSettingsOpen(true)}
-              className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-input px-2.5 text-[12px] font-medium text-ink-mute transition-colors duration-[120ms] ease-standard hover:bg-wash hover:text-ink-soft"
+              className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-input px-2.5 text-[12px] font-medium text-ink-mute transition-colors duration-fast ease-standard hover:bg-wash hover:text-ink-soft"
             >
               <SlidersHorizontal aria-hidden size={15} strokeWidth={1.6} className="shrink-0" />
               <span className="truncate">{paramsSummary}</span>

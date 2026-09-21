@@ -89,13 +89,20 @@ export function FutureDevelopmentRow({ icon: Icon, label, mode = 'expanded', pla
         onClick={toggle}
         className={cn(
           'flex min-h-11 w-full items-center gap-2.75 rounded-input px-2.75 text-[13.5px] text-ink-mute lg:min-h-9',
-          'transition-colors duration-[120ms] ease-standard hover:bg-wash hover:text-ink-soft',
+          'transition-colors duration-fast ease-standard hover:bg-wash hover:text-ink-soft',
           open && 'bg-wash text-ink-soft',
           railRow[mode],
         )}
       >
         <Icon aria-hidden size={17} strokeWidth={1.5} className="shrink-0" />
-        <span className={railLabel[mode]}>{label}</span>
+        <span
+          className={cn(
+            'overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-standard ease-standard motion-reduce:transition-none',
+            railLabel[mode],
+          )}
+        >
+          {label}
+        </span>
       </button>
       {phase === 'closed'
         ? null

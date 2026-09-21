@@ -39,7 +39,7 @@ export function PlinkoControls({ params, onChange, disabled }: GameControlsProps
                 onClick={() => setRows(rows)}
                 className={cn(
                   'inline-flex min-h-10 items-center justify-center rounded-[7px] font-mono text-[12.5px] font-medium tnum lg:min-h-[26px]',
-                  'transition-colors duration-[120ms] ease-standard',
+                  'transition-colors duration-fast ease-standard',
                   active ? 'bg-wash text-ink-soft' : 'text-ink-mute hover:text-ink-soft',
                   disabled && 'cursor-not-allowed hover:text-ink-mute',
                 )}

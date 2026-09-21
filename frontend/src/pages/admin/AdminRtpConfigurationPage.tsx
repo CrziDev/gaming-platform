@@ -229,8 +229,8 @@ function SummaryValue({ label, value, mono = false }: { label: string; value: st
 function ChanceChart({ slots }: { slots: AdminRtpSlot[] }) {
   const highest = Math.max(...slots.map((slot) => slot.chance_thousandths_percent))
   return (
-    <Panel title="Chance distribution" className="hidden sm:block" bodyClassName="overflow-x-auto pt-5">
-      <figure aria-label="Chance distribution by landing slot" className="min-w-[720px]">
+    <Panel title="Chance distribution" className="hidden wide:block" bodyClassName="pt-5">
+      <figure aria-label="Chance distribution by landing slot">
         <div className="flex h-60 items-end gap-1 border-b border-surface-3 px-1">
           {slots.map((slot) => (
             <div key={slot.slot} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
@@ -259,8 +259,8 @@ function ChanceChart({ slots }: { slots: AdminRtpSlot[] }) {
 
 function ExactTable({ slots, total }: { slots: AdminRtpSlot[]; total: number }) {
   return (
-    <Panel title="Exact values" className="hidden sm:block" bodyClassName="overflow-x-auto">
-      <table className="w-full min-w-[720px] border-collapse text-left">
+    <Panel title="Exact values" className="hidden wide:block">
+      <table className="w-full border-collapse text-left">
         <caption className="sr-only">Exact multiplier and chance for every landing slot</caption>
         <tbody>
           <ValueRow label="Slot" slots={slots} render={(slot) => String(slot.slot)} />
@@ -289,7 +289,7 @@ function ValueRow({ label, slots, render }: { label: string; slots: AdminRtpSlot
 
 function MobileOutcomes({ slots, total }: { slots: AdminRtpSlot[]; total: number }) {
   return (
-    <section aria-labelledby="slot-outcomes-heading" className="sm:hidden">
+    <section aria-labelledby="slot-outcomes-heading" className="wide:hidden">
       <h2 id="slot-outcomes-heading" className="label-mono mb-2.5 text-ink-mute">Slot outcomes</h2>
       <div className="overflow-hidden rounded-card bg-surface-1">
         <ul>

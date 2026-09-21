@@ -118,10 +118,9 @@ describe('the top bar for a player', () => {
 })
 
 describe('the navigation rail', () => {
-  it('rests collapsed and expands only while the player is interacting with it', async () => {
+  it('opens on hover, stays open when the pointer leaves, and closes on an outside click', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({ 'GET /me': guest })
-    window.localStorage.setItem('shell.rail', 'expanded')
 
     renderApp('/')
 
@@ -132,6 +131,12 @@ describe('the navigation rail', () => {
     expect(rail).toHaveClass('w-48')
 
     await user.unhover(rail)
+    expect(rail).toHaveClass('w-48')
+
+    await user.click(within(rail).getByRole('searchbox', { name: 'Search games' }))
+    expect(rail).toHaveClass('w-48')
+
+    await user.click(screen.getByRole('main'))
     expect(rail).toHaveClass('w-14')
   })
 

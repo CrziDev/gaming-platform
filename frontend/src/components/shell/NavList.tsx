@@ -25,13 +25,20 @@ export function NavList({ items, mode = 'expanded', onNavigate }: NavListProps) 
         const body = (
           <>
             <Icon aria-hidden size={17} strokeWidth={1.5} className="shrink-0" />
-            <span className={railLabel[mode]}>{item.label}</span>
+            <span
+              className={cn(
+                'overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-standard ease-standard motion-reduce:transition-none',
+                railLabel[mode],
+              )}
+            >
+              {item.label}
+            </span>
           </>
         )
 
         const shape = cn(
           'flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13.5px] lg:min-h-9',
-          'transition-colors duration-[120ms] ease-standard',
+          'relative transition-[color,background-color,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none',
           railRow[mode],
         )
 
@@ -59,7 +66,7 @@ export function NavList({ items, mode = 'expanded', onNavigate }: NavListProps) 
                   cn(
                     shape,
                     isActive
-                      ? 'bg-wash font-medium text-ink-soft'
+                      ? 'bg-wash font-medium text-ink-soft before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-sm before:bg-accent-ink'
                       : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
                   )
                 }

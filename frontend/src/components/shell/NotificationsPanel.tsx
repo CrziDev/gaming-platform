@@ -48,7 +48,7 @@ export function NotificationsPanel() {
       </IconButton>
 
       {open ? (
-        <div className="absolute right-0 z-40 mt-1.5 w-[min(22rem,calc(100vw-2rem))] rounded-card bg-surface-2 p-1">
+        <div className="pop-enter overlay-shadow absolute right-0 z-40 mt-1.5 w-[min(22rem,calc(100vw-2rem))] rounded-card bg-surface-2 p-1">
           <header className="flex items-center justify-between px-3 pt-2 pb-1.5">
             <span className="text-[13px] font-semibold text-ink-soft">Notifications</span>
             <button

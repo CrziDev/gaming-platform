@@ -30,12 +30,14 @@ removed.
    exceptions are the two scrims that fade artwork into chrome so text over it stays
    legible: `tile-scrim` at the bottom of a game tile and `banner-scrim` over the lobby
    banner's artwork.
-2. **No borders as dividers.** Regions are separated by background step
-   (`base` → `panel` → `surface-1` → `surface-2` → `surface-3`), never by a 1px line.
-   There are no `line` tokens.
-3. **No glows, coloured shadows, or `box-shadow` for depth.** Elevation is background
-   lightness only. Floating panels sit one step lighter than what they cover; modals add
-   the `base` scrim.
+2. **Background steps before borders.** Regions are separated by background step
+   (`base` → `panel` → `surface-1` → `surface-2` → `surface-3`). A quiet neutral
+   hairline is allowed where it communicates selection, separates dense tabular data,
+   or defines an edge that moves over content. It is not routine card decoration and
+   there are no general-purpose `line` tokens.
+3. **No glows or coloured shadows.** Elevation is primarily background lightness.
+   Floating overlays and fixed sheets may add the shared neutral overlay shadow when a
+   surface step alone does not separate them from moving content; routine cards do not.
 4. **No decorative texture** — no stripe overlays, radial blooms, noise, glass, or blur.
 5. **One accent.** Green `accent` fills primary actions; `accent-ink` is the same accent as
    text, link, or live dot. Gold is reserved for the currency mark and win amounts.
@@ -113,8 +115,11 @@ Gaps: 1–2px within a nav list · 6–8px within a control cluster · 10px grid
 `chip 8` (chips, buttons) · `input 9` (controls, inset fields) · `tile 10` (tiles, rows) ·
 `card 12` (cards, panels, modals). Avatars and status dots are the only full circles.
 
-There are no shadow tokens. Depth is the surface ladder: a card is `surface-1` on
-`base`; a menu is `surface-2`; a modal is `surface-1` over the `base/70` scrim.
+Depth starts with the surface ladder: a card is `surface-1` on `base`; a menu is
+`surface-2`; a modal is `surface-1` over the `base/70` scrim. A subtle neutral overlay
+shadow is reserved for floating menus, dialogs, drawers, and fixed sheets. A neutral
+hairline may clarify a selected control or an edge that moves over content, but it is
+not used to divide routine page regions.
 
 ## Controls
 
@@ -123,8 +128,9 @@ Heights on the desktop shell (1024px and up): 26 segmented · 32 icon button and
 target is 44px; the in-game play action is 52px everywhere.
 
 Variants: primary (accent fill), secondary (`inset` fill, `wash` on hover), ghost,
-destructive (`danger` tint), play (primary at 52px, `tile` radius). Hover is a background
-swap; there is no pressed state and no transform.
+destructive (`danger` tint), play (primary at 52px, `tile` radius). Hover is primarily a
+background swap. Pressed feedback may use colour, opacity, or at most 1px of translation;
+controls never bounce or scale.
 
 ## Shell
 
@@ -188,11 +194,21 @@ navigation; icon-only is permitted for header utilities at 44px targets on touch
 
 ## Motion
 
-Hover states are a background swap, or a 120ms opacity fade for the tile Play overlay.
-A transient popover — a box that appears in answer to a tap and dismisses itself — may
-enter with one opacity fade plus a translate of at most 6px lasting at most 180ms, and
-leave the same way.
-`prefers-reduced-motion` is honoured.
+Motion communicates interaction, state, hierarchy, or spatial continuity. It is never
+added merely to decorate, increase urgency, or keep a player engaged.
+
+- Direct hover, focus, and pressed feedback uses `fast` (120ms).
+- Menus, tooltips, dialogs, toasts, and other overlays use `standard` (180ms) with an
+  opacity fade and a translate of at most 6px.
+- Bounded shell layout changes, including rail and chat width, may use `layout` (220ms).
+  Width animation is limited to these small persistent regions; their contents animate
+  with `transform` and `opacity`.
+- Directly interactive cards may translate by at most 2px. Media never zooms, bounces,
+  pulses, or animates automatically.
+- Loading indicators do not loop unless progress cannot otherwise be understood. Static,
+  shape-matched skeletons are preferred.
+- `prefers-reduced-motion` is honoured. Under reduced motion, state remains legible and
+  no information depends on an animation completing.
 
 ## Breakpoints
 
@@ -215,7 +231,9 @@ Nothing ever emits a horizontal page scrollbar.
 - **Gradients** (game art, banner fades) — chrome must not compete with art; flat
   placeholders until real assets land. The banner fade came back as `banner-scrim` once
   Plinko's art did, because it fades art into chrome rather than decorating chrome.
-- **`shadow-e1` / `shadow-e2` / `shadow-glow`** — elevation is background lightness.
+- **Multi-level and coloured shadow systems** (`shadow-e1`, `shadow-e2`,
+  `shadow-glow`) — background lightness remains the default; one neutral overlay shadow
+  is enough for floating UI.
 - **`line`, `line-strong`, `line-hover`** — dividers were the main source of visual
   noise; every region is now a background step.
 - **Sora / `font-display` and weight 700** — one text face, max 600, reads calmer at

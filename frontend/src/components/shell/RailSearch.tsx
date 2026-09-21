@@ -19,9 +19,10 @@ const RESULT_ROWS = 8
 type RailSearchProps = {
   mode: RailMode
   onNavigate?: () => void
+  active?: boolean
 }
 
-export function RailSearch({ mode, onNavigate }: RailSearchProps) {
+export function RailSearch({ mode, onNavigate, active = true }: RailSearchProps) {
   const { search, setSearch, searchFocus, focusSearch, searchFocused } = useShell()
   const input = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
@@ -30,12 +31,12 @@ export function RailSearch({ mode, onNavigate }: RailSearchProps) {
   const results = useGameSearch(search)
 
   useEffect(() => {
-    if (searchFocus === 0) {
+    if (!active || searchFocus === 0) {
       return
     }
     input.current?.focus()
     searchFocused()
-  }, [searchFocus, searchFocused])
+  }, [active, searchFocus, searchFocused])
 
   const showAll = async () => {
     if (term === '') {
@@ -47,23 +48,29 @@ export function RailSearch({ mode, onNavigate }: RailSearchProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <button
-        type="button"
-        onFocus={focusSearch}
-        onClick={focusSearch}
-        className={cn(
-          'min-h-11 w-full items-center gap-2.5 rounded-input bg-inset px-2.5 text-[13px] text-ink-mute',
-          'transition-colors duration-[120ms] hover:bg-wash hover:text-ink-soft lg:min-h-[34px]',
-          railRow[mode],
-          railNarrow[mode],
-        )}
-      >
-        <Search aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
-        <span className="sr-only">Search games</span>
-      </button>
+      <div className="relative min-h-11 lg:min-h-[34px]">
+        <button
+          type="button"
+          title="Search games"
+          onFocus={focusSearch}
+          onClick={focusSearch}
+          className={cn(
+            'absolute inset-0 flex w-full items-center gap-2.5 rounded-input bg-inset px-2.5 text-[13px] text-ink-mute',
+            'transition-[color,background-color,opacity,transform] duration-standard ease-standard hover:bg-wash hover:text-ink-soft',
+            railRow[mode],
+            railNarrow[mode],
+          )}
+        >
+          <Search aria-hidden size={16} strokeWidth={1.5} className="shrink-0" />
+          <span className="sr-only">Search games</span>
+        </button>
 
-      <div className={cn('flex-col gap-3', railWide[mode])}>
-        <div className="relative">
+        <div
+          className={cn(
+            'absolute inset-0 transition-[opacity,transform] duration-standard ease-standard motion-reduce:transition-none',
+            railWide[mode],
+          )}
+        >
           <Search
             aria-hidden
             size={16}
@@ -103,8 +110,10 @@ export function RailSearch({ mode, onNavigate }: RailSearchProps) {
             </button>
           )}
         </div>
+      </div>
 
-        {term === '' ? null : (
+      {mode === 'collapsed' || term === '' ? null : (
+        <div className="pop-enter">
           <SearchResults
             games={results.data}
             error={results.isError}
@@ -112,8 +121,8 @@ export function RailSearch({ mode, onNavigate }: RailSearchProps) {
             term={term}
             onNavigate={onNavigate}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -192,7 +201,7 @@ function SearchResults({ games, error, loading, term, onNavigate }: SearchResult
       <Link
         to={catalogueSearch(term)}
         {...(onNavigate ? { onClick: onNavigate } : {})}
-        className="flex min-h-11 items-center gap-1 rounded-input px-2.5 text-[12.5px] font-medium text-accent-ink transition-colors duration-[120ms] hover:bg-wash lg:min-h-9"
+        className="flex min-h-11 items-center gap-1 rounded-input px-2.5 text-[12.5px] font-medium text-accent-ink transition-colors duration-fast hover:bg-wash lg:min-h-9"
       >
         See all results
         <ChevronRight aria-hidden size={14} strokeWidth={1.5} />
@@ -202,7 +211,7 @@ function SearchResults({ games, error, loading, term, onNavigate }: SearchResult
 }
 
 const row =
-  'flex min-h-11 items-center gap-2.5 rounded-input px-2 text-ink-soft transition-colors duration-[120ms] hover:bg-wash lg:min-h-9'
+  'flex min-h-11 items-center gap-2.5 rounded-input px-2 text-ink-soft transition-colors duration-fast hover:bg-wash lg:min-h-9'
 
 const note = 'px-2.5 py-2 text-[12.5px] text-ink-mute'
 

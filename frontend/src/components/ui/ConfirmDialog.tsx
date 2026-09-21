@@ -39,8 +39,8 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onClose} disabled={pending}>
             {cancelLabel}
           </Button>
-          <Button variant={tone} onClick={onConfirm} disabled={pending}>
-            {confirmLabel}
+          <Button variant={tone} onClick={onConfirm} disabled={pending} aria-busy={pending}>
+            {pending ? `${confirmLabel}…` : confirmLabel}
           </Button>
         </div>
       }

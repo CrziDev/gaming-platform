@@ -24,6 +24,7 @@ export function Header() {
     <header className="flex h-14 shrink-0 items-center gap-2 bg-panel px-3 sm:gap-3 sm:px-3.5">
       <IconButton
         label="Toggle navigation"
+        data-navigation-toggle
         className="bg-inset"
         onClick={() => {
           if (railVisible()) {

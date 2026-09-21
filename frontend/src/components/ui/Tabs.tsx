@@ -34,7 +34,7 @@ export function ChipTabs<T extends string>({ items, value, onChange, label, clas
             onClick={() => !disabled && onChange(item.id)}
             className={cn(
               'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-chip px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-8',
-              'transition-colors duration-[120ms] ease-standard',
+              'transition-[color,background-color,opacity,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none',
               active ? 'bg-surface-3 text-ink-soft' : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
               disabled && 'cursor-not-allowed text-ink-mute hover:bg-transparent',
             )}
@@ -77,7 +77,7 @@ export function SegmentedTrack<T extends string>({
             onClick={() => !disabled && onChange(item.id)}
             className={cn(
               'inline-flex min-h-10 shrink-0 items-center gap-2 rounded-[7px] px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-[26px]',
-              'transition-colors duration-[120ms] ease-standard',
+              'transition-[color,background-color,opacity,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none',
               active ? 'bg-wash text-ink-soft' : 'text-ink-mute hover:text-ink-soft',
               disabled && 'cursor-not-allowed hover:text-ink-mute',
             )}

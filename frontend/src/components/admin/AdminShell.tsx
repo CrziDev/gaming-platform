@@ -1,5 +1,5 @@
 import { LogOut, Settings, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 
 import { MenuGlyph } from '@/components/shell/MenuGlyph'
@@ -14,6 +14,41 @@ import { AdminConsoleSearch } from './AdminConsoleSearch'
 
 export function AdminShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const drawerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!drawerOpen) return
+    const previous = document.activeElement as HTMLElement | null
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    drawerRef.current?.querySelector<HTMLButtonElement>('button')?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDrawerOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const targets = drawerRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )
+      if (!targets || targets.length === 0) return
+      const first = targets[0]
+      const last = targets[targets.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last?.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first?.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = overflow
+      previous?.focus()
+    }
+  }, [drawerOpen])
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-base">
@@ -31,30 +66,44 @@ export function AdminShell() {
         </main>
       </div>
 
-      {drawerOpen ? (
-        <div className="fixed inset-0 z-50 flex rail:hidden">
-          <button
-            type="button"
-            aria-label="Close navigation"
-            onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-base/70"
-          />
-          <div className="relative flex w-72 max-w-[85vw] flex-col bg-panel">
-            <div className="flex items-center justify-between px-4 pt-2 pb-1">
-              <span className="text-[17px] font-semibold tracking-[-0.02em] text-ink">Console</span>
-              <button
-                type="button"
-                aria-label="Close navigation"
-                onClick={() => setDrawerOpen(false)}
-                className="flex size-11 items-center justify-center rounded-input text-ink-mute hover:bg-wash hover:text-ink-soft"
-              >
-                <X aria-hidden size={18} strokeWidth={1.5} />
-              </button>
-            </div>
-            <AdminNavPanel onNavigate={() => setDrawerOpen(false)} />
+      <div
+        className={cn('fixed inset-0 z-50 flex rail:hidden', !drawerOpen && 'pointer-events-none')}
+        aria-hidden={!drawerOpen}
+        inert={!drawerOpen}
+      >
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setDrawerOpen(false)}
+          className={cn(
+            'absolute inset-0 bg-base/70 transition-opacity duration-standard ease-standard motion-reduce:transition-none',
+            drawerOpen ? 'opacity-100' : 'opacity-0',
+          )}
+        />
+        <div
+          ref={drawerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Console navigation"
+          className={cn(
+            'overlay-shadow relative flex w-72 max-w-[85vw] flex-col bg-panel transition-[transform,opacity] duration-layout ease-standard motion-reduce:transition-none',
+            drawerOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0',
+          )}
+        >
+          <div className="flex items-center justify-between px-4 pt-2 pb-1">
+            <span className="text-[17px] font-semibold tracking-[-0.02em] text-ink">Console</span>
+            <button
+              type="button"
+              aria-label="Close navigation"
+              onClick={() => setDrawerOpen(false)}
+              className="flex size-11 items-center justify-center rounded-input text-ink-mute hover:bg-wash hover:text-ink-soft"
+            >
+              <X aria-hidden size={18} strokeWidth={1.5} />
+            </button>
           </div>
+          <AdminNavPanel onNavigate={() => setDrawerOpen(false)} />
         </div>
-      ) : null}
+      </div>
     </div>
   )
 }
@@ -106,7 +155,7 @@ function AdminNavPanel({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate()
 
   const shape =
-    'flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13.5px] transition-colors duration-[120ms] lg:min-h-9'
+    'relative flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13.5px] transition-[color,background-color,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none lg:min-h-9'
 
   const signOut = async () => {
     await logoutMutation.mutateAsync()
@@ -130,7 +179,7 @@ function AdminNavPanel({ onNavigate }: { onNavigate?: () => void }) {
                   cn(
                     shape,
                     isActive
-                      ? 'bg-wash font-medium text-ink-soft'
+                      ? 'bg-wash font-medium text-ink-soft before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-sm before:bg-accent-ink'
                       : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
                   )
                 }
@@ -155,7 +204,9 @@ function AdminNavPanel({ onNavigate }: { onNavigate?: () => void }) {
           className={({ isActive }) =>
             cn(
               shape,
-              isActive ? 'bg-wash font-medium text-ink-soft' : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
+              isActive
+                ? 'bg-wash font-medium text-ink-soft before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-sm before:bg-accent-ink'
+                : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
             )
           }
         >

@@ -56,13 +56,23 @@ export function CollapsiblePanel({
             aria-hidden
             size={16}
             strokeWidth={1.5}
-            className={cn('text-ink-mute', open && 'rotate-180')}
+            className={cn(
+              'text-ink-mute transition-transform duration-standard ease-standard motion-reduce:transition-none',
+              open && 'rotate-180',
+            )}
           />
         </button>
         {action}
       </div>
-      <div id={bodyId} hidden={!open} className={cn('px-4 pb-4', bodyClassName)}>
-        {children}
+      <div
+        id={bodyId}
+        aria-hidden={!open}
+        className={cn(
+          'grid transition-[grid-template-rows,opacity] duration-standard ease-standard motion-reduce:transition-none',
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+        )}
+      >
+        <div className={cn('overflow-hidden px-4', open && 'pb-4', bodyClassName)}>{children}</div>
       </div>
     </section>
   )

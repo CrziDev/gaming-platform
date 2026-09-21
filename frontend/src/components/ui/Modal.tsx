@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import { IconButton } from '@/components/ui/Button'
@@ -38,6 +38,7 @@ export function Modal({
   placement = 'responsive',
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const [present, setPresent] = useState(open)
   const titleId = useId()
   const descriptionId = useId()
 
@@ -84,7 +85,7 @@ export function Modal({
     }
   }, [open, onClose])
 
-  if (!open) {
+  if (!open && !present) {
     return null
   }
 
@@ -92,15 +93,18 @@ export function Modal({
     <div
       className={cn(
         'fixed inset-0 z-50 flex justify-center',
+        !open && 'pointer-events-none',
         placement === 'bottom' ? 'items-end' : 'items-end sm:items-center',
       )}
+      aria-hidden={!open}
+      inert={!open}
     >
       <button
         type="button"
         aria-label="Close"
         tabIndex={-1}
         onClick={onClose}
-        className="absolute inset-0 bg-base/70"
+        className={cn('absolute inset-0 bg-base/70', open ? 'overlay-enter' : 'overlay-exit')}
       />
       <div
         ref={panelRef}
@@ -108,8 +112,15 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
+        onAnimationStart={() => {
+          if (open && !present) setPresent(true)
+        }}
+        onAnimationEnd={() => {
+          if (!open) setPresent(false)
+        }}
         className={cn(
-          'relative flex max-h-[calc(100dvh-1.5rem)] w-full flex-col bg-surface-1 sm:max-h-[calc(100dvh-3rem)]',
+          'overlay-shadow relative flex max-h-[calc(100dvh-1.5rem)] w-full flex-col bg-surface-1 sm:max-h-[calc(100dvh-3rem)]',
+          open ? 'dialog-enter' : 'dialog-exit',
           placement === 'bottom' ? 'rounded-t-card' : 'rounded-t-card sm:rounded-card',
           sizes[size],
         )}

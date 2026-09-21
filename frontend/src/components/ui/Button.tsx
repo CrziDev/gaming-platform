@@ -7,7 +7,9 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const base =
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-chip font-semibold ' +
-  'transition-colors duration-[120ms] ease-standard disabled:cursor-not-allowed'
+  'transition-[color,background-color,opacity,transform] duration-fast ease-standard ' +
+  'active:translate-y-px disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-55 ' +
+  'motion-reduce:transform-none'
 
 const variants: Record<ButtonVariant, string> = {
   primary:
@@ -65,7 +67,7 @@ export function IconButton({ label, className, type = 'button', ...props }: Icon
       title={label}
       className={cn(
         'relative inline-flex size-11 shrink-0 items-center justify-center rounded-input text-ink-mute lg:size-8',
-        'transition-colors duration-[120ms] ease-standard hover:bg-wash hover:text-ink-soft',
+        'transition-[color,background-color,opacity,transform] duration-fast ease-standard hover:bg-wash hover:text-ink-soft active:translate-y-px disabled:pointer-events-none disabled:opacity-55 motion-reduce:transform-none',
         className,
       )}
       {...props}

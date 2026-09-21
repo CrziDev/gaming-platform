@@ -4,8 +4,8 @@ import { cn } from '@/lib/cn'
 
 export const inputClass =
   'w-full min-h-11 rounded-input bg-inset px-3 text-[13.5px] text-ink-soft lg:min-h-[34px] ' +
-  'placeholder:text-ink-mute transition-colors duration-[120ms] ease-standard ' +
-  'focus:bg-wash disabled:text-ink-mute'
+  'placeholder:text-ink-mute transition-[color,background-color,opacity] duration-fast ease-standard ' +
+  'focus:bg-wash disabled:cursor-not-allowed disabled:text-ink-mute disabled:opacity-55'
 
 type FieldProps = {
   label: string

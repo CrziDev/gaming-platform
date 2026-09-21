@@ -83,7 +83,7 @@ export function AdminConsoleSearch() {
           'lg:relative lg:top-auto lg:right-auto lg:left-auto lg:block lg:w-80',
         )}
       >
-        <label className="flex min-w-0 items-center gap-2.5 rounded-input bg-inset px-2.5 shadow-sm lg:shadow-none">
+        <label className="overlay-shadow flex min-w-0 items-center gap-2.5 rounded-input bg-inset px-2.5 lg:shadow-none">
           <Search aria-hidden size={15} strokeWidth={1.5} className="shrink-0 text-ink-mute" />
           <input
             ref={inputRef}
@@ -130,7 +130,7 @@ export function AdminConsoleSearch() {
         </label>
 
         {expanded ? (
-          <div id={listId} role="listbox" className="absolute top-[calc(100%+0.35rem)] right-0 left-0 max-h-[min(30rem,70dvh)] overflow-y-auto rounded-card bg-surface-1 p-2 shadow-lg">
+          <div id={listId} role="listbox" className="pop-enter overlay-shadow absolute top-[calc(100%+0.35rem)] right-0 left-0 max-h-[min(30rem,70dvh)] overflow-y-auto rounded-card bg-surface-2 p-2">
             {debounced.length < 2 || results.isPending ? (
               <p className="px-3 py-4 text-[13px] text-ink-mute">Searching…</p>
             ) : results.isError ? (
