@@ -7,15 +7,18 @@ import (
 )
 
 var (
-	ErrGameUnavailable    = errors.New("round: game is unavailable")
-	ErrProfileUnavailable = errors.New("round: active RTP profile is unavailable")
-	ErrInvalidWager       = errors.New("round: wager is outside the game's permitted steps")
-	ErrInvalidOutcome     = errors.New("round: outcome is invalid")
-	ErrNotFound           = errors.New("round: not found")
-	ErrRoundKeyRequired   = errors.New("round: round key is required")
-	ErrRoundKeyConflict   = errors.New("round: round key belongs to another request")
-	ErrRoundSettled       = errors.New("round: round is already settled")
-	ErrRoundClosed        = errors.New("round: round cannot make that transition")
+	ErrGameUnavailable     = errors.New("round: game is unavailable")
+	ErrProfileUnavailable  = errors.New("round: the game has no RTP its engine plays")
+	ErrInvalidWager        = errors.New("round: wager is outside the game's permitted steps")
+	ErrInvalidOutcome      = errors.New("round: outcome is invalid")
+	ErrNotFound            = errors.New("round: not found")
+	ErrRoundKeyRequired    = errors.New("round: round key is required")
+	ErrRoundKeyConflict    = errors.New("round: round key belongs to another request")
+	ErrRoundSettled        = errors.New("round: round is already settled")
+	ErrRoundClosed         = errors.New("round: round cannot make that transition")
+	ErrUnsupportedCurrency = errors.New("round: the game does not play in that currency")
+	ErrEngineRequired      = errors.New("round: no engine plays that game")
+	ErrReplayIncomplete    = errors.New("round: a replayed round was never settled")
 )
 
 const (
@@ -32,7 +35,7 @@ type Round struct {
 	GameID               string
 	WalletID             string
 	Currency             string
-	RTPProfileID         string
+	RTPBasisPoints       int
 	Status               string
 	StakeMinor           int64
 	WinMinor             *int64
@@ -62,6 +65,7 @@ type ReadFilter struct {
 	Currency string
 	From     *time.Time
 	To       *time.Time
+	Search   string
 }
 
 type OpenInput struct {
@@ -69,6 +73,8 @@ type OpenInput struct {
 	UserID     string
 	GameID     string
 	StakeMinor int64
+	// Required: selects the game's wager limits and the player's wallet.
+	Currency string
 }
 
 type SettleInput struct {
@@ -77,6 +83,8 @@ type SettleInput struct {
 	MultiplierHundredths int
 	EngineReference      string
 	ResultData           json.RawMessage
+	// A win at or above this multiplier notifies the player; zero notifies nobody.
+	BigWinMultiplierHundredths int
 }
 
 type TerminateInput struct {

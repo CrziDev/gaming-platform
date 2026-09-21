@@ -45,7 +45,7 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
       onClose()
     } catch (failure) {
       if (failure instanceof ApiError && failure.code === 'DEPOSIT_ALREADY_REVIEWED') {
-        toast.push('Another operator already reviewed this request. The queue has been refreshed.')
+        toast.push('This request has already been reviewed by another operator.')
         onClose()
         return
       }
@@ -64,7 +64,7 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
       return
     }
     if (edited && reason.trim() === '') {
-      setError('An edited amount needs a note')
+      setError('Enter a note for the changed amount. The player will see it.')
       return
     }
     await submit({
@@ -77,7 +77,7 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
 
   const reject = async () => {
     if (reason.trim() === '') {
-      setError('A rejection needs a reason — the player sees it verbatim')
+      setError('Enter a reason. The player will see it.')
       return
     }
     await submit({ id: deposit.id, action: 'reject', reason })
@@ -105,10 +105,6 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
               Approve {creditMinor === null ? '' : formatMoney(money(creditMinor, deposit.currency))}
             </Button>
           </div>
-          <p className="text-[12px] leading-relaxed text-ink-mute">
-            Rejecting requires a reason, shown to the player verbatim. Approving with an edited amount
-            requires a note. Both write to the audit log.
-          </p>
         </div>
       }
     >
@@ -153,11 +149,11 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
         </Field>
 
         <Field
-          label={edited ? 'Note — required for an edited amount' : 'Reason — required to reject'}
+          label={edited ? 'Note (shown to the player)' : 'Reason (shown to the player)'}
           htmlFor="review-reason"
         >
           <Select id="review-reason" value={reason} onChange={(event) => setReason(event.target.value)}>
-            <option value="">Select or type a reason</option>
+            <option value="">Select a reason</option>
             <option value="Proof unreadable">Proof unreadable</option>
             <option value="Reference not found">Reference not found</option>
             <option value="Amount does not match proof">Amount does not match proof</option>

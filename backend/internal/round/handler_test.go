@@ -19,26 +19,26 @@ func TestPlayerRoundReadsAreOwnedAndPaginated(t *testing.T) {
 	owner := createRoundFixture(t, db, 10_000)
 	other := createRoundFixture(t, db, 10_000)
 
-	owned, err := Open(t.Context(), db, OpenInput{RoundKey: "read-owned-" + owner.Suffix, UserID: owner.UserID, GameID: owner.GameID, StakeMinor: 100})
+	owned, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-owned-" + owner.Suffix, UserID: owner.UserID, GameID: owner.GameID, Currency: "PHP", StakeMinor: 100})
 	if err != nil {
 		t.Fatalf("open owned round: %v", err)
 	}
 	if _, err := Settle(t.Context(), db, SettleInput{RoundID: owned.ID, WinMinor: 250, MultiplierHundredths: 250}); err != nil {
 		t.Fatalf("settle owned round: %v", err)
 	}
-	second, err := Open(t.Context(), db, OpenInput{RoundKey: "read-owned-second-" + owner.Suffix, UserID: owner.UserID, GameID: owner.GameID, StakeMinor: 200})
+	second, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-owned-second-" + owner.Suffix, UserID: owner.UserID, GameID: owner.GameID, Currency: "PHP", StakeMinor: 200})
 	if err != nil {
 		t.Fatalf("open second owned round: %v", err)
 	}
 	if _, err := Settle(t.Context(), db, SettleInput{RoundID: second.ID, WinMinor: 250, MultiplierHundredths: 125}); err != nil {
 		t.Fatalf("settle second owned round: %v", err)
 	}
-	foreign, err := Open(t.Context(), db, OpenInput{RoundKey: "read-foreign-" + other.Suffix, UserID: other.UserID, GameID: other.GameID, StakeMinor: 100})
+	foreign, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-foreign-" + other.Suffix, UserID: other.UserID, GameID: other.GameID, Currency: "PHP", StakeMinor: 100})
 	if err != nil {
 		t.Fatalf("open foreign round: %v", err)
 	}
 
-	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	handler := NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0)
 	listRequest := httptest.NewRequest(http.MethodGet, "/api/rounds?status=settled&page=1&size=1", nil)
 	listResponse := httptest.NewRecorder()
 	handler.List(listResponse, listRequest, user.User{ID: owner.UserID})
@@ -76,7 +76,7 @@ func TestPlayerRoundReadsAreOwnedAndPaginated(t *testing.T) {
 func TestAdminRoundListAppliesEveryFilter(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 10_000)
-	item, err := Open(t.Context(), db, OpenInput{RoundKey: "admin-read-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100})
+	item, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "admin-read-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 100})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
 	}
@@ -84,10 +84,10 @@ func TestAdminRoundListAppliesEveryFilter(t *testing.T) {
 	from := url.QueryEscape(item.StartedAt.Add(-time.Minute).UTC().Format(time.RFC3339))
 	to := url.QueryEscape(item.StartedAt.Add(time.Minute).UTC().Format(time.RFC3339))
 	target := "/api/admin/rounds?page=1&size=20&user_id=" + fixture.UserID +
-		"&game_id=" + fixture.GameID + "&status=open&currency=PHP&from=" + from + "&to=" + to
+		"&game_id=" + fixture.GameID + "&status=open&currency=PHP&from=" + from + "&to=" + to + "&search=" + item.ID[:8]
 	request := httptest.NewRequest(http.MethodGet, target, nil)
 	recorder := httptest.NewRecorder()
-	NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil))).AdminList(recorder, request, user.User{Role: "admin"})
+	NewHandler(db, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0).AdminList(recorder, request, user.User{Role: "admin"})
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("admin list: want 200, got %d (%s)", recorder.Code, recorder.Body.String())
 	}
@@ -108,7 +108,7 @@ func TestRoundReadHandlersRejectInvalidFilters(t *testing.T) {
 		"?user_id=not-a-uuid",
 		"?from=yesterday",
 	}
-	handler := NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	handler := NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0)
 	for _, query := range tests {
 		t.Run(query, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/api/admin/rounds"+query, nil)
@@ -125,7 +125,7 @@ func TestPlayerRoundGetRejectsMalformedIDAsNotFound(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/api/rounds/not-an-id", nil)
 	request.SetPathValue("id", "not-an-id")
 	recorder := httptest.NewRecorder()
-	NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil))).Get(recorder, request, user.User{})
+	NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, 0).Get(recorder, request, user.User{})
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("want 404, got %d (%s)", recorder.Code, recorder.Body.String())
 	}

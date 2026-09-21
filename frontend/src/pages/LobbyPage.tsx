@@ -2,37 +2,34 @@ import { useState } from 'react'
 
 import { BigWins } from '@/components/catalogue/BigWins'
 import { GameGrid, gameGrid } from '@/components/catalogue/GameGrid'
-import { GameRow, SeeAll } from '@/components/catalogue/GameRow'
+import { GameRow } from '@/components/catalogue/GameRow'
 import { HeroBanner } from '@/components/catalogue/HeroBanner'
-import { Promotions } from '@/components/catalogue/Promotions'
+import { FutureDevelopment } from '@/components/ui/FutureDevelopment'
+import { SeeAll } from '@/components/ui/SeeAll'
 import { SkeletonGrid } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/States'
 import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import { useSession } from '@/features/auth'
 import {
-  useBigWins,
   useCategories,
   useGames,
-  useGamesByIds,
-  useLobbyRows,
-  usePromotions,
+  useRecentlyPlayed,
 } from '@/features/catalogue'
-import type { LobbyRow as LobbyRowData } from '@/api/types'
+import { gameModuleFor } from '@/features/gameplay'
 import { paths } from '@/routes/paths'
 
 export function LobbyPage() {
   const { data: user } = useSession()
   const [category, setCategory] = useState('all')
-  const rowsQuery = useLobbyRows(Boolean(user))
+  const recentlyPlayedQuery = useRecentlyPlayed(Boolean(user))
   const categoriesQuery = useCategories()
   const featuredQuery = useGames({ category: 'all', search: '', sort: 'name' })
   const gamesQuery = useGames({ category, search: '', sort: 'name' })
-  const winsQuery = useBigWins()
-  const promotionsQuery = usePromotions()
-
-  if (rowsQuery.isError) {
-    return <ErrorState message={rowsQuery.error.message} onRetry={() => void rowsQuery.refetch()} />
-  }
+  // The banner promotes a title that actually plays here, the first with a registered
+  // module, and falls back to the first title by name while none is listed.
+  const featured =
+    featuredQuery.data?.find((game) => gameModuleFor(game.slug) !== null) ??
+    featuredQuery.data?.[0]
 
   const tabs: TabItem<string>[] = [
     { id: 'all', label: 'All games' },
@@ -42,9 +39,9 @@ export function LobbyPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <HeroBanner featured={featuredQuery.data?.[0]} />
+      <HeroBanner featured={featured} />
 
-      <BigWins wins={winsQuery.data ?? []} />
+      <BigWins />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
@@ -71,23 +68,22 @@ export function LobbyPage() {
         )}
       </section>
 
-      <Promotions promotions={promotionsQuery.data ?? []} />
+      <section className="flex flex-col gap-2.5">
+        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Promotions</h2>
+        <FutureDevelopment />
+      </section>
 
-      {rowsQuery.isPending ? (
+      {user && recentlyPlayedQuery.isPending ? (
         <SkeletonGrid count={4} className={gameGrid} />
-      ) : (
-        rowsQuery.data?.map((row) => <LobbyRow key={row.id} row={row} />)
-      )}
+      ) : user && recentlyPlayedQuery.isError ? (
+        <ErrorState
+          title="Recently played unavailable"
+          message={recentlyPlayedQuery.error.message}
+          onRetry={() => void recentlyPlayedQuery.refetch()}
+        />
+      ) : recentlyPlayedQuery.data && recentlyPlayedQuery.data.length > 0 ? (
+        <GameRow title="Recently Played" categorySlug={null} games={recentlyPlayedQuery.data} />
+      ) : null}
     </div>
   )
-}
-
-function LobbyRow({ row }: { row: LobbyRowData }) {
-  const gamesQuery = useGamesByIds(row.game_ids)
-  const games = gamesQuery.data ?? []
-
-  if (games.length === 0) {
-    return null
-  }
-  return <GameRow title={row.title} categorySlug={row.category_slug} games={games} />
 }

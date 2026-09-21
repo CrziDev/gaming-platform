@@ -9,6 +9,7 @@ const anyID = "00000000-0000-4000-8000-000000000000"
 
 var playerRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/me"},
+	{http.MethodPost, "/api/password"},
 	{http.MethodGet, "/api/payment-methods"},
 	{http.MethodGet, "/api/deposits"},
 	{http.MethodGet, "/api/deposits/" + anyID},
@@ -17,6 +18,14 @@ var playerRoutes = []struct{ method, path string }{
 	{http.MethodGet, "/api/wallets/PHP"},
 	{http.MethodGet, "/api/wallets/PHP/transactions"},
 	{http.MethodGet, "/api/transactions"},
+	{http.MethodGet, "/api/transactions/summary"},
+	{http.MethodGet, "/api/recent-games"},
+	{http.MethodGet, "/api/favorites"},
+	{http.MethodPut, "/api/games/plinko/favorite"},
+	{http.MethodDelete, "/api/games/plinko/favorite"},
+	{http.MethodPost, "/api/chat/messages"},
+	{http.MethodGet, "/api/notifications"},
+	{http.MethodPost, "/api/notifications/read"},
 	{http.MethodGet, "/api/rounds"},
 	{http.MethodGet, "/api/rounds/" + anyID},
 }
@@ -36,13 +45,14 @@ var adminRoutes = []struct{ method, path string }{
 	{http.MethodPost, "/api/admin/games"},
 	{http.MethodGet, "/api/admin/games/" + anyID},
 	{http.MethodPatch, "/api/admin/games/" + anyID},
-	{http.MethodGet, "/api/admin/games/" + anyID + "/rtp-profiles"},
-	{http.MethodPost, "/api/admin/games/" + anyID + "/rtp-profiles"},
-	{http.MethodGet, "/api/admin/rtp-profiles"},
-	{http.MethodPatch, "/api/admin/rtp-profiles/" + anyID},
-	{http.MethodPost, "/api/admin/rtp-profiles/" + anyID + "/activate"},
+	{http.MethodPut, "/api/admin/games/" + anyID + "/rtp"},
+	{http.MethodGet, "/api/admin/games/" + anyID + "/rtp-configuration?rtp_basis_points=9500&rows=8&risk=normal"},
 	{http.MethodGet, "/api/admin/audit-logs"},
 	{http.MethodGet, "/api/admin/dashboard?currency=PHP"},
+	{http.MethodGet, "/api/admin/announcements"},
+	{http.MethodPost, "/api/admin/announcements"},
+	{http.MethodPut, "/api/admin/announcements/" + anyID},
+	{http.MethodPatch, "/api/admin/announcements/" + anyID + "/status"},
 }
 
 func TestEveryGuardedRouteRefusesAnAnonymousRequest(t *testing.T) {

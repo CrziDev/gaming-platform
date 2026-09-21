@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import type { AdminDeposit } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
@@ -8,15 +9,23 @@ import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTabl
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { useDepositQueue } from '@/features/admin'
+import { useAdminDeposits } from '@/features/admin'
 import { formatDuration } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
 
 import { DepositReviewDrawer } from './DepositReviewDrawer'
 
 export function AdminDepositsPage() {
-  const [page, setPage] = useState(1)
-  const depositsQuery = useDepositQueue(page)
+  const [params, setParams] = useSearchParams()
+  const search = params.get('search')?.trim() ?? ''
+  const [pagination, setPagination] = useState({ search, page: 1 })
+  const page = pagination.search === search ? pagination.page : 1
+  const setPage = (nextPage: number) => setPagination({ search, page: nextPage })
+  const depositsQuery = useAdminDeposits({
+    page,
+    status: search ? 'all' : 'pending',
+    ...(search ? { search } : {}),
+  })
   const [reviewing, setReviewing] = useState<AdminDeposit | null>(null)
 
   const result = depositsQuery.data
@@ -26,8 +35,15 @@ export function AdminDepositsPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         title="Deposits"
-        meta="Oldest first while pending — the queue is worked from the top, never the newest."
+        meta={search ? 'Console search result across every deposit status.' : 'Pending requests, oldest first.'}
       />
+
+      {search ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-tile bg-surface-1 px-4 py-3">
+          <span className="text-[13px] text-ink-mute">Matching deposit <span className="font-mono text-ink-soft">{search.slice(0, 12)}</span></span>
+          <Button variant="secondary" size="sm" onClick={() => { setParams({}); setPage(1) }}>Clear search</Button>
+        </div>
+      ) : null}
 
       {depositsQuery.isPending ? (
         <SkeletonRows count={6} />
@@ -38,7 +54,10 @@ export function AdminDepositsPage() {
           onRetry={() => void depositsQuery.refetch()}
         />
       ) : rows.length === 0 ? (
-        <EmptyState title="Queue clear" description="There are no pending deposit requests." />
+        <EmptyState
+          title={search ? 'Deposit not found' : 'Queue is clear'}
+          description={search ? 'The searched payment reference or deposit is unavailable.' : 'No deposits are waiting for review.'}
+        />
       ) : (
         <RecordTable
           label="Deposit requests"
@@ -56,7 +75,7 @@ export function AdminDepositsPage() {
                 </span>
               }
               aside={<StatusBadge status={row.status} />}
-              actions={
+              actions={row.status === 'pending' ? (
                 <>
                   <Button variant="secondary" size="sm" onClick={() => setReviewing(row)}>
                     Reject
@@ -65,7 +84,7 @@ export function AdminDepositsPage() {
                     Review
                   </Button>
                 </>
-              }
+              ) : undefined}
             />
           )}
           footer={
@@ -133,9 +152,7 @@ function columns(onReview: (deposit: AdminDeposit) => void): Column<AdminDeposit
       align: 'right',
       width: '120px',
       cell: (row) => (
-        <Button size="sm" onClick={() => onReview(row)}>
-          Review
-        </Button>
+        row.status === 'pending' ? <Button size="sm" onClick={() => onReview(row)}>Review</Button> : <span className="text-ink-mute">—</span>
       ),
     },
   ]

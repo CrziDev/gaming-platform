@@ -59,8 +59,7 @@ export function AdminLoginPage() {
           </Button>
 
           <p className="text-[12px] leading-relaxed text-ink-mute">
-            No register link, no password self-reset, no &ldquo;remember me&rdquo;. Staff accounts
-            are provisioned by an owner, and sign-in attempts are rate limited.
+            Need access or help signing in? Contact an administrator.
           </p>
         </form>
       </div>

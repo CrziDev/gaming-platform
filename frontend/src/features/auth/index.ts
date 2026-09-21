@@ -1,7 +1,8 @@
-export { adminLogin, describeResetFailure, fetchCurrentUser, login, logout, register } from './api'
+export { adminLogin, changePassword, describeResetFailure, fetchCurrentUser, login, logout, register } from './api'
 export {
   useAdminLogin,
   useConfirmPasswordReset,
+  useChangePassword,
   useLogin,
   useLogout,
   useRegister,
@@ -11,6 +12,7 @@ export {
 } from './hooks'
 export {
   adminLoginSchema,
+  changePasswordSchema,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
@@ -18,6 +20,7 @@ export {
 } from './schemas'
 export type {
   AdminLoginInput,
+  ChangePasswordInput,
   ForgotPasswordInput,
   LoginInput,
   RegisterInput,

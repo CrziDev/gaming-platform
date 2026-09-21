@@ -12,7 +12,7 @@ export function GameCard({ game }: { game: Game }) {
 
   const card = (
     <>
-      <span className="relative flex aspect-3/4 items-end overflow-hidden rounded-tile bg-surface-3">
+      <span className="relative flex aspect-3/4 items-end overflow-hidden rounded-tile bg-surface-3 ring-1 ring-white/0 transition-[transform,box-shadow] duration-standard ease-standard group-hover:-translate-y-0.5 group-hover:ring-white/10 group-focus-visible:ring-accent-ink/70 group-active:translate-y-px motion-reduce:transform-none">
         {art ? (
           <img
             src={art}
@@ -44,7 +44,7 @@ export function GameCard({ game }: { game: Game }) {
             ))}
           </span>
         ) : null}
-        <span className="absolute inset-0 flex items-center justify-center bg-base/60 opacity-0 transition-opacity duration-[120ms] ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
+        <span className="absolute inset-0 flex items-center justify-center bg-base/60 opacity-0 transition-opacity duration-fast ease-standard group-hover:opacity-100 group-focus-visible:opacity-100">
           <span className="rounded-chip bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-on-accent">
             Play
           </span>
@@ -54,7 +54,7 @@ export function GameCard({ game }: { game: Game }) {
     </>
   )
 
-  const className = 'group flex w-full flex-col gap-1.5 text-left text-ink-soft'
+  const className = 'group flex w-full flex-col gap-1.5 rounded-tile text-left text-ink-soft'
 
   if (!user) {
     return (

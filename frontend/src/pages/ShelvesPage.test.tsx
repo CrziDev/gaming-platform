@@ -67,13 +67,14 @@ describe('favorites', () => {
 })
 
 describe('promotions', () => {
-  it('lists every running promotion on its own page', async () => {
+  it('marks promotion campaigns as future development', async () => {
     stubFetchRoutes({ 'GET /me': guest })
 
     renderApp('/promotions')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Promotions' })).toBeInTheDocument()
-    const list = await screen.findByRole('list', { name: 'Promotions' })
-    expect(within(list).getAllByRole('listitem')).toHaveLength(3)
+    expect(screen.getByText('Future development')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
+    expect(screen.queryByRole('paragraph')).not.toBeInTheDocument()
   })
 })

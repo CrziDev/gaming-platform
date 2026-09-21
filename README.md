@@ -48,8 +48,47 @@ make tools        # pin golang-migrate into backend/bin
 make migrate-up
 make dev          # API on :8080, web on :5173
 
-make seed         # create or reset the local admin (SEED_USER_*), 18 demo players, and 27 games
+make bootstrap    # create the initial admin/catalogue when absent; preserve later operator changes
+make seed-demo    # add the 18 synthetic players, balances, and placeholder payment methods
+make seed         # run both commands for a complete local fixture
 make test         # migrates and uses only TEST_DATABASE_URL (a *_test database)
 ```
 
 `make help` lists every target. Ports: web 5173, API 8080, PostgreSQL 5432.
+
+## Manual staging setup
+
+Build the frontend with `VITE_API_BASE_URL=/api` when the web server proxies `/api`
+to the Go service. Inject environment variables directly rather than copying the local
+`.env`. At minimum, staging uses:
+
+```dotenv
+APP_ENV=staging
+SESSION_SECURE=true
+CORS_ALLOWED_ORIGINS=https://stage.example.com
+PUBLIC_WEB_URL=https://stage.example.com
+TRUST_PROXY_HEADERS=true
+ALLOW_DEMO_SEED=true
+```
+
+Set unique `SEED_USER_PASSWORD` and `SEED_PLAYER_PASSWORD` secrets, apply migrations,
+then run `make bootstrap seed-demo`. `bootstrap` never resets an existing administrator
+or overwrites game settings. `seed-demo` is refused in production. Keep the API private
+behind the trusted proxy when proxy-header trust is enabled. The deployment health check
+is `GET /api/health`.
+
+## Password-reset email
+
+Email delivery is disabled by default, so local reset requests return `503`. For a
+deployment using Resend, configure:
+
+```dotenv
+EMAIL_DELIVERY_PROVIDER=resend
+PUBLIC_WEB_URL=https://play.example.com
+RESEND_API_KEY=re_...
+RESEND_FROM=HeziBet <security@example.com>
+```
+
+`PUBLIC_WEB_URL` must be HTTPS and `RESEND_FROM` must be a valid, verified sender. The
+server fails startup when enabled delivery is incomplete or invalid. Reset links expire
+after 30 minutes; the API stores only their SHA-256 hashes.

@@ -1,14 +1,20 @@
 import type {
   AdminDeposit,
   AdminGame,
+  AdminRtpConfiguration,
   AdminUser,
   Adjustment,
   AuditEntry,
-  ConsoleAlert,
   DashboardSummary,
-  RtpProfile,
   Wallet,
 } from '@/api/types'
+import {
+  PLINKO_MULTIPLIERS_HUNDREDTHS,
+  PLINKO_RISKS,
+  PLINKO_ROWS,
+  type PlinkoRisk,
+  type PlinkoRows,
+} from '@/features/gameplay/multipliers'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
 import { games } from './games'
@@ -20,19 +26,49 @@ export const dashboardSummary: DashboardSummary = {
   approved_today_minor: 4_215_000,
   approved_today_count: 31,
   staked_today_minor: 9_672_000,
+  returned_today_minor: 8_931_000,
+  hold_today_minor: 741_000,
   rounds_today: 1204,
   players_today: 88,
-  returned_today_minor: 8_931_000,
-  effective_rtp_basis_points: 9230,
-  target_rtp_basis_points: 9400,
+  effective_rtp_basis_points: 9233,
+  expected_rtp_basis_points: 9533,
+  games: [
+    {
+      game_id: 'gm-004',
+      game_slug: 'plinko',
+      game_name: 'Plinko',
+      rounds: 612,
+      staked_minor: 4_120_000,
+      returned_minor: 3_905_000,
+      hold_minor: 215_000,
+      effective_rtp_basis_points: 9478,
+      expected_rtp_basis_points: 9500,
+    },
+    {
+      game_id: 'gm-001',
+      game_slug: 'aurora-dice',
+      game_name: 'Aurora Dice',
+      rounds: 388,
+      staked_minor: 3_240_000,
+      returned_minor: 3_410_000,
+      hold_minor: -170_000,
+      effective_rtp_basis_points: 10524,
+      expected_rtp_basis_points: 9600,
+    },
+    {
+      game_id: 'gm-002',
+      game_slug: 'vault-break',
+      game_name: 'Vault Break',
+      rounds: 204,
+      staked_minor: 2_312_000,
+      returned_minor: 1_616_000,
+      hold_minor: 696_000,
+      effective_rtp_basis_points: 6989,
+      expected_rtp_basis_points: 9500,
+    },
+  ],
   currency: 'PHP',
 }
-
-export const consoleAlerts: ConsoleAlert[] = [
-  { id: 'al-1', tone: 'warning', message: '1 deposit waiting over 20 min', href: '/admin/deposits' },
-  { id: 'al-2', tone: 'neutral', message: 'Skyline Crash disabled by operator', href: '/admin/games' },
-  { id: 'al-3', tone: 'danger', message: 'Aurora Dice RTP set to 102% · ends 18:00', href: '/admin/rtp' },
-]
 
 const firstNames = ['juan', 'ana', 'dee', 'kris', 'mia', 'leo', 'noel', 'rita', 'sam', 'tess']
 const lastNames = ['martinez', 'rivera', 'tan', 'severino', 'lopez', 'cruz', 'reyes', 'diaz', 'uy', 'go']
@@ -256,9 +292,9 @@ export const auditEntries: AuditEntry[] = [
     id: 'au-3',
     created_at: hoursAgo(3),
     operator: 'A. Reyes',
-    action: 'rtp.activate',
+    action: 'game.rtp_change',
     entity: 'aurora-dice',
-    detail: 'Set Aurora Dice RTP 102% until 18:00',
+    detail: 'Changed Aurora Dice (aurora-dice) RTP from 95.00% to 105.00%',
   },
   {
     id: 'au-4',
@@ -278,57 +314,63 @@ export const auditEntries: AuditEntry[] = [
   },
 ]
 
+// Plinko is the one integrated game and carries the engine's four options; the
+// first fixture game runs above 100% so the danger reading has something to show.
+const PLINKO_OPTIONS = [9_000, 9_500, 10_500, 11_000]
+
 export const adminGames: AdminGame[] = games.map((game, index) => ({
   ...game,
-  integration: index === 2 ? 'under_review' : 'supported',
-  active_rtp_basis_points: [10_200, 9_400, 9_600][index] ?? null,
+  integration: game.slug === 'plinko' ? 'integrated' : index === 2 ? 'under_review' : 'supported',
+  rtp_basis_points: game.slug === 'plinko' ? 9_500 : index === 0 ? 10_500 : index === 1 ? 9_500 : null,
+  rtp_options: game.slug === 'plinko' || index === 0 ? PLINKO_OPTIONS : [],
   rounds_30d: [18_420, 12_880, 6_140][index] ?? 0,
   updated_at: game.created_at,
 }))
 
-const profile = (
-  id: string,
-  game: AdminGame,
-  name: string,
-  version: number,
-  target: number,
-  status: RtpProfile['status'],
-  operator: string,
-  created: string,
-  until: string | null = null,
-  isDefault = status === 'active' && until === null,
-): RtpProfile => ({
-  id,
-  game_id: game.id,
-  game_slug: game.slug,
-  game_name: game.name,
-  name,
-  version,
-  target_basis_points: target,
-  status,
-  engine_config_ref: '',
-  theoretical_basis_points: status === 'draft' ? null : target,
-  observed_basis_points: status === 'draft' ? null : target,
-  verified_at: status === 'draft' ? null : created,
-  effective_from: null,
-  effective_until: until,
-  is_default: isDefault,
-  created_by: '',
-  created_by_display_name: operator,
-  created_at: created,
-  updated_at: created,
-})
+export function plinkoRtpConfiguration(
+  basisPoints: number,
+  rows: PlinkoRows,
+  risk: PlinkoRisk,
+): AdminRtpConfiguration {
+  const multipliers = PLINKO_MULTIPLIERS_HUNDREDTHS[rows][risk]
+  const chances = rows === 8 && risk === 'normal'
+    ? [485, 1_567, 5_068, 16_387, 52_986, 16_387, 5_068, 1_567, 485]
+    : binomialChances(rows)
+  return {
+    configuration_ref: `plinko/${basisPoints}`,
+    rtp_basis_points: basisPoints,
+    rows: [...PLINKO_ROWS],
+    risks: [...PLINKO_RISKS],
+    selected_board: {
+      rows,
+      risk,
+      theoretical_rtp_basis_points: basisPoints,
+      slots: multipliers.map((multiplier, slot) => ({
+        slot,
+        multiplier_hundredths: multiplier,
+        chance_thousandths_percent: chances[slot] ?? 0,
+      })),
+    },
+  }
+}
 
-export const rtpProfiles: RtpProfile[] = [
-  profile('rtp-1', adminGames[0]!, 'Promo', 1, 10_200, 'active', 'A. Reyes', hoursAgo(3), hoursAgo(-6)),
-  profile('rtp-2', adminGames[0]!, 'Standard', 1, 9_400, 'verified', 'A. Reyes', daysAgo(4), null, true),
-  profile('rtp-3', adminGames[1]!, 'Standard', 1, 9_400, 'active', 'R. Cruz', daysAgo(12)),
-  profile('rtp-4', adminGames[2]!, 'Standard', 1, 9_600, 'retired', 'R. Cruz', daysAgo(40)),
-  profile('rtp-5', adminGames[2]!, 'Standard', 2, 9_600, 'draft', 'R. Cruz', daysAgo(2)),
-]
+function binomialChances(rows: number): number[] {
+  const weights = Array.from({ length: rows + 1 }, (_, slot) => choose(rows, slot))
+  const total = 2 ** rows
+  const floors = weights.map((weight) => Math.floor((weight * 100_000) / total))
+  const missing = 100_000 - floors.reduce((sum, value) => sum + value, 0)
+  const ranked = weights
+    .map((weight, slot) => ({ slot, remainder: (weight * 100_000) % total }))
+    .sort((a, b) => b.remainder - a.remainder || a.slot - b.slot)
+  for (let i = 0; i < missing; i += 1) {
+    const slot = ranked[i]?.slot ?? 0
+    floors[slot] = (floors[slot] ?? 0) + 1
+  }
+  return floors
+}
 
-export const staffAccounts = [
-  { id: 'st-1', name: 'R. Cruz', email: 'r.cruz@ops.example.com', role: 'Operator', enabled: true },
-  { id: 'st-2', name: 'A. Reyes', email: 'a.reyes@ops.example.com', role: 'Owner', enabled: true },
-  { id: 'st-3', name: 'M. Villa', email: 'm.villa@ops.example.com', role: 'Operator', enabled: false },
-]
+function choose(n: number, k: number): number {
+  let result = 1
+  for (let i = 1; i <= k; i += 1) result = (result * (n - i + 1)) / i
+  return result
+}

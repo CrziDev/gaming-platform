@@ -62,7 +62,6 @@ export function AdminUserDetailPage() {
     return (
       <EmptyState
         title="Account not found"
-        description="This account is no longer in the directory."
         action={
           <Link to={adminPaths.users} className="text-accent-ink hover:text-accent-hi">
             Back to users
@@ -171,7 +170,7 @@ export function AdminUserDetailPage() {
             <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Account controls</h2>
             {user.status === 'closed' ? (
               <p className="text-[12.5px] leading-relaxed text-ink-mute">
-                This account is permanently closed. Its status cannot be changed.
+                This account is permanently closed.
               </p>
             ) : (
               <Button
@@ -251,7 +250,7 @@ function DepositsTab({ userId }: { userId: string }) {
   }
 
   if (!result || result.rows.length === 0) {
-    return <EmptyState title="No deposits" description="This account has never submitted a request." />
+    return <EmptyState title="No deposits" />
   }
 
   return (
@@ -331,7 +330,7 @@ function RoundsTab({ userId }: { userId: string }) {
   }
 
   if (!result || result.rows.length === 0) {
-    return <EmptyState title="No rounds" description="This account has not played a round." />
+    return <EmptyState title="No rounds" />
   }
 
   return (
@@ -368,12 +367,7 @@ function AdjustmentsTab({ userId }: { userId: string }) {
   }
 
   if (!result || result.rows.length === 0) {
-    return (
-      <EmptyState
-        title="No adjustments"
-        description="Nobody has credited or debited this wallet by hand."
-      />
-    )
+    return <EmptyState title="No adjustments" />
   }
 
   return (
@@ -426,9 +420,6 @@ function AdjustmentsTab({ userId }: { userId: string }) {
           />
         }
       />
-      <p className="font-mono text-[10.5px] text-ink-mute">
-        Append-only. No edit, no delete — this is the audit trail.
-      </p>
     </>
   )
 }

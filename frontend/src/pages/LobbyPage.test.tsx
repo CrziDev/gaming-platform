@@ -12,40 +12,43 @@ const guest = { status: 401, body: errorBody('Authentication is required') }
 const player = { status: 200, body: userBody() }
 
 describe('the lobby for a guest', () => {
-  it('merchandises the featured game with its minimum bet and both calls to action', async () => {
+  it('features the playable game with its art, minimum bet, and both calls to action', async () => {
     stubFetchRoutes({ 'GET /me': guest })
 
     renderApp('/')
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Aurora Dice' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Plinko' })).toBeInTheDocument()
     expect(screen.getByText('Featured')).toBeInTheDocument()
     expect(screen.getByText('₱1.00')).toBeInTheDocument()
 
-    const hero = screen.getByRole('heading', { level: 1, name: 'Aurora Dice' }).closest('section')!
+    const hero = screen.getByRole('heading', { level: 1, name: 'Plinko' }).closest('section')!
+    expect(hero.querySelector('img')).toHaveAttribute('src', expect.stringContaining('banners/plinko'))
     expect(within(hero).getByRole('button', { name: 'Join now' })).toBeInTheDocument()
     expect(within(hero).getByRole('link', { name: 'Browse all games' })).toBeInTheDocument()
   })
 
-  it('composes banner, big wins, category grid and promotions in that order', async () => {
+  it('marks future merchandising around the real category grid', async () => {
     stubFetchRoutes({ 'GET /me': guest })
 
     renderApp('/')
 
-    const wins = await screen.findByRole('list', { name: 'Big wins' })
+    const wins = await screen.findByRole('heading', { name: 'Big wins' })
     const grid = await screen.findByRole('list', { name: 'All games' })
-    const promotions = await screen.findByRole('list', { name: 'Promotions' })
-    const banner = screen.getByRole('heading', { level: 1, name: 'Aurora Dice' })
+    const promotions = await screen.findByRole('heading', { name: 'Promotions' })
+    const banner = screen.getByRole('heading', { level: 1, name: 'Plinko' })
 
     expect(banner.compareDocumentPosition(wins) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(wins.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(grid.compareDocumentPosition(promotions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
-    expect(within(wins).getAllByRole('listitem')).toHaveLength(8)
-    expect(within(wins).getByRole('link', { name: 'jack_jones won ₱48,600.00' })).toHaveAttribute(
-      'href',
-      '/game/aurora-dice',
-    )
-    expect(within(promotions).getAllByRole('listitem')).toHaveLength(3)
+    const winsSection = within(wins.closest('section')!)
+    expect(winsSection.getByText('Future Development')).toBeInTheDocument()
+    expect(within(winsSection.getByRole('list', { name: 'Big wins' })).getAllByRole('listitem')).toHaveLength(6)
+    expect(winsSection.queryByRole('link')).not.toBeInTheDocument()
+
+    const promotionsSection = within(promotions.closest('section')!)
+    expect(promotionsSection.getByText('Future development')).toBeInTheDocument()
+    expect(promotionsSection.queryByRole('paragraph')).not.toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Recently Played' })).not.toBeInTheDocument()
   })
 
@@ -56,7 +59,7 @@ describe('the lobby for a guest', () => {
     renderApp('/')
 
     const all = await screen.findByRole('list', { name: 'All games' })
-    expect(within(all).getAllByRole('listitem')).toHaveLength(3)
+    expect(within(all).getAllByRole('listitem')).toHaveLength(4)
     expect(screen.getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/games')
 
     const tabs = screen.getByRole('tablist', { name: 'Browse by category' })
@@ -78,7 +81,7 @@ describe('the lobby for a guest', () => {
     await user.click(within(all).getByRole('button', { name: /Vault Break/ }))
 
     expect(await screen.findByRole('dialog', { name: 'Sign in to play' })).toBeInTheDocument()
-    expect(screen.getByText(/Vault Break is waiting/)).toBeInTheDocument()
+    expect(screen.getByText(/straight to Vault Break/)).toBeInTheDocument()
   })
 })
 
@@ -88,7 +91,7 @@ describe('the lobby for a player', () => {
 
     renderApp('/')
 
-    expect(await screen.findByRole('link', { name: 'Play Aurora Dice' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Play Plinko' })).toBeInTheDocument()
 
     const recent = await screen.findByRole('list', { name: 'Recently Played' })
     expect(within(recent).getAllByRole('listitem')).toHaveLength(2)

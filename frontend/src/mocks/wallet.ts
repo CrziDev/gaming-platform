@@ -6,6 +6,7 @@ import type {
   Round,
   Transaction,
   Wallet,
+  WalletSummary,
 } from '@/api/types'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
@@ -18,6 +19,11 @@ export const currencies: CurrencyMetadata[] = [
 export const wallets: Wallet[] = [
   { currency: 'PHP', balance_minor: 525_000 },
   { currency: 'USD', balance_minor: 14_250 },
+]
+
+export const walletSummary: WalletSummary[] = [
+  { currency: 'PHP', deposited_minor: 650_000, staked_minor: 324_000, returned_minor: 299_000 },
+  { currency: 'USD', deposited_minor: 20_000, staked_minor: 7_500, returned_minor: 6_900 },
 ]
 
 export const paymentMethods: PaymentMethod[] = [
@@ -221,7 +227,7 @@ export const rounds: Round[] = transactions
           ? 'skyline-crash'
           : 'vault-break',
       game_name: stake.label.replace('Stake · ', ''),
-      rtp_profile_id: 'rtp-demo-9600',
+      rtp_basis_points: 9500,
       status: 'settled' as const,
       stake_minor: stakeAmount,
       win_minor: win?.amount_minor ?? 0,
@@ -235,26 +241,32 @@ export const rounds: Round[] = transactions
 export const notifications: Notification[] = [
   {
     id: 'nt-1',
-    message: 'Deposit approved',
+    kind: 'deposit_approved',
     amount_minor: 200_000,
     currency: 'PHP',
-    created_at: minutesAgo(2),
+    detail: null,
+    reference_id: 'dp-1001',
     read: false,
+    created_at: minutesAgo(2),
   },
   {
     id: 'nt-2',
-    message: 'Deposit rejected — reference not found',
-    amount_minor: null,
-    currency: null,
-    created_at: daysAgo(1),
+    kind: 'deposit_rejected',
+    amount_minor: 100_000,
+    currency: 'PHP',
+    detail: 'Reference not found',
+    reference_id: 'dp-1000',
     read: true,
+    created_at: daysAgo(1),
   },
   {
     id: 'nt-3',
-    message: 'Balance credited by support',
+    kind: 'round_win',
     amount_minor: 50_000,
     currency: 'PHP',
-    created_at: daysAgo(3),
+    detail: null,
+    reference_id: 'rd-3001',
     read: true,
+    created_at: daysAgo(3),
   },
 ]

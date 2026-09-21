@@ -1,12 +1,9 @@
 import { api, ApiError } from '@/api/client'
 import { mockRequest, type Page } from '@/api/mock'
-import { usingFixtures } from '@/api/mode'
-import type { BigWin, Category, Game, GameFlag, LobbyRow, Promotion } from '@/api/types'
-import { bigWins, categories, favoriteIds, games, lobbyRows, promotions } from '@/mocks/games'
+import { testFixturesEnabled } from '@/api/mode'
+import type { Category, Game, GameFlag } from '@/api/types'
 
-// The catalogue, a single game, and the category list are real reads. Big
-// wins, promotions, lobby rows, and favorites have no service yet, so outside
-// the demo and tests they are empty and their sections do not render.
+const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
 
 export type GameFilters = {
   category: string
@@ -20,47 +17,54 @@ export type GameFilters = {
 const CATALOGUE_PAGE_SIZE = 100
 
 export async function fetchCategories(): Promise<Category[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { categories } = await import('@/mocks/games')
     return mockRequest(() => categories.filter((category) => category.available))
   }
   const all = await api.get<Category[]>('/categories')
   return all.filter((category) => category.available)
 }
 
-export async function fetchLobbyRows(signedIn: boolean): Promise<LobbyRow[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => lobbyRows(signedIn))
-}
-
-export async function fetchBigWins(): Promise<BigWin[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => [...bigWins])
-}
-
-export async function fetchPromotions(): Promise<Promotion[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => [...promotions])
+export async function fetchRecentlyPlayed(): Promise<Game[]> {
+  if (usingTestFixtures) {
+    const { games, recentlyPlayedIds } = await import('@/mocks/games')
+    return mockRequest(() =>
+      recentlyPlayedIds
+        .map((id) => games.find((game) => game.id === id))
+        .filter((game): game is Game => Boolean(game)),
+    )
+  }
+  const page = await api.get<Page<Game>>(`/recent-games?page=1&size=${CATALOGUE_PAGE_SIZE}`)
+  return page.rows
 }
 
 export async function fetchFavorites(): Promise<Game[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => games.filter((game) => favoriteIds.has(game.id)))
+  if (usingTestFixtures) {
+    const { favoriteIds, games } = await import('@/mocks/games')
+    return mockRequest(() => games.filter((game) => favoriteIds.has(game.id)))
+  }
+  const page = await api.get<Page<Game>>(`/favorites?page=1&size=${CATALOGUE_PAGE_SIZE}`)
+  return page.rows
 }
 
-export async function toggleFavorite(gameId: string): Promise<{ favorite: boolean }> {
-  if (!usingFixtures) return { favorite: false }
-  return mockRequest(() => {
-    if (favoriteIds.has(gameId)) {
-      favoriteIds.delete(gameId)
-      return { favorite: false }
-    }
-    favoriteIds.add(gameId)
-    return { favorite: true }
-  })
+export async function setFavorite({ slug, favorite }: { slug: string; favorite: boolean }): Promise<void> {
+  if (usingTestFixtures) {
+    const { favoriteIds, games } = await import('@/mocks/games')
+    return mockRequest(() => {
+      const game = games.find((entry) => entry.slug === slug)
+      if (!game) return
+      if (favorite) favoriteIds.add(game.id)
+      else favoriteIds.delete(game.id)
+    })
+  }
+  const path = `/games/${encodeURIComponent(slug)}/favorite`
+  if (favorite) await api.put<void>(path)
+  else await api.delete<void>(path)
 }
 
 export async function fetchGames(filters: GameFilters): Promise<Game[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { games } = await import('@/mocks/games')
     return mockRequest(() => {
       const search = filters.search.trim().toLowerCase()
 
@@ -80,12 +84,6 @@ export async function fetchGames(filters: GameFilters): Promise<Game[]> {
     })
   }
 
-  // "Hot" needs round data to mean anything, and no round has been played
-  // until the engine exists; the shelf is honest about that.
-  if (filters.flag === 'hot') {
-    return []
-  }
-
   const params = new URLSearchParams({
     page: '1',
     size: String(CATALOGUE_PAGE_SIZE),
@@ -100,7 +98,8 @@ export async function fetchGames(filters: GameFilters): Promise<Game[]> {
 }
 
 export async function fetchGame(slug: string): Promise<Game | null> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { games } = await import('@/mocks/games')
     return mockRequest(() => games.find((game) => game.slug === slug) ?? null)
   }
   try {
@@ -109,11 +108,4 @@ export async function fetchGame(slug: string): Promise<Game | null> {
     if (error instanceof ApiError && error.status === 404) return null
     throw error
   }
-}
-
-export async function fetchGamesByIds(ids: string[]): Promise<Game[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() =>
-    ids.map((id) => games.find((game) => game.id === id)).filter((game): game is Game => Boolean(game)),
-  )
 }

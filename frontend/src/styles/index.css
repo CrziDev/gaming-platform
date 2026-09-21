@@ -34,6 +34,10 @@
   --radius-card: 12px;
 
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-standard: 180ms;
+  --duration-layout: 220ms;
+  --shadow-overlay: 0 16px 40px rgb(0 0 0 / 0.28), 0 2px 8px rgb(0 0 0 / 0.18);
 
   --breakpoint-chat: 720px;
   --breakpoint-rail: 760px;
@@ -48,6 +52,74 @@
   color-scheme: dark;
 }
 
+/* The application shells own their scrolling. Keep the browser document at one
+   viewport so a shell cannot create a second, page-level scrollbar. Routes
+   outside a shell (password reset, admin sign-in, and error screens) can still
+   scroll through #root when their content is taller than the viewport. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+#root {
+  overflow-y: auto;
+}
+
+/* Scrollbars: a translucent thumb on no track and no buttons, faint at rest and
+   stronger while its region is scrolling (`data-scrolling`, set by
+   app/scrollbars.ts). Chromium and WebKit take the pseudo-element route, which
+   controls every part; Firefox gets the standard properties, which only choose
+   thickness and colour. */
+:root {
+  --scrollbar-thumb: rgb(255 255 255 / 0.12);
+  --scrollbar-thumb-active: rgb(255 255 255 / 0.32);
+}
+
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 5px;
+    background-clip: content-box;
+    background-color: var(--scrollbar-thumb);
+  }
+
+  [data-scrolling]::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-active);
+  }
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  :root {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  [data-scrolling] {
+    scrollbar-color: var(--scrollbar-thumb-active) transparent;
+  }
+}
+
 .scrollbar-hidden {
   scrollbar-width: none;
 }
@@ -55,6 +127,136 @@
 .scrollbar-hidden::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+@keyframes pop-enter {
+  from {
+    opacity: 0;
+    translate: var(--pop-from, 0 0);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes pop-exit {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: var(--pop-from, 0 0);
+  }
+}
+
+@keyframes overlay-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes overlay-exit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialog-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes value-update {
+  from {
+    opacity: 0.45;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pop-enter {
+  animation: pop-enter var(--duration-standard) var(--ease-standard) both;
+}
+
+.pop-exit {
+  animation: pop-exit var(--duration-fast) var(--ease-standard) both;
+}
+
+.overlay-enter {
+  animation: overlay-enter var(--duration-standard) var(--ease-standard) both;
+}
+
+.overlay-exit {
+  animation: overlay-exit var(--duration-fast) var(--ease-standard) both;
+}
+
+.dialog-enter {
+  animation: dialog-enter var(--duration-standard) var(--ease-standard) both;
+}
+
+.dialog-exit {
+  animation: dialog-exit var(--duration-fast) var(--ease-standard) both;
+}
+
+.value-update {
+  animation: value-update var(--duration-standard) var(--ease-standard) both;
+}
+
+.overlay-shadow {
+  box-shadow: var(--shadow-overlay);
+}
+
+@keyframes announcement-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.announcement-marquee {
+  overflow: hidden;
+}
+
+.announcement-track {
+  display: flex;
+  width: max-content;
+  padding-left: 100%;
+  animation: announcement-scroll var(--announcement-duration) linear infinite;
+  will-change: transform;
+}
+
+.announcement-marquee:hover .announcement-track {
+  animation-play-state: paused;
+}
+
+/* The ticker floats at the top of the center shell column. Only reserve room
+   for it once active announcements have loaded, so an empty/error state does
+   not leave a blank strip above the page content. */
+.shell-content-column:has(> .announcement-ticker) > .shell-main {
+  padding-top: 3.375rem;
 }
 
 body {
@@ -89,6 +291,15 @@ body {
   background-image: linear-gradient(180deg, rgb(11 15 20 / 0), rgb(11 15 20 / 0.85));
 }
 
+@utility banner-scrim {
+  background-image: linear-gradient(
+    var(--banner-scrim-angle, 180deg),
+    var(--color-banner) 0%,
+    var(--color-banner) 55%,
+    rgb(22 32 42 / 0) 100%
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -97,5 +308,19 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .announcement-track {
+    display: block;
+    width: auto;
+    padding-left: 0;
+    transform: none;
+    animation: none !important;
+  }
+
+  .announcement-group {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    white-space: normal;
   }
 }

@@ -4,23 +4,21 @@ import type { AccountStatus } from '@/api/types'
 import type { Currency } from '@/lib/money'
 
 import {
-  activateRtpProfile,
   adjustWallet,
   createGame,
-  createRtpProfile,
+  createPaymentMethod,
+  fetchAdminDeposits,
   fetchAdminGame,
   fetchAdminGames,
   fetchAdminPaymentMethods,
   fetchAdminTransactions,
   fetchAdminRounds,
+  fetchAdminRtpConfiguration,
   fetchAllCategories,
   fetchAuditEntries,
-  fetchConsoleAlerts,
+  fetchConsoleSearch,
   fetchDashboard,
   fetchDepositQueue,
-  fetchGameRtpProfiles,
-  fetchRtpProfiles,
-  fetchStaff,
   fetchUser,
   fetchUserAdjustments,
   fetchUserCounts,
@@ -29,13 +27,14 @@ import {
   fetchUserWallets,
   fetchUsers,
   reviewDeposit,
+  setGameRtp,
   setUserStatus,
   updateGame,
-  updateRtpProfile,
+  updatePaymentMethod,
+  type AdminDepositFilter,
   type GameInput,
   type GamePatch,
-  type RtpDraftInput,
-  type RtpSchedule,
+  type PaymentMethodInput,
   type UserFilter,
 } from './api'
 
@@ -44,10 +43,6 @@ export function useDashboard(currency: Currency) {
     queryKey: ['admin', 'dashboard', currency],
     queryFn: () => fetchDashboard(currency),
   })
-}
-
-export function useConsoleAlerts() {
-  return useQuery({ queryKey: ['admin', 'alerts'], queryFn: fetchConsoleAlerts })
 }
 
 export function useAuditEntries(page = 1, size?: number) {
@@ -61,6 +56,13 @@ export function useDepositQueue(page = 1, size?: number) {
   return useQuery({
     queryKey: ['admin', 'deposit-queue', page, size],
     queryFn: () => fetchDepositQueue(page, size),
+  })
+}
+
+export function useAdminDeposits(filter: AdminDepositFilter) {
+  return useQuery({
+    queryKey: ['admin', 'deposits', filter],
+    queryFn: () => fetchAdminDeposits(filter),
   })
 }
 
@@ -151,6 +153,19 @@ export function useAdminGame(id: string) {
   return useQuery({ queryKey: ['admin', 'game', id], queryFn: () => fetchAdminGame(id) })
 }
 
+export function useAdminRtpConfiguration(
+  id: string,
+  basisPoints: number | null,
+  rows: number,
+  risk: 'low' | 'normal' | 'high',
+) {
+  return useQuery({
+    queryKey: ['admin', 'game', id, 'rtp-configuration', basisPoints, rows, risk],
+    queryFn: () => fetchAdminRtpConfiguration(id, basisPoints ?? 0, rows, risk),
+    enabled: id !== '' && basisPoints !== null,
+  })
+}
+
 export function useAllCategories() {
   return useQuery({ queryKey: ['admin', 'categories'], queryFn: fetchAllCategories })
 }
@@ -189,46 +204,44 @@ export function useAdminRounds(filter: Parameters<typeof fetchAdminRounds>[0], e
   })
 }
 
-export function useRtpProfiles() {
-  return useQuery({ queryKey: ['admin', 'rtp'], queryFn: fetchRtpProfiles })
-}
-
-export function useGameRtpProfiles(gameId: string) {
-  return useQuery({
-    queryKey: ['admin', 'rtp', 'game', gameId],
-    queryFn: () => fetchGameRtpProfiles(gameId),
-    enabled: gameId !== '',
-  })
-}
-
-export function useCreateRtpProfile() {
+export function useSetGameRtp() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ gameId, input }: { gameId: string; input: RtpDraftInput }) => createRtpProfile(gameId, input),
+    mutationFn: ({ gameId, basisPoints }: { gameId: string; basisPoints: number }) => setGameRtp(gameId, basisPoints),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
-}
-
-export function useUpdateRtpProfile() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: Partial<RtpDraftInput> }) => updateRtpProfile(id, patch),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
-  })
-}
-
-export function useActivateRtpProfile() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, schedule }: { id: string; schedule: RtpSchedule }) => activateRtpProfile(id, schedule),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
-  })
-}
-
-export function useStaff() {
-  return useQuery({ queryKey: ['admin', 'staff'], queryFn: fetchStaff })
 }
 
 export function useAdminPaymentMethods() {
   return useQuery({ queryKey: ['admin', 'payment-methods'], queryFn: fetchAdminPaymentMethods })
+}
+
+export function useCreatePaymentMethod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createPaymentMethod,
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'payment-methods'] }),
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+    ]),
+  })
+}
+
+export function useUpdatePaymentMethod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<PaymentMethodInput> }) => updatePaymentMethod({ id, patch }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'payment-methods'] }),
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+    ]),
+  })
+}
+
+export function useConsoleSearch(query: string) {
+  return useQuery({
+    queryKey: ['admin', 'search', query],
+    queryFn: ({ signal }) => fetchConsoleSearch(query, signal),
+    enabled: query.trim().length >= 2,
+  })
 }

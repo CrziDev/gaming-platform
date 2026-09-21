@@ -1,35 +1,47 @@
-import { ChevronLeft, Heart, Maximize2, Minimize2, ShieldCheck } from 'lucide-react'
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { ChevronLeft, Heart, Maximize2, Minimize2, SlidersHorizontal } from 'lucide-react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from 'react'
 import { Link, useParams } from 'react-router'
 
-import { GameRow } from '@/components/catalogue/GameRow'
-import { Button, IconButton } from '@/components/ui/Button'
+import { GameHost } from '@/components/game/GameHost'
+import { SoundToggle } from '@/components/game/SoundToggle'
+import { Button, IconButton, buttonStyles } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ChipTabs } from '@/components/ui/Tabs'
 import { useToast } from '@/components/ui/Toast'
-import { useFavorites, useGame, useGames, useToggleFavorite } from '@/features/catalogue'
-import { useRecentRounds, useWallet } from '@/features/wallet'
+import { useFavorites, useGame, useSetFavorite } from '@/features/catalogue'
+import { GameHistory, gameModuleFor, useGameSession, type GameSession } from '@/features/gameplay'
+import { useActiveCurrency, useWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
-import { formatClockSeconds, formatMultiplier } from '@/lib/format'
-import { formatMoney, money, type Money } from '@/lib/money'
+import { MOBILE_GAME_QUERY, useMediaQuery } from '@/lib/media'
+import { formatMoney, money, type Currency, type Money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
 export function GamePage() {
   const { slug = '' } = useParams()
   const gameQuery = useGame(slug)
   const game = gameQuery.data
-  // A title is denominated in one currency, so the balance beside the bet
-  // controls is that wallet's — never whichever one the header happens to show.
-  const { data: wallet } = useWallet(game?.currency ?? 'PHP')
-  const catalogue = useGames({ category: 'all', search: '', sort: 'name' })
+  const currency = useActiveCurrency()
+  const { data: wallet } = useWallet(currency)
   const favorites = useFavorites(true)
-  const toggleFavorite = useToggleFavorite()
+  const setFavorite = useSetFavorite()
   const hostRef = useRef<HTMLElement>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  const [shortfall, setShortfall] = useState(false)
+  const [stake, setStake] = useState<{ slug: string; currency: Currency; amountMinor: number } | null>(null)
+  const mobileGame = useMediaQuery(MOBILE_GAME_QUERY)
+
+  const module = gameModuleFor(slug)
+  const onShortfall = useCallback(() => setShortfall(true), [])
+  const session = useGameSession({ module, slug, currency, onShortfall })
 
   useEffect(() => {
     const sync = () => setFullscreen(document.fullscreenElement !== null)
@@ -50,18 +62,20 @@ export function GamePage() {
   }
 
   if (gameQuery.isPending) {
-    return <Skeleton className="h-96 rounded-card" />
+    const state = <Skeleton className="h-96 rounded-card" />
+    return mobileGame ? <MobileGameState title="Game">{state}</MobileGameState> : state
   }
 
   if (gameQuery.isError) {
-    return <ErrorState message={gameQuery.error.message} onRetry={() => void gameQuery.refetch()} />
+    const state = <ErrorState message={gameQuery.error.message} onRetry={() => void gameQuery.refetch()} />
+    return mobileGame ? <MobileGameState title="Game unavailable">{state}</MobileGameState> : state
   }
 
   if (!game) {
-    return (
+    const state = (
       <EmptyState
         title="Game unavailable"
-        description="This game is not in the catalogue right now."
+        description="This game isn't available right now."
         action={
           <Link to={paths.games} className="text-accent-ink hover:text-accent-hi">
             Back to games
@@ -69,15 +83,112 @@ export function GamePage() {
         }
       />
     )
+    return mobileGame ? <MobileGameState title="Game unavailable">{state}</MobileGameState> : state
   }
 
-  const related = (catalogue.data ?? []).filter(
-    (entry) => entry.category_slug === game.category_slug && entry.id !== game.id,
-  )
   const favorite = favorites.data?.some((entry) => entry.id === game.id) ?? false
+  const limits = game.wager_limits[currency]
+  const stakeMatches = stake?.slug === game.slug && stake.currency === currency
+  const stakeMinor = stakeMatches ? stake.amountMinor : limits.min_wager_minor
+  const setStakeMinor: Dispatch<SetStateAction<number>> = (next) => {
+    setStake((current) => {
+      const amount = current?.slug === game.slug && current.currency === currency ? current.amountMinor : limits.min_wager_minor
+      return {
+        slug: game.slug,
+        currency,
+        amountMinor: typeof next === 'function' ? next(amount) : next,
+      }
+    })
+  }
+  const paramsSlot = module ? (
+    <module.Controls
+      params={session.params}
+      onChange={session.setParams}
+      disabled={!session.canChangeParams}
+    />
+  ) : null
+  const paramsSummary = module ? module.summarizeParams(session.params) : 'Game settings'
+  const gameHost = (
+    <GameHost
+      ref={hostRef}
+      name={game.name}
+      fullscreen={fullscreen}
+      fitAvailable={mobileGame}
+      frame={
+        module
+          ? {
+              url: module.frameUrl,
+              key: session.frame.key,
+              status: session.frame.status,
+              error: session.frame.error,
+              onRetry: session.frame.retry,
+              aspect: module.aspect,
+            }
+          : undefined
+      }
+      frameRef={module ? session.attachFrame : undefined}
+      chrome={module ? <SoundToggle on={session.sound} onChange={session.setSound} /> : null}
+    />
+  )
+
+  if (mobileGame) {
+    return (
+      <div className="min-h-full w-full pb-[calc(9rem+env(safe-area-inset-bottom))] sm:pb-[calc(6rem+env(safe-area-inset-bottom))]">
+        <div className="flex h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] flex-col sm:h-[calc(100dvh-5rem-env(safe-area-inset-bottom))]">
+          <nav
+            aria-label="Game toolbar"
+            className="flex min-h-14 shrink-0 items-center gap-1 px-2 pt-[env(safe-area-inset-top)]"
+          >
+            <MobileGameBack />
+            <h1 className="min-w-0 flex-1 truncate px-1 text-[15px] font-semibold tracking-[-0.01em] text-ink">
+              {game.name}
+            </h1>
+            <IconButton
+              label={favorite ? 'Remove from favorites' : 'Add to favorites'}
+              aria-pressed={favorite}
+              disabled={setFavorite.isPending}
+              onClick={() => setFavorite.mutate({ slug: game.slug, favorite: !favorite })}
+              className={cn(favorite && 'text-accent-ink')}
+            >
+              <Heart aria-hidden size={17} strokeWidth={1.6} fill={favorite ? 'currentColor' : 'none'} />
+            </IconButton>
+            <IconButton label={fullscreen ? 'Exit full screen' : 'Full screen'} onClick={() => void toggleFullscreen()}>
+              {fullscreen ? (
+                <Minimize2 aria-hidden size={17} strokeWidth={1.5} />
+              ) : (
+                <Maximize2 aria-hidden size={17} strokeWidth={1.5} />
+              )}
+            </IconButton>
+          </nav>
+
+          <div className="min-h-0 flex-1 px-3.5 py-2">{gameHost}</div>
+        </div>
+
+        <BetControls
+          mobile
+          stakeMinor={stakeMinor}
+          setStakeMinor={setStakeMinor}
+          balance={wallet ? money(wallet.balance_minor, wallet.currency) : null}
+          currency={currency}
+          minMinor={limits.min_wager_minor}
+          maxMinor={limits.max_wager_minor}
+          stepMinor={limits.wager_step_minor}
+          session={module ? session : null}
+          paramsSlot={paramsSlot}
+          paramsSummary={paramsSummary}
+          shortfall={shortfall}
+          onShortfall={setShortfall}
+        />
+
+        <div className="px-3.5">
+          <GameHistory gameId={game.id} currency={currency} />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
       <nav aria-label="Breadcrumb" className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-ink-mute">
           <Link to={paths.games} className="inline-flex min-h-11 items-center gap-1 hover:text-ink-soft">
@@ -94,8 +205,8 @@ export function GamePage() {
           <IconButton
             label={favorite ? 'Remove from favorites' : 'Add to favorites'}
             aria-pressed={favorite}
-            disabled={toggleFavorite.isPending}
-            onClick={() => toggleFavorite.mutate(game.id)}
+            disabled={setFavorite.isPending}
+            onClick={() => setFavorite.mutate({ slug: game.slug, favorite: !favorite })}
             className={cn(favorite && 'text-accent-ink')}
           >
             <Heart aria-hidden size={16} strokeWidth={1.6} fill={favorite ? 'currentColor' : 'none'} />
@@ -111,76 +222,103 @@ export function GamePage() {
         </div>
       </nav>
 
-      <div className="grid gap-5 wide:grid-cols-[300px_minmax(0,1fr)_300px] wide:items-start">
-        <div className="order-2 wide:order-1">
+      <div className="grid gap-4 sm:grid-cols-[280px_minmax(0,1fr)] sm:items-start">
+        <div className="order-2 flex flex-col gap-4 sm:order-1">
           <BetControls
+            mobile={false}
+            stakeMinor={stakeMinor}
+            setStakeMinor={setStakeMinor}
             balance={wallet ? money(wallet.balance_minor, wallet.currency) : null}
-            minMinor={game.min_wager_minor}
-            maxMinor={game.max_wager_minor}
-            stepMinor={game.wager_step_minor}
+            currency={currency}
+            minMinor={limits.min_wager_minor}
+            maxMinor={limits.max_wager_minor}
+            stepMinor={limits.wager_step_minor}
+            session={module ? session : null}
+            paramsSlot={paramsSlot}
+            paramsSummary={paramsSummary}
+            shortfall={shortfall}
+            onShortfall={setShortfall}
           />
         </div>
 
-        <GameHost ref={hostRef} name={game.name} className="order-1 wide:order-2" />
-
-        <div className="order-3">
-          <ActivityPanel gameId={game.id} />
+        <div className="order-1 mx-auto w-full max-w-[520px] min-w-0 sm:order-2 sm:max-w-none">
+          {gameHost}
         </div>
       </div>
 
-      {related.length > 0 ? (
-        <GameRow title={`More ${game.category_name}`} categorySlug={game.category_slug} games={related} />
-      ) : null}
+      <GameHistory gameId={game.id} currency={currency} />
     </div>
   )
 }
 
-type GameHostProps = {
-  name: string
-  className?: string
-  ref?: RefObject<HTMLElement | null>
+function MobileGameBack() {
+  return (
+    <Link
+      to={paths.games}
+      aria-label="Back to games"
+      title="Back to games"
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-input text-ink-mute transition-colors duration-fast ease-standard hover:bg-wash hover:text-ink-soft"
+    >
+      <ChevronLeft aria-hidden size={18} strokeWidth={1.6} />
+    </Link>
+  )
 }
 
-function GameHost({ name, className, ref }: GameHostProps) {
+function MobileGameState({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section
-      ref={ref}
-      aria-label={`${name} game canvas`}
-      className={cn(
-        'relative aspect-4/3 overflow-hidden rounded-card bg-surface-3 wide:aspect-16/10',
-        '[&:fullscreen]:aspect-auto [&:fullscreen]:size-full [&:fullscreen]:rounded-none',
-        className,
-      )}
-    >
-
-      <div className="absolute inset-x-0 top-0 flex items-center p-3">
-        <span className="label-mono inline-flex items-center gap-1.5 rounded-chip bg-base/70 px-2.5 py-1.5 text-ink-mute">
-          <ShieldCheck aria-hidden size={12} strokeWidth={1.5} />
-          Fair game
-        </span>
-      </div>
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-        <span className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{name}</span>
-        <span className="label-mono text-ink-mute">game canvas · aspect-locked slot</span>
-      </div>
-    </section>
+    <div className="flex h-dvh flex-col">
+      <nav
+        aria-label="Game toolbar"
+        className="flex min-h-14 shrink-0 items-center gap-1 px-2 pt-[env(safe-area-inset-top)]"
+      >
+        <MobileGameBack />
+        <h1 className="min-w-0 flex-1 truncate px-1 text-[15px] font-semibold tracking-[-0.01em] text-ink">
+          {title}
+        </h1>
+      </nav>
+      <div className="min-h-0 flex-1 p-3.5">{children}</div>
+    </div>
   )
 }
 
 type BetControlsProps = {
+  mobile: boolean
+  stakeMinor: number
+  setStakeMinor: Dispatch<SetStateAction<number>>
   balance: Money | null
+  currency: Currency
   minMinor: number
   maxMinor: number
   stepMinor: number
+  // Present only for a title with an engine; every other game keeps the display slot.
+  session: GameSession | null
+  paramsSlot: ReactNode
+  paramsSummary: string
+  shortfall: boolean
+  onShortfall: (open: boolean) => void
 }
 
-function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProps) {
-  const [mode, setMode] = useState<'manual' | 'auto'>('manual')
-  const [stakeMinor, setStakeMinor] = useState(minMinor)
-  const [shortfall, setShortfall] = useState(false)
+function BetControls({
+  mobile,
+  stakeMinor,
+  setStakeMinor,
+  balance,
+  currency,
+  minMinor,
+  maxMinor,
+  stepMinor,
+  session,
+  paramsSlot,
+  paramsSummary,
+  shortfall,
+  onShortfall,
+}: BetControlsProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const toast = useToast()
-  const currency = balance?.currency ?? 'PHP'
+  const busy = session?.playing ?? false
+  // A title with an engine offers a bet only once its board is configured from the
+  // server's manifest; the host overlay says why while it is not.
+  const offered = session ? session.canPlay : true
 
   // The server accepts only min + n × step, so the selector can only produce that.
   // A stake is player input rather than a financial outcome, but an input the server
@@ -191,35 +329,169 @@ function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProp
     return minMinor + steps * stepMinor
   }
 
-  const place = () => {
+  const covered = () => {
     if (!balance || stakeMinor > balance.amount_minor) {
-      setShortfall(true)
+      onShortfall(true)
+      return false
+    }
+    return true
+  }
+
+  const place = () => {
+    if (!covered()) return
+    if (!session) {
+      toast.push("This game isn't available to play yet.")
       return
     }
-    toast.push(`Stake of ${formatMoney(money(stakeMinor, currency))} sent to the game module.`)
+    void session.play(stakeMinor)
+  }
+
+  const shortfallDialog = (
+    <Modal
+      open={shortfall}
+      onClose={() => onShortfall(false)}
+      title="Not enough balance"
+      description="This stake is more than your wallet holds. Deposit to keep playing."
+      footer={
+        <div className="grid grid-cols-2 gap-2.5">
+          <Button variant="secondary" onClick={() => onShortfall(false)}>
+            Change stake
+          </Button>
+          <Link
+            to={paths.deposit}
+            onClick={() => onShortfall(false)}
+            className={buttonStyles('primary', 'md')}
+          >
+            Deposit
+          </Link>
+        </div>
+      }
+    >
+      <dl className="flex flex-col gap-2 text-[13.5px]">
+        <div className="flex justify-between gap-4">
+          <dt className="text-ink-mute">Stake</dt>
+          <dd className="font-mono font-medium tnum">{formatMoney(money(stakeMinor, currency))}</dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-ink-mute">Balance</dt>
+          <dd className="font-mono font-medium tnum">{balance ? formatMoney(balance) : '—'}</dd>
+        </div>
+      </dl>
+    </Modal>
+  )
+
+  if (mobile) {
+    return (
+      <>
+        <section
+          aria-label="Bet controls"
+          className="overlay-shadow fixed bottom-0 z-40 border-t border-white/5 bg-panel p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:grid sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:items-center sm:gap-2 [left:env(safe-area-inset-left)] [right:env(safe-area-inset-right)]"
+        >
+          <div className="mb-2 flex min-h-11 items-center justify-between gap-2 sm:mb-0">
+            <Link
+              to={paths.deposit}
+              className="flex min-h-11 min-w-0 flex-col justify-center rounded-input px-2 text-left hover:bg-wash"
+            >
+              <span className="label-mono text-ink-mute">Balance</span>
+              <span className="truncate font-mono text-[12.5px] font-medium text-ink-soft tnum">
+                {balance ? formatMoney(balance) : '—'}
+              </span>
+            </Link>
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded={settingsOpen}
+              onClick={() => setSettingsOpen(true)}
+              className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-input px-2.5 text-[12px] font-medium text-ink-mute transition-colors duration-fast ease-standard hover:bg-wash hover:text-ink-soft"
+            >
+              <SlidersHorizontal aria-hidden size={15} strokeWidth={1.6} className="shrink-0" />
+              <span className="truncate">{paramsSummary}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(116px,0.85fr)] gap-2">
+            <div className="grid min-w-0 grid-cols-[44px_minmax(0,1fr)_44px] items-center rounded-input bg-inset p-0.5">
+              <button
+                type="button"
+                aria-label="Decrease bet"
+                onClick={() => setStakeMinor((value) => clamp(value - stepMinor))}
+                className="inline-flex min-h-12 items-center justify-center rounded-[7px] text-[16px] text-ink-mute hover:bg-wash hover:text-ink-soft"
+              >
+                −
+              </button>
+              <div className="min-w-0 truncate text-center font-mono text-[14px] font-medium text-ink tnum">
+                {formatMoney(money(stakeMinor, currency))}
+              </div>
+              <button
+                type="button"
+                aria-label="Increase bet"
+                onClick={() => setStakeMinor((value) => clamp(value + stepMinor))}
+                className="inline-flex min-h-12 items-center justify-center rounded-[7px] text-[16px] text-ink-mute hover:bg-wash hover:text-ink-soft"
+              >
+                +
+              </button>
+            </div>
+
+            <Button variant="play" size="lg" fullWidth onClick={place} disabled={busy || !offered}>
+              PLACE BET
+            </Button>
+          </div>
+        </section>
+
+        <Modal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          title="Bet settings"
+          description="Adjust the next stake and game setup."
+          placement="bottom"
+          footer={
+            <Button fullWidth onClick={() => setSettingsOpen(false)}>
+              Done
+            </Button>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="label-mono text-ink-mute">Bet amount</span>
+                <span className="font-mono text-[15px] font-medium text-ink tnum">
+                  {formatMoney(money(stakeMinor, currency))}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setStakeMinor((value) => clamp(Math.floor(value / 2)))}
+                >
+                  ½
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setStakeMinor((value) => clamp(value * 2))}>
+                  2×
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => balance && setStakeMinor(clamp(balance.amount_minor))}
+                >
+                  Max
+                </Button>
+              </div>
+            </div>
+
+            {paramsSlot ? <div className="border-t border-white/5 pt-4">{paramsSlot}</div> : null}
+          </div>
+        </Modal>
+
+        {shortfallDialog}
+      </>
+    )
   }
 
   return (
     <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-3.5">
-      <ChipTabs
-        items={[
-          { id: 'manual' as const, label: 'Manual' },
-          { id: 'auto' as const, label: 'Auto' },
-        ]}
-        value={mode}
-        onChange={setMode}
-        label="Bet mode"
-      />
-
       <div className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between">
-          <span className="label-mono text-ink-mute">Bet amount</span>
-          {balance ? (
-            <span className="font-mono text-[11px] text-ink-mute">
-              balance {formatMoney(balance, { decimals: 'trim' })}
-            </span>
-          ) : null}
-        </div>
+        <span className="label-mono text-ink-mute">Bet amount</span>
 
         <div className="flex items-center gap-2">
           <Button
@@ -262,133 +534,13 @@ function BetControls({ balance, minMinor, maxMinor, stepMinor }: BetControlsProp
         </div>
       </div>
 
-      <div className="rounded-input bg-inset p-3">
-        <p className="font-mono text-[10.5px] leading-relaxed text-ink-mute">
-          Game parameter slot — rows, risk or lines come from the game manifest. Games that ship their
-          own controls leave this panel empty.
-        </p>
-      </div>
+      {paramsSlot}
 
-      <Button variant="play" size="lg" fullWidth onClick={place}>
+      <Button variant="play" size="lg" fullWidth onClick={place} disabled={busy || !offered}>
         PLACE BET
       </Button>
 
-      <Modal
-        open={shortfall}
-        onClose={() => setShortfall(false)}
-        title="Not enough balance"
-        description={`This stake is more than your wallet holds. Deposit to keep playing.`}
-        footer={
-          <div className="grid grid-cols-2 gap-2.5">
-            <Button variant="secondary" onClick={() => setShortfall(false)}>
-              Change stake
-            </Button>
-            <Link to={paths.deposit} className="contents">
-              <Button onClick={() => setShortfall(false)}>Deposit</Button>
-            </Link>
-          </div>
-        }
-      >
-        <dl className="flex flex-col gap-2 text-[13.5px]">
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-mute">Stake</dt>
-            <dd className="font-mono font-medium tnum">{formatMoney(money(stakeMinor, currency))}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-mute">Balance</dt>
-            <dd className="font-mono font-medium tnum">
-              {balance ? formatMoney(balance) : '—'}
-            </dd>
-          </div>
-        </dl>
-      </Modal>
-    </section>
-  )
-}
-
-function ActivityPanel({ gameId }: { gameId: string }) {
-  const [tab, setTab] = useState<'activity' | 'rules'>('activity')
-  const roundsQuery = useRecentRounds(gameId)
-  const recentRounds = roundsQuery.data ?? []
-
-  return (
-    <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-3.5">
-      <ChipTabs
-        items={[
-          { id: 'activity' as const, label: 'My Activity' },
-          { id: 'rules' as const, label: 'Rules' },
-        ]}
-        value={tab}
-        onChange={setTab}
-        label="Game side panel"
-      />
-
-      {tab === 'activity' ? (
-        roundsQuery.isPending ? (
-          <div className="flex flex-col gap-2.5" aria-label="Loading recent rounds">
-            <Skeleton className="h-12 rounded-tile" />
-            <Skeleton className="h-12 rounded-tile" />
-          </div>
-        ) : roundsQuery.isError ? (
-          <div className="flex flex-col items-start gap-2.5">
-            <p className="text-[13px] leading-relaxed text-ink-mute">
-              Recent rounds could not be loaded.
-            </p>
-            <Button variant="secondary" size="sm" onClick={() => void roundsQuery.refetch()}>
-              Retry
-            </Button>
-          </div>
-        ) : (
-          <>
-            {recentRounds.length === 0 ? (
-            <p className="text-[13px] leading-relaxed text-ink-mute">
-              No rounds yet. Every settled round lands here and in your history.
-            </p>
-            ) : null}
-            <ul className="flex flex-col gap-2.5">
-              {recentRounds.map((round) => (
-                <li key={round.id} className="flex items-center justify-between gap-3">
-                  <span className="flex flex-col">
-                    <span className="font-mono text-[11.5px] text-ink-mute">
-                      {formatClockSeconds(round.started_at)}
-                    </span>
-                    <span className="text-[13px] text-ink-soft">
-                      Bet {formatMoney(money(round.stake_minor, round.currency), { decimals: 'trim' })}
-                      {round.multiplier_hundredths
-                        ? ` · ${formatMultiplier(round.multiplier_hundredths)}`
-                        : ''}
-                    </span>
-                  </span>
-                  {round.win_minor === null ? (
-                    <StatusBadge status={round.status} />
-                  ) : (
-                    <MoneyDisplay
-                      value={money(round.win_minor, round.currency)}
-                      tone="auto"
-                      className="text-[13.5px]"
-                    />
-                  )}
-                </li>
-              ))}
-            </ul>
-
-            <div className="flex items-baseline justify-between rounded-input bg-inset p-3">
-              <span className="label-mono text-ink-mute">Recent rounds</span>
-              <span className="font-mono text-[15px] font-medium tnum">{recentRounds.length}</span>
-            </div>
-
-            <Link to={paths.history} className="text-[13px] text-accent-ink hover:text-accent-hi">
-              Full history →
-            </Link>
-          </>
-        )
-      ) : (
-        <p className="text-[13.5px] leading-relaxed text-ink-soft">
-          Every round is settled by the game engine and written to your history as two entries — the
-          stake and, when you win, the return. A stake and its win are never netted into one figure,
-          so the ledger always reconciles against your balance.
-        </p>
-      )}
+      {shortfallDialog}
     </section>
   )
 }

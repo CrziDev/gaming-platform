@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/gaming-platform/backend/internal/money"
 	"github.com/gaming-platform/backend/internal/testdb"
@@ -46,7 +47,7 @@ func createWalletTestUser(t *testing.T, db *sql.DB) string {
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM audit_logs WHERE actor_user_id = ($1::text)::uuid`, id)
-		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid`, id)
+		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid OR actor_user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM wallets WHERE user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM users WHERE id = ($1::text)::uuid`, id)
 	})
@@ -299,5 +300,61 @@ func TestConcurrentDebitsCannotOverspend(t *testing.T) {
 	item, err := Get(context.Background(), db, userID, "PHP")
 	if err != nil || item.BalanceMinor != 30 {
 		t.Fatalf("wallet balance = %d, err = %v", item.BalanceMinor, err)
+	}
+}
+
+func TestSummarizeTotalsEachWalletOnItsOwn(t *testing.T) {
+	db := walletTestDB(t)
+	userID := createWalletTestUser(t, db)
+	if _, err := List(context.Background(), db, userID); err != nil {
+		t.Fatalf("provision wallets: %v", err)
+	}
+	movements := []struct {
+		currency, kind string
+		amount         int64
+	}{
+		{"PHP", "deposit", 10_000},
+		{"PHP", "wager", -200},
+		{"PHP", "win", 340},
+		{"PHP", "adjustment", 500},
+		{"USD", "deposit", 700},
+	}
+	for i, m := range movements {
+		if _, err := Move(context.Background(), db, userID, m.currency, m.kind, m.amount, fmt.Sprintf("summary-%d", i), "summary fixture"); err != nil {
+			t.Fatalf("move %+v: %v", m, err)
+		}
+	}
+
+	result, err := Summarize(context.Background(), db, userID, SummaryFilter{})
+	if err != nil {
+		t.Fatalf("summarize: %v", err)
+	}
+	want := map[string]Summary{
+		"PHP": {Currency: "PHP", DepositedMinor: 10_000, StakedMinor: 200, ReturnedMinor: 340},
+		"USD": {Currency: "USD", DepositedMinor: 700},
+	}
+	if len(result) != len(want) {
+		t.Fatalf("summaries = %+v, want one per wallet", result)
+	}
+	for _, item := range result {
+		if item != want[item.Currency] {
+			t.Fatalf("summary for %s = %+v, want %+v", item.Currency, item, want[item.Currency])
+		}
+	}
+
+	only, err := Summarize(context.Background(), db, userID, SummaryFilter{Currency: "USD"})
+	if err != nil || len(only) != 1 || only[0] != want["USD"] {
+		t.Fatalf("summary filtered to USD = %+v, err = %v", only, err)
+	}
+
+	future := time.Now().Add(time.Hour)
+	later, err := Summarize(context.Background(), db, userID, SummaryFilter{From: &future})
+	if err != nil {
+		t.Fatalf("summarize from the future: %v", err)
+	}
+	for _, item := range later {
+		if item.DepositedMinor != 0 || item.StakedMinor != 0 || item.ReturnedMinor != 0 {
+			t.Fatalf("a window with no movements must total zero: %+v", item)
+		}
 	}
 }

@@ -1,14 +1,21 @@
-import { Bell, ChevronRight } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router'
 
+import type { Notification } from '@/api/types'
 import { IconButton } from '@/components/ui/Button'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
+import { SeeAll } from '@/components/ui/SeeAll'
 import { useMarkNotificationsRead, useNotifications } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatRelative } from '@/lib/format'
-import { money } from '@/lib/money'
+import { formatMoney, money } from '@/lib/money'
 import { paths } from '@/routes/paths'
+
+const labels: Record<Notification['kind'], string> = {
+  deposit_approved: 'Deposit approved',
+  deposit_rejected: 'Deposit rejected',
+  round_win: 'Big win',
+}
 
 export function NotificationsPanel() {
   const [open, setOpen] = useState(false)
@@ -31,12 +38,6 @@ export function NotificationsPanel() {
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [open])
 
-  // No notification service exists yet: a bell with nothing behind it is a
-  // control implying a feature that does not exist.
-  if (notifications !== undefined && notifications.length === 0) {
-    return null
-  }
-
   return (
     <div ref={containerRef} className="relative">
       <IconButton label="Notifications" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
@@ -47,7 +48,7 @@ export function NotificationsPanel() {
       </IconButton>
 
       {open ? (
-        <div className="absolute right-0 z-40 mt-1.5 w-[min(22rem,calc(100vw-2rem))] rounded-card bg-surface-2 p-1">
+        <div className="pop-enter overlay-shadow absolute right-0 z-40 mt-1.5 w-[min(22rem,calc(100vw-2rem))] rounded-card bg-surface-2 p-1">
           <header className="flex items-center justify-between px-3 pt-2 pb-1.5">
             <span className="text-[13px] font-semibold text-ink-soft">Notifications</span>
             <button
@@ -59,7 +60,11 @@ export function NotificationsPanel() {
             </button>
           </header>
 
-          <ul className="flex max-h-80 flex-col gap-0.5 overflow-y-auto">
+          {notifications !== undefined && notifications.length === 0 ? (
+            <p className="px-3 py-4 text-[12.5px] text-ink-mute">Nothing yet</p>
+          ) : null}
+
+          <ul aria-label="Notifications" className="flex max-h-80 flex-col gap-0.5 overflow-y-auto">
             {notifications?.map((notification) => (
               <li
                 key={notification.id}
@@ -81,18 +86,7 @@ export function NotificationsPanel() {
                       notification.read ? 'text-ink-mute' : 'text-ink-soft',
                     )}
                   >
-                    {notification.message}
-                    {notification.amount_minor !== null && notification.currency ? (
-                      <>
-                        {' — '}
-                        <MoneyDisplay
-                          value={money(notification.amount_minor, notification.currency)}
-                          tone="auto"
-                          sign="always"
-                          className="text-[13px]"
-                        />
-                      </>
-                    ) : null}
+                    <Label notification={notification} />
                   </span>
                   <span className="font-mono text-[10.5px] text-ink-mute">
                     {formatRelative(notification.created_at)}
@@ -102,16 +96,37 @@ export function NotificationsPanel() {
             ))}
           </ul>
 
-          <Link
-            to={paths.history}
-            onClick={() => setOpen(false)}
-            className="mt-1 flex min-h-11 items-center justify-center gap-1 rounded-input text-[12.5px] font-medium text-accent-ink transition-colors duration-[120ms] hover:bg-wash lg:min-h-9"
-          >
-            See all in History
-            <ChevronRight aria-hidden size={14} strokeWidth={1.5} />
-          </Link>
+          <div className="flex justify-end px-3">
+            <SeeAll to={paths.history} subject="in history" onClick={() => setOpen(false)} />
+          </div>
         </div>
       ) : null}
     </div>
+  )
+}
+
+// A credit reads with its sign and colour; a refused deposit's amount is the
+// sum that did not move, so it reads plain beside the reason.
+function Label({ notification }: { notification: Notification }) {
+  const amount =
+    notification.amount_minor !== null && notification.currency
+      ? money(notification.amount_minor, notification.currency)
+      : null
+
+  return (
+    <>
+      {labels[notification.kind]}
+      {amount ? (
+        <>
+          {' — '}
+          {notification.kind === 'deposit_rejected' ? (
+            <span className="font-mono tnum">{formatMoney(amount)}</span>
+          ) : (
+            <MoneyDisplay value={amount} tone="auto" sign="always" className="text-[13px]" />
+          )}
+        </>
+      ) : null}
+      {notification.detail ? ` — ${notification.detail}` : null}
+    </>
   )
 }

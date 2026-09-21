@@ -2,18 +2,17 @@ import { Layers, X } from 'lucide-react'
 import { useSearchParams } from 'react-router'
 
 import { GameGrid, gameGrid } from '@/components/catalogue/GameGrid'
-import { Select } from '@/components/ui/Field'
 import { SkeletonGrid } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { categoryIcon } from '@/components/shell/nav'
 import type { GameFlag } from '@/api/types'
-import { useCategories, useGames, type GameFilters } from '@/features/catalogue'
+import { useCategories, useGames } from '@/features/catalogue'
 
 const shelves: Record<GameFlag, { title: string; empty: string }> = {
-  hot: { title: 'Hot games', empty: 'Nothing is trending right now. The full catalogue is one tap away.' },
-  new: { title: 'New games', empty: 'No new releases this week. The full catalogue is one tap away.' },
+  hot: { title: 'Hot games', empty: 'Nothing is trending right now.' },
+  new: { title: 'New games', empty: 'No new releases this week.' },
 }
 
 export function GamesPage({ flag }: { flag?: GameFlag }) {
@@ -21,11 +20,10 @@ export function GamesPage({ flag }: { flag?: GameFlag }) {
 
   const category = params.get('category') ?? 'all'
   const search = params.get('q') ?? ''
-  const sort = (params.get('sort') as GameFilters['sort']) ?? 'name'
   const shelf = flag ? shelves[flag] : undefined
 
   const categoriesQuery = useCategories()
-  const gamesQuery = useGames({ category, search, sort, ...(flag ? { flag } : {}) })
+  const gamesQuery = useGames({ category, search, sort: 'name', ...(flag ? { flag } : {}) })
 
   const tabs: TabItem<string>[] = [
     { id: 'all', label: 'All', icon: Layers },
@@ -61,37 +59,20 @@ export function GamesPage({ flag }: { flag?: GameFlag }) {
           label="Filter by category"
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {search === '' ? null : (
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="font-mono text-[12px] text-ink-mute">
-              {gamesQuery.data?.length ?? 0} games
-            </span>
-            {search === '' ? null : (
-              <button
-                type="button"
-                onClick={() => update({ q: '' })}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-chip bg-surface-2 px-2.5 text-[12.5px] text-ink"
-              >
-                <span className="text-ink-mute">Search</span>
-                {search}
-                <X aria-hidden size={13} strokeWidth={1.5} className="text-ink-mute" />
-                <span className="sr-only">Clear search</span>
-              </button>
-            )}
-          </div>
-          <label className="flex items-center gap-2 text-[13px] text-ink-mute">
-            Sort
-            <Select
-              value={sort}
-              onChange={(event) => update({ sort: event.target.value })}
-              aria-label="Sort games"
-              className="min-h-11 w-40"
+            <button
+              type="button"
+              onClick={() => update({ q: '' })}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-chip bg-surface-2 px-2.5 text-[12.5px] text-ink"
             >
-              <option value="name">A–Z</option>
-              <option value="newest">Newest</option>
-            </Select>
-          </label>
-        </div>
+              <span className="text-ink-mute">Search</span>
+              {search}
+              <X aria-hidden size={13} strokeWidth={1.5} className="text-ink-mute" />
+              <span className="sr-only">Clear search</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {gamesQuery.isPending ? (
@@ -103,7 +84,7 @@ export function GamesPage({ flag }: { flag?: GameFlag }) {
       ) : (
         <EmptyState
           title="No games match"
-          description={shelf?.empty ?? 'Nothing here yet. Clear the filters to see the full catalogue.'}
+          {...(shelf ? { description: shelf.empty } : {})}
           action={
             <Button variant="secondary" size="sm" onClick={() => setParams(new URLSearchParams())}>
               Clear filters

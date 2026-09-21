@@ -1,9 +1,9 @@
-import type { BigWin, Category, Game, LobbyRow, Promotion } from '@/api/types'
+import type { Category, Game } from '@/api/types'
 
-import { daysAgo, minutesAgo } from './clock'
+import { daysAgo } from './clock'
 
 export const categories: Category[] = [
-  { slug: 'originals', name: 'Originals', game_count: 2, available: true },
+  { slug: 'originals', name: 'Originals', game_count: 3, available: true },
   { slug: 'crash', name: 'Crash', game_count: 1, available: true },
   { slug: 'slots', name: 'Slots', game_count: 0, available: false },
   { slug: 'live', name: 'Live dealers', game_count: 0, available: false },
@@ -19,10 +19,10 @@ export const games: Game[] = [
     category_name: 'Originals',
     provider: 'In-house',
     status: 'active',
-    currency: 'PHP',
-    min_wager_minor: 100,
-    max_wager_minor: 5_000_00,
-    wager_step_minor: 100,
+    wager_limits: {
+      PHP: { min_wager_minor: 100, max_wager_minor: 500_000, wager_step_minor: 100 },
+      USD: { min_wager_minor: 100, max_wager_minor: 500_000, wager_step_minor: 100 },
+    },
     thumbnail_url: null,
     created_at: daysAgo(120),
     flags: ['hot'],
@@ -36,10 +36,10 @@ export const games: Game[] = [
     category_name: 'Originals',
     provider: 'In-house',
     status: 'active',
-    currency: 'PHP',
-    min_wager_minor: 100,
-    max_wager_minor: 5_000_00,
-    wager_step_minor: 100,
+    wager_limits: {
+      PHP: { min_wager_minor: 100, max_wager_minor: 500_000, wager_step_minor: 100 },
+      USD: { min_wager_minor: 100, max_wager_minor: 500_000, wager_step_minor: 100 },
+    },
     thumbnail_url: null,
     created_at: daysAgo(4),
     flags: ['hot', 'new'],
@@ -53,55 +53,33 @@ export const games: Game[] = [
     category_name: 'Crash',
     provider: 'In-house',
     status: 'active',
-    currency: 'PHP',
-    min_wager_minor: 100,
-    max_wager_minor: 5_000_00,
-    wager_step_minor: 100,
+    wager_limits: {
+      PHP: { min_wager_minor: 100, max_wager_minor: 500_000, wager_step_minor: 100 },
+      USD: { min_wager_minor: 100, max_wager_minor: 500_000, wager_step_minor: 100 },
+    },
     thumbnail_url: null,
     created_at: daysAgo(9),
     flags: ['new'],
+  },
+  {
+    id: 'gm-004',
+    slug: 'plinko',
+    name: 'Plinko',
+    description: 'Drop a ball through eight to sixteen rows of pegs and land a multiplier.',
+    category_slug: 'originals',
+    category_name: 'Originals',
+    provider: 'In-house',
+    status: 'active',
+    wager_limits: {
+      PHP: { min_wager_minor: 100, max_wager_minor: 1_000_000, wager_step_minor: 100 },
+      USD: { min_wager_minor: 100, max_wager_minor: 1_000_000, wager_step_minor: 100 },
+    },
+    thumbnail_url: null,
+    created_at: daysAgo(40),
+    flags: [],
   },
 ]
 
 export const recentlyPlayedIds = ['gm-002', 'gm-003']
 
 export const favoriteIds = new Set<string>(['gm-001'])
-
-export function lobbyRows(signedIn: boolean): LobbyRow[] {
-  if (!signedIn || recentlyPlayedIds.length === 0) {
-    return []
-  }
-  return [
-    {
-      id: 'recently-played',
-      title: 'Recently Played',
-      category_slug: null,
-      game_ids: recentlyPlayedIds,
-    },
-  ]
-}
-
-const win = (
-  id: string,
-  username: string,
-  game_slug: string,
-  amount_minor: number,
-  minutes: number,
-): BigWin => ({ id, username, game_slug, amount_minor, currency: 'PHP', created_at: minutesAgo(minutes) })
-
-export const bigWins: BigWin[] = [
-  win('bw-1', 'jack_jones', 'aurora-dice', 4_860_000, 2),
-  win('bw-2', 'mariacruz', 'skyline-crash', 3_124_000, 5),
-  win('bw-3', 'benj_04', 'vault-break', 2_791_500, 9),
-  win('bw-4', 'reyesph', 'aurora-dice', 2_248_000, 14),
-  win('bw-5', 'nina.dlc', 'skyline-crash', 1_933_000, 21),
-  win('bw-6', 'k1ngoff', 'vault-break', 1_672_000, 30),
-  win('bw-7', 'sadbetsonly', 'aurora-dice', 1_405_000, 44),
-  win('bw-8', 'gregor56', 'skyline-crash', 1_188_000, 58),
-]
-
-export const promotions: Promotion[] = [
-  { id: 'pr-1', kicker: 'Weekly', title: '15% cashback every Monday', subtitle: 'On net losses, no wagering' },
-  { id: 'pr-2', kicker: 'Tournament', title: '₱250K slots race', subtitle: 'Top 100 players share the pot' },
-  { id: 'pr-3', kicker: 'VIP', title: 'Daily rakeback', subtitle: 'Unlocks at Bronze III' },
-]

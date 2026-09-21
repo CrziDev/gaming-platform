@@ -14,16 +14,17 @@ type gameConfig struct {
 	MinWagerMinor  int64
 	MaxWagerMinor  int64
 	WagerStepMinor int64
+	RTPBasisPoints *int
 }
 
 const roundColumns = `
 	id::text, round_key, user_id::text, game_id::text, wallet_id::text, currency,
-	COALESCE(rtp_profile_id::text, ''), status, stake_minor, win_minor, multiplier_hundredths,
+	rtp_basis_points, status, stake_minor, win_minor, multiplier_hundredths,
 	COALESCE(engine_reference, ''), result_data, started_at, settled_at, created_at, updated_at`
 
 const roundReadColumns = `
 	r.id::text, r.round_key, r.user_id::text, r.game_id::text, r.wallet_id::text, r.currency,
-	COALESCE(r.rtp_profile_id::text, ''), r.status, r.stake_minor, r.win_minor, r.multiplier_hundredths,
+	r.rtp_basis_points, r.status, r.stake_minor, r.win_minor, r.multiplier_hundredths,
 	COALESCE(r.engine_reference, ''), r.result_data, r.started_at, r.settled_at, r.created_at, r.updated_at,
 	g.slug, g.name, u.email, u.display_name`
 
@@ -38,10 +39,11 @@ const roundReadWhere = `
 	  AND ($3 = '' OR r.status = $3)
 	  AND ($4 = '' OR r.currency = $4)
 	  AND ($5::timestamptz IS NULL OR r.started_at >= $5::timestamptz)
-	  AND ($6::timestamptz IS NULL OR r.started_at <= $6::timestamptz)`
+	  AND ($6::timestamptz IS NULL OR r.started_at <= $6::timestamptz)
+	  AND ($7 = '' OR position(lower($7) in lower(r.id::text)) > 0)`
 
 func List(ctx context.Context, db *sql.DB, filter ReadFilter) ([]Record, int, error) {
-	args := []any{filter.UserID, filter.GameID, filter.Status, filter.Currency, filter.From, filter.To}
+	args := []any{filter.UserID, filter.GameID, filter.Status, filter.Currency, filter.From, filter.To, filter.Search}
 	var total int
 	if err := db.QueryRowContext(ctx, `SELECT count(*)`+roundReadFrom+roundReadWhere, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("round: count read list: %w", err)
@@ -50,7 +52,7 @@ func List(ctx context.Context, db *sql.DB, filter ReadFilter) ([]Record, int, er
 	offset := int64(filter.Page-1) * int64(filter.Size)
 	rows, err := db.QueryContext(ctx, `SELECT `+roundReadColumns+roundReadFrom+roundReadWhere+`
 		ORDER BY r.started_at DESC, r.id DESC
-		LIMIT $7 OFFSET $8`, append(args, filter.Size, offset)...)
+		LIMIT $8 OFFSET $9`, append(args, filter.Size, offset)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("round: read list: %w", err)
 	}
@@ -70,7 +72,11 @@ func List(ctx context.Context, db *sql.DB, filter ReadFilter) ([]Record, int, er
 	return items, total, nil
 }
 
-func GetForPlayer(ctx context.Context, db *sql.DB, userID, roundID string) (Record, error) {
+type querier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+func GetForPlayer(ctx context.Context, db querier, userID, roundID string) (Record, error) {
 	item, err := scanRecord(db.QueryRowContext(ctx, `SELECT `+roundReadColumns+roundReadFrom+`
 		WHERE r.id = ($1::text)::uuid AND r.user_id = ($2::text)::uuid`, roundID, userID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -106,18 +112,6 @@ func lockByID(ctx context.Context, tx *sql.Tx, id string) (Round, error) {
 	return item, nil
 }
 
-func gameCurrency(ctx context.Context, tx *sql.Tx, gameID string) (string, error) {
-	var currency string
-	err := tx.QueryRowContext(ctx, `SELECT currency FROM games WHERE id = ($1::text)::uuid`, gameID).Scan(&currency)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", ErrGameUnavailable
-	}
-	if err != nil {
-		return "", fmt.Errorf("round: read game currency: %w", err)
-	}
-	return currency, nil
-}
-
 func lockWallet(ctx context.Context, tx *sql.Tx, userID, currency string) (string, error) {
 	var walletID string
 	err := tx.QueryRowContext(ctx, `SELECT id::text FROM wallets WHERE user_id = ($1::text)::uuid AND currency = $2 FOR UPDATE`, userID, currency).Scan(&walletID)
@@ -127,17 +121,31 @@ func lockWallet(ctx context.Context, tx *sql.Tx, userID, currency string) (strin
 	return walletID, nil
 }
 
-func lockGame(ctx context.Context, tx *sql.Tx, gameID string) (gameConfig, error) {
+func lockGame(ctx context.Context, tx *sql.Tx, gameID, currency string) (gameConfig, error) {
 	var config gameConfig
+	var rtp sql.NullInt64
 	err := tx.QueryRowContext(ctx, `
-		SELECT id::text, status, currency, min_wager_minor, max_wager_minor, wager_step_minor
-		FROM games
-		WHERE id = ($1::text)::uuid
-	FOR UPDATE`, gameID).Scan(
+		SELECT g.id::text, g.status, limits.currency, limits.min_wager_minor,
+		       limits.max_wager_minor, limits.wager_step_minor, g.rtp_basis_points
+		FROM games g
+		JOIN game_wager_limits limits ON limits.game_id = g.id AND limits.currency = $2
+		WHERE g.id = ($1::text)::uuid
+		FOR UPDATE OF g, limits`, gameID, currency).Scan(
 		&config.ID, &config.Status, &config.Currency,
-		&config.MinWagerMinor, &config.MaxWagerMinor, &config.WagerStepMinor,
+		&config.MinWagerMinor, &config.MaxWagerMinor, &config.WagerStepMinor, &rtp,
 	)
+	if rtp.Valid {
+		basisPoints := int(rtp.Int64)
+		config.RTPBasisPoints = &basisPoints
+	}
 	if errors.Is(err, sql.ErrNoRows) {
+		var exists bool
+		if findErr := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM games WHERE id = ($1::text)::uuid)`, gameID).Scan(&exists); findErr != nil {
+			return gameConfig{}, fmt.Errorf("round: check game: %w", findErr)
+		}
+		if exists {
+			return gameConfig{}, ErrUnsupportedCurrency
+		}
 		return gameConfig{}, ErrGameUnavailable
 	}
 	if err != nil {
@@ -146,25 +154,13 @@ func lockGame(ctx context.Context, tx *sql.Tx, gameID string) (gameConfig, error
 	return config, nil
 }
 
-func activeProfileID(ctx context.Context, tx *sql.Tx, gameID string) (string, error) {
-	var profileID string
-	err := tx.QueryRowContext(ctx, `SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid AND status = 'active'`, gameID).Scan(&profileID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", ErrProfileUnavailable
-	}
-	if err != nil {
-		return "", fmt.Errorf("round: find active RTP profile: %w", err)
-	}
-	return profileID, nil
-}
-
-func insertOpen(ctx context.Context, tx *sql.Tx, in OpenInput, walletID, currency, profileID string) (Round, bool, error) {
+func insertOpen(ctx context.Context, tx *sql.Tx, in OpenInput, walletID, currency string, rtpBasisPoints int) (Round, bool, error) {
 	item, err := scanRound(tx.QueryRowContext(ctx, `
-		INSERT INTO game_rounds (round_key, user_id, game_id, wallet_id, currency, rtp_profile_id, stake_minor)
-		VALUES ($1, ($2::text)::uuid, ($3::text)::uuid, ($4::text)::uuid, $5, ($6::text)::uuid, $7)
+		INSERT INTO game_rounds (round_key, user_id, game_id, wallet_id, currency, rtp_basis_points, stake_minor)
+		VALUES ($1, ($2::text)::uuid, ($3::text)::uuid, ($4::text)::uuid, $5, $6, $7)
 		ON CONFLICT (round_key) DO NOTHING
 		RETURNING `+roundColumns,
-		in.RoundKey, in.UserID, in.GameID, walletID, currency, profileID, in.StakeMinor,
+		in.RoundKey, in.UserID, in.GameID, walletID, currency, rtpBasisPoints, in.StakeMinor,
 	))
 	if errors.Is(err, sql.ErrNoRows) {
 		existing, findErr := findByKey(ctx, tx, in.RoundKey)
@@ -225,7 +221,7 @@ func scanRound(row scanner) (Round, error) {
 	var resultData []byte
 	err := row.Scan(
 		&item.ID, &item.RoundKey, &item.UserID, &item.GameID, &item.WalletID, &item.Currency,
-		&item.RTPProfileID, &item.Status, &item.StakeMinor, &item.WinMinor, &item.MultiplierHundredths,
+		&item.RTPBasisPoints, &item.Status, &item.StakeMinor, &item.WinMinor, &item.MultiplierHundredths,
 		&item.EngineReference, &resultData, &item.StartedAt, &item.SettledAt, &item.CreatedAt, &item.UpdatedAt,
 	)
 	if resultData != nil {
@@ -239,7 +235,7 @@ func scanRecord(row scanner) (Record, error) {
 	var resultData []byte
 	err := row.Scan(
 		&item.ID, &item.RoundKey, &item.UserID, &item.GameID, &item.WalletID, &item.Currency,
-		&item.RTPProfileID, &item.Status, &item.StakeMinor, &item.WinMinor, &item.MultiplierHundredths,
+		&item.RTPBasisPoints, &item.Status, &item.StakeMinor, &item.WinMinor, &item.MultiplierHundredths,
 		&item.EngineReference, &resultData, &item.StartedAt, &item.SettledAt, &item.CreatedAt, &item.UpdatedAt,
 		&item.GameSlug, &item.GameName, &item.UserEmail, &item.UserDisplayName,
 	)

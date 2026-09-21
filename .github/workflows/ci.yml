@@ -63,6 +63,15 @@ jobs:
       - name: Test with PostgreSQL required
         run: make test
 
+      - name: Bootstrap and seed the migrated database
+        run: make bootstrap seed-demo
+        env:
+          APP_ENV: development
+          ALLOW_DEMO_SEED: "true"
+          SEED_USER_EMAIL: owner@example.com
+          SEED_USER_PASSWORD: ci-seed-only
+          SEED_PLAYER_PASSWORD: ci-demo-player-only
+
       - name: Build
         run: make build
 

@@ -1,10 +1,14 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { errorBody, renderApp, stubFetchRoutes } from '@/test-utils'
+import { errorBody, liveShellStubs, renderApp, stubFetchRoutes, stubWebSocket } from '@/test-utils'
 
-vi.mock('@/api/mode', () => ({ usingMockApi: false, usingFixtures: false }))
+vi.mock('@/api/mode', () => ({ testFixturesEnabled: false }))
+
+beforeEach(() => {
+  stubWebSocket()
+})
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -21,10 +25,10 @@ const game = {
   category_name: 'Originals',
   provider: 'In-house',
   status: 'active',
-  currency: 'PHP',
-  min_wager_minor: 100,
-  max_wager_minor: 500_000,
-  wager_step_minor: 100,
+  wager_limits: {
+    PHP: { min_wager_minor: 100, max_wager_minor: 500_000, wager_step_minor: 100 },
+    USD: { min_wager_minor: 100, max_wager_minor: 500_000, wager_step_minor: 100 },
+  },
   thumbnail_url: null,
   flags: [],
   created_at: '2026-06-01T00:00:00Z',
@@ -35,6 +39,7 @@ const page = (rows: unknown[]) => ({ rows, total: rows.length, page: 1, size: 10
 describe('the catalogue against a live server', () => {
   it('renders the cards the server returns', async () => {
     stubFetchRoutes({
+      ...liveShellStubs,
       'GET /me': guest,
       'GET /categories': { status: 200, body: [] },
       'GET /games': { status: 200, body: page([game]) },
@@ -51,6 +56,7 @@ describe('the catalogue against a live server', () => {
   it('reports a failed read instead of an empty catalogue', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({
+      ...liveShellStubs,
       'GET /me': guest,
       'GET /categories': { status: 200, body: [] },
       'GET /games': [
@@ -68,5 +74,20 @@ describe('the catalogue against a live server', () => {
 
     const grid = await screen.findByRole('list', { name: 'Game catalogue' })
     expect(within(grid).getAllByRole('listitem')).toHaveLength(1)
+  })
+
+  it('renders the server-ranked hot shelf', async () => {
+    stubFetchRoutes({
+      ...liveShellStubs,
+      'GET /me': guest,
+      'GET /categories': { status: 200, body: [] },
+      'GET /games': { status: 200, body: page([{ ...game, flags: ['hot'] }]) },
+    })
+
+    renderApp('/games/hot')
+
+    const grid = await screen.findByRole('list', { name: 'Hot games' })
+    expect(within(grid).getByText('Aurora Dice')).toBeInTheDocument()
+    expect(within(grid).getByText('hot')).toBeInTheDocument()
   })
 })

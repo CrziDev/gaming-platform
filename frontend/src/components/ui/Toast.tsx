@@ -48,7 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cn(
-              'pointer-events-auto w-full max-w-sm rounded-card px-4 py-3 text-[13px]',
+              'pop-enter overlay-shadow pointer-events-auto w-full max-w-sm rounded-card px-4 py-3 text-[13px]',
               tones[toast.tone],
             )}
           >

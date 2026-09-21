@@ -25,7 +25,8 @@ export function BottomNav() {
           </>
         )
 
-        const shape = 'flex min-h-13 flex-col items-center justify-center gap-1 py-2'
+        const shape =
+          'relative flex min-h-13 flex-col items-center justify-center gap-1 py-2 transition-[color,background-color,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none'
 
         return locked ? (
           <button
@@ -42,7 +43,12 @@ export function BottomNav() {
             to={item.to}
             end={item.end ?? false}
             className={({ isActive }) =>
-              cn(shape, isActive ? 'font-medium text-ink-soft' : 'text-ink-mute')
+              cn(
+                shape,
+                isActive
+                  ? 'bg-wash font-medium text-accent-ink before:absolute before:top-0 before:h-0.5 before:w-8 before:rounded-b-sm before:bg-accent-ink'
+                  : 'text-ink-mute',
+              )
             }
           >
             {body}

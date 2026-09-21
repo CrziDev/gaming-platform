@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 
-import type { AdminDeposit } from '@/api/types'
+import type { AdminDeposit, DashboardGameActivity } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
 import { Button } from '@/components/ui/Button'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
+import { SeeAll } from '@/components/ui/SeeAll'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { StatCard } from '@/components/ui/StatCard'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { SegmentedTrack } from '@/components/ui/Tabs'
-import { useAuditEntries, useConsoleAlerts, useDashboard, useDepositQueue } from '@/features/admin'
+import { useAuditEntries, useDashboard, useDepositQueue } from '@/features/admin'
 import { useCurrencies } from '@/features/wallet'
-import { cn } from '@/lib/cn'
 import { formatClock, formatCount, formatDuration, formatPercent } from '@/lib/format'
 import { formatDate } from '@/lib/format'
 import { formatMoney, money, type Currency } from '@/lib/money'
@@ -24,14 +24,13 @@ export function AdminDashboardPage() {
   const currenciesQuery = useCurrencies()
   const summaryQuery = useDashboard(currency)
   const queueQuery = useDepositQueue(1, 6)
-  const alertsQuery = useConsoleAlerts()
   const auditQuery = useAuditEntries(1, 4)
   const [reviewing, setReviewing] = useState<AdminDeposit | null>(null)
 
   const summary = summaryQuery.data
   const queue = queueQuery.data?.rows ?? []
   const currencies = currenciesQuery.data ?? []
-  const alerts = alertsQuery.data ?? []
+  const audit = auditQuery.data?.rows ?? []
   const pendingMeta = summary
     ? `${formatMoney(money(summary.pending_held_minor, summary.currency), { decimals: 'trim' })} held${summary.oldest_pending_at ? ` · oldest ${formatDuration(summary.oldest_pending_at)}` : ''}`
     : ''
@@ -40,7 +39,7 @@ export function AdminDashboardPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         title="Today"
-        meta={`${formatDate(new Date().toISOString())} · every figure below is ${currency} only; currencies are never summed`}
+        meta={`${formatDate(new Date().toISOString())} · ${currency}`}
         actions={
           currencies.length > 1 ? (
             <SegmentedTrack
@@ -66,6 +65,7 @@ export function AdminDashboardPage() {
             label="Pending deposits"
             value={summary.pending_deposits}
             meta={pendingMeta}
+            help="Deposit requests waiting for review. Held is their total amount; nothing reaches a wallet until a request is approved."
           />
           <StatCard
             label="Approved today"
@@ -80,13 +80,15 @@ export function AdminDashboardPage() {
               decimals: 'trim',
             })}
             meta={`${formatCount(summary.rounds_today)} rounds · ${summary.players_today} players`}
+            help="Everything wagered on rounds settled since midnight UTC, and the rounds and players behind it. A round that was refunded does not count."
           />
           <StatCard
-            label="Returned today"
-            value={formatMoney(money(summary.returned_today_minor, summary.currency), {
+            label="Hold today"
+            value={formatMoney(money(summary.hold_today_minor, summary.currency), {
               decimals: 'trim',
             })}
-            meta={`Effective ${formatPercent(summary.effective_rtp_basis_points)} · target ${formatPercent(summary.target_rtp_basis_points)}`}
+            meta={`RTP ${formatPercent(summary.effective_rtp_basis_points)} · expected ${formatPercent(summary.expected_rtp_basis_points)}`}
+            help="What the house kept today: stake minus wins paid out. RTP is the share of stake paid back to players; expected is what the games were set to return on those same rounds. A gap of a few points over a few hundred rounds is normal variance."
           />
         </div>
       ) : (
@@ -96,10 +98,10 @@ export function AdminDashboardPage() {
       <div className="grid gap-5 wide:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] wide:items-start">
         <section className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Deposit queue</h2>
-            <Link to={adminPaths.deposits} className="text-[13px] text-accent-ink hover:text-accent-hi">
-              Open full queue
-            </Link>
+            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
+              Deposit queue
+            </h2>
+            <SeeAll to={adminPaths.deposits} subject="pending deposits" />
           </div>
 
           {queueQuery.isPending ? (
@@ -111,7 +113,7 @@ export function AdminDashboardPage() {
               onRetry={() => void queueQuery.refetch()}
             />
           ) : queue.length === 0 ? (
-            <EmptyState title="Queue is clear" description="No deposit is waiting on a human." />
+            <EmptyState title="Queue is clear" description="No deposits are waiting for review." />
           ) : (
             <RecordTable
               label="Pending deposit queue"
@@ -145,74 +147,74 @@ export function AdminDashboardPage() {
                   }
                 />
               )}
-              footer={
-                <p className="font-mono text-[10.5px] text-ink-mute">
-                  Oldest first, never newest. Approve is only reachable inside Review — the proof must
-                  be seen before funds move.
-                </p>
-              }
             />
           )}
+
+          {summary && summary.games.length > 0 ? (
+            <>
+              <div className="flex items-baseline justify-between gap-3 pt-2">
+                <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
+                  Games today
+                </h2>
+                <SeeAll to={adminPaths.rounds} subject="rounds" />
+              </div>
+              <RecordTable
+                label="Game activity today"
+                columns={gameColumns(summary.currency)}
+                rows={summary.games}
+                rowKey={(row) => row.game_id}
+                renderCard={(row) => (
+                  <RecordCard
+                    title={row.game_name}
+                    meta={`${formatCount(row.rounds)} rounds · RTP ${formatPercent(row.effective_rtp_basis_points)} · expected ${formatPercent(row.expected_rtp_basis_points)}`}
+                    value={
+                      <span className="font-mono text-[15px] font-medium tnum">
+                        {formatMoney(money(row.hold_minor, summary.currency), { decimals: 'trim' })}
+                      </span>
+                    }
+                    aside={
+                      <span className="font-mono text-[11px] text-ink-mute">
+                        staked {formatMoney(money(row.staked_minor, summary.currency), { decimals: 'trim' })}
+                      </span>
+                    }
+                  />
+                )}
+              />
+            </>
+          ) : null}
         </section>
 
         <div className="flex flex-col gap-5">
-          {alerts.length > 0 ? (
-            <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
-              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Needs attention</h2>
-              <ul className="flex flex-col gap-2.5">
-                {alerts.map((alert) => (
-                  <li key={alert.id}>
-                    <Link
-                      to={alert.href}
-                      className={cn(
-                        'flex min-h-11 items-center gap-3 rounded-input px-3 text-[13px]',
-                        alert.tone === 'warning' && 'bg-warning/10',
-                        alert.tone === 'danger' && 'bg-danger/10',
-                        alert.tone === 'neutral' && 'bg-surface-1',
-                      )}
-                    >
-                      <span
-                        aria-hidden
-                        className={cn(
-                          'size-2 shrink-0 rounded-full',
-                          alert.tone === 'warning' && 'bg-warning',
-                          alert.tone === 'danger' && 'bg-danger',
-                          alert.tone === 'neutral' && 'bg-ink-mute',
-                        )}
-                      />
-                      <span className="flex-1 text-ink-soft">{alert.message}</span>
-                      <span className="text-[12px] text-accent-ink">View</span>
-                    </Link>
+          <section className="flex flex-col gap-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
+                Activity log
+              </h2>
+              <SeeAll to={adminPaths.audit} subject="audit entries" />
+            </div>
+
+            {auditQuery.isPending ? (
+              <SkeletonRows count={3} />
+            ) : auditQuery.isError ? (
+              <ErrorState
+                title="Activity unavailable"
+                message="Recent actions could not be loaded."
+                onRetry={() => void auditQuery.refetch()}
+              />
+            ) : audit.length === 0 ? (
+              <EmptyState title="No activity yet" />
+            ) : (
+              <ul className="flex flex-col gap-3 rounded-card bg-surface-1 p-4">
+                {audit.map((entry) => (
+                  <li key={entry.id} className="flex gap-3">
+                    <span className="w-11 shrink-0 font-mono text-[11.5px] text-ink-mute">
+                      {formatClock(entry.created_at)}
+                    </span>
+                    <span className="text-[13px] leading-snug text-ink-soft">{entry.detail}</span>
                   </li>
                 ))}
               </ul>
-              <p className="text-[12px] leading-relaxed text-ink-mute">
-                Only states a human must resolve or has deliberately created. Nothing informational,
-                nothing that clears itself.
-              </p>
-            </section>
-          ) : null}
-
-          <section className="flex flex-col gap-3.5 rounded-card bg-surface-1 p-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Activity log</h2>
-              <Link to={adminPaths.audit} className="text-[12.5px] text-accent-ink hover:text-accent-hi">
-                All
-              </Link>
-            </div>
-            <ul className="flex flex-col gap-3">
-              {auditQuery.data?.rows.map((entry) => (
-                <li key={entry.id} className="flex gap-3">
-                  <span className="w-11 shrink-0 font-mono text-[11.5px] text-ink-mute">
-                    {formatClock(entry.created_at)}
-                  </span>
-                  <span className="text-[13px] leading-snug text-ink-soft">{entry.detail}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-[12px] leading-relaxed text-ink-mute">
-              Every money and config action is attributed and immutable.
-            </p>
+            )}
           </section>
         </div>
       </div>
@@ -283,6 +285,73 @@ function queueColumns(onReview: (deposit: AdminDeposit) => void): Column<AdminDe
           <Button size="sm" onClick={() => onReview(row)}>
             Review
           </Button>
+        </span>
+      ),
+    },
+  ]
+}
+
+function gameColumns(currency: Currency): Column<DashboardGameActivity>[] {
+  const amount = (minor: number) => (
+    <span className="font-mono text-sm font-medium tnum">
+      {formatMoney(money(minor, currency), { decimals: 'trim' })}
+    </span>
+  )
+  return [
+    {
+      key: 'game',
+      header: 'Game',
+      cell: (row) => (
+        <span className="flex min-w-0 flex-col">
+          <Link
+            to={adminPaths.game(row.game_id)}
+            className="truncate text-[13.5px] font-medium text-ink-soft hover:text-ink"
+          >
+            {row.game_name}
+          </Link>
+          <span className="font-mono text-[11px] text-ink-mute">{row.game_slug}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'rounds',
+      header: 'Rounds',
+      align: 'right',
+      width: '90px',
+      cell: (row) => <span className="font-mono text-sm tnum">{formatCount(row.rounds)}</span>,
+    },
+    {
+      key: 'staked',
+      header: 'Staked',
+      align: 'right',
+      width: '120px',
+      cell: (row) => amount(row.staked_minor),
+    },
+    {
+      key: 'returned',
+      header: 'Returned',
+      align: 'right',
+      width: '120px',
+      cell: (row) => amount(row.returned_minor),
+    },
+    {
+      key: 'hold',
+      header: 'Hold',
+      align: 'right',
+      width: '120px',
+      cell: (row) => amount(row.hold_minor),
+    },
+    {
+      key: 'rtp',
+      header: 'RTP',
+      align: 'right',
+      width: '130px',
+      cell: (row) => (
+        <span className="flex flex-col items-end">
+          <span className="font-mono text-sm tnum">{formatPercent(row.effective_rtp_basis_points)}</span>
+          <span className="font-mono text-[11px] text-ink-mute tnum">
+            expected {formatPercent(row.expected_rtp_basis_points)}
+          </span>
         </span>
       ),
     },

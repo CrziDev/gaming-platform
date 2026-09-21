@@ -1,0 +1,15 @@
+# SITE_ADDRESS is the public hostname, e.g. play.example.com. Caddy obtains and
+# renews its TLS certificate automatically; use :80 for a plain-HTTP trial.
+{$SITE_ADDRESS}
+
+encode gzip
+
+handle /api/* {
+	reverse_proxy api:8080
+}
+
+handle {
+	root * /srv
+	try_files {path} /index.html
+	file_server
+}

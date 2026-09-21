@@ -7,91 +7,112 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
+	"github.com/gaming-platform/backend/internal/engine"
 	"github.com/gaming-platform/backend/internal/money"
-	"github.com/gaming-platform/backend/internal/rtp"
+	"github.com/gaming-platform/backend/internal/notification"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
-func Open(ctx context.Context, db *sql.DB, in OpenInput) (Round, error) {
-	in.RoundKey = strings.TrimSpace(in.RoundKey)
-	if in.RoundKey == "" {
-		return Round{}, ErrRoundKeyRequired
-	}
-
+func Open(ctx context.Context, db *sql.DB, options []engine.Option, in OpenInput) (Round, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return Round{}, fmt.Errorf("round: begin open: %w", err)
 	}
 	defer tx.Rollback()
 
-	existing, err := findByKey(ctx, tx, in.RoundKey)
-	if err == nil {
-		if !sameOpenRequest(existing, in) {
-			return Round{}, ErrRoundKeyConflict
-		}
-		return existing, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return Round{}, fmt.Errorf("round: find idempotent open: %w", err)
-	}
-
-	currency, err := gameCurrency(ctx, tx, in.GameID)
+	opened, err := openTx(ctx, tx, options, in)
 	if err != nil {
 		return Round{}, err
 	}
-	walletID, err := lockWallet(ctx, tx, in.UserID, currency)
+	if !opened.Created {
+		return opened.Round, nil
+	}
+	if err := tx.Commit(); err != nil {
+		return Round{}, fmt.Errorf("round: commit open: %w", err)
+	}
+	return opened.Round, nil
+}
+
+type opening struct {
+	Round           Round
+	EngineConfigRef string
+	Created         bool
+}
+
+// openTx binds a round and debits its wager inside the caller's transaction.
+// It locks the requested wager configuration and wallet before it rechecks the
+// round key. A replay returns the committed round with Created false and writes
+// nothing. The game row is locked with the limits, so a round never binds to a
+// return or wager configuration an operator is changing underneath it.
+func openTx(ctx context.Context, tx *sql.Tx, options []engine.Option, in OpenInput) (opening, error) {
+	in.RoundKey = strings.TrimSpace(in.RoundKey)
+	if in.RoundKey == "" {
+		return opening{}, ErrRoundKeyRequired
+	}
+
+	existing, err := findByKey(ctx, tx, in.RoundKey)
+	if err == nil {
+		if !sameOpenRequest(existing, in) {
+			return opening{}, ErrRoundKeyConflict
+		}
+		return opening{Round: existing}, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return opening{}, fmt.Errorf("round: find idempotent open: %w", err)
+	}
+
+	if in.Currency == "" {
+		return opening{}, ErrUnsupportedCurrency
+	}
+	config, err := lockGame(ctx, tx, in.GameID, in.Currency)
+	if err != nil {
+		return opening{}, err
+	}
+	if config.Status != "active" || config.Currency != in.Currency {
+		return opening{}, ErrGameUnavailable
+	}
+	walletID, err := lockWallet(ctx, tx, in.UserID, in.Currency)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Round{}, wallet.ErrNotFound
+		return opening{}, wallet.ErrNotFound
 	}
 	if err != nil {
-		return Round{}, fmt.Errorf("round: lock wallet: %w", err)
+		return opening{}, fmt.Errorf("round: lock wallet: %w", err)
 	}
 
 	existing, err = findByKey(ctx, tx, in.RoundKey)
 	if err == nil {
 		if !sameOpenRequest(existing, in) {
-			return Round{}, ErrRoundKeyConflict
+			return opening{}, ErrRoundKeyConflict
 		}
-		return existing, nil
+		return opening{Round: existing}, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return Round{}, fmt.Errorf("round: recheck idempotent open: %w", err)
+		return opening{}, fmt.Errorf("round: recheck idempotent open: %w", err)
 	}
 
-	config, err := lockGame(ctx, tx, in.GameID)
-	if err != nil {
-		return Round{}, err
-	}
-	if config.Status != "active" || config.Currency != currency {
-		return Round{}, ErrGameUnavailable
-	}
 	if !validWager(config, in.StakeMinor) {
-		return Round{}, ErrInvalidWager
+		return opening{}, ErrInvalidWager
 	}
-	if _, err := rtp.RevertExpiredForGameTx(ctx, tx, in.GameID, time.Now().UTC()); err != nil {
-		return Round{}, fmt.Errorf("round: reconcile RTP profile: %w", err)
-	}
-	profileID, err := activeProfileID(ctx, tx, in.GameID)
-	if err != nil {
-		return Round{}, err
+	option, ok := optionFor(options, config.RTPBasisPoints)
+	if !ok {
+		return opening{}, ErrProfileUnavailable
 	}
 
-	opened, created, err := insertOpen(ctx, tx, in, walletID, currency, profileID)
+	opened, created, err := insertOpen(ctx, tx, in, walletID, in.Currency, option.BasisPoints)
 	if err != nil {
-		return Round{}, err
+		return opening{}, err
 	}
 	if !sameOpenRequest(opened, in) {
-		return Round{}, ErrRoundKeyConflict
+		return opening{}, ErrRoundKeyConflict
 	}
 	if !created {
-		return opened, nil
+		return opening{Round: opened}, nil
 	}
 
 	_, err = wallet.MoveTx(ctx, tx, wallet.Movement{
 		UserID:         in.UserID,
-		Currency:       currency,
+		Currency:       in.Currency,
 		Kind:           "wager",
 		AmountMinor:    -in.StakeMinor,
 		IdempotencyKey: "round:" + opened.ID + ":wager",
@@ -100,12 +121,9 @@ func Open(ctx context.Context, db *sql.DB, in OpenInput) (Round, error) {
 		Reason:         "round wager",
 	})
 	if err != nil {
-		return Round{}, err
+		return opening{}, err
 	}
-	if err := tx.Commit(); err != nil {
-		return Round{}, fmt.Errorf("round: commit open: %w", err)
-	}
-	return opened, nil
+	return opening{Round: opened, EngineConfigRef: option.Ref, Created: true}, nil
 }
 
 func validWager(config gameConfig, stakeMinor int64) bool {
@@ -116,14 +134,12 @@ func validWager(config gameConfig, stakeMinor int64) bool {
 }
 
 func sameOpenRequest(item Round, in OpenInput) bool {
-	return item.RoundKey == in.RoundKey && item.UserID == in.UserID && item.GameID == in.GameID && item.StakeMinor == in.StakeMinor
+	return item.RoundKey == in.RoundKey && item.UserID == in.UserID && item.GameID == in.GameID && item.Currency == in.Currency && item.StakeMinor == in.StakeMinor
 }
 
 func Settle(ctx context.Context, db *sql.DB, in SettleInput) (Round, error) {
-	in.RoundID = strings.TrimSpace(in.RoundID)
-	in.EngineReference = strings.TrimSpace(in.EngineReference)
-	if in.RoundID == "" || in.WinMinor < 0 || !money.IsSafeMinor(in.WinMinor) || in.MultiplierHundredths < 0 || int64(in.MultiplierHundredths) > 1<<31-1 || !validResultData(in.ResultData) {
-		return Round{}, ErrInvalidOutcome
+	if err := validateSettle(&in); err != nil {
+		return Round{}, err
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -132,6 +148,29 @@ func Settle(ctx context.Context, db *sql.DB, in SettleInput) (Round, error) {
 	}
 	defer tx.Rollback()
 
+	settled, err := settleTx(ctx, tx, in)
+	if err != nil {
+		return settled, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Round{}, fmt.Errorf("round: commit settle: %w", err)
+	}
+	return settled, nil
+}
+
+func validateSettle(in *SettleInput) error {
+	in.RoundID = strings.TrimSpace(in.RoundID)
+	in.EngineReference = strings.TrimSpace(in.EngineReference)
+	if in.RoundID == "" || in.WinMinor < 0 || !money.IsSafeMinor(in.WinMinor) || in.MultiplierHundredths < 0 || int64(in.MultiplierHundredths) > 1<<31-1 || !validResultData(in.ResultData) {
+		return ErrInvalidOutcome
+	}
+	return nil
+}
+
+// settleTx credits any win and closes the round inside the caller's transaction.
+// The win movement is keyed by the round, so a second settlement of the same
+// round can never credit twice even if it reaches the ledger.
+func settleTx(ctx context.Context, tx *sql.Tx, in SettleInput) (Round, error) {
 	item, err := lockForLifecycle(ctx, tx, in.RoundID)
 	if err != nil {
 		return Round{}, err
@@ -155,16 +194,16 @@ func Settle(ctx context.Context, db *sql.DB, in SettleInput) (Round, error) {
 		}); err != nil {
 			return Round{}, err
 		}
+		if in.BigWinMultiplierHundredths > 0 && in.MultiplierHundredths >= in.BigWinMultiplierHundredths {
+			if err := notification.Create(ctx, tx, notification.Notification{
+				UserID: item.UserID, Kind: notification.KindRoundWin, AmountMinor: &in.WinMinor, Currency: item.Currency,
+				ReferenceType: "round", ReferenceID: item.ID,
+			}); err != nil {
+				return Round{}, err
+			}
+		}
 	}
-
-	settled, err := updateSettled(ctx, tx, in)
-	if err != nil {
-		return Round{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Round{}, fmt.Errorf("round: commit settle: %w", err)
-	}
-	return settled, nil
+	return updateSettled(ctx, tx, in)
 }
 
 func Cancel(ctx context.Context, db *sql.DB, in TerminateInput) (Round, error) {

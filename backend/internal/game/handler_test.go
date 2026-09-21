@@ -8,10 +8,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gaming-platform/backend/internal/user"
 )
 
 func newTestHandler() *Handler {
-	return NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return NewHandler(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
 }
 
 func TestListRejectsInvalidFiltersBeforeTouchingTheDatabase(t *testing.T) {
@@ -22,7 +24,7 @@ func TestListRejectsInvalidFiltersBeforeTouchingTheDatabase(t *testing.T) {
 		field  string
 	}{
 		"sort":               {"/api/games?sort=popular", `"sort"`},
-		"flag":               {"/api/games?flag=hot", `"flag"`},
+		"flag":               {"/api/games?flag=featured", `"flag"`},
 		"category uppercase": {"/api/games?category=Slots", `"category"`},
 		"category spaces":    {"/api/games?category=live%20dealers", `"category"`},
 		"category too long":  {"/api/games?category=" + strings.Repeat("a", maxSlugLength+1), `"category"`},
@@ -65,6 +67,46 @@ func TestGetRejectsAMalformedSlugAsNotFound(t *testing.T) {
 	}
 }
 
+func TestFavoriteMutationsRejectAMalformedSlugAsNotFound(t *testing.T) {
+	handler := newTestHandler()
+
+	for name, mutate := range map[string]func(http.ResponseWriter, *http.Request, user.User){
+		"add":    handler.AddFavorite,
+		"remove": handler.RemoveFavorite,
+	} {
+		t.Run(name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPut, "/api/games/Aurora-Dice/favorite", nil)
+			request.SetPathValue("slug", "Aurora-Dice")
+			mutate(response, request, user.User{Role: "player"})
+
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("want 404, got %d (%s)", response.Code, response.Body.String())
+			}
+		})
+	}
+}
+
+func TestFavoritesRejectsAnOversizedPage(t *testing.T) {
+	handler := newTestHandler()
+	response := httptest.NewRecorder()
+	handler.Favorites(response, httptest.NewRequest(http.MethodGet, "/api/favorites?size=101", nil), user.User{Role: "player"})
+
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), `"size"`) {
+		t.Fatalf("want 400 with a size field error, got %d (%s)", response.Code, response.Body.String())
+	}
+}
+
+func TestRecentlyPlayedRejectsAnOversizedPage(t *testing.T) {
+	handler := newTestHandler()
+	response := httptest.NewRecorder()
+	handler.RecentlyPlayed(response, httptest.NewRequest(http.MethodGet, "/api/recent-games?size=101", nil), user.User{Role: "player"})
+
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), `"size"`) {
+		t.Fatalf("want 400 with a size field error, got %d (%s)", response.Code, response.Body.String())
+	}
+}
+
 func TestFlagsMarkAGameNewForThirtyDays(t *testing.T) {
 	now := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC)
 
@@ -76,6 +118,19 @@ func TestFlagsMarkAGameNewForThirtyDays(t *testing.T) {
 	stale := Game{CreatedAt: now.Add(-31 * 24 * time.Hour)}
 	if flags := stale.Flags(now); len(flags) != 0 {
 		t.Fatalf("a 31-day-old game should carry no flags, got %v", flags)
+	}
+}
+
+func TestFlagsIncludeHotBeforeNew(t *testing.T) {
+	now := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC)
+	game := Game{CreatedAt: now, Hot: true}
+
+	flags := game.Flags(now)
+	if len(flags) != 2 || flags[0] != FlagHot || flags[1] != FlagNew {
+		t.Fatalf("hot new game flags = %v, want [hot new]", flags)
+	}
+	if cutoff := HotSince(now); !cutoff.Equal(now.Add(-7 * 24 * time.Hour)) {
+		t.Fatalf("hot cutoff = %v", cutoff)
 	}
 }
 

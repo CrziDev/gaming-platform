@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gaming-platform/backend/internal/audit"
+	"github.com/gaming-platform/backend/internal/notification"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
@@ -31,6 +32,10 @@ type PaymentMethod struct {
 	Description       string
 	PayTo             string
 	ReferenceRequired bool
+	Enabled           bool
+	SortOrder         int
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type Request struct {
@@ -59,6 +64,7 @@ type AdminListFilter struct {
 	Size   int
 	UserID string
 	Status string
+	Search string
 }
 
 func ListMethods(ctx context.Context, db *sql.DB) ([]PaymentMethod, error) {
@@ -193,13 +199,16 @@ func scanRequests(rows *sql.Rows) ([]Request, error) {
 
 func ListAdmin(ctx context.Context, db *sql.DB, filter AdminListFilter) ([]AdminRequest, int, error) {
 	where := `WHERE (NULLIF($1, '')::uuid IS NULL OR d.user_id = NULLIF($1, '')::uuid)
-		AND ($2 = '' OR d.status = $2)`
+		AND ($2 = '' OR d.status = $2)
+		AND ($3 = ''
+			OR position(lower($3) in lower(COALESCE(d.reference, ''))) > 0
+			OR position(lower($3) in lower(d.id::text)) > 0)`
 	var total int
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM deposit_requests d `+where, filter.UserID, filter.Status).Scan(&total); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM deposit_requests d `+where, filter.UserID, filter.Status, filter.Search).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("deposit: count admin list: %w", err)
 	}
 	offset := int64(filter.Page-1) * int64(filter.Size)
-	rows, err := db.QueryContext(ctx, `SELECT d.id::text, d.user_id::text, d.wallet_id::text, d.currency, d.method_id::text, p.name, d.amount_minor, COALESCE(d.reference, ''), d.status, d.reviewed_at, COALESCE(d.reason, ''), d.created_at, u.email, u.display_name FROM deposit_requests d JOIN payment_methods p ON p.id = d.method_id JOIN users u ON u.id = d.user_id `+where+` ORDER BY d.created_at ASC, d.id ASC LIMIT $3 OFFSET $4`, filter.UserID, filter.Status, filter.Size, offset)
+	rows, err := db.QueryContext(ctx, `SELECT d.id::text, d.user_id::text, d.wallet_id::text, d.currency, d.method_id::text, p.name, d.amount_minor, COALESCE(d.reference, ''), d.status, d.reviewed_at, COALESCE(d.reason, ''), d.created_at, u.email, u.display_name FROM deposit_requests d JOIN payment_methods p ON p.id = d.method_id JOIN users u ON u.id = d.user_id `+where+` ORDER BY d.created_at ASC, d.id ASC LIMIT $4 OFFSET $5`, filter.UserID, filter.Status, filter.Search, filter.Size, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("deposit: admin list: %w", err)
 	}
@@ -253,6 +262,12 @@ func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, 
 		if err := writeAudit(ctx, tx, actorID, requestID, "deposit.reject", item.Status, "rejected", originalAmount, originalAmount, reason); err != nil {
 			return Request{}, err
 		}
+		if err := notification.Create(ctx, tx, notification.Notification{
+			UserID: item.UserID, Kind: notification.KindDepositRejected, AmountMinor: &originalAmount, Currency: item.Currency,
+			ReferenceType: "deposit", ReferenceID: requestID, Detail: reason,
+		}); err != nil {
+			return Request{}, err
+		}
 	} else if action == "approve" {
 		var minMinor, maxMinor int64
 		if err := tx.QueryRowContext(ctx, `SELECT deposit_min_minor, deposit_max_minor FROM currencies WHERE code = $1`, item.Currency).Scan(&minMinor, &maxMinor); err != nil {
@@ -278,6 +293,12 @@ func Review(ctx context.Context, db *sql.DB, actorID, requestID, action string, 
 			return Request{}, fmt.Errorf("deposit: approve request: %w", err)
 		}
 		if err := writeAudit(ctx, tx, actorID, requestID, "deposit.approve", item.Status, "approved", originalAmount, item.AmountMinor, reason); err != nil {
+			return Request{}, err
+		}
+		if err := notification.Create(ctx, tx, notification.Notification{
+			UserID: item.UserID, Kind: notification.KindDepositApproved, AmountMinor: &item.AmountMinor, Currency: item.Currency,
+			ReferenceType: "deposit", ReferenceID: requestID,
+		}); err != nil {
 			return Request{}, err
 		}
 	} else {

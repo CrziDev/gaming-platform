@@ -1,6 +1,6 @@
 import { api, ApiError } from '@/api/client'
 import { mockRequest, paginate, type Page } from '@/api/mock'
-import { usingFixtures } from '@/api/mode'
+import { testFixturesEnabled } from '@/api/mode'
 import type {
   CurrencyMetadata,
   DepositRequest,
@@ -9,17 +9,11 @@ import type {
   Round,
   Transaction,
   Wallet,
+  WalletSummary,
 } from '@/api/types'
 import type { Currency } from '@/lib/money'
-import {
-  currencies,
-  depositRequests,
-  notifications,
-  paymentMethods,
-  rounds,
-  transactions,
-  wallets,
-} from '@/mocks/wallet'
+
+const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
 
 export type HistoryKind = 'all' | 'deposit' | 'rounds' | 'adjustment'
 
@@ -37,6 +31,8 @@ export type RoundFilter = Pick<HistoryFilter, 'page' | 'currency'> & {
   game_id?: string
 }
 
+export type SummaryFilter = Pick<HistoryFilter, 'days' | 'currency'>
+
 function matchesKind(kind: HistoryKind, transaction: Transaction): boolean {
   if (kind === 'all') return true
   if (kind === 'rounds') return transaction.kind === 'wager' || transaction.kind === 'win'
@@ -46,21 +42,24 @@ function matchesKind(kind: HistoryKind, transaction: Transaction): boolean {
 export const HISTORY_PAGE_SIZE = 20
 
 export async function fetchCurrencies(): Promise<CurrencyMetadata[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { currencies } = await import('@/mocks/wallet')
     return mockRequest(() => currencies.map((entry) => ({ ...entry })))
   }
   return api.get<CurrencyMetadata[]>('/currencies')
 }
 
 export async function fetchWallets(): Promise<Wallet[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { wallets } = await import('@/mocks/wallet')
     return mockRequest(() => wallets.map((entry) => ({ ...entry })))
   }
   return api.get<Wallet[]>('/wallets')
 }
 
 export async function fetchWallet(currency: Currency): Promise<Wallet> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { wallets } = await import('@/mocks/wallet')
     return mockRequest(() => {
       const held = wallets.find((entry) => entry.currency === currency)
       // The server provisions a wallet on read, so an unfunded currency is a zero
@@ -72,7 +71,8 @@ export async function fetchWallet(currency: Currency): Promise<Wallet> {
 }
 
 export async function fetchPaymentMethods(): Promise<PaymentMethod[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { paymentMethods } = await import('@/mocks/wallet')
     return mockRequest(() => paymentMethods.filter((method) => method.enabled))
   }
   const methods = await api.get<Omit<PaymentMethod, 'enabled'>[]>('/payment-methods')
@@ -98,7 +98,8 @@ export async function fetchDepositLimits(currency: Currency): Promise<DepositLim
 }
 
 export async function fetchPendingDeposits(): Promise<DepositRequest[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { depositRequests } = await import('@/mocks/wallet')
     return mockRequest(() =>
       depositRequests
         .filter((request) => request.status === 'pending')
@@ -111,7 +112,8 @@ export async function fetchPendingDeposits(): Promise<DepositRequest[]> {
 }
 
 export async function fetchDeposit(id: string): Promise<DepositRequest | null> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { depositRequests } = await import('@/mocks/wallet')
     return mockRequest(() => depositRequests.find((request) => request.id === id) ?? null)
   }
   try {
@@ -134,7 +136,8 @@ export type NewDeposit = {
 }
 
 export async function submitDeposit(input: NewDeposit): Promise<DepositRequest> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { depositRequests, paymentMethods, transactions } = await import('@/mocks/wallet')
     return mockRequest(() => {
       const method = paymentMethods.find((candidate) => candidate.id === input.method_id)
       const reference = input.reference.trim()
@@ -180,7 +183,8 @@ export async function submitDeposit(input: NewDeposit): Promise<DepositRequest> 
 }
 
 export async function fetchTransactions(filter: HistoryFilter): Promise<Page<Transaction>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { transactions } = await import('@/mocks/wallet')
     return mockRequest(() => {
       const cutoff = Date.now() - filter.days * 86_400_000
       const matched = transactions.filter((transaction) => {
@@ -202,6 +206,24 @@ export async function fetchTransactions(filter: HistoryFilter): Promise<Page<Tra
 
   const response = await api.get<Page<BackendTransaction>>(`/transactions?${params.toString()}`)
   return { ...response, rows: response.rows.map(toTransaction) }
+}
+
+// One entry per wallet the player holds; the server never adds currencies
+// together and neither does anything here.
+export async function fetchWalletSummary(filter: SummaryFilter): Promise<WalletSummary[]> {
+  if (usingTestFixtures) {
+    const { walletSummary } = await import('@/mocks/wallet')
+    return mockRequest(() =>
+      walletSummary.filter((entry) => !filter.currency || entry.currency === filter.currency),
+    )
+  }
+
+  const params = new URLSearchParams({
+    from: new Date(Date.now() - filter.days * 86_400_000).toISOString(),
+  })
+  if (filter.currency) params.set('currency', filter.currency)
+
+  return api.get<WalletSummary[]>(`/transactions/summary?${params.toString()}`)
 }
 
 type BackendTransaction = {
@@ -227,7 +249,8 @@ function toTransaction(row: BackendTransaction): Transaction {
 }
 
 export async function fetchRounds(filter: RoundFilter): Promise<Page<Round>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { rounds } = await import('@/mocks/wallet')
     return mockRequest(() => {
       const cutoff = filter.days ? Date.now() - filter.days * 86_400_000 : null
       const matched = rounds.filter(
@@ -250,25 +273,32 @@ export async function fetchRounds(filter: RoundFilter): Promise<Page<Round>> {
   return api.get<Page<Round>>(`/rounds?${params.toString()}`)
 }
 
-export async function fetchRecentRounds(gameId: string): Promise<Round[]> {
-  const page = await fetchRounds({ page: 1, game_id: gameId })
-  return page.rows.slice(0, 6)
+const RECENT_ROUNDS = 10
+
+export async function fetchRecentRounds(gameId: string, currency: Currency): Promise<Round[]> {
+  const page = await fetchRounds({ page: 1, game_id: gameId, currency })
+  return page.rows.slice(0, RECENT_ROUNDS)
 }
 
+const NOTIFICATION_PAGE_SIZE = 20
+
 export async function fetchNotifications(): Promise<Notification[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { notifications } = await import('@/mocks/wallet')
     return mockRequest(() => [...notifications])
   }
-  return []
+  const page = await api.get<Page<Notification>>(`/notifications?page=1&size=${NOTIFICATION_PAGE_SIZE}`)
+  return page.rows
 }
 
 export async function markNotificationsRead(): Promise<void> {
-  if (!usingFixtures) {
-    return
+  if (usingTestFixtures) {
+    const { notifications } = await import('@/mocks/wallet')
+    return mockRequest(() => {
+      for (const notification of notifications) {
+        notification.read = true
+      }
+    }, 120)
   }
-  return mockRequest(() => {
-    for (const notification of notifications) {
-      notification.read = true
-    }
-  }, 120)
+  await api.post<void>('/notifications/read')
 }

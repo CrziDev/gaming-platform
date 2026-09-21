@@ -19,7 +19,13 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react-refresh/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          allowExportNames: ['buttonStyles', 'railVisible', 'toneForStatus', 'useAuthIntent', 'useShell', 'useToast'],
+        },
+      ],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 
@@ -39,7 +45,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['*.config.{ts,js}'],
+    files: ['*.config.{ts,js}', 'vite/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
 )

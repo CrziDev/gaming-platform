@@ -29,7 +29,7 @@ export function AdminTransactionsPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         title="Transactions"
-        meta="Every money movement on the platform, newest first, over the last 90 days."
+        meta="Last 90 days, newest first."
       />
 
       <SegmentedTrack

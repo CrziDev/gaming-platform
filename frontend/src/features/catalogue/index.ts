@@ -1,23 +1,18 @@
 export {
-  fetchBigWins,
   fetchCategories,
   fetchFavorites,
   fetchGame,
   fetchGames,
-  fetchGamesByIds,
-  fetchLobbyRows,
-  fetchPromotions,
-  toggleFavorite,
+  fetchRecentlyPlayed,
+  setFavorite,
 } from './api'
 export type { GameFilters } from './api'
 export {
-  useBigWins,
   useCategories,
   useFavorites,
   useGame,
+  useGameSearch,
   useGames,
-  useGamesByIds,
-  useLobbyRows,
-  usePromotions,
-  useToggleFavorite,
+  useRecentlyPlayed,
+  useSetFavorite,
 } from './hooks'

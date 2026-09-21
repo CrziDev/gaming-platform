@@ -5,7 +5,7 @@ import type { ChatMessage } from '@/api/types'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuthIntent, useSession } from '@/features/auth'
-import { chatAvailable, useChatRoom, useSendChatMessage } from '@/features/chat'
+import { useChatRoom, useChatSocket, useSendChatMessage } from '@/features/chat'
 import { cn } from '@/lib/cn'
 import { formatClock } from '@/lib/format'
 
@@ -13,53 +13,61 @@ import { useShell } from './ShellContext'
 
 export function ChatRail() {
   const { chatOpen, setChatOpen } = useShell()
-  const room = useChatRoom(chatAvailable && chatOpen)
-
-  if (!chatAvailable || !chatOpen) {
-    return null
-  }
+  const room = useChatRoom(chatOpen)
+  const socket = useChatSocket(chatOpen)
+  const online = socket.online ?? room.data?.online
 
   return (
-    <aside aria-label="Live chat" className="hidden w-[272px] shrink-0 flex-col bg-panel @chat:flex">
-      <div className="flex h-11 shrink-0 items-center gap-2 px-3">
-        <span className="text-[13px] font-semibold text-ink-soft">Live chat</span>
-        {room.data ? (
-          <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink-mute">
-            <span aria-hidden className="size-[5px] rounded-full bg-accent-ink" />
-            {room.data.online}
-            <span className="sr-only">online</span>
-          </span>
-        ) : null}
-        <span className="flex-1" />
-        <button
-          type="button"
-          aria-label="Close chat"
-          onClick={() => setChatOpen(false)}
-          className="flex size-[26px] items-center justify-center rounded-[7px] text-ink-mute transition-colors duration-[120ms] hover:bg-wash hover:text-ink-soft"
-        >
-          <X aria-hidden size={14} strokeWidth={1.8} />
-        </button>
-      </div>
+    <aside
+      aria-label="Live chat"
+      aria-hidden={!chatOpen}
+      inert={!chatOpen}
+      className={cn(
+        'hidden shrink-0 overflow-hidden bg-panel transition-[width,opacity] duration-layout ease-standard motion-reduce:transition-none @chat:block',
+        chatOpen ? 'w-[272px] opacity-100' : 'w-0 opacity-0',
+      )}
+    >
+      <div className="flex h-full w-[272px] flex-col">
+        <div className="flex h-11 shrink-0 items-center gap-2 px-3">
+          <span className="text-[13px] font-semibold text-ink-soft">Live chat</span>
+          {online !== undefined ? (
+            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink-mute">
+              <span aria-hidden className="size-[5px] rounded-full bg-accent-ink" />
+              {online}
+              <span className="sr-only">online</span>
+            </span>
+          ) : null}
+          <span className="flex-1" />
+          <button
+            type="button"
+            aria-label="Close chat"
+            onClick={() => setChatOpen(false)}
+            className="flex size-[26px] items-center justify-center rounded-[7px] text-ink-mute transition-colors duration-fast hover:bg-wash hover:text-ink-soft"
+          >
+            <X aria-hidden size={14} strokeWidth={1.8} />
+          </button>
+        </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pt-1 pb-3">
-        {room.isPending ? (
-          <div role="status" aria-label="Loading" className="flex flex-col gap-3">
-            <Skeleton className="h-9" />
-            <Skeleton className="h-9" />
-            <Skeleton className="h-9" />
-          </div>
-        ) : room.isError ? (
-          <p className="text-[12.5px] text-ink-mute">Chat is unavailable right now.</p>
-        ) : (
-          <ul aria-label="Messages" className="flex flex-col gap-3">
-            {room.data.messages.map((message) => (
-              <Message key={message.id} message={message} />
-            ))}
-          </ul>
-        )}
-      </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pt-1 pb-3">
+          {room.isPending ? (
+            <div role="status" aria-label="Loading" className="flex flex-col gap-3">
+              <Skeleton className="h-9" />
+              <Skeleton className="h-9" />
+              <Skeleton className="h-9" />
+            </div>
+          ) : room.isError ? (
+            <p className="text-[12.5px] text-ink-mute">Chat is unavailable right now.</p>
+          ) : (
+            <ul aria-label="Messages" className="flex flex-col gap-3">
+              {room.data.messages.map((message) => (
+                <Message key={message.id} message={message} />
+              ))}
+            </ul>
+          )}
+        </div>
 
-      <Composer />
+        <Composer />
+      </div>
     </aside>
   )
 }
@@ -73,7 +81,7 @@ function Message({ message }: { message: ChatMessage }) {
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
           <span className={cn('text-[11.5px] font-medium', admin ? 'text-accent-ink' : 'text-ink-soft')}>
-            {message.user}
+            {message.display_name}
           </span>
           {admin ? (
             <span className="rounded-[4px] bg-accent-ink/16 px-1.5 py-px font-mono text-[8.5px] font-medium tracking-[0.1em] text-accent-ink uppercase">
@@ -104,18 +112,22 @@ function Composer() {
     )
   }
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmed = text.trim()
     if (trimmed === '' || send.isPending) {
       return
     }
-    await send.mutateAsync({ user, text: trimmed })
-    setText('')
+    send.mutate({ user, text: trimmed }, { onSuccess: () => setText('') })
   }
 
   return (
-    <form onSubmit={(event) => void submit(event)} className="flex shrink-0 items-center gap-1.5 px-3 pt-2.5 pb-3">
+    <form onSubmit={submit} className="flex shrink-0 flex-wrap items-center gap-1.5 px-3 pt-2.5 pb-3">
+      {send.isError ? (
+        <p role="alert" className="w-full text-[12px] text-danger">
+          {send.error.message}
+        </p>
+      ) : null}
       <input
         type="text"
         value={text}
@@ -129,7 +141,7 @@ function Composer() {
         type="submit"
         aria-label="Send"
         disabled={send.isPending}
-        className="flex size-11 shrink-0 items-center justify-center rounded-input bg-accent text-on-accent transition-colors duration-[120ms] hover:bg-accent-hi disabled:bg-surface-2 disabled:text-ink-mute lg:size-[34px]"
+        className="flex size-11 shrink-0 items-center justify-center rounded-input bg-accent text-on-accent transition-colors duration-fast hover:bg-accent-hi disabled:bg-surface-2 disabled:text-ink-mute lg:size-[34px]"
       >
         <Send aria-hidden size={15} strokeWidth={1.8} />
       </button>

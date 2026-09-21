@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ import (
 	"time"
 
 	"github.com/gaming-platform/backend/internal/app"
+	"github.com/gaming-platform/backend/internal/chat"
 	"github.com/gaming-platform/backend/internal/testdb"
 )
 
@@ -51,7 +53,7 @@ func requireDB(t *testing.T) *sql.DB {
 		t.Skipf("skipping: no test database (%v)", dbErr)
 	}
 
-	if _, err := testDB.Exec(`TRUNCATE auth_sessions, users RESTART IDENTITY CASCADE`); err != nil {
+	if _, err := testDB.Exec(`TRUNCATE announcements, auth_sessions, users RESTART IDENTITY CASCADE`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 	return testDB
@@ -92,13 +94,14 @@ func newHandlerWithProofDir(db *sql.DB, proofDir string) http.Handler {
 
 func newHandlerWithSessionTTL(db *sql.DB, proofDir string, sessionTTL time.Duration) http.Handler {
 	return app.New(db, slog.New(slog.NewTextHandler(io.Discard, nil)), app.Config{
-		CookieName:      "gp_session",
-		SessionTTL:      sessionTTL,
-		AllowedOrigins:  []string{webOrigin},
-		MaxBodyBytes:    6 << 20,
-		ProofDir:        proofDir,
-		LoginsPerMinute: 100,
-	})
+		CookieName:            "gp_session",
+		SessionTTL:            sessionTTL,
+		AllowedOrigins:        []string{webOrigin},
+		MaxBodyBytes:          6 << 20,
+		ProofDir:              proofDir,
+		LoginsPerMinute:       100,
+		ChatMessagesPerMinute: 100,
+	}, chat.NewHub())
 }
 
 func enableTestPaymentMethod(t *testing.T, db *sql.DB) {
@@ -144,6 +147,22 @@ func send(t *testing.T, client *http.Client, method, url string, body any) (int,
 		t.Fatalf("read body: %v", err)
 	}
 	return resp.StatusCode, responseBody
+}
+
+func TestHealthReportsDatabaseReadiness(t *testing.T) {
+	db := requireDB(t)
+	base, client := newServer(t, db)
+	status, body := send(t, client, http.MethodGet, base+"/api/health", nil)
+	if status != http.StatusOK || string(body) != `{"status":"ok"}` {
+		t.Fatalf("healthy database: status=%d body=%s", status, body)
+	}
+
+	server := httptest.NewServer(newHandler(nil))
+	defer server.Close()
+	status, _ = send(t, clientWithCookies(t), http.MethodGet, server.URL+"/api/health", nil)
+	if status != http.StatusServiceUnavailable {
+		t.Fatalf("unavailable database: status=%d, want %d", status, http.StatusServiceUnavailable)
+	}
 }
 
 func sendDeposit(t *testing.T, client *http.Client, url, methodID, currency, amount, reference, idempotencyKey, filename string, proof []byte) (int, []byte) {
@@ -598,6 +617,15 @@ func TestAdminUsersSupportsPagingSearchAndStatus(t *testing.T) {
 	if err := json.Unmarshal(body, &page); err != nil || page.Total != 1 || len(page.Rows) != 1 || page.Rows[0].Email != "suspended@example.com" {
 		t.Fatalf("unexpected id search: page=%+v err=%v (%s)", page, err, body)
 	}
+
+	status, body = send(t, adminClient, http.MethodGet,
+		base+"/api/admin/users?role=admin&search="+testEmail, nil)
+	if status != http.StatusOK {
+		t.Fatalf("role-filtered list: want 200, got %d (%s)", status, body)
+	}
+	if err := json.Unmarshal(body, &page); err != nil || page.Total != 1 || len(page.Rows) != 1 || page.Rows[0].Email != testEmail {
+		t.Fatalf("unexpected role-filtered list: page=%+v err=%v (%s)", page, err, body)
+	}
 }
 
 func TestAdminUsersRejectsInvalidPagingAndStatus(t *testing.T) {
@@ -613,6 +641,7 @@ func TestAdminUsersRejectsInvalidPagingAndStatus(t *testing.T) {
 		"?page=0",
 		"?size=101",
 		"?status=unknown",
+		"?role=unknown",
 	}
 	for _, query := range tests {
 		status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/users"+query, nil)
@@ -648,16 +677,21 @@ func TestAdminDashboardHTTPContract(t *testing.T) {
 		t.Fatalf("dashboard: want 200, got %d (%s)", status, body)
 	}
 	var summary struct {
-		Currency                string  `json:"currency"`
-		PendingDeposits         int     `json:"pending_deposits"`
-		OldestPendingAt         *string `json:"oldest_pending_at"`
-		EffectiveRTPBasisPoints int     `json:"effective_rtp_basis_points"`
+		Currency                string           `json:"currency"`
+		PendingDeposits         int              `json:"pending_deposits"`
+		OldestPendingAt         *string          `json:"oldest_pending_at"`
+		EffectiveRTPBasisPoints int              `json:"effective_rtp_basis_points"`
+		ExpectedRTPBasisPoints  int              `json:"expected_rtp_basis_points"`
+		Games                   *json.RawMessage `json:"games"`
 	}
 	if err := json.Unmarshal(body, &summary); err != nil {
 		t.Fatalf("decode dashboard: %v (%s)", err, body)
 	}
-	if summary.Currency != "PHP" || summary.PendingDeposits != 0 || summary.OldestPendingAt != nil || summary.EffectiveRTPBasisPoints != 0 {
+	if summary.Currency != "PHP" || summary.PendingDeposits != 0 || summary.OldestPendingAt != nil || summary.EffectiveRTPBasisPoints != 0 || summary.ExpectedRTPBasisPoints != 0 {
 		t.Fatalf("unexpected dashboard summary: %+v", summary)
+	}
+	if summary.Games == nil || string(*summary.Games) != "[]" {
+		t.Fatalf("games must be an empty array, got %s", body)
 	}
 }
 
@@ -1026,6 +1060,35 @@ func TestAdminWalletAdjustmentAndTransactionHTTPFlow(t *testing.T) {
 		t.Fatalf("player invalid from filter: want 400 with a from field error, got %d (%s)", status, body)
 	}
 
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/transactions/summary?from="+past, nil)
+	if status != http.StatusOK {
+		t.Fatalf("player summary: want 200, got %d (%s)", status, body)
+	}
+	var summary []struct {
+		Currency       string `json:"currency"`
+		DepositedMinor int64  `json:"deposited_minor"`
+		StakedMinor    int64  `json:"staked_minor"`
+		ReturnedMinor  int64  `json:"returned_minor"`
+	}
+	if err := json.Unmarshal(body, &summary); err != nil || len(summary) == 0 {
+		t.Fatalf("decode player summary: len=%d err=%v (%s)", len(summary), err, body)
+	}
+	for _, row := range summary {
+		if row.DepositedMinor != 0 || row.StakedMinor != 0 || row.ReturnedMinor != 0 {
+			t.Fatalf("adjustments must not count as deposits, stakes, or returns: %+v", row)
+		}
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/transactions/summary?currency=PHP", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`[{"currency":"PHP"`)) || bytes.Contains(body, []byte(`"USD"`)) {
+		t.Fatalf("player summary for one currency: want one PHP row, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/transactions/summary?currency=XXX", nil); status != http.StatusNotFound {
+		t.Fatalf("player summary for an unknown currency: want 404, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/transactions/summary?to=yesterday", nil); status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"to"`)) {
+		t.Fatalf("player summary with an invalid to filter: want 400 with a to field error, got %d (%s)", status, body)
+	}
+
 	var balance int64
 	var movements, audits int
 	if err := db.QueryRow(`SELECT balance_minor FROM wallets WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, player.ID).Scan(&balance); err != nil {
@@ -1106,6 +1169,74 @@ func TestPaymentMethodsRequireASession(t *testing.T) {
 	}
 	if len(methods) == 0 || methods[0].ID == "" || methods[0].Name == "" || methods[0].PayTo == "" {
 		t.Fatalf("enabled payment methods are incomplete: %+v", methods)
+	}
+}
+
+func TestAdminPaymentMethodManagementRequiresAdminAndPersistsChanges(t *testing.T) {
+	db := requireDB(t)
+	base, anonymous := newServer(t, db)
+
+	status, body := send(t, anonymous, http.MethodGet, base+"/api/admin/payment-methods", nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("anonymous list: want 401, got %d (%s)", status, body)
+	}
+
+	player := clientWithCookies(t)
+	status, body = send(t, player, http.MethodPost, base+"/api/register", map[string]string{
+		"email": "method-player@example.com", "password": testPassword, "display_name": "Method Player",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("register player: want 201, got %d (%s)", status, body)
+	}
+	status, body = send(t, player, http.MethodGet, base+"/api/admin/payment-methods", nil)
+	if status != http.StatusForbidden {
+		t.Fatalf("player list: want 403, got %d (%s)", status, body)
+	}
+
+	admin, _ := registerAdmin(t, db, base, "method-admin@example.com")
+	status, body = send(t, admin, http.MethodGet, base+"/api/admin/payment-methods", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"name":"GCash"`)) || !bytes.Contains(body, []byte(`"enabled":false`)) {
+		t.Fatalf("admin list: got %d (%s)", status, body)
+	}
+
+	name := "Bank Transfer Test"
+	status, body = send(t, admin, http.MethodPost, base+"/api/admin/payment-methods", map[string]any{
+		"name": name, "description": "Send a bank transfer", "pay_to": "Account 123",
+		"reference_required": true, "enabled": false,
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("create method: want 201, got %d (%s)", status, body)
+	}
+	var created struct {
+		ID      string `json:"id"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := json.Unmarshal(body, &created); err != nil || created.ID == "" || created.Enabled {
+		t.Fatalf("decode created method: method=%+v err=%v (%s)", created, err, body)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'payment_method' AND entity_id = $1`, created.ID)
+		_, _ = db.Exec(`DELETE FROM payment_methods WHERE id = ($1::text)::uuid`, created.ID)
+	})
+
+	status, body = send(t, admin, http.MethodPost, base+"/api/admin/payment-methods", map[string]any{
+		"name": strings.ToLower(name), "description": "Duplicate", "pay_to": "Account 456",
+		"reference_required": false, "enabled": false,
+	})
+	if status != http.StatusConflict || !bytes.Contains(body, []byte(`"name":"Already taken"`)) {
+		t.Fatalf("duplicate method: want 409 field error, got %d (%s)", status, body)
+	}
+
+	status, body = send(t, admin, http.MethodPatch, base+"/api/admin/payment-methods/"+created.ID, map[string]any{
+		"enabled": true, "pay_to": "Account 789",
+	})
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"enabled":true`)) || !bytes.Contains(body, []byte(`"pay_to":"Account 789"`)) {
+		t.Fatalf("update method: got %d (%s)", status, body)
+	}
+
+	var audits int
+	if err := db.QueryRow(`SELECT count(*) FROM audit_logs WHERE entity_type = 'payment_method' AND entity_id = $1`, created.ID).Scan(&audits); err != nil || audits != 2 {
+		t.Fatalf("payment method audits: count=%d err=%v", audits, err)
 	}
 }
 
@@ -1289,6 +1420,13 @@ func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	if queuePage.Total != 1 || len(queuePage.Rows) != 1 || queuePage.Rows[0].ID != created.ID {
 		t.Fatalf("unexpected filtered deposit page: %+v", queuePage)
 	}
+	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/deposits?page=1&size=5&status=all&search="+created.ID[:8], nil)
+	if status != http.StatusOK {
+		t.Fatalf("search deposits: want 200, got %d (%s)", status, body)
+	}
+	if err := json.Unmarshal(body, &queuePage); err != nil || queuePage.Total != 1 || len(queuePage.Rows) != 1 || queuePage.Rows[0].ID != created.ID {
+		t.Fatalf("unexpected deposit search: page=%+v err=%v (%s)", queuePage, err, body)
+	}
 	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/deposits?status=unknown", nil); status != http.StatusBadRequest {
 		t.Fatalf("invalid deposit status filter: want 400, got %d (%s)", status, body)
 	}
@@ -1309,6 +1447,42 @@ func TestDepositHTTPWorkflowIsPrivateIdempotentAndReviewedOnce(t *testing.T) {
 	}
 	if balance != 12_000 || movements != 1 || audits != 1 {
 		t.Fatalf("balance=%d movements=%d audits=%d, want 12000/1/1", balance, movements, audits)
+	}
+
+	if status, body := send(t, adminClient, http.MethodGet, base+"/api/notifications", nil); status != http.StatusOK || !bytes.Contains(body, []byte(`"total":0`)) {
+		t.Fatalf("the reviewer's own bell must stay empty: %d (%s)", status, body)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/notifications", nil)
+	if status != http.StatusOK {
+		t.Fatalf("player notifications: want 200, got %d (%s)", status, body)
+	}
+	var bell struct {
+		Rows []struct {
+			Kind        string  `json:"kind"`
+			AmountMinor *int64  `json:"amount_minor"`
+			Currency    *string `json:"currency"`
+			Detail      *string `json:"detail"`
+			ReferenceID string  `json:"reference_id"`
+			Read        bool    `json:"read"`
+			CreatedAt   string  `json:"created_at"`
+		} `json:"rows"`
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal(body, &bell); err != nil || bell.Total != 1 || len(bell.Rows) != 1 {
+		t.Fatalf("decode notifications: err=%v total=%d (%s)", err, bell.Total, body)
+	}
+	got := bell.Rows[0]
+	if got.Kind != "deposit_approved" || got.AmountMinor == nil || *got.AmountMinor != 12_000 || got.Currency == nil || *got.Currency != "PHP" || got.Detail != nil || got.ReferenceID != created.ID || got.Read {
+		t.Fatalf("unexpected approval notification: %+v", got)
+	}
+	if _, err := time.Parse(time.RFC3339, got.CreatedAt); err != nil {
+		t.Fatalf("created_at is not RFC 3339: %q", got.CreatedAt)
+	}
+	if status, body := send(t, playerClient, http.MethodPost, base+"/api/notifications/read", nil); status != http.StatusNoContent {
+		t.Fatalf("mark read: want 204, got %d (%s)", status, body)
+	}
+	if status, body := send(t, playerClient, http.MethodGet, base+"/api/notifications", nil); status != http.StatusOK || !bytes.Contains(body, []byte(`"read":true`)) {
+		t.Fatalf("after marking read: %d (%s)", status, body)
 	}
 }
 
@@ -1424,6 +1598,10 @@ func TestDepositHTTPRejectionPreservesReasonWithoutMovingMoney(t *testing.T) {
 	}
 	if rejected.Status != "rejected" || rejected.Reason == nil || *rejected.Reason != "Reference not found" {
 		t.Fatalf("unexpected rejected request: %+v", rejected)
+	}
+	status, body = send(t, playerClient, http.MethodGet, base+"/api/notifications", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"kind":"deposit_rejected"`)) || !bytes.Contains(body, []byte(`"detail":"Reference not found"`)) || !bytes.Contains(body, []byte(`"reference_id":"`+request.ID+`"`)) {
+		t.Fatalf("rejection notification: %d (%s)", status, body)
 	}
 
 	var balance int64
@@ -1727,18 +1905,19 @@ func sessionCookie(t *testing.T, client *http.Client, base string) *http.Cookie 
 }
 
 type catalogueGame struct {
-	ID           string   `json:"id"`
-	Slug         string   `json:"slug"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	CategorySlug string   `json:"category_slug"`
-	CategoryName string   `json:"category_name"`
-	Provider     string   `json:"provider"`
-	Status       string   `json:"status"`
-	Currency     string   `json:"currency"`
-	MinWager     int64    `json:"min_wager_minor"`
-	MaxWager     int64    `json:"max_wager_minor"`
-	WagerStep    int64    `json:"wager_step_minor"`
+	ID           string `json:"id"`
+	Slug         string `json:"slug"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	CategorySlug string `json:"category_slug"`
+	CategoryName string `json:"category_name"`
+	Provider     string `json:"provider"`
+	Status       string `json:"status"`
+	WagerLimits  map[string]struct {
+		MinWager  int64 `json:"min_wager_minor"`
+		MaxWager  int64 `json:"max_wager_minor"`
+		WagerStep int64 `json:"wager_step_minor"`
+	} `json:"wager_limits"`
 	ThumbnailURL *string  `json:"thumbnail_url"`
 	Flags        []string `json:"flags"`
 	CreatedAt    string   `json:"created_at"`
@@ -1770,8 +1949,8 @@ func seedCatalogueFixture(t *testing.T, db *sql.DB) (categoryA, categoryB, suffi
 		}
 	}
 
-	insertGame := `INSERT INTO games (slug, name, description, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor, thumbnail_path, created_at)
-	               VALUES ($1, $2, $3, $4, $5, $6, 'supported', 'PHP', 100, 500000, 100, $7, $8)`
+	insertGame := `INSERT INTO games (slug, name, description, category_slug, provider, status, integration, thumbnail_path, created_at)
+	               VALUES ($1, $2, $3, $4, $5, $6, 'supported', $7, $8) RETURNING id::text`
 	for _, item := range []struct {
 		slug, name, category, status string
 		thumbnail                    *string
@@ -1784,8 +1963,13 @@ func seedCatalogueFixture(t *testing.T, db *sql.DB) (categoryA, categoryB, suffi
 		{"test-a-retired-" + suffix, "Retired Test " + suffix, categoryA, "retired", nil, time.Now()},
 		{"test-b-draft-" + suffix, "Hidden Test " + suffix, categoryB, "draft", nil, time.Now()},
 	} {
-		if _, err := db.Exec(insertGame, item.slug, item.name, "Description of "+item.name, item.category, "Test Studio "+suffix, item.status, item.thumbnail, item.createdAt); err != nil {
+		var gameID string
+		if err := db.QueryRow(insertGame, item.slug, item.name, "Description of "+item.name, item.category, "Test Studio "+suffix, item.status, item.thumbnail, item.createdAt).Scan(&gameID); err != nil {
 			t.Fatalf("insert game %s: %v", item.slug, err)
+		}
+		if _, err := db.Exec(`INSERT INTO game_wager_limits (game_id, currency, min_wager_minor, max_wager_minor, wager_step_minor)
+			SELECT ($1::text)::uuid, currency, 100, 500000, 100 FROM (VALUES ('PHP'), ('USD')) currencies(currency)`, gameID); err != nil {
+			t.Fatalf("insert limits for %s: %v", item.slug, err)
 		}
 	}
 
@@ -1828,7 +2012,9 @@ func TestCatalogueServesOnlyActiveGamesWithFiltersAndCategories(t *testing.T) {
 		t.Fatalf("default sort should be by name: %q, %q", page.Rows[0].Name, page.Rows[1].Name)
 	}
 	for _, row := range page.Rows {
-		if row.Status != "active" || row.CategoryName != "Test Category A "+suffix || row.Currency != "PHP" || row.MinWager != 100 || row.MaxWager != 500_000 || row.WagerStep != 100 {
+		php, phpOK := row.WagerLimits["PHP"]
+		usd, usdOK := row.WagerLimits["USD"]
+		if row.Status != "active" || row.CategoryName != "Test Category A "+suffix || !phpOK || !usdOK || php.MinWager != 100 || php.MaxWager != 500_000 || php.WagerStep != 100 || usd != php {
 			t.Fatalf("unexpected catalogue row: %+v", row)
 		}
 		if row.ID == "" || row.CreatedAt == "" || row.Description == "" {
@@ -1955,10 +2141,11 @@ func registerAdmin(t *testing.T, db *sql.DB, base, email string) (*http.Client, 
 
 type adminGameBody struct {
 	catalogueGame
-	Integration          string `json:"integration"`
-	ActiveRTPBasisPoints *int   `json:"active_rtp_basis_points"`
-	Rounds30d            int    `json:"rounds_30d"`
-	UpdatedAt            string `json:"updated_at"`
+	Integration    string `json:"integration"`
+	RTPBasisPoints *int   `json:"rtp_basis_points"`
+	RTPOptions     []int  `json:"rtp_options"`
+	Rounds30d      int    `json:"rounds_30d"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
 func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
@@ -1972,8 +2159,11 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 
 	newGame := map[string]any{
 		"slug": "test-created-" + suffix, "name": "Created Test " + suffix, "description": "Made by the admin API",
-		"category_slug": categoryA, "provider": "Test Studio " + suffix, "currency": "PHP",
-		"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100,
+		"category_slug": categoryA, "provider": "Test Studio " + suffix,
+		"wager_limits": map[string]any{
+			"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100},
+			"USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100},
+		},
 	}
 	if status, body := send(t, clientWithCookies(t), http.MethodPost, base+"/api/admin/games", newGame); status != http.StatusUnauthorized {
 		t.Fatalf("anonymous create: want 401, got %d (%s)", status, body)
@@ -1992,14 +2182,14 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 		"bad slug":            {map[string]any{"slug": "Bad Slug"}, "slug"},
 		"missing name":        {map[string]any{"name": " "}, "name"},
 		"unknown category":    {map[string]any{"category_slug": "no-such-category-" + suffix}, "category_slug"},
-		"disabled currency":   {map[string]any{"currency": "EUR"}, "currency"},
-		"fractional units":    {map[string]any{"min_wager_minor": 150, "wager_step_minor": 50}, "wager_step_minor"},
-		"max below min":       {map[string]any{"max_wager_minor": 50}, "max_wager_minor"},
-		"max off the step":    {map[string]any{"max_wager_minor": 10_050, "wager_step_minor": 100}, "max_wager_minor"},
-		"zero step":           {map[string]any{"wager_step_minor": 0}, "wager_step_minor"},
+		"missing currency":    {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits"},
+		"fractional units":    {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 150, "max_wager_minor": 10_000, "wager_step_minor": 50}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits"},
+		"max below min":       {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 50, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits.PHP.max_wager_minor"},
+		"max off the step":    {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_050, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits.PHP.max_wager_minor"},
+		"zero step":           {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 0}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits.PHP.wager_step_minor"},
 		"unknown status":      {map[string]any{"status": "live"}, "status"},
 		"unknown body field":  {map[string]any{"integration": "integrated"}, ""},
-		"fractional min only": {map[string]any{"min_wager_minor": 120, "max_wager_minor": 10_020}, "wager_step_minor"},
+		"fractional min only": {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 120, "max_wager_minor": 10_020, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits"},
 	}
 	for name, tc := range rejects {
 		t.Run("create rejects "+name, func(t *testing.T) {
@@ -2031,7 +2221,7 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'game' AND entity_id = $1`, created.ID)
 	})
-	if created.ID == "" || created.Status != "draft" || created.Integration != "unreviewed" || created.CategoryName != "Test Category A "+suffix || created.ActiveRTPBasisPoints != nil || created.Rounds30d != 0 {
+	if created.ID == "" || created.Status != "draft" || created.Integration != "unreviewed" || created.CategoryName != "Test Category A "+suffix || created.RTPBasisPoints != nil || created.RTPOptions == nil || len(created.RTPOptions) != 0 || created.Rounds30d != 0 {
 		t.Fatalf("unexpected created game: %+v", created)
 	}
 	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/games", newGame); status != http.StatusConflict || !bytes.Contains(body, []byte(`"slug"`)) {
@@ -2071,8 +2261,9 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 		}
 	}
 
-	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"max_wager_minor": 10_050})
-	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"max_wager_minor"`)) {
+	offStepLimits := map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_050, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"wager_limits": offStepLimits})
+	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"wager_limits.PHP.max_wager_minor"`)) {
 		t.Fatalf("patch off-step max: want 400, got %d (%s)", status, body)
 	}
 	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"slug": "renamed"})
@@ -2080,7 +2271,8 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 		t.Fatalf("patch slug must be refused as an unknown field: want 400, got %d (%s)", status, body)
 	}
 
-	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"name": "Renamed Test " + suffix, "max_wager_minor": 20_000})
+	editedLimits := map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 20_000, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"name": "Renamed Test " + suffix, "wager_limits": editedLimits})
 	if status != http.StatusOK {
 		t.Fatalf("patch metadata: want 200, got %d (%s)", status, body)
 	}
@@ -2088,7 +2280,7 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 	if err := json.Unmarshal(body, &edited); err != nil {
 		t.Fatalf("decode edited: %v (%s)", err, body)
 	}
-	if edited.Name != "Renamed Test "+suffix || edited.MaxWager != 20_000 || edited.Status != "draft" || edited.MinWager != 100 {
+	if edited.Name != "Renamed Test "+suffix || edited.WagerLimits["PHP"].MaxWager != 20_000 || edited.Status != "draft" || edited.WagerLimits["PHP"].MinWager != 100 {
 		t.Fatalf("unexpected edited game: %+v", edited)
 	}
 
@@ -2138,190 +2330,123 @@ func fetchAdminGames(t *testing.T, client *http.Client, url string) struct {
 	return page
 }
 
-type rtpProfileBody struct {
-	ID                string  `json:"id"`
-	GameID            string  `json:"game_id"`
-	GameName          string  `json:"game_name"`
-	Name              string  `json:"name"`
-	Version           int     `json:"version"`
-	TargetBasisPoints int     `json:"target_basis_points"`
-	Status            string  `json:"status"`
-	EngineConfigRef   string  `json:"engine_config_ref"`
-	EffectiveFrom     *string `json:"effective_from"`
-	EffectiveUntil    *string `json:"effective_until"`
-	IsDefault         bool    `json:"is_default"`
-	CreatedBy         string  `json:"created_by"`
-	CreatedByName     string  `json:"created_by_display_name"`
-}
-
-func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
+func TestAdminGameRTPIsSetFromTheEngineOptionsAndAudited(t *testing.T) {
 	db := requireDB(t)
 	_, _, suffix := seedCatalogueFixture(t, db)
+	createPlinko(t, db)
 	base, playerClient := newServer(t, db)
 	if status, body := register(t, playerClient, base); status != http.StatusCreated {
 		t.Fatalf("register player: want 201, got %d (%s)", status, body)
 	}
 	adminClient, adminID := registerAdmin(t, db, base, "rtp-admin-"+suffix+"@example.com")
 
-	var gameID string
-	if err := db.QueryRow(`SELECT id::text FROM games WHERE slug = $1`, "test-a-zebra-"+suffix).Scan(&gameID); err != nil {
+	var plinkoID, fixtureID string
+	if err := db.QueryRow(`SELECT id::text FROM games WHERE slug = 'plinko'`).Scan(&plinkoID); err != nil {
+		t.Fatalf("find plinko: %v", err)
+	}
+	if err := db.QueryRow(`SELECT id::text FROM games WHERE slug = $1`, "test-a-zebra-"+suffix).Scan(&fixtureID); err != nil {
 		t.Fatalf("find fixture game: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'rtp_profile' AND entity_id IN (SELECT id::text FROM rtp_profiles WHERE game_id = ($1::text)::uuid)`, gameID)
-		_, _ = db.Exec(`DELETE FROM rtp_profiles WHERE game_id = ($1::text)::uuid`, gameID)
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'game' AND entity_id IN ($1, $2)`, plinkoID, fixtureID)
 	})
-	profilesPath := base + "/api/admin/games/" + gameID + "/rtp-profiles"
-	draft := map[string]any{"name": strings.Repeat("界", 80), "version": 1, "target_basis_points": 9600, "engine_config_ref": "cfg-" + suffix}
+	rtpPath := func(id string) string { return base + "/api/admin/games/" + id + "/rtp" }
 
-	if status, body := send(t, playerClient, http.MethodPost, profilesPath, draft); status != http.StatusForbidden {
-		t.Fatalf("player draft: want 403, got %d (%s)", status, body)
+	if status, body := send(t, playerClient, http.MethodPut, rtpPath(plinkoID), map[string]any{"rtp_basis_points": 9500}); status != http.StatusForbidden {
+		t.Fatalf("player: want 403, got %d (%s)", status, body)
 	}
-	if status, body := send(t, playerClient, http.MethodGet, base+"/api/admin/rtp-profiles", nil); status != http.StatusForbidden {
-		t.Fatalf("player list: want 403, got %d (%s)", status, body)
+	status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/games/"+plinkoID, nil)
+	var plinko adminGameBody
+	if err := json.Unmarshal(body, &plinko); status != http.StatusOK || err != nil {
+		t.Fatalf("get plinko: %d %v (%s)", status, err, body)
 	}
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/games/00000000-0000-4000-8000-000000000000/rtp-profiles", draft); status != http.StatusNotFound {
-		t.Fatalf("draft for unknown game: want 404, got %d (%s)", status, body)
+	if plinko.RTPBasisPoints == nil || *plinko.RTPBasisPoints != 9500 || !slices.Equal(plinko.RTPOptions, []int{9000, 9500, 10500, 11000}) {
+		t.Fatalf("plinko rtp %v options %v", plinko.RTPBasisPoints, plinko.RTPOptions)
 	}
-	for name, tc := range map[string]struct {
-		change map[string]any
-		field  string
+
+	configurationPath := base + "/api/admin/games/" + plinkoID + "/rtp-configuration?rtp_basis_points=9500&rows=8&risk=normal"
+	if status, body := send(t, playerClient, http.MethodGet, configurationPath, nil); status != http.StatusForbidden {
+		t.Fatalf("player configuration: want 403, got %d (%s)", status, body)
+	}
+	status, body = send(t, adminClient, http.MethodGet, configurationPath, nil)
+	var configuration struct {
+		ConfigurationRef string `json:"configuration_ref"`
+		RTPBasisPoints   int    `json:"rtp_basis_points"`
+		SelectedBoard    struct {
+			Rows                      int    `json:"rows"`
+			Risk                      string `json:"risk"`
+			TheoreticalRTPBasisPoints int    `json:"theoretical_rtp_basis_points"`
+			Slots                     []struct {
+				Slot                     int `json:"slot"`
+				MultiplierHundredths     int `json:"multiplier_hundredths"`
+				ChanceThousandthsPercent int `json:"chance_thousandths_percent"`
+			} `json:"slots"`
+		} `json:"selected_board"`
+	}
+	if err := json.Unmarshal(body, &configuration); status != http.StatusOK || err != nil {
+		t.Fatalf("get configuration: %d %v (%s)", status, err, body)
+	}
+	chanceTotal := 0
+	for slot, outcome := range configuration.SelectedBoard.Slots {
+		chanceTotal += outcome.ChanceThousandthsPercent
+		if outcome.Slot != slot || outcome.MultiplierHundredths <= 0 {
+			t.Fatalf("bad slot %d: %+v", slot, outcome)
+		}
+	}
+	if configuration.ConfigurationRef != "plinko/9500" || configuration.RTPBasisPoints != 9500 ||
+		configuration.SelectedBoard.Rows != 8 || configuration.SelectedBoard.Risk != "normal" ||
+		configuration.SelectedBoard.TheoreticalRTPBasisPoints != 9500 || len(configuration.SelectedBoard.Slots) != 9 || chanceTotal != 100000 {
+		t.Fatalf("unexpected configuration: %+v, chance total %d", configuration, chanceTotal)
+	}
+
+	for name, c := range map[string]struct {
+		id    string
+		body  any
+		field string
 	}{
-		"unsupported target": {map[string]any{"target_basis_points": 9700}, "target_basis_points"},
-		"zero version":       {map[string]any{"version": 0}, "version"},
-		"blank name":         {map[string]any{"name": ""}, "name"},
-		"status in body":     {map[string]any{"status": "verified"}, ""},
+		"not an option":         {plinkoID, map[string]any{"rtp_basis_points": 9700}, "rtp_basis_points"},
+		"game without engine":   {fixtureID, map[string]any{"rtp_basis_points": 9500}, "rtp_basis_points"},
+		"missing value":         {plinkoID, map[string]any{}, "rtp_basis_points"},
+		"unknown field refused": {plinkoID, map[string]any{"rtp_basis_points": 9500, "effective_until": "2030-01-01T00:00:00Z"}, ""},
 	} {
-		t.Run("draft rejects "+name, func(t *testing.T) {
-			body := map[string]any{}
-			for key, value := range draft {
-				body[key] = value
-			}
-			for key, value := range tc.change {
-				body[key] = value
-			}
-			status, response := send(t, adminClient, http.MethodPost, profilesPath, body)
-			if status != http.StatusBadRequest {
-				t.Fatalf("want 400, got %d (%s)", status, response)
-			}
-			if tc.field != "" && !bytes.Contains(response, []byte(`"`+tc.field+`"`)) {
-				t.Fatalf("field %s missing from %s", tc.field, response)
-			}
-		})
+		status, body := send(t, adminClient, http.MethodPut, rtpPath(c.id), c.body)
+		if status != http.StatusBadRequest {
+			t.Fatalf("%s: want 400, got %d (%s)", name, status, body)
+		}
+		var failure struct {
+			Fields map[string]string `json:"fields"`
+		}
+		if c.field != "" && (json.Unmarshal(body, &failure) != nil || failure.Fields[c.field] == "") {
+			t.Fatalf("%s: want fields.%s, got %s", name, c.field, body)
+		}
+	}
+	if status, body := send(t, adminClient, http.MethodPut, rtpPath("00000000-0000-0000-0000-000000000000"), map[string]any{"rtp_basis_points": 9500}); status != http.StatusNotFound {
+		t.Fatalf("unknown game: want 404, got %d (%s)", status, body)
 	}
 
-	status, body := send(t, adminClient, http.MethodPost, profilesPath, draft)
-	if status != http.StatusCreated {
-		t.Fatalf("create draft: want 201, got %d (%s)", status, body)
+	set := func(basisPoints int) adminGameBody {
+		t.Helper()
+		status, body := send(t, adminClient, http.MethodPut, rtpPath(plinkoID), map[string]any{"rtp_basis_points": basisPoints})
+		var updated adminGameBody
+		if err := json.Unmarshal(body, &updated); status != http.StatusOK || err != nil || updated.RTPBasisPoints == nil || *updated.RTPBasisPoints != basisPoints {
+			t.Fatalf("set %d: %d %v (%s)", basisPoints, status, err, body)
+		}
+		return updated
 	}
-	var created rtpProfileBody
-	if err := json.Unmarshal(body, &created); err != nil {
-		t.Fatalf("decode draft: %v (%s)", err, body)
-	}
-	if created.Status != "draft" || created.GameID != gameID || created.GameName != "Zebra Test "+suffix || created.CreatedBy != adminID || created.CreatedByName != "Operator" || created.EngineConfigRef != "cfg-"+suffix {
-		t.Fatalf("unexpected draft: %+v", created)
-	}
-	if status, body := send(t, adminClient, http.MethodPost, profilesPath, draft); status != http.StatusConflict || !bytes.Contains(body, []byte(`"version"`)) {
-		t.Fatalf("duplicate name and version: want 409 naming version, got %d (%s)", status, body)
-	}
+	set(9000)
+	set(9000)
+	set(11000)
 
-	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 9400, "version": 2})
-	if status != http.StatusOK || !bytes.Contains(body, []byte(`"target_basis_points":9400`)) || !bytes.Contains(body, []byte(`"version":2`)) {
-		t.Fatalf("edit draft: want 200 with the new target, got %d (%s)", status, body)
+	_, body = send(t, adminClient, http.MethodGet, base+"/api/games/plinko/manifest", nil)
+	var manifest struct {
+		RTPBasisPoints int `json:"rtp_basis_points"`
 	}
-	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+created.ID, map[string]any{"target_basis_points": 9999}); status != http.StatusBadRequest {
-		t.Fatalf("edit draft to unsupported target: want 400, got %d (%s)", status, body)
-	}
-
-	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+created.ID+"/activate", nil)
-	if status != http.StatusConflict || !bytes.Contains(body, []byte(`"code":"RTP_PROFILE_NOT_VERIFIED"`)) {
-		t.Fatalf("activate draft: want 409 RTP_PROFILE_NOT_VERIFIED, got %d (%s)", status, body)
-	}
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/00000000-0000-4000-8000-000000000000/activate", nil); status != http.StatusNotFound {
-		t.Fatalf("activate unknown: want 404, got %d (%s)", status, body)
-	}
-
-	// Nothing in the platform can verify a profile; only the engine work does.
-	// The rows below stand in for that evidence so the activation path itself is
-	// exercised: the game lock, the swap of the profile in force, and the audit.
-	var verifiedID, promoID string
-	if err := db.QueryRow(`INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, observed_basis_points, verified_at, created_by)
-		VALUES (($1::text)::uuid, 'Verified', 1, 9600, 'verified', 9598, now(), ($2::text)::uuid) RETURNING id::text`, gameID, adminID).Scan(&verifiedID); err != nil {
-		t.Fatalf("insert verified profile: %v", err)
-	}
-	if err := db.QueryRow(`INSERT INTO rtp_profiles (game_id, name, version, target_basis_points, status, observed_basis_points, verified_at, created_by)
-		VALUES (($1::text)::uuid, 'Promo', 1, 10200, 'verified', 10190, now(), ($2::text)::uuid) RETURNING id::text`, gameID, adminID).Scan(&promoID); err != nil {
-		t.Fatalf("insert promo profile: %v", err)
-	}
-	if status, body := send(t, adminClient, http.MethodPatch, base+"/api/admin/rtp-profiles/"+verifiedID, map[string]any{"name": "Edited"}); status != http.StatusBadRequest {
-		t.Fatalf("edit verified profile: want 400, got %d (%s)", status, body)
-	}
-	until := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_until": until}); status != http.StatusConflict || !bytes.Contains(body, []byte(`"code":"RTP_DEFAULT_REQUIRED"`)) {
-		t.Fatalf("activate timed profile without default: want 409 RTP_DEFAULT_REQUIRED, got %d (%s)", status, body)
-	}
-
-	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+verifiedID+"/activate", nil)
-	if status != http.StatusOK || !bytes.Contains(body, []byte(`"status":"active"`)) {
-		t.Fatalf("activate verified: want 200 active, got %d (%s)", status, body)
-	}
-	var activeDefault rtpProfileBody
-	if err := json.Unmarshal(body, &activeDefault); err != nil || !activeDefault.IsDefault {
-		t.Fatalf("open-ended activation should establish the default: err=%v (%s)", err, body)
-	}
-	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/games/"+gameID, nil)
-	if status != http.StatusOK || !bytes.Contains(body, []byte(`"active_rtp_basis_points":9600`)) {
-		t.Fatalf("game should report the active profile: got %d (%s)", status, body)
-	}
-
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", nil); status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"effective_until"`)) {
-		t.Fatalf("activate negative margin without an end: want 400 naming effective_until, got %d (%s)", status, body)
-	}
-	if status, body := send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_from": until, "effective_until": until}); status != http.StatusBadRequest {
-		t.Fatalf("activate with an end not after the start: want 400, got %d (%s)", status, body)
-	}
-	status, body = send(t, adminClient, http.MethodPost, base+"/api/admin/rtp-profiles/"+promoID+"/activate", map[string]any{"effective_until": until})
-	if status != http.StatusOK || !bytes.Contains(body, []byte(`"effective_until":"`+until+`"`)) {
-		t.Fatalf("activate promo with an end: want 200 with the schedule, got %d (%s)", status, body)
-	}
-	var activePromotion rtpProfileBody
-	if err := json.Unmarshal(body, &activePromotion); err != nil || activePromotion.IsDefault {
-		t.Fatalf("timed activation should not replace the default: err=%v (%s)", err, body)
-	}
-
-	var previous, active int
-	if err := db.QueryRow(`SELECT count(*) FILTER (WHERE id = ($1::text)::uuid AND status = 'verified'), count(*) FILTER (WHERE status = 'active') FROM rtp_profiles WHERE game_id = ($2::text)::uuid`, verifiedID, gameID).Scan(&previous, &active); err != nil {
-		t.Fatalf("count profiles: %v", err)
-	}
-	if previous != 1 || active != 1 {
-		t.Fatalf("after replacing the active profile: previous back to verified=%d active=%d, want 1/1", previous, active)
-	}
-
-	status, body = send(t, adminClient, http.MethodGet, profilesPath, nil)
-	if status != http.StatusOK {
-		t.Fatalf("list for game: want 200, got %d (%s)", status, body)
-	}
-	var forGame []rtpProfileBody
-	if err := json.Unmarshal(body, &forGame); err != nil || len(forGame) != 3 {
-		t.Fatalf("list for game: want 3 profiles, got %d err=%v (%s)", len(forGame), err, body)
-	}
-	status, body = send(t, adminClient, http.MethodGet, base+"/api/admin/rtp-profiles?game_id="+gameID+"&status=active", nil)
-	if status != http.StatusOK {
-		t.Fatalf("global list: want 200, got %d (%s)", status, body)
-	}
-	var global struct {
-		Rows  []rtpProfileBody `json:"rows"`
-		Total int              `json:"total"`
-	}
-	if err := json.Unmarshal(body, &global); err != nil || global.Total != 1 || global.Rows[0].ID != promoID {
-		t.Fatalf("global list filtered to the active profile: got total=%d err=%v (%s)", global.Total, err, body)
-	}
-	if status, body := send(t, adminClient, http.MethodGet, base+"/api/admin/rtp-profiles?game_id=nope", nil); status != http.StatusBadRequest {
-		t.Fatalf("global list bad game_id: want 400, got %d (%s)", status, body)
+	if err := json.Unmarshal(body, &manifest); err != nil || manifest.RTPBasisPoints != 11000 {
+		t.Fatalf("manifest after the switch: %s", body)
 	}
 
 	var actions []string
-	rows, err := db.Query(`SELECT action FROM audit_logs WHERE entity_type = 'rtp_profile' AND actor_user_id = ($1::text)::uuid ORDER BY created_at ASC`, adminID)
+	rows, err := db.Query(`SELECT action || ':' || COALESCE(before_data->>'rtp_basis_points', '-') || '>' || (after_data->>'rtp_basis_points') FROM audit_logs WHERE entity_type = 'game' AND entity_id = $1 AND actor_user_id = ($2::text)::uuid ORDER BY created_at ASC`, plinkoID, adminID)
 	if err != nil {
 		t.Fatalf("query audit: %v", err)
 	}
@@ -2333,7 +2458,7 @@ func TestRtpProfilesDraftEditAndRefuseUnverifiedActivation(t *testing.T) {
 		}
 		actions = append(actions, action)
 	}
-	if strings.Join(actions, ",") != "rtp_profile.create,rtp_profile.update,rtp_profile.activate,rtp_profile.activate" {
+	if strings.Join(actions, ",") != "game.rtp_change:9500>9000,game.rtp_change:9000>11000" {
 		t.Fatalf("audit actions: got %v", actions)
 	}
 }

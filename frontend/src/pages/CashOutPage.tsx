@@ -2,6 +2,7 @@ import { ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { buttonStyles } from '@/components/ui/Button'
+import { FutureDevelopment } from '@/components/ui/FutureDevelopment'
 import { useActiveWallet } from '@/features/wallet'
 import { formatMoney, money } from '@/lib/money'
 import { paths } from '@/routes/paths'
@@ -27,15 +28,7 @@ export function CashOutPage() {
         ) : null}
       </header>
 
-      <section className="flex flex-col gap-2 rounded-card bg-surface-1 p-5">
-        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
-          Cash-out requests aren&rsquo;t open yet
-        </h2>
-        <p className="text-[13px] leading-relaxed text-ink-mute text-pretty">
-          Withdrawals will be requested here and reviewed by an administrator, the same way deposits
-          are. Until then, support can arrange a payout for you.
-        </p>
-      </section>
+      <FutureDevelopment />
 
       <Link to={paths.wallet} className={buttonStyles('secondary', 'md', true)}>
         Back to wallet

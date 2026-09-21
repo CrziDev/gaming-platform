@@ -42,6 +42,12 @@ export type GameStatus = 'draft' | 'active' | 'maintenance' | 'retired'
 
 export type GameFlag = 'hot' | 'new'
 
+export type WagerLimit = {
+  min_wager_minor: number
+  max_wager_minor: number
+  wager_step_minor: number
+}
+
 export type Game = {
   id: string
   slug: string
@@ -51,41 +57,15 @@ export type Game = {
   category_name: string
   provider: string
   status: GameStatus
-  currency: Currency
-  min_wager_minor: number
-  max_wager_minor: number
-  wager_step_minor: number
+  wager_limits: Record<Currency, WagerLimit>
   thumbnail_url: string | null
   flags: GameFlag[]
   created_at: string
 }
 
-export type LobbyRow = {
-  id: string
-  title: string
-  category_slug: string | null
-  game_ids: string[]
-}
-
-export type BigWin = {
-  id: string
-  username: string
-  game_slug: string
-  amount_minor: number
-  currency: Currency
-  created_at: string
-}
-
-export type Promotion = {
-  id: string
-  kicker: string
-  title: string
-  subtitle: string
-}
-
 export type ChatMessage = {
   id: string
-  user: string
+  display_name: string
   role: Role
   text: string
   created_at: string
@@ -99,6 +79,13 @@ export type ChatRoom = {
 export type Wallet = {
   currency: Currency
   balance_minor: number
+}
+
+export type WalletSummary = {
+  currency: Currency
+  deposited_minor: number
+  staked_minor: number
+  returned_minor: number
 }
 
 export type TransactionKind =
@@ -127,7 +114,7 @@ export type Round = {
   game_id: string
   game_slug: string
   game_name: string
-  rtp_profile_id: string
+  rtp_basis_points: number
   status: 'open' | 'settled' | 'cancelled' | 'failed'
   stake_minor: number
   win_minor: number | null
@@ -135,6 +122,29 @@ export type Round = {
   currency: Currency
   started_at: string
   settled_at: string | null
+}
+
+// A play request carries only the wager and the game's public parameters; the
+// response is the settled round, a safe display result, and the wallet after it.
+export type PlayRoundRequest = {
+  stake_minor: number
+  currency: Currency
+  params: Record<string, string | number>
+}
+
+export type PlayRoundResponse = {
+  round: Round
+  result: Record<string, string | number>
+  wallet: Wallet
+}
+
+// The active profile's public parameters for an integrated game, and the id of the
+// profile they describe. Plinko's are its boards; the table is keyed by rows then risk.
+export type PlinkoManifest = {
+  rtp_basis_points: number
+  rows: number[]
+  risks: string[]
+  multipliers_hundredths: Record<string, Record<string, number[]>>
 }
 
 export type AdminRound = Round & {
@@ -168,13 +178,23 @@ export type PaymentMethod = {
   enabled: boolean
 }
 
+export type AdminPaymentMethod = PaymentMethod & {
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type NotificationKind = 'deposit_approved' | 'deposit_rejected' | 'round_win'
+
 export type Notification = {
   id: string
-  message: string
+  kind: NotificationKind
   amount_minor: number | null
   currency: Currency | null
-  created_at: string
+  detail: string | null
+  reference_id: string
   read: boolean
+  created_at: string
 }
 
 export type Adjustment = {
@@ -196,6 +216,18 @@ export type AuditEntry = {
   detail: string
 }
 
+export type Announcement = {
+  id: string
+  text: string
+  ends_at: string | null
+  created_at: string
+}
+
+export type AdminAnnouncement = Announcement & {
+  enabled: boolean
+  updated_at: string
+}
+
 export type AdminDeposit = DepositRequest & {
   user_id: string
   username: string
@@ -204,44 +236,48 @@ export type AdminDeposit = DepositRequest & {
   rejected_count?: number
 }
 
-export type RtpStatus = 'draft' | 'verified' | 'active' | 'retired'
-
-export type RtpProfile = {
-  id: string
-  game_id: string
-  game_slug: string
-  game_name: string
-  name: string
-  version: number
-  target_basis_points: number
-  status: RtpStatus
-  engine_config_ref: string
-  theoretical_basis_points: number | null
-  observed_basis_points: number | null
-  verified_at: string | null
-  effective_from: string | null
-  effective_until: string | null
-  is_default: boolean
-  created_by: string
-  created_by_display_name: string
-  created_at: string
-  updated_at: string
-}
-
 export type GameIntegration = 'unreviewed' | 'under_review' | 'supported' | 'integrated' | 'unsupported'
 
+// rtp_basis_points is the return the game plays at, null until an operator
+// picks one; rtp_options are the returns its engine ships, empty when no engine
+// on the server plays the game.
 export type AdminGame = Game & {
   integration: GameIntegration
-  active_rtp_basis_points: number | null
+  rtp_basis_points: number | null
+  rtp_options: number[]
   rounds_30d: number
   updated_at: string
 }
 
-export type ConsoleAlert = {
-  id: string
-  tone: 'warning' | 'danger' | 'neutral'
-  message: string
-  href: string
+export type AdminRtpSlot = {
+  slot: number
+  multiplier_hundredths: number
+  chance_thousandths_percent: number
+}
+
+export type AdminRtpConfiguration = {
+  configuration_ref: string
+  rtp_basis_points: number
+  rows: number[]
+  risks: Array<'low' | 'normal' | 'high'>
+  selected_board: {
+    rows: number
+    risk: 'low' | 'normal' | 'high'
+    theoretical_rtp_basis_points: number
+    slots: AdminRtpSlot[]
+  }
+}
+
+export type DashboardGameActivity = {
+  game_id: string
+  game_slug: string
+  game_name: string
+  rounds: number
+  staked_minor: number
+  returned_minor: number
+  hold_minor: number
+  effective_rtp_basis_points: number
+  expected_rtp_basis_points: number
 }
 
 export type DashboardSummary = {
@@ -251,10 +287,12 @@ export type DashboardSummary = {
   approved_today_minor: number
   approved_today_count: number
   staked_today_minor: number
+  returned_today_minor: number
+  hold_today_minor: number
   rounds_today: number
   players_today: number
-  returned_today_minor: number
   effective_rtp_basis_points: number
-  target_rtp_basis_points: number
+  expected_rtp_basis_points: number
+  games: DashboardGameActivity[]
   currency: Currency
 }

@@ -1,46 +1,39 @@
-import { api, ApiError } from '@/api/client'
+import { API_BASE_URL, api, ApiError } from '@/api/client'
 import { mockRequest, paginate, type Page } from '@/api/mock'
-import { usingFixtures } from '@/api/mode'
+import { testFixturesEnabled } from '@/api/mode'
 import type {
   AccountStatus,
   AdminDeposit,
   AdminGame,
+  AdminPaymentMethod,
+  AdminRtpConfiguration,
   AdminRound,
   AdminUser,
   Adjustment,
   AuditEntry,
   Category,
-  ConsoleAlert,
   DashboardSummary,
   GameStatus,
-  PaymentMethod,
   Round,
-  RtpProfile,
   Transaction,
   Wallet,
+  WagerLimit,
 } from '@/api/types'
 import type { Currency } from '@/lib/money'
-import {
-  adjustmentReasons,
-  adjustments,
-  adminDeposits,
-  adminGames,
-  adminUserWallets,
-  adminUsers,
-  auditEntries,
-  consoleAlerts,
-  dashboardSummary,
-  rtpProfiles,
-  staffAccounts,
-} from '@/mocks/admin'
-import { categories, games } from '@/mocks/games'
-import { paymentMethods, rounds, transactions } from '@/mocks/wallet'
+
+const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
+const adjustmentReasons = [
+  'Goodwill — delayed deposit review',
+  'Deposit credited manually',
+  'Duplicate credit reversed',
+  'Chargeback recovered',
+  'Promotional credit',
+] as const
 
 export const ADMIN_PAGE_SIZE = 20
 
 export function adminDepositProofUrl(id: string): string {
-  const base = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'
-  return `${base}/admin/deposits/${encodeURIComponent(id)}/proof`
+  return `${API_BASE_URL}/admin/deposits/${encodeURIComponent(id)}/proof`
 }
 
 export type UserFilter = {
@@ -50,25 +43,23 @@ export type UserFilter = {
 }
 
 export async function fetchDashboard(currency: Currency): Promise<DashboardSummary> {
-  if (usingFixtures) {
-    return mockRequest(() => ({ ...dashboardSummary, currency, pending_deposits: pendingQueue().length }))
+  if (usingTestFixtures) {
+    const { adminDeposits, dashboardSummary } = await import('@/mocks/admin')
+    return mockRequest(() => ({
+      ...dashboardSummary,
+      currency,
+      pending_deposits: pendingQueue(adminDeposits).length,
+    }))
   }
   return api.get<DashboardSummary>(`/admin/dashboard?currency=${encodeURIComponent(currency)}`)
-}
-
-// Alerts, staff, and payment-method administration have no service yet.
-// Outside the demo and tests they read as empty so the console shows
-// nothing an operator could act on that the platform cannot do.
-export async function fetchConsoleAlerts(): Promise<ConsoleAlert[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => [...consoleAlerts])
 }
 
 export async function fetchAuditEntries(
   page = 1,
   size = ADMIN_PAGE_SIZE,
 ): Promise<Page<AuditEntry>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { auditEntries } = await import('@/mocks/admin')
     return mockRequest(() => paginate(auditEntries, page, size))
   }
   const response = await api.get<Page<BackendAuditEntry>>(
@@ -97,17 +88,54 @@ type BackendAuditEntry = {
   created_at: string
 }
 
-function pendingQueue(): AdminDeposit[] {
+function pendingQueue(adminDeposits: AdminDeposit[]): AdminDeposit[] {
   return adminDeposits
     .filter((deposit) => deposit.status === 'pending')
     .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
 }
 
 export async function fetchDepositQueue(page = 1, size = ADMIN_PAGE_SIZE): Promise<Page<AdminDeposit>> {
-  if (usingFixtures) {
-    return mockRequest(() => paginate(pendingQueue(), page, size))
+  if (usingTestFixtures) {
+    const { adminDeposits } = await import('@/mocks/admin')
+    return mockRequest(() => paginate(pendingQueue(adminDeposits), page, size))
   }
   const response = await api.get<Page<BackendAdminDeposit>>(`/admin/deposits?page=${page}&size=${size}`)
+  return { ...response, rows: response.rows.map(toAdminDeposit) }
+}
+
+export type AdminDepositFilter = {
+  page: number
+  size?: number
+  status?: 'all' | AdminDeposit['status']
+  search?: string
+  user_id?: string
+}
+
+export async function fetchAdminDeposits(filter: AdminDepositFilter): Promise<Page<AdminDeposit>> {
+  if (usingTestFixtures) {
+    const { adminDeposits } = await import('@/mocks/admin')
+    return mockRequest(() => {
+      const search = filter.search?.trim().toLowerCase() ?? ''
+      const rows = adminDeposits.filter((deposit) => {
+        const matchesStatus = !filter.status || filter.status === 'all' || deposit.status === filter.status
+        const matchesUser = !filter.user_id || deposit.user_id === filter.user_id
+        const matchesSearch =
+          search === '' ||
+          deposit.reference.toLowerCase().includes(search) ||
+          deposit.id.toLowerCase().includes(search)
+        return matchesStatus && matchesUser && matchesSearch
+      })
+      return paginate(rows, filter.page, filter.size ?? ADMIN_PAGE_SIZE)
+    })
+  }
+  const params = new URLSearchParams({
+    page: String(filter.page),
+    size: String(filter.size ?? ADMIN_PAGE_SIZE),
+    status: filter.status ?? 'pending',
+  })
+  if (filter.search?.trim()) params.set('search', filter.search.trim())
+  if (filter.user_id) params.set('user_id', filter.user_id)
+  const response = await api.get<Page<BackendAdminDeposit>>(`/admin/deposits?${params.toString()}`)
   return { ...response, rows: response.rows.map(toAdminDeposit) }
 }
 
@@ -119,7 +147,8 @@ export type DepositReview = {
 }
 
 export async function reviewDeposit(review: DepositReview): Promise<void> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminDeposits, adminUserWallets, auditEntries } = await import('@/mocks/admin')
     return mockRequest(() => {
       const deposit = adminDeposits.find((candidate) => candidate.id === review.id)
       if (!deposit) {
@@ -195,7 +224,8 @@ function toAdminDeposit(row: BackendAdminDeposit): AdminDeposit {
 }
 
 export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUser>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUsers } = await import('@/mocks/admin')
     return mockRequest(() => {
       const search = filter.search.trim().toLowerCase()
       const matched = adminUsers.filter((user) => {
@@ -221,7 +251,8 @@ export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUser>> {
 }
 
 export async function fetchUserCounts() {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUsers } = await import('@/mocks/admin')
     return mockRequest(() => ({
       all: adminUsers.length,
       active: adminUsers.filter((user) => user.status === 'active').length,
@@ -243,7 +274,8 @@ export async function fetchUserCounts() {
 }
 
 export async function fetchUser(id: string): Promise<AdminUser | null> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUsers } = await import('@/mocks/admin')
     return mockRequest(() => adminUsers.find((user) => user.id === id) ?? null)
   }
   try {
@@ -255,7 +287,8 @@ export async function fetchUser(id: string): Promise<AdminUser | null> {
 }
 
 export async function fetchUserWallets(id: string): Promise<Wallet[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUserWallets } = await import('@/mocks/admin')
     return mockRequest(() => (adminUserWallets[id] ?? []).map((wallet) => ({ ...wallet })))
   }
   return api.get<Wallet[]>(`/admin/users/${id}/wallets`)
@@ -266,7 +299,8 @@ export async function fetchUserRounds(userId: string, page = 1): Promise<Page<Ad
 }
 
 export async function fetchUserDeposits(userId: string, page = 1): Promise<Page<AdminDeposit>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminDeposits } = await import('@/mocks/admin')
     return mockRequest(() =>
       paginate(
         adminDeposits.filter((deposit) => deposit.user_id === userId),
@@ -282,7 +316,8 @@ export async function fetchUserDeposits(userId: string, page = 1): Promise<Page<
 }
 
 export async function fetchUserAdjustments(userId: string, page = 1): Promise<Page<Adjustment>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adjustments } = await import('@/mocks/admin')
     return mockRequest(() =>
       paginate(
         adjustments.filter((entry) => entry.user_id === userId),
@@ -328,7 +363,8 @@ export type AdminAdjustment = {
 }
 
 export async function adjustWallet(input: WalletAdjustment): Promise<AdminAdjustment> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adjustments, adminUsers, adminUserWallets, auditEntries } = await import('@/mocks/admin')
     return mockRequest(() => {
       const user = adminUsers.find((candidate) => candidate.id === input.user_id)
       if (!user) {
@@ -415,7 +451,8 @@ type BackendAdminTransaction = {
 }
 
 export async function fetchAdminTransactions(filter: AdminTransactionFilter): Promise<Page<AdminTransaction>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { transactions } = await import('@/mocks/wallet')
     return mockRequest(() => {
       const cutoff = Date.now() - filter.days * 86_400_000
       const rows = transactions
@@ -464,7 +501,8 @@ function toAdminTransaction(row: BackendAdminTransaction): AdminTransaction {
 }
 
 export async function setUserStatus(id: string, status: AccountStatus): Promise<AdminUser> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminUsers, auditEntries } = await import('@/mocks/admin')
     return mockRequest(() => {
       const user = adminUsers.find((candidate) => candidate.id === id)
       if (!user) {
@@ -492,7 +530,8 @@ export async function setUserStatus(id: string, status: AccountStatus): Promise<
 const ADMIN_CATALOGUE_SIZE = 100
 
 export async function fetchAdminGames(): Promise<AdminGame[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminGames } = await import('@/mocks/admin')
     return mockRequest(() => [...adminGames])
   }
   const page = await api.get<Page<AdminGame>>(`/admin/games?page=1&size=${ADMIN_CATALOGUE_SIZE}`)
@@ -500,7 +539,8 @@ export async function fetchAdminGames(): Promise<AdminGame[]> {
 }
 
 export async function fetchAdminGame(id: string): Promise<AdminGame | null> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { adminGames } = await import('@/mocks/admin')
     return mockRequest(() => adminGames.find((game) => game.id === id) ?? null)
   }
   try {
@@ -511,10 +551,46 @@ export async function fetchAdminGame(id: string): Promise<AdminGame | null> {
   }
 }
 
+export async function fetchAdminRtpConfiguration(
+  id: string,
+  basisPoints: number,
+  rows: number,
+  risk: 'low' | 'normal' | 'high',
+): Promise<AdminRtpConfiguration | null> {
+  if (usingTestFixtures) {
+    const [{ adminGames, plinkoRtpConfiguration }, { isPlinkoRows, isPlinkoRisk }] = await Promise.all([
+      import('@/mocks/admin'),
+      import('@/features/gameplay/multipliers'),
+    ])
+    return mockRequest(() => {
+      const game = adminGames.find((candidate) => candidate.id === id)
+      if (!game || game.slug !== 'plinko') return null
+      if (!game.rtp_options.includes(basisPoints) || !isPlinkoRows(rows) || !isPlinkoRisk(risk)) {
+        throw new ApiError(400, 'One or more fields are invalid')
+      }
+      return plinkoRtpConfiguration(basisPoints, rows, risk)
+    })
+  }
+  const params = new URLSearchParams({
+    rtp_basis_points: String(basisPoints),
+    rows: String(rows),
+    risk,
+  })
+  try {
+    return await api.get<AdminRtpConfiguration>(
+      `/admin/games/${encodeURIComponent(id)}/rtp-configuration?${params.toString()}`,
+    )
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
+}
+
 // Every category, including ones with no active game: an operator files a
 // game under a category before it has anything to show a player.
 export async function fetchAllCategories(): Promise<Category[]> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const { categories } = await import('@/mocks/games')
     return mockRequest(() => [...categories])
   }
   return api.get<Category[]>('/categories')
@@ -527,16 +603,17 @@ export type GameInput = {
   category_slug: string
   provider: string
   status: GameStatus
-  currency: Currency
-  min_wager_minor: number
-  max_wager_minor: number
-  wager_step_minor: number
+  wager_limits: Record<Currency, WagerLimit>
 }
 
 export type GamePatch = Partial<Omit<GameInput, 'slug'>>
 
 export async function createGame(input: GameInput): Promise<AdminGame> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const [{ adminGames }, { categories, games }] = await Promise.all([
+      import('@/mocks/admin'),
+      import('@/mocks/games'),
+    ])
     return mockRequest(() => {
       if (adminGames.some((game) => game.slug === input.slug)) {
         throw new ApiError(409, 'That slug is already taken', null, { slug: 'Already taken' })
@@ -550,7 +627,8 @@ export async function createGame(input: GameInput): Promise<AdminGame> {
         thumbnail_url: null,
         flags: ['new'],
         integration: 'unreviewed',
-        active_rtp_basis_points: null,
+        rtp_basis_points: null,
+        rtp_options: [],
         rounds_30d: 0,
         created_at: now,
         updated_at: now,
@@ -564,7 +642,11 @@ export async function createGame(input: GameInput): Promise<AdminGame> {
 }
 
 export async function updateGame(id: string, patch: GamePatch): Promise<AdminGame> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const [{ adminGames }, { categories, games }] = await Promise.all([
+      import('@/mocks/admin'),
+      import('@/mocks/games'),
+    ])
     return mockRequest(() => {
       const game = adminGames.find((candidate) => candidate.id === id)
       if (!game) {
@@ -585,15 +667,21 @@ export async function updateGame(id: string, patch: GamePatch): Promise<AdminGam
 
 export type AdminRoundFilter = {
   page: number
+  size?: number
   days?: 7 | 30 | 90
   status?: Round['status']
   currency?: Currency
   user_id?: string
   game_id?: string
+  search?: string
 }
 
 export async function fetchAdminRounds(filter: AdminRoundFilter): Promise<Page<AdminRound>> {
-  if (usingFixtures) {
+  if (usingTestFixtures) {
+    const [{ adminUsers }, { rounds }] = await Promise.all([
+      import('@/mocks/admin'),
+      import('@/mocks/wallet'),
+    ])
     return mockRequest(() => {
       const cutoff = filter.days ? Date.now() - filter.days * 86_400_000 : null
       const fixtureUser = adminUsers[0]
@@ -613,163 +701,153 @@ export async function fetchAdminRounds(filter: AdminRoundFilter): Promise<Page<A
             (!filter.user_id || round.user_id === filter.user_id) &&
             (!filter.game_id || round.game_id === filter.game_id),
         )
-      return paginate(matched, filter.page, ADMIN_PAGE_SIZE)
+      const search = filter.search?.trim().toLowerCase() ?? ''
+      return paginate(
+        matched.filter((round) => search === '' || round.id.toLowerCase().includes(search)),
+        filter.page,
+        filter.size ?? ADMIN_PAGE_SIZE,
+      )
     })
   }
 
   const params = new URLSearchParams({
     page: String(filter.page),
-    size: String(ADMIN_PAGE_SIZE),
+    size: String(filter.size ?? ADMIN_PAGE_SIZE),
   })
   if (filter.days) params.set('from', new Date(Date.now() - filter.days * 86_400_000).toISOString())
   if (filter.status) params.set('status', filter.status)
   if (filter.currency) params.set('currency', filter.currency)
   if (filter.user_id) params.set('user_id', filter.user_id)
   if (filter.game_id) params.set('game_id', filter.game_id)
+  if (filter.search?.trim()) params.set('search', filter.search.trim())
   return api.get<Page<AdminRound>>(`/admin/rounds?${params.toString()}`)
 }
 
-export async function fetchRtpProfiles(): Promise<RtpProfile[]> {
-  if (usingFixtures) {
-    return mockRequest(() => [...rtpProfiles])
-  }
-  const page = await api.get<Page<RtpProfile>>(`/admin/rtp-profiles?page=1&size=${ADMIN_CATALOGUE_SIZE}`)
-  return page.rows
-}
-
-export async function fetchGameRtpProfiles(gameId: string): Promise<RtpProfile[]> {
-  if (usingFixtures) {
-    return mockRequest(() => rtpProfiles.filter((profile) => profile.game_id === gameId))
-  }
-  return api.get<RtpProfile[]>(`/admin/games/${encodeURIComponent(gameId)}/rtp-profiles`)
-}
-
-export type RtpDraftInput = {
-  name: string
-  version: number
-  target_basis_points: number
-  engine_config_ref: string
-}
-
-export async function createRtpProfile(gameId: string, input: RtpDraftInput): Promise<RtpProfile> {
-  if (usingFixtures) {
+// The server validates the value against the engine's options; the test fixture
+// mirrors that so component coverage refuses the same input.
+export async function setGameRtp(gameId: string, basisPoints: number): Promise<AdminGame> {
+  if (usingTestFixtures) {
+    const { adminGames } = await import('@/mocks/admin')
     return mockRequest(() => {
       const game = adminGames.find((candidate) => candidate.id === gameId)
       if (!game) {
         throw new ApiError(404, 'Game not found')
       }
-      const taken = rtpProfiles.some(
-        (p) => p.game_id === gameId && p.name === input.name && p.version === input.version,
-      )
-      if (taken) {
-        throw new ApiError(409, 'That name and version already exist for this game', null, {
-          version: 'Already used with this name',
+      if (!game.rtp_options.includes(basisPoints)) {
+        throw new ApiError(400, 'One or more fields are invalid', null, {
+          rtp_basis_points: "Choose one of the game's RTP options",
         })
       }
+      game.rtp_basis_points = basisPoints
+      game.updated_at = new Date().toISOString()
+      return { ...game }
+    }, 400)
+  }
+  return api.put<AdminGame>(`/admin/games/${encodeURIComponent(gameId)}/rtp`, { rtp_basis_points: basisPoints })
+}
+
+export type PaymentMethodInput = {
+  name: string
+  description: string
+  pay_to: string
+  reference_required: boolean
+  enabled: boolean
+}
+
+export async function fetchAdminPaymentMethods(): Promise<AdminPaymentMethod[]> {
+  if (usingTestFixtures) {
+    const { paymentMethods } = await import('@/mocks/wallet')
+    return mockRequest(() =>
+      paymentMethods.map((method, index) => ({
+        ...method,
+        sort_order: (index + 1) * 10,
+        created_at: new Date(0).toISOString(),
+        updated_at: new Date(0).toISOString(),
+      })),
+    )
+  }
+  return api.get<AdminPaymentMethod[]>('/admin/payment-methods')
+}
+
+export async function createPaymentMethod(input: PaymentMethodInput): Promise<AdminPaymentMethod> {
+  if (usingTestFixtures) {
+    const { paymentMethods } = await import('@/mocks/wallet')
+    return mockRequest(() => {
+      if (paymentMethods.some((method) => method.name.toLowerCase() === input.name.toLowerCase())) {
+        throw new ApiError(409, 'That payment method name is already taken', null, { name: 'Already taken' })
+      }
       const now = new Date().toISOString()
-      const created: RtpProfile = {
-        id: `rtp-${Date.now()}`,
-        game_id: game.id,
-        game_slug: game.slug,
-        game_name: game.name,
+      const created: AdminPaymentMethod = {
+        id: `method-${Date.now()}`,
         ...input,
-        status: 'draft',
-        theoretical_basis_points: null,
-        observed_basis_points: null,
-        verified_at: null,
-        effective_from: null,
-        effective_until: null,
-        is_default: false,
-        created_by: '',
-        created_by_display_name: 'R. Cruz',
+        sort_order: (paymentMethods.length + 1) * 10,
         created_at: now,
         updated_at: now,
       }
-      rtpProfiles.unshift(created)
+      paymentMethods.push(created)
       return created
-    }, 400)
+    })
   }
-  return api.post<RtpProfile>(`/admin/games/${encodeURIComponent(gameId)}/rtp-profiles`, input)
+  return api.post<AdminPaymentMethod>('/admin/payment-methods', input)
 }
 
-export async function updateRtpProfile(id: string, patch: Partial<RtpDraftInput>): Promise<RtpProfile> {
-  if (usingFixtures) {
+export async function updatePaymentMethod({
+  id,
+  patch,
+}: {
+  id: string
+  patch: Partial<PaymentMethodInput>
+}): Promise<AdminPaymentMethod> {
+  if (usingTestFixtures) {
+    const { paymentMethods } = await import('@/mocks/wallet')
     return mockRequest(() => {
-      const profile = rtpProfiles.find((candidate) => candidate.id === id)
-      if (!profile) {
-        throw new ApiError(404, 'Profile not found')
+      const method = paymentMethods.find((candidate) => candidate.id === id)
+      if (!method) throw new ApiError(404, 'Payment method not found')
+      Object.assign(method, patch)
+      return {
+        ...method,
+        sort_order: (paymentMethods.indexOf(method) + 1) * 10,
+        created_at: new Date(0).toISOString(),
+        updated_at: new Date().toISOString(),
       }
-      if (profile.status !== 'draft') {
-        throw new ApiError(400, 'Only a draft profile can be edited; a verified profile changes by a new version')
-      }
-      Object.assign(profile, patch, { updated_at: new Date().toISOString() })
-      return { ...profile }
-    }, 400)
+    })
   }
-  return api.patch<RtpProfile>(`/admin/rtp-profiles/${encodeURIComponent(id)}`, patch)
+  return api.patch<AdminPaymentMethod>(`/admin/payment-methods/${encodeURIComponent(id)}`, patch)
 }
 
-export type RtpSchedule = {
-  effective_from?: string
-  effective_until?: string
+export type ConsoleSearchResults = {
+  players: AdminUser[]
+  deposits: AdminDeposit[]
+  rounds: AdminRound[]
 }
 
-export async function activateRtpProfile(id: string, schedule: RtpSchedule): Promise<RtpProfile> {
-  if (usingFixtures) {
-    return mockRequest(() => {
-      const profile = rtpProfiles.find((candidate) => candidate.id === id)
-      if (!profile) {
-        throw new ApiError(404, 'Profile not found')
-      }
-      if (profile.status !== 'verified' && profile.status !== 'active') {
-        throw new ApiError(
-          409,
-          'Only a profile the engine has verified can be activated',
-          'RTP_PROFILE_NOT_VERIFIED',
-        )
-      }
-      const until = schedule.effective_until ?? null
-      const fallback = rtpProfiles.find(
-        (candidate) => candidate.game_id === profile.game_id && candidate.is_default,
-      )
-      if (until && (!fallback || fallback.id === profile.id)) {
-        throw new ApiError(
-          409,
-          'Activate an open-ended verified default profile before scheduling a temporary profile',
-          'RTP_DEFAULT_REQUIRED',
-        )
-      }
-      for (const other of rtpProfiles) {
-        if (other.game_id === profile.game_id && other.status === 'active' && other.id !== id) {
-          other.status = 'verified'
-          other.effective_from = null
-          other.effective_until = null
-        }
-      }
-      profile.status = 'active'
-      profile.effective_from = schedule.effective_from ?? null
-      profile.effective_until = until
-      if (!until) {
-        for (const other of rtpProfiles) {
-          if (other.game_id === profile.game_id) other.is_default = other.id === profile.id
-        }
-      }
-      const game = adminGames.find((candidate) => candidate.id === profile.game_id)
-      if (game) game.active_rtp_basis_points = profile.target_basis_points
-      return { ...profile }
-    }, 400)
+export async function fetchConsoleSearch(query: string, signal?: AbortSignal): Promise<ConsoleSearchResults> {
+  const search = query.trim()
+  if (search.length < 2) return { players: [], deposits: [], rounds: [] }
+  if (usingTestFixtures) {
+    const [players, deposits, rounds] = await Promise.all([
+      fetchUsers({ status: 'all', search, page: 1 }),
+      fetchAdminDeposits({ page: 1, size: 5, status: 'all', search }),
+      fetchAdminRounds({ page: 1, size: 5, search }),
+    ])
+    return {
+      players: players.rows.filter((player) => player.role === 'player').slice(0, 5),
+      deposits: deposits.rows,
+      rounds: rounds.rows,
+    }
   }
-  return api.post<RtpProfile>(`/admin/rtp-profiles/${encodeURIComponent(id)}/activate`, schedule)
-}
-
-export async function fetchStaff() {
-  if (!usingFixtures) return [] as typeof staffAccounts
-  return mockRequest(() => [...staffAccounts])
-}
-
-export async function fetchAdminPaymentMethods(): Promise<PaymentMethod[]> {
-  if (!usingFixtures) return []
-  return mockRequest(() => [...paymentMethods])
+  const encoded = encodeURIComponent(search)
+  const options = signal ? { signal } : undefined
+  const [players, deposits, rounds] = await Promise.all([
+    api.get<Page<AdminUser>>(`/admin/users?page=1&size=5&role=player&search=${encoded}`, options),
+    api.get<Page<BackendAdminDeposit>>(`/admin/deposits?page=1&size=5&status=all&search=${encoded}`, options),
+    api.get<Page<AdminRound>>(`/admin/rounds?page=1&size=5&search=${encoded}`, options),
+  ])
+  return {
+    players: players.rows,
+    deposits: deposits.rows.map(toAdminDeposit),
+    rounds: rounds.rows,
+  }
 }
 
 export function reasonOptions(): readonly string[] {

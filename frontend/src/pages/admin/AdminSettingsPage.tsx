@@ -1,16 +1,18 @@
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
+import type { AdminPaymentMethod } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
 import { Button } from '@/components/ui/Button'
-import { Field, Input, Select } from '@/components/ui/Field'
+import { FutureDevelopment } from '@/components/ui/FutureDevelopment'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
 import { SkeletonRows } from '@/components/ui/Skeleton'
-import { EmptyState } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
-import { useAdminPaymentMethods, useStaff } from '@/features/admin'
-import { formatMoney, money } from '@/lib/money'
+import { useAdminPaymentMethods, useUpdatePaymentMethod } from '@/features/admin'
+
+import { PaymentMethodDialog } from './PaymentMethodDialog'
 
 type SettingsTab = 'methods' | 'staff' | 'limits' | 'platform'
 
@@ -19,7 +21,7 @@ export function AdminSettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeading title="Settings" meta="Owner-only changes are marked. Everything here writes to the audit log." />
+      <PageHeading title="Settings" />
 
       <ChipTabs
         items={[
@@ -43,16 +45,21 @@ export function AdminSettingsPage() {
 
 function MethodsTab() {
   const methodsQuery = useAdminPaymentMethods()
+  const update = useUpdatePaymentMethod()
+  const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<AdminPaymentMethod | undefined>(undefined)
+
+  const toggle = (method: AdminPaymentMethod) => {
+    update.mutate({ id: method.id, patch: { enabled: !method.enabled } })
+  }
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <p className="max-w-[60ch] text-[13px] leading-relaxed text-ink-mute">
-          What appears in the player&rsquo;s deposit step. Each method carries a display name, the
-          account details the player pays into, and whether a reference number is required. Turning
-          every method off disables deposits platform-wide.
+          Disabling every method turns deposits off for all players.
         </p>
-        <Button size="sm">
+        <Button size="sm" onClick={() => setCreating(true)}>
           <Plus aria-hidden size={15} strokeWidth={2} />
           Add method
         </Button>
@@ -60,10 +67,16 @@ function MethodsTab() {
 
       {methodsQuery.isPending ? (
         <SkeletonRows count={2} />
+      ) : methodsQuery.isError ? (
+        <ErrorState
+          title="Payment methods unavailable"
+          message="Payment methods could not be loaded."
+          onRetry={() => void methodsQuery.refetch()}
+        />
       ) : (methodsQuery.data ?? []).length === 0 ? (
         <EmptyState
-          title="Managed by configuration"
-          description="Payment methods are seeded by deployment configuration in Phase 1. There is nothing to edit here yet."
+          title="No payment methods"
+          description="Add a payment method before accepting player deposits."
         />
       ) : (
         <RecordTable
@@ -94,9 +107,22 @@ function MethodsTab() {
             {
               key: 'status',
               header: 'Status',
-              align: 'right',
               width: '110px',
               cell: (row) => <StatusBadge status={row.enabled ? 'Live' : 'Off'} />,
+            },
+            {
+              key: 'actions',
+              header: 'Actions',
+              align: 'right',
+              width: '190px',
+              cell: (row) => (
+                <span className="flex justify-end gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => toggle(row)} disabled={update.isPending}>
+                    {row.enabled ? 'Disable' : 'Enable'}
+                  </Button>
+                  <Button size="sm" onClick={() => setEditing(row)}>Edit</Button>
+                </span>
+              ),
             },
           ]}
           renderCard={(row) => (
@@ -104,135 +130,46 @@ function MethodsTab() {
               title={row.name}
               meta={row.pay_to}
               aside={<StatusBadge status={row.enabled ? 'Live' : 'Off'} />}
+              actions={
+                <>
+                  <Button variant="secondary" size="sm" onClick={() => toggle(row)} disabled={update.isPending}>
+                    {row.enabled ? 'Disable' : 'Enable'}
+                  </Button>
+                  <Button size="sm" onClick={() => setEditing(row)}>Edit</Button>
+                </>
+              }
             />
           )}
         />
       )}
+
+      {update.isError ? (
+        <p role="alert" className="text-[13px] text-danger">The payment-method status could not be changed.</p>
+      ) : null}
+
+      <PaymentMethodDialog
+        key={creating ? 'create-open' : 'create-closed'}
+        open={creating}
+        onClose={() => setCreating(false)}
+      />
+      <PaymentMethodDialog
+        key={editing?.id ?? 'none'}
+        open={editing !== undefined}
+        {...(editing ? { method: editing } : {})}
+        onClose={() => setEditing(undefined)}
+      />
     </section>
   )
 }
 
 function StaffTab() {
-  const staffQuery = useStaff()
-
-  return (
-    <section className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="max-w-[60ch] text-[13px] leading-relaxed text-ink-mute">
-          Owner grants all access including RTP and staff. Operator covers deposits, users and games.
-          Owner-only section.
-        </p>
-        <Button size="sm">
-          <Plus aria-hidden size={15} strokeWidth={2} />
-          Invite staff
-        </Button>
-      </div>
-
-      {staffQuery.isPending ? (
-        <SkeletonRows count={3} />
-      ) : (staffQuery.data ?? []).length === 0 ? (
-        <EmptyState
-          title="No staff directory"
-          description="The development administrator is provisioned by seed. Staff management is not part of this phase."
-        />
-      ) : (
-        <RecordTable
-          label="Staff accounts"
-          rows={staffQuery.data ?? []}
-          rowKey={(row) => row.id}
-          columns={[
-            { key: 'name', header: 'Name', cell: (row) => row.name },
-            {
-              key: 'email',
-              header: 'Work email',
-              cell: (row) => <span className="text-[13px] text-ink-mute">{row.email}</span>,
-            },
-            { key: 'role', header: 'Role', width: '130px', cell: (row) => row.role },
-            {
-              key: 'status',
-              header: 'Status',
-              align: 'right',
-              width: '120px',
-              cell: (row) => <StatusBadge status={row.enabled ? 'Active' : 'Disabled'} />,
-            },
-          ]}
-          renderCard={(row) => (
-            <RecordCard
-              title={row.name}
-              meta={`${row.email} · ${row.role}`}
-              aside={<StatusBadge status={row.enabled ? 'Active' : 'Disabled'} />}
-            />
-          )}
-        />
-      )}
-    </section>
-  )
+  return <FutureDevelopment />
 }
 
 function LimitsTab() {
-  return (
-    <section className="grid max-w-2xl gap-4">
-      <Field label="Minimum per deposit request" htmlFor="limit-min">
-        <Input id="limit-min" defaultValue={formatMoney(money(10_000), { symbol: false })} className="font-mono" />
-      </Field>
-      <Field label="Maximum per deposit request" htmlFor="limit-max">
-        <Input
-          id="limit-max"
-          defaultValue={formatMoney(money(5_000_000), { symbol: false })}
-          className="font-mono"
-        />
-      </Field>
-      <Field label="Maximum per player per day" htmlFor="limit-day">
-        <Input
-          id="limit-day"
-          defaultValue={formatMoney(money(10_000_000), { symbol: false })}
-          className="font-mono"
-        />
-      </Field>
-      <Field
-        label="Concurrent pending requests"
-        htmlFor="limit-pending"
-        hint="One open request per player keeps the queue reconcilable."
-      >
-        <Select id="limit-pending" defaultValue="1">
-          <option value="1">One at a time</option>
-          <option value="many">Unlimited</option>
-        </Select>
-      </Field>
-      <div>
-        <Button>Save limits</Button>
-      </div>
-    </section>
-  )
+  return <FutureDevelopment />
 }
 
 function PlatformTab() {
-  return (
-    <section className="grid max-w-2xl gap-4">
-      <Field label="Platform name" htmlFor="platform-name">
-        <Input id="platform-name" defaultValue="Gaming Platform" />
-      </Field>
-      <Field label="Support link" htmlFor="platform-support">
-        <Input id="platform-support" defaultValue="https://support.example.com" />
-      </Field>
-      <Field label="Default language" htmlFor="platform-language">
-        <Select id="platform-language" defaultValue="en">
-          <option value="en">English</option>
-        </Select>
-      </Field>
-      <Field
-        label="Enabled currencies"
-        htmlFor="platform-currency"
-        hint="Every player holds a wallet in each enabled currency. Nothing converts between them."
-      >
-        <Select id="platform-currency" defaultValue="PHP">
-          <option value="PHP">PHP · ₱</option>
-          <option value="USD">USD · $</option>
-        </Select>
-      </Field>
-      <div>
-        <Button>Save platform settings</Button>
-      </div>
-    </section>
-  )
+  return <FutureDevelopment />
 }

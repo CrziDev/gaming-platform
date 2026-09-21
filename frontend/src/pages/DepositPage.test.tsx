@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -34,25 +34,40 @@ async function submitARequest() {
 }
 
 describe('submitting a deposit request', () => {
+  it('keeps the selected method and amount visible in the deposit summary', async () => {
+    const user = userEvent.setup()
+
+    stubFetchRoutes({ 'GET /me': player })
+    renderApp('/wallet/deposit')
+
+    const summary = await screen.findByRole('complementary', { name: 'Deposit summary' })
+    expect(within(summary).getByText('Method A')).toBeInTheDocument()
+    expect(within(summary).getByText('₱1,000.00')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '2,500' }))
+
+    expect(within(summary).getByText('₱2,500.00')).toBeInTheDocument()
+  })
+
   it('confirms the request in a toast that names the reference', async () => {
     await submitARequest()
 
-    expect(await screen.findByText(/Request 8841 sent for review/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Request 8841 submitted/i)).toBeInTheDocument()
   })
 
   it('never claims the money has landed', async () => {
     await submitARequest()
 
-    const toast = await screen.findByText(/Request 8841 sent for review/i)
-    expect(toast).toHaveTextContent(/Funds appear once an admin approves/i)
+    const toast = await screen.findByText(/Request 8841 submitted/i)
+    expect(toast).toHaveTextContent(/Funds are added once it is approved/i)
     expect(toast).not.toHaveTextContent(/added to your balance|credited|deposit complete/i)
   })
 
   it('lands on the request status page, awaiting approval', async () => {
     await submitARequest()
 
-    expect(await screen.findByText('Awaiting approval')).toBeInTheDocument()
+    expect(await screen.findByText('Awaiting approval', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /cancel request/i })).not.toBeInTheDocument()
-    expect(screen.getByText(/submitted requests cannot be cancelled/i)).toBeInTheDocument()
+    expect(screen.getByText(/request can’t be cancelled/i)).toBeInTheDocument()
   })
 })

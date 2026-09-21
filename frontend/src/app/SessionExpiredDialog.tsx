@@ -42,7 +42,7 @@ export function SessionExpiredDialog() {
       open={expired}
       onClose={dismiss}
       title="Session expired"
-      description="You were signed out because your session ended. Nothing was lost — sign in again to pick up where you left off."
+      description="Sign in again to pick up where you left off."
       footer={
         <div className="grid grid-cols-2 gap-2.5">
           <Button variant="secondary" onClick={dismiss}>
@@ -51,12 +51,6 @@ export function SessionExpiredDialog() {
           <Button onClick={() => void signIn()}>Sign in</Button>
         </div>
       }
-    >
-      <p className="text-[13.5px] leading-relaxed text-ink-mute">
-        {inConsole
-          ? 'The console signs staff out after a period of inactivity. Balances and pending requests are untouched.'
-          : 'Your balance and any pending deposit are untouched. The lobby stays browsable while you are signed out.'}
-      </p>
-    </Modal>
+    />
   )
 }

@@ -39,6 +39,17 @@ describe('api client', () => {
     await expect(api.post<void>('/logout')).resolves.toBeUndefined()
   })
 
+  it('sends PUT and DELETE with their methods and no body', async () => {
+    const fetchMock = stubFetch(204, undefined)
+
+    await expect(api.put<void>('/games/plinko/favorite')).resolves.toBeUndefined()
+    await expect(api.delete<void>('/games/plinko/favorite')).resolves.toBeUndefined()
+
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'PUT', credentials: 'include' })
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: 'DELETE', credentials: 'include' })
+    expect(fetchMock.mock.calls[1]?.[1]?.body).toBeNull()
+  })
+
   it('maps an error body onto ApiError, keeping the per-field messages', async () => {
     stubFetch(400, {
       error: 'One or more fields are invalid',

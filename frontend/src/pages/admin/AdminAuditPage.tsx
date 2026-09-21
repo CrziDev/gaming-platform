@@ -17,7 +17,7 @@ export function AdminAuditPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         title="Audit logs"
-        meta="Append-only. Every money and configuration action, attributed to the operator who took it."
+        meta="Every money and configuration action, and who took it."
       />
 
       {auditQuery.isPending ? (
@@ -29,7 +29,7 @@ export function AdminAuditPage() {
           onRetry={() => void auditQuery.refetch()}
         />
       ) : !result || result.rows.length === 0 ? (
-        <EmptyState title="No audit entries" description="No operator action has been recorded yet." />
+        <EmptyState title="No audit entries" />
       ) : (
         <RecordTable
           label="Audit log"

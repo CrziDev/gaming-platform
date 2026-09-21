@@ -1,6 +1,14 @@
 import type { ApiErrorBody } from '@/api/types'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+
+// The socket shares the API origin, so the same allowlisted Origin header the
+// browser sends on every write also covers the upgrade.
+export function socketUrl(path: string): string {
+  const url = new URL(`${API_BASE_URL}${path}`, window.location.href)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  return url.href
+}
 
 export class ApiError extends Error {
   readonly status: number
@@ -40,7 +48,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers['Content-Type'] = 'application/json'
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers,
     credentials: 'include',
@@ -70,6 +78,12 @@ export const api = {
 
   patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(path, { ...options, method: 'PATCH', body }),
+
+  put: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>) =>
+    request<T>(path, { ...options, method: 'PUT', body }),
+
+  delete: <T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>) =>
+    request<T>(path, { ...options, method: 'DELETE' }),
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -88,7 +102,7 @@ function toApiError(status: number, payload: unknown): ApiError {
   const body = payload as ApiErrorBody | null
 
   if (!body || typeof body.error !== 'string') {
-    return new ApiError(status, 'The server returned an unexpected response')
+    return new ApiError(status, 'Something went wrong. Please try again.')
   }
 
   return new ApiError(status, body.error, body.code ?? null, body.fields ?? {})

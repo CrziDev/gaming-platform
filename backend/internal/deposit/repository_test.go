@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -46,6 +47,7 @@ func createDepositUser(t *testing.T, db *sql.DB) string {
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM audit_logs WHERE actor_user_id = ($1::text)::uuid OR entity_id IN (SELECT id::text FROM deposit_requests WHERE user_id = ($1::text)::uuid)`, id)
+		_, _ = db.Exec(`DELETE FROM notifications WHERE user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM deposit_requests WHERE user_id = ($1::text)::uuid OR reviewed_by = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM wallet_transactions WHERE user_id = ($1::text)::uuid OR actor_user_id = ($1::text)::uuid`, id)
 		_, _ = db.Exec(`DELETE FROM wallets WHERE user_id = ($1::text)::uuid`, id)
@@ -116,6 +118,106 @@ func TestProofPathPreservesDatabaseErrors(t *testing.T) {
 	}
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("want context cancellation, got %v", err)
+	}
+}
+
+func TestAdminPaymentMethodsCreateUpdateListAndAudit(t *testing.T) {
+	db := depositTestDB(t)
+	actorID := createDepositUser(t, db)
+	name := fmt.Sprintf("Test method %d", depositUserSequence.Add(1))
+
+	created, err := CreatePaymentMethod(context.Background(), db, actorID, PaymentMethodInput{
+		Name: name, Description: "Original description", PayTo: "Account 100",
+		ReferenceRequired: true, Enabled: false,
+	})
+	if err != nil {
+		t.Fatalf("create payment method: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM audit_logs WHERE entity_type = 'payment_method' AND entity_id = $1`, created.ID)
+		_, _ = db.Exec(`DELETE FROM deposit_requests WHERE method_id = ($1::text)::uuid`, created.ID)
+		_, _ = db.Exec(`DELETE FROM payment_methods WHERE id = ($1::text)::uuid`, created.ID)
+	})
+	if created.Enabled || created.SortOrder <= 0 || created.Name != name {
+		t.Fatalf("unexpected created method: %+v", created)
+	}
+
+	if _, err := CreatePaymentMethod(context.Background(), db, actorID, PaymentMethodInput{
+		Name: strings.ToUpper(name), PayTo: "Duplicate", ReferenceRequired: true,
+	}); !errors.Is(err, ErrMethodNameTaken) {
+		t.Fatalf("case-insensitive duplicate: want ErrMethodNameTaken, got %v", err)
+	}
+
+	enabled := true
+	payTo := "Account 200"
+	updated, err := UpdatePaymentMethod(context.Background(), db, actorID, created.ID, PaymentMethodPatch{
+		PayTo: &payTo, Enabled: &enabled,
+	})
+	if err != nil {
+		t.Fatalf("update payment method: %v", err)
+	}
+	if !updated.Enabled || updated.PayTo != payTo {
+		t.Fatalf("unexpected updated method: %+v", updated)
+	}
+
+	methods, err := ListAdminMethods(context.Background(), db)
+	if err != nil {
+		t.Fatalf("list admin methods: %v", err)
+	}
+	found := false
+	for _, method := range methods {
+		if method.ID == created.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("created method missing from admin list: %+v", methods)
+	}
+	public, err := ListMethods(context.Background(), db)
+	if err != nil {
+		t.Fatalf("list public methods: %v", err)
+	}
+	found = false
+	for _, method := range public {
+		if method.ID == created.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("enabled method missing from player list: %+v", public)
+	}
+
+	provisionDepositWallets(t, db, actorID)
+	request, wasCreated, err := Create(context.Background(), db, actorID, created.ID, "PHP", 10_000, "reference-before-disable", "proof.png", "admin-method-test")
+	if err != nil || !wasCreated {
+		t.Fatalf("create request with enabled method: created=%v err=%v", wasCreated, err)
+	}
+	disabled := false
+	if _, err := UpdatePaymentMethod(context.Background(), db, actorID, created.ID, PaymentMethodPatch{Enabled: &disabled}); err != nil {
+		t.Fatalf("disable payment method: %v", err)
+	}
+	if _, _, err := Create(context.Background(), db, actorID, created.ID, "PHP", 10_000, "reference-after-disable", "proof.png", "admin-method-disabled-test"); !errors.Is(err, ErrInvalidMethod) {
+		t.Fatalf("new request with disabled method: want ErrInvalidMethod, got %v", err)
+	}
+	if _, err := Get(context.Background(), db, actorID, request.ID); err != nil {
+		t.Fatalf("historical request after method disable: %v", err)
+	}
+	public, err = ListMethods(context.Background(), db)
+	if err != nil {
+		t.Fatalf("list public methods after disable: %v", err)
+	}
+	for _, method := range public {
+		if method.ID == created.ID {
+			t.Fatalf("disabled method remained in player list: %+v", public)
+		}
+	}
+
+	var audits int
+	if err := db.QueryRow(`SELECT count(*) FROM audit_logs WHERE entity_type = 'payment_method' AND entity_id = $1`, created.ID).Scan(&audits); err != nil {
+		t.Fatalf("count payment method audits: %v", err)
+	}
+	if audits != 3 {
+		t.Fatalf("payment method audits = %d, want 3", audits)
 	}
 }
 
@@ -236,6 +338,23 @@ func TestReviewApprovalCreditsOnceAndAudits(t *testing.T) {
 	if actor != actorID || action != "deposit.approve" || detail != "Verified amount on proof" || beforeAmount != "10000" || afterAmount != "12000" {
 		t.Fatalf("unexpected approval audit: actor=%q action=%q detail=%q before=%q after=%q", actor, action, detail, beforeAmount, afterAmount)
 	}
+	assertNotification(t, db, userID, request.ID, "deposit_approved", 12_000, "")
+}
+
+func assertNotification(t *testing.T, db *sql.DB, userID, requestID, kind string, amount int64, detail string) {
+	t.Helper()
+	var count int
+	var gotKind, gotCurrency, gotDetail string
+	var gotAmount int64
+	if err := db.QueryRow(`SELECT count(*) FROM notifications WHERE user_id = ($1::text)::uuid`, userID).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("notifications for the player = %d, err = %v, want exactly one", count, err)
+	}
+	if err := db.QueryRow(`SELECT kind, amount_minor, currency, COALESCE(detail, '') FROM notifications WHERE reference_type = 'deposit' AND reference_id = ($1::text)::uuid`, requestID).Scan(&gotKind, &gotAmount, &gotCurrency, &gotDetail); err != nil {
+		t.Fatalf("read notification: %v", err)
+	}
+	if gotKind != kind || gotAmount != amount || gotCurrency != "PHP" || gotDetail != detail {
+		t.Fatalf("notification = %s %d %s %q, want %s %d PHP %q", gotKind, gotAmount, gotCurrency, gotDetail, kind, amount, detail)
+	}
 }
 
 func TestReviewRejectionPreservesReasonWithoutMovingMoney(t *testing.T) {
@@ -259,6 +378,7 @@ func TestReviewRejectionPreservesReasonWithoutMovingMoney(t *testing.T) {
 		t.Fatalf("unexpected rejected request: %+v", rejected)
 	}
 	assertDepositFinancialRows(t, db, userID, request.ID, 0, 0, 1)
+	assertNotification(t, db, userID, request.ID, "deposit_rejected", 10_000, "Reference not found")
 }
 
 func TestConcurrentApprovalsCreditExactlyOnce(t *testing.T) {

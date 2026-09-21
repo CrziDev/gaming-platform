@@ -15,9 +15,10 @@ type TabsProps<T extends string> = {
   onChange: (value: T) => void
   label: string
   className?: string
+  disabled?: boolean
 }
 
-export function ChipTabs<T extends string>({ items, value, onChange, label, className }: TabsProps<T>) {
+export function ChipTabs<T extends string>({ items, value, onChange, label, className, disabled = false }: TabsProps<T>) {
   return (
     <div role="tablist" aria-label={label} className={cn('scrollbar-hidden flex gap-1.5 overflow-x-auto', className)}>
       {items.map((item) => {
@@ -29,11 +30,13 @@ export function ChipTabs<T extends string>({ items, value, onChange, label, clas
             type="button"
             role="tab"
             aria-selected={active}
-            onClick={() => onChange(item.id)}
+            aria-disabled={disabled || undefined}
+            onClick={() => !disabled && onChange(item.id)}
             className={cn(
               'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-chip px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-8',
-              'transition-colors duration-[120ms] ease-standard',
+              'transition-[color,background-color,opacity,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none',
               active ? 'bg-surface-3 text-ink-soft' : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
+              disabled && 'cursor-not-allowed text-ink-mute hover:bg-transparent',
             )}
           >
             {Icon ? <Icon aria-hidden size={15} strokeWidth={1.5} /> : null}
@@ -54,6 +57,7 @@ export function SegmentedTrack<T extends string>({
   onChange,
   label,
   className,
+  disabled = false,
 }: TabsProps<T>) {
   return (
     <div
@@ -69,11 +73,13 @@ export function SegmentedTrack<T extends string>({
             type="button"
             role="tab"
             aria-selected={active}
-            onClick={() => onChange(item.id)}
+            aria-disabled={disabled || undefined}
+            onClick={() => !disabled && onChange(item.id)}
             className={cn(
               'inline-flex min-h-10 shrink-0 items-center gap-2 rounded-[7px] px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-[26px]',
-              'transition-colors duration-[120ms] ease-standard',
+              'transition-[color,background-color,opacity,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none',
               active ? 'bg-wash text-ink-soft' : 'text-ink-mute hover:text-ink-soft',
+              disabled && 'cursor-not-allowed hover:text-ink-mute',
             )}
           >
             {item.label}

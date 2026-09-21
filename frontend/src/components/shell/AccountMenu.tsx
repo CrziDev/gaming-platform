@@ -4,10 +4,11 @@ import { Link, useNavigate } from 'react-router'
 
 import type { User } from '@/api/types'
 import { useLogout } from '@/features/auth'
+import { cn } from '@/lib/cn'
 import { paths } from '@/routes/paths'
 
 const itemClass =
-  'flex min-h-11 w-full items-center gap-2.5 rounded-input px-3 text-[13px] text-ink-mute transition-colors duration-[120ms] hover:bg-wash hover:text-ink-soft lg:min-h-9'
+  'flex min-h-11 w-full items-center gap-2.5 rounded-input px-3 text-[13px] text-ink-mute transition-colors duration-fast hover:bg-wash hover:text-ink-soft lg:min-h-9'
 
 export function AccountMenu({ user }: { user: User }) {
   const [open, setOpen] = useState(false)
@@ -41,7 +42,7 @@ export function AccountMenu({ user }: { user: User }) {
         aria-label="Account menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex min-h-11 items-center gap-2 rounded-chip px-1 py-1 text-ink-soft transition-colors duration-[120ms] hover:bg-wash sm:pr-2 lg:min-h-8"
+        className="flex min-h-11 items-center gap-2 rounded-chip px-1 py-1 text-ink-soft transition-colors duration-fast hover:bg-wash sm:pr-2 lg:min-h-8"
       >
         <span
           aria-hidden
@@ -52,11 +53,19 @@ export function AccountMenu({ user }: { user: User }) {
         <span aria-hidden className="hidden text-[13px] font-medium sm:inline">
           {surname(user.display_name)}
         </span>
-        <ChevronDown aria-hidden size={12} strokeWidth={2.2} className="hidden text-ink-mute sm:inline" />
+        <ChevronDown
+          aria-hidden
+          size={12}
+          strokeWidth={2.2}
+          className={cn(
+            'hidden text-ink-mute transition-transform duration-standard ease-standard motion-reduce:transition-none sm:inline',
+            open && 'rotate-180',
+          )}
+        />
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-40 mt-1.5 w-56 rounded-card bg-surface-2 p-1">
+        <div className="pop-enter overlay-shadow absolute right-0 z-40 mt-1.5 w-56 rounded-card bg-surface-2 p-1">
           <div className="px-3 pt-2 pb-2.5">
             <p className="truncate text-[13px] font-medium text-ink-soft">{user.display_name}</p>
             <p className="truncate text-[12px] text-ink-mute">{user.email}</p>

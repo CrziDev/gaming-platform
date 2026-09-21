@@ -2,12 +2,27 @@ package app
 
 import (
 	"log/slog"
+	"net"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gaming-platform/backend/internal/httpx"
 )
+
+func forwardedClientIP(enabled bool, next http.Handler) http.Handler {
+	if !enabled {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		forwarded := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0])
+		if ip := net.ParseIP(forwarded); ip != nil {
+			r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func browserRules(origins []string, next http.Handler) http.Handler {
 	allowed := make(map[string]struct{}, len(origins))
@@ -41,7 +56,7 @@ func browserRules(origins []string, next http.Handler) http.Handler {
 		header.Set("Access-Control-Allow-Origin", origin)
 		header.Set("Access-Control-Allow-Credentials", "true")
 		if r.Method == http.MethodOptions {
-			header.Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+			header.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			header.Set("Access-Control-Allow-Headers", "Content-Type, Idempotency-Key")
 			header.Set("Access-Control-Max-Age", "600")
 			w.WriteHeader(http.StatusNoContent)
@@ -136,4 +151,9 @@ func (r *statusRecorder) WriteHeader(status int) {
 func (r *statusRecorder) Write(body []byte) (int, error) {
 	r.wrote = true
 	return r.ResponseWriter.Write(body)
+}
+
+// Unwrap lets a WebSocket upgrade reach the server's writer for the hijack.
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
 }

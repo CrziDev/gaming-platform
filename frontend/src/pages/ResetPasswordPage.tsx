@@ -47,8 +47,7 @@ export function ResetPasswordPage() {
           <div className="flex flex-col gap-2">
             <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Choose a new password</h1>
             <p className="text-[13.5px] leading-relaxed text-ink-mute">
-              Once it is saved, every other session on your account is signed out and you return
-              to the lobby.
+              You&rsquo;ll be signed out on any other devices.
             </p>
           </div>
 

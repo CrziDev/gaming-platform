@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/ratelimit"
 	"github.com/gaming-platform/backend/internal/user"
 )
 
@@ -24,17 +25,18 @@ const (
 const invalidCredentials = "Email or password is incorrect"
 
 type Config struct {
-	CookieName      string
-	CookieSecure    bool
-	SessionTTL      time.Duration
-	LoginsPerMinute int
+	CookieName          string
+	CookieSecure        bool
+	SessionTTL          time.Duration
+	LoginsPerMinute     int
+	PasswordResetSender PasswordResetSender
 }
 
 type Handler struct {
 	db      *sql.DB
 	logger  *slog.Logger
 	cfg     Config
-	limiter *rateLimiter
+	limiter *ratelimit.Limiter
 }
 
 func NewHandler(db *sql.DB, logger *slog.Logger, cfg Config) *Handler {
@@ -42,7 +44,7 @@ func NewHandler(db *sql.DB, logger *slog.Logger, cfg Config) *Handler {
 		db:      db,
 		logger:  logger,
 		cfg:     cfg,
-		limiter: newRateLimiter(cfg.LoginsPerMinute, time.Minute),
+		limiter: ratelimit.New(cfg.LoginsPerMinute, time.Minute),
 	}
 }
 
@@ -188,9 +190,15 @@ func (h *Handler) AdminUsers(w http.ResponseWriter, r *http.Request, _ user.User
 		})
 		return
 	}
+	if query.Role != "" && query.Role != "player" && query.Role != "admin" {
+		httpx.WriteFieldErrors(w, "One or more filters are invalid", map[string]string{
+			"role": "Role must be player or admin",
+		})
+		return
+	}
 
 	accounts, total, err := user.List(r.Context(), h.db, user.ListFilter{
-		Page: query.Page, Size: query.Size, Search: query.Search, Status: query.Status,
+		Page: query.Page, Size: query.Size, Search: query.Search, Status: query.Status, Role: query.Role,
 	})
 	if err != nil {
 		h.internal(w, r, err)

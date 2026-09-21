@@ -5,7 +5,8 @@ import { Select } from '@/components/ui/Field'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
-import { SkeletonRows } from '@/components/ui/Skeleton'
+import { Skeleton, SkeletonRows } from '@/components/ui/Skeleton'
+import { StatCard } from '@/components/ui/StatCard'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
@@ -13,8 +14,10 @@ import {
   ledgerColumns,
   useRounds,
   useTransactions,
+  useWalletSummary,
   type HistoryFilter,
   type HistoryKind,
+  type SummaryFilter,
 } from '@/features/wallet'
 import { formatClock, formatDate, formatMultiplier } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
@@ -30,6 +33,10 @@ export function HistoryPage() {
   const [filter, setFilter] = useState<HistoryFilter>({ kind: 'all', days: 30, page: 1 })
   const showingRounds = filter.kind === 'rounds'
   const historyQuery = useTransactions(filter, !showingRounds)
+  const summaryFilter: SummaryFilter = {
+    days: filter.days,
+    ...(filter.currency ? { currency: filter.currency } : {}),
+  }
   const roundsQuery = useRounds(
     {
       days: filter.days,
@@ -74,6 +81,8 @@ export function HistoryPage() {
         label="Filter by type"
       />
 
+      <SummaryStrip filter={summaryFilter} />
+
       {showingRounds ? (
         roundsQuery.isPending ? (
           <SkeletonRows count={6} />
@@ -86,7 +95,7 @@ export function HistoryPage() {
         ) : !roundPage || roundPage.rows.length === 0 ? (
           <EmptyState
             title="No rounds in this range"
-            description="Widen the date range to see more of your play history."
+            description="Try a wider date range."
           />
         ) : (
           <>
@@ -172,13 +181,13 @@ export function HistoryPage() {
       ) : historyQuery.isError ? (
         <ErrorState
           title="History unavailable"
-          message="Your ledger could not be loaded."
+          message="Your history could not be loaded."
           onRetry={() => void historyQuery.refetch()}
         />
       ) : !page || page.rows.length === 0 ? (
         <EmptyState
           title="Nothing in this range"
-          description="Widen the date range or clear the type filter to see more of your ledger."
+          description="Try a wider date range or a different filter."
         />
       ) : (
         <>
@@ -261,5 +270,54 @@ function RoundReturn({ round }: { round: Round }) {
       tone={round.win_minor > 0 ? 'auto' : 'neutral'}
       className="text-sm"
     />
+  )
+}
+
+function SummaryStrip({ filter }: { filter: SummaryFilter }) {
+  const summaryQuery = useWalletSummary(filter)
+
+  if (summaryQuery.isPending) {
+    return (
+      <div role="status" aria-label="Loading summary" className="grid gap-3 sm:grid-cols-3">
+        <Skeleton className="h-[74px] rounded-card" />
+        <Skeleton className="h-[74px] rounded-card" />
+        <Skeleton className="h-[74px] rounded-card" />
+      </div>
+    )
+  }
+  if (summaryQuery.isError) {
+    return (
+      <ErrorState
+        title="Summary unavailable"
+        message="Your totals could not be loaded."
+        onRetry={() => void summaryQuery.refetch()}
+      />
+    )
+  }
+  if (summaryQuery.data.length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-3">
+      {summaryQuery.data.map((entry) => (
+        <section
+          key={entry.currency}
+          aria-label={`${entry.currency} summary`}
+          className="grid gap-3 sm:grid-cols-3"
+        >
+          <StatCard
+            label={`Deposited · ${filter.days}d`}
+            value={formatMoney(money(entry.deposited_minor, entry.currency))}
+          />
+          <StatCard
+            label={`Staked · ${filter.days}d`}
+            value={formatMoney(money(entry.staked_minor, entry.currency))}
+          />
+          <StatCard
+            label={`Returned · ${filter.days}d`}
+            value={formatMoney(money(entry.returned_minor, entry.currency))}
+          />
+        </section>
+      ))}
+    </div>
   )
 }

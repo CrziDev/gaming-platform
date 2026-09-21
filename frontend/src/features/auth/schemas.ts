@@ -39,8 +39,20 @@ export const resetPasswordSchema = z
     error: 'Both passwords must match',
   })
 
+export const changePasswordSchema = z
+  .object({
+    current_password: z.string().min(1, 'Enter your current password'),
+    password: z.string().min(12, 'Use at least 12 characters').max(128, 'Use at most 128 characters'),
+    confirm_password: z.string(),
+  })
+  .refine((values) => values.password === values.confirm_password, {
+    path: ['confirm_password'],
+    error: 'Both passwords must match',
+  })
+
 export type LoginInput = z.infer<typeof loginSchema>
 export type RegisterInput = z.infer<typeof registerSchema>
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>

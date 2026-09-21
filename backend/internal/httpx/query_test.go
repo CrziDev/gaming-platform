@@ -12,7 +12,7 @@ import (
 
 func TestReadQueryAppliesDefaultsAndNormalizesValues(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet,
-		"/api/records?search=++Player+One++&status=active&type=wager&currency=php&game_id=game-1"+
+		"/api/records?search=++Player+One++&status=active&role=player&type=wager&currency=php&game_id=game-1"+
 			"&from=2026-09-01T08%3A00%3A00%2B08%3A00&to=2026-09-02T00%3A00%3A00Z", nil)
 	response := httptest.NewRecorder()
 
@@ -23,7 +23,7 @@ func TestReadQueryAppliesDefaultsAndNormalizesValues(t *testing.T) {
 	if query.Page != 1 || query.Size != 20 {
 		t.Fatalf("unexpected defaults: page=%d size=%d", query.Page, query.Size)
 	}
-	if query.Search != "Player One" || query.Status != "active" || query.Type != "wager" ||
+	if query.Search != "Player One" || query.Status != "active" || query.Role != "player" || query.Type != "wager" ||
 		query.Currency != "PHP" || query.GameID != "game-1" {
 		t.Fatalf("unexpected filters: %+v", query)
 	}

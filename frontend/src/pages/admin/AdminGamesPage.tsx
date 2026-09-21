@@ -32,7 +32,7 @@ export function AdminGamesPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeading
           title="Games"
-          meta="Every game in every status. Only an active game reaches the player catalogue."
+          meta="Only active games appear in the player catalogue."
         />
         {newGame}
       </div>
@@ -47,8 +47,8 @@ export function AdminGamesPage() {
         />
       ) : gamesQuery.data.length === 0 ? (
         <EmptyState
-          title="No games configured"
-          description="Add the first title to start the catalogue. It stays a draft until you activate it."
+          title="No games yet"
+          description="A new game stays a draft until you activate it."
           action={newGame}
         />
       ) : (
@@ -84,10 +84,10 @@ export function AdminGamesPage() {
             },
             {
               key: 'rtp',
-              header: 'Active RTP',
+              header: 'RTP',
               align: 'right',
               width: '130px',
-              cell: (row) => <ActiveRtp basisPoints={row.active_rtp_basis_points} />,
+              cell: (row) => <ActiveRtp basisPoints={row.rtp_basis_points} />,
             },
             {
               key: 'status',
@@ -100,7 +100,7 @@ export function AdminGamesPage() {
             <RecordCard
               onClick={() => void navigate(adminPaths.game(row.id))}
               title={row.name}
-              meta={`${row.category_name} · ${row.active_rtp_basis_points === null ? 'no active profile' : formatPercent(row.active_rtp_basis_points)}`}
+              meta={`${row.category_name} · ${row.rtp_basis_points === null ? 'no RTP set' : formatPercent(row.rtp_basis_points)}`}
               aside={<StatusBadge status={row.status} />}
             />
           )}

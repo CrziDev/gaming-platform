@@ -18,18 +18,32 @@ type Handler struct {
 }
 
 type response struct {
-	PendingDeposits         int     `json:"pending_deposits"`
-	PendingHeldMinor        int64   `json:"pending_held_minor"`
-	OldestPendingAt         *string `json:"oldest_pending_at"`
-	ApprovedTodayMinor      int64   `json:"approved_today_minor"`
-	ApprovedTodayCount      int     `json:"approved_today_count"`
-	StakedTodayMinor        int64   `json:"staked_today_minor"`
-	RoundsToday             int     `json:"rounds_today"`
-	PlayersToday            int     `json:"players_today"`
-	ReturnedTodayMinor      int64   `json:"returned_today_minor"`
-	EffectiveRTPBasisPoints int     `json:"effective_rtp_basis_points"`
-	TargetRTPBasisPoints    int     `json:"target_rtp_basis_points"`
-	Currency                string  `json:"currency"`
+	PendingDeposits         int            `json:"pending_deposits"`
+	PendingHeldMinor        int64          `json:"pending_held_minor"`
+	OldestPendingAt         *string        `json:"oldest_pending_at"`
+	ApprovedTodayMinor      int64          `json:"approved_today_minor"`
+	ApprovedTodayCount      int            `json:"approved_today_count"`
+	StakedTodayMinor        int64          `json:"staked_today_minor"`
+	ReturnedTodayMinor      int64          `json:"returned_today_minor"`
+	HoldTodayMinor          int64          `json:"hold_today_minor"`
+	RoundsToday             int            `json:"rounds_today"`
+	PlayersToday            int            `json:"players_today"`
+	EffectiveRTPBasisPoints int            `json:"effective_rtp_basis_points"`
+	ExpectedRTPBasisPoints  int            `json:"expected_rtp_basis_points"`
+	Games                   []gameActivity `json:"games"`
+	Currency                string         `json:"currency"`
+}
+
+type gameActivity struct {
+	GameID                  string `json:"game_id"`
+	GameSlug                string `json:"game_slug"`
+	GameName                string `json:"game_name"`
+	Rounds                  int    `json:"rounds"`
+	StakedMinor             int64  `json:"staked_minor"`
+	ReturnedMinor           int64  `json:"returned_minor"`
+	HoldMinor               int64  `json:"hold_minor"`
+	EffectiveRTPBasisPoints int    `json:"effective_rtp_basis_points"`
+	ExpectedRTPBasisPoints  int    `json:"expected_rtp_basis_points"`
 }
 
 func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
@@ -61,6 +75,20 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request, _ user.User) {
 		formatted := summary.OldestPendingAt.UTC().Format(time.RFC3339)
 		oldestPendingAt = &formatted
 	}
+	games := make([]gameActivity, 0, len(summary.Games))
+	for _, item := range summary.Games {
+		games = append(games, gameActivity{
+			GameID:                  item.GameID,
+			GameSlug:                item.Slug,
+			GameName:                item.Name,
+			Rounds:                  item.Rounds,
+			StakedMinor:             item.StakedMinor,
+			ReturnedMinor:           item.ReturnedMinor,
+			HoldMinor:               item.HoldMinor,
+			EffectiveRTPBasisPoints: item.EffectiveRTPBasisPts,
+			ExpectedRTPBasisPoints:  item.ExpectedRTPBasisPts,
+		})
+	}
 	httpx.WriteJSON(w, http.StatusOK, response{
 		PendingDeposits:         summary.PendingDeposits,
 		PendingHeldMinor:        summary.PendingHeldMinor,
@@ -68,11 +96,13 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request, _ user.User) {
 		ApprovedTodayMinor:      summary.ApprovedTodayMinor,
 		ApprovedTodayCount:      summary.ApprovedTodayCount,
 		StakedTodayMinor:        summary.StakedTodayMinor,
+		ReturnedTodayMinor:      summary.ReturnedTodayMinor,
+		HoldTodayMinor:          summary.HoldTodayMinor,
 		RoundsToday:             summary.RoundsToday,
 		PlayersToday:            summary.PlayersToday,
-		ReturnedTodayMinor:      summary.ReturnedTodayMinor,
 		EffectiveRTPBasisPoints: summary.EffectiveRTPBasisPts,
-		TargetRTPBasisPoints:    summary.TargetRTPBasisPoints,
+		ExpectedRTPBasisPoints:  summary.ExpectedRTPBasisPts,
+		Games:                   games,
 		Currency:                summary.Currency,
 	})
 }

@@ -18,21 +18,21 @@ const presentation: Record<
   pending: {
     icon: Clock,
     heading: 'Awaiting approval',
-    body: "We'll notify you the moment an admin reviews this. You can keep playing with your current balance.",
+    body: "We'll notify you once it has been reviewed. You can keep playing with your current balance.",
     frame: 'bg-warning/10',
     ring: 'bg-warning/14 text-warning',
   },
   approved: {
     icon: Check,
     heading: 'Approved',
-    body: 'The funds are in your wallet and the request has moved into your ledger as approved.',
+    body: 'The funds are in your wallet.',
     frame: 'bg-success/10',
     ring: 'bg-success/14 text-success',
   },
   rejected: {
     icon: X,
     heading: 'Rejected',
-    body: 'No funds moved. The reason below comes from the operator who reviewed the request.',
+    body: 'No funds were added.',
     frame: 'bg-danger/10',
     ring: 'bg-danger/14 text-danger',
   },
@@ -50,7 +50,7 @@ export function DepositStatusPage() {
     return (
       <ErrorState
         title="Request unavailable"
-        message="This deposit request could not be loaded. It has not changed."
+        message="This request could not be loaded."
         onRetry={() => void depositQuery.refetch()}
       />
     )
@@ -61,7 +61,6 @@ export function DepositStatusPage() {
     return (
       <EmptyState
         title="Request not found"
-        description="This deposit request is no longer on your account."
         action={
           <Link to={paths.wallet} className="text-accent-ink hover:text-accent-hi">
             Back to wallet
@@ -112,7 +111,6 @@ export function DepositStatusPage() {
         </Row>
         <Row label="Submitted">{formatDateTime(deposit.created_at)}</Row>
         {deposit.reviewed_at ? <Row label="Reviewed">{formatDateTime(deposit.reviewed_at)}</Row> : null}
-        <Row label="Proof">Stored for administrator review</Row>
       </dl>
 
       <div className="flex flex-col gap-2">
@@ -128,7 +126,7 @@ export function DepositStatusPage() {
 
         {deposit.status === 'pending' ? (
           <p className="text-center text-[12.5px] leading-relaxed text-ink-mute">
-            Submitted requests cannot be cancelled. An administrator must approve or reject this request.
+            A submitted request can&rsquo;t be cancelled.
           </p>
         ) : null}
       </div>

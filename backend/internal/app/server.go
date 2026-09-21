@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gaming-platform/backend/internal/rtp"
+	"github.com/gaming-platform/backend/internal/chat"
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver with database/sql
 )
 
@@ -28,21 +28,12 @@ func Run(ctx context.Context, logger *slog.Logger, cfg Config) error {
 		slog.Bool("cookie_secure", cfg.CookieSecure),
 		slog.Duration("ttl", cfg.SessionTTL),
 		slog.Any("allowed_origins", cfg.AllowedOrigins))
+	logger.Info("email delivery configured", slog.String("provider", cfg.EmailDeliveryProvider))
 
-	workerCtx, stopWorkers := context.WithCancel(ctx)
-	workerDone := make(chan struct{})
-	go func() {
-		defer close(workerDone)
-		rtp.RunReverter(workerCtx, db, logger, 30*time.Second)
-	}()
-	defer func() {
-		stopWorkers()
-		<-workerDone
-	}()
-
+	hub := chat.NewHub()
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(cfg.Port),
-		Handler:           New(db, logger, cfg),
+		Handler:           New(db, logger, cfg, hub),
 		ReadHeaderTimeout: 15 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -72,6 +63,9 @@ func Run(ctx context.Context, logger *slog.Logger, cfg Config) error {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}
+	// Shutdown neither closes nor waits for hijacked connections, so the chat
+	// sockets are told to go away once ordinary requests have drained.
+	hub.Close()
 	return <-serveErr
 }
 

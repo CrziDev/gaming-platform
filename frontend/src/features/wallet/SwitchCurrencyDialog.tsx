@@ -33,7 +33,7 @@ export function SwitchCurrencyDialog({ open, onClose }: SwitchCurrencyDialogProp
               }}
               className={cn(
                 'flex min-h-12 w-full items-center justify-between gap-3 rounded-input px-3 text-left',
-                'transition-colors duration-[120ms] hover:bg-wash',
+                'transition-colors duration-fast hover:bg-wash',
                 current ? 'bg-wash text-ink' : 'text-ink-soft',
               )}
             >

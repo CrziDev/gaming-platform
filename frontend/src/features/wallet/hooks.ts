@@ -15,10 +15,12 @@ import {
   fetchRounds,
   fetchTransactions,
   fetchWallet,
+  fetchWalletSummary,
   fetchWallets,
   markNotificationsRead,
   submitDeposit,
   type HistoryFilter,
+  type SummaryFilter,
 } from './api'
 
 export const walletQueryKey = ['wallets'] as const
@@ -79,20 +81,36 @@ export function useTransactions(filter: HistoryFilter, enabled = true) {
   return useQuery({ queryKey: ['transactions', filter], queryFn: () => fetchTransactions(filter), enabled })
 }
 
+// Keyed under 'transactions' so every invalidation that refreshes the ledger
+// refreshes its totals in the same breath.
+export function useWalletSummary(filter: SummaryFilter) {
+  return useQuery({
+    queryKey: ['transactions', 'summary', filter],
+    queryFn: () => fetchWalletSummary(filter),
+  })
+}
+
 export function useRounds(filter: Parameters<typeof fetchRounds>[0], enabled = true) {
   return useQuery({ queryKey: ['rounds', filter], queryFn: () => fetchRounds(filter), enabled })
 }
 
-export function useRecentRounds(gameId: string) {
+export function useRecentRounds(gameId: string, currency: Currency) {
   return useQuery({
-    queryKey: ['rounds', 'recent', gameId],
-    queryFn: () => fetchRecentRounds(gameId),
+    queryKey: ['rounds', 'recent', gameId, currency],
+    queryFn: () => fetchRecentRounds(gameId, currency),
     enabled: gameId !== '',
   })
 }
 
+// A review lands while the player is elsewhere, so the bell re-reads on a
+// slow clock; a settled round refreshes it directly through the game session.
 export function useNotifications(enabled = true) {
-  return useQuery({ queryKey: ['notifications'], queryFn: fetchNotifications, enabled })
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: fetchNotifications,
+    enabled,
+    refetchInterval: 60_000,
+  })
 }
 
 export function useMarkNotificationsRead() {
