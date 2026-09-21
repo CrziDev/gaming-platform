@@ -275,8 +275,8 @@ export async function fetchRounds(filter: RoundFilter): Promise<Page<Round>> {
 
 const RECENT_ROUNDS = 10
 
-export async function fetchRecentRounds(gameId: string): Promise<Round[]> {
-  const page = await fetchRounds({ page: 1, game_id: gameId })
+export async function fetchRecentRounds(gameId: string, currency: Currency): Promise<Round[]> {
+  const page = await fetchRounds({ page: 1, game_id: gameId, currency })
   return page.rows.slice(0, RECENT_ROUNDS)
 }
 

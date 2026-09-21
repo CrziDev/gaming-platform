@@ -1,9 +1,13 @@
 package game
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -35,21 +39,18 @@ type Handler struct {
 }
 
 type response struct {
-	ID             string   `json:"id"`
-	Slug           string   `json:"slug"`
-	Name           string   `json:"name"`
-	Description    string   `json:"description"`
-	CategorySlug   string   `json:"category_slug"`
-	CategoryName   string   `json:"category_name"`
-	Provider       string   `json:"provider"`
-	Status         string   `json:"status"`
-	Currency       string   `json:"currency"`
-	MinWagerMinor  int64    `json:"min_wager_minor"`
-	MaxWagerMinor  int64    `json:"max_wager_minor"`
-	WagerStepMinor int64    `json:"wager_step_minor"`
-	ThumbnailURL   *string  `json:"thumbnail_url"`
-	Flags          []string `json:"flags"`
-	CreatedAt      string   `json:"created_at"`
+	ID           string                `json:"id"`
+	Slug         string                `json:"slug"`
+	Name         string                `json:"name"`
+	Description  string                `json:"description"`
+	CategorySlug string                `json:"category_slug"`
+	CategoryName string                `json:"category_name"`
+	Provider     string                `json:"provider"`
+	Status       string                `json:"status"`
+	WagerLimits  map[string]WagerLimit `json:"wager_limits"`
+	ThumbnailURL *string               `json:"thumbnail_url"`
+	Flags        []string              `json:"flags"`
+	CreatedAt    string                `json:"created_at"`
 }
 
 type adminResponse struct {
@@ -69,16 +70,13 @@ type categoryResponse struct {
 }
 
 type createBody struct {
-	Slug           string `json:"slug"`
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	CategorySlug   string `json:"category_slug"`
-	Provider       string `json:"provider"`
-	Status         string `json:"status"`
-	Currency       string `json:"currency"`
-	MinWagerMinor  int64  `json:"min_wager_minor"`
-	MaxWagerMinor  int64  `json:"max_wager_minor"`
-	WagerStepMinor int64  `json:"wager_step_minor"`
+	Slug         string        `json:"slug"`
+	Name         string        `json:"name"`
+	Description  string        `json:"description"`
+	CategorySlug string        `json:"category_slug"`
+	Provider     string        `json:"provider"`
+	Status       string        `json:"status"`
+	WagerLimits  wagerLimitMap `json:"wager_limits"`
 }
 
 type rtpBody struct {
@@ -86,15 +84,62 @@ type rtpBody struct {
 }
 
 type patchBody struct {
-	Name           *string `json:"name"`
-	Description    *string `json:"description"`
-	CategorySlug   *string `json:"category_slug"`
-	Provider       *string `json:"provider"`
-	Status         *string `json:"status"`
-	Currency       *string `json:"currency"`
-	MinWagerMinor  *int64  `json:"min_wager_minor"`
-	MaxWagerMinor  *int64  `json:"max_wager_minor"`
-	WagerStepMinor *int64  `json:"wager_step_minor"`
+	Name         *string       `json:"name"`
+	Description  *string       `json:"description"`
+	CategorySlug *string       `json:"category_slug"`
+	Provider     *string       `json:"provider"`
+	Status       *string       `json:"status"`
+	WagerLimits  wagerLimitMap `json:"wager_limits"`
+}
+
+type wagerLimitMap map[string]WagerLimit
+
+func (limits *wagerLimitMap) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		*limits = nil
+		return nil
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	if delimiter, ok := token.(json.Delim); !ok || delimiter != '{' {
+		return errors.New("wager_limits must be an object")
+	}
+	result := make(wagerLimitMap)
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		currency, ok := keyToken.(string)
+		if !ok {
+			return errors.New("wager limit currency must be a string")
+		}
+		if _, duplicate := result[currency]; duplicate {
+			return fmt.Errorf("duplicate wager limit for %s", currency)
+		}
+		var raw json.RawMessage
+		if err := decoder.Decode(&raw); err != nil {
+			return err
+		}
+		entryDecoder := json.NewDecoder(bytes.NewReader(raw))
+		entryDecoder.DisallowUnknownFields()
+		var limit WagerLimit
+		if err := entryDecoder.Decode(&limit); err != nil {
+			return err
+		}
+		if err := entryDecoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+			return errors.New("wager limit must contain one object")
+		}
+		result[currency] = limit
+	}
+	if _, err := decoder.Token(); err != nil {
+		return err
+	}
+	*limits = result
+	return nil
 }
 
 func NewHandler(db *sql.DB, logger *slog.Logger, options engineOptions) *Handler {
@@ -298,8 +343,7 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request, actor user
 	in := Input{
 		Slug: strings.TrimSpace(body.Slug), Name: strings.TrimSpace(body.Name), Description: strings.TrimSpace(body.Description),
 		CategorySlug: strings.TrimSpace(body.CategorySlug), Provider: strings.TrimSpace(body.Provider),
-		Status: strings.ToLower(strings.TrimSpace(body.Status)), Currency: strings.ToUpper(strings.TrimSpace(body.Currency)),
-		MinWagerMinor: body.MinWagerMinor, MaxWagerMinor: body.MaxWagerMinor, WagerStepMinor: body.WagerStepMinor,
+		Status: strings.ToLower(strings.TrimSpace(body.Status)), WagerLimits: map[string]WagerLimit(body.WagerLimits),
 	}
 	fields := map[string]string{}
 	if !isSlug(in.Slug) {
@@ -308,8 +352,8 @@ func (h *Handler) AdminCreate(w http.ResponseWriter, r *http.Request, actor user
 	if in.Status != "" && !Statuses[in.Status] {
 		fields["status"] = "Status must be draft, active, maintenance, or retired"
 	}
-	validateText(fields, in.Name, in.Description, in.CategorySlug, in.Provider, in.Currency)
-	validateWagers(fields, in.MinWagerMinor, in.MaxWagerMinor, in.WagerStepMinor)
+	validateText(fields, in.Name, in.Description, in.CategorySlug, in.Provider)
+	validateWagerLimits(fields, in.WagerLimits)
 	if len(fields) > 0 {
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", fields)
 		return
@@ -339,7 +383,7 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request, actor user
 	if !httpx.ReadJSON(w, r, &body) {
 		return
 	}
-	patch := Patch{MinWagerMinor: body.MinWagerMinor, MaxWagerMinor: body.MaxWagerMinor, WagerStepMinor: body.WagerStepMinor}
+	patch := Patch{WagerLimits: map[string]WagerLimit(body.WagerLimits)}
 	fields := map[string]string{}
 	if body.Name != nil {
 		patch.Name = trimmed(*body.Name)
@@ -372,17 +416,8 @@ func (h *Handler) AdminUpdate(w http.ResponseWriter, r *http.Request, actor user
 			fields["status"] = "Status must be draft, active, maintenance, or retired"
 		}
 	}
-	if body.Currency != nil {
-		currency := strings.ToUpper(strings.TrimSpace(*body.Currency))
-		patch.Currency = &currency
-		if len(currency) != 3 {
-			fields["currency"] = "Currency must be a three-letter code"
-		}
-	}
-	for name, value := range map[string]*int64{"min_wager_minor": patch.MinWagerMinor, "max_wager_minor": patch.MaxWagerMinor, "wager_step_minor": patch.WagerStepMinor} {
-		if value != nil {
-			validateWagerValue(fields, name, *value)
-		}
+	if patch.WagerLimits != nil {
+		validateWagerLimits(fields, patch.WagerLimits)
 	}
 	if len(fields) > 0 {
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", fields)
@@ -489,20 +524,20 @@ func (h *Handler) writeRuleError(w http.ResponseWriter, err error) bool {
 	case errors.Is(err, ErrNoCategory):
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"category_slug": "Unknown category"})
 	case errors.Is(err, ErrCurrencyUnavailable):
-		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"currency": "Currency is not enabled"})
-	case errors.Is(err, ErrCurrencyLocked):
-		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"currency": "Currency cannot change once rounds have been played"})
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"wager_limits": "Every wager currency must be enabled"})
+	case errors.Is(err, ErrWagerLimitsRequired):
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"wager_limits": "PHP and USD wager limits are required"})
 	case errors.Is(err, ErrWagerBounds):
-		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"max_wager_minor": "Maximum must be the minimum plus a whole number of steps"})
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"wager_limits": "Each maximum must be the minimum plus a whole number of steps"})
 	case errors.Is(err, ErrWagerNotWholeUnits):
-		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"wager_step_minor": "Wager bounds must be whole units of the currency"})
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"wager_limits": "Wager bounds must be whole units of their currency"})
 	default:
 		return false
 	}
 	return true
 }
 
-func validateText(fields map[string]string, name, description, categorySlug, provider, currency string) {
+func validateText(fields map[string]string, name, description, categorySlug, provider string, _ ...string) {
 	if name == "" || utf8.RuneCountInString(name) > maxNameLength {
 		fields["name"] = "Name must be between 1 and 120 characters"
 	}
@@ -515,18 +550,35 @@ func validateText(fields map[string]string, name, description, categorySlug, pro
 	if provider == "" || utf8.RuneCountInString(provider) > maxProviderLength {
 		fields["provider"] = "Provider must be between 1 and 80 characters"
 	}
-	if len(currency) != 3 {
-		fields["currency"] = "Currency must be a three-letter code"
-	}
 }
 
+// validateWagers keeps the value-level validator reusable for focused tests;
+// API requests validate the same fields within each currency entry.
 func validateWagers(fields map[string]string, minimum, maximum, step int64) {
-	for name, value := range map[string]int64{
-		"min_wager_minor":  minimum,
-		"max_wager_minor":  maximum,
-		"wager_step_minor": step,
-	} {
-		validateWagerValue(fields, name, value)
+	validateWagerValue(fields, "min_wager_minor", minimum)
+	validateWagerValue(fields, "max_wager_minor", maximum)
+	validateWagerValue(fields, "wager_step_minor", step)
+}
+
+func validateWagerLimits(fields map[string]string, limits map[string]WagerLimit) {
+	if len(limits) != len(SupportedWagerCurrencies) {
+		fields["wager_limits"] = "PHP and USD wager limits are required"
+	}
+	for _, currency := range SupportedWagerCurrencies {
+		limit, ok := limits[currency]
+		if !ok {
+			fields["wager_limits."+currency] = currency + " wager limits are required"
+			continue
+		}
+		prefix := "wager_limits." + currency + "."
+		validateWagerValue(fields, prefix+"min_wager_minor", limit.MinWagerMinor)
+		validateWagerValue(fields, prefix+"max_wager_minor", limit.MaxWagerMinor)
+		validateWagerValue(fields, prefix+"wager_step_minor", limit.WagerStepMinor)
+		if limit.MaxWagerMinor < limit.MinWagerMinor {
+			fields[prefix+"max_wager_minor"] = "Maximum must be at least the minimum"
+		} else if limit.WagerStepMinor > 0 && (limit.MaxWagerMinor-limit.MinWagerMinor)%limit.WagerStepMinor != 0 {
+			fields[prefix+"max_wager_minor"] = "Maximum must be the minimum plus a whole number of steps"
+		}
 	}
 }
 
@@ -551,8 +603,7 @@ func newResponse(item Game, now time.Time) response {
 	return response{
 		ID: item.ID, Slug: item.Slug, Name: item.Name, Description: item.Description,
 		CategorySlug: item.CategorySlug, CategoryName: item.CategoryName, Provider: item.Provider,
-		Status: item.Status, Currency: item.Currency,
-		MinWagerMinor: item.MinWagerMinor, MaxWagerMinor: item.MaxWagerMinor, WagerStepMinor: item.WagerStepMinor,
+		Status: item.Status, WagerLimits: item.WagerLimits,
 		ThumbnailURL: thumbnail, Flags: item.Flags(now),
 		CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339),
 	}

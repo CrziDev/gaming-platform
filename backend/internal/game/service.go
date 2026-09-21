@@ -6,31 +6,26 @@ import (
 	"fmt"
 
 	"github.com/gaming-platform/backend/internal/audit"
+	"github.com/gaming-platform/backend/internal/money"
 )
 
 type Input struct {
-	Slug           string
-	Name           string
-	Description    string
-	CategorySlug   string
-	Provider       string
-	Status         string
-	Currency       string
-	MinWagerMinor  int64
-	MaxWagerMinor  int64
-	WagerStepMinor int64
+	Slug         string
+	Name         string
+	Description  string
+	CategorySlug string
+	Provider     string
+	Status       string
+	WagerLimits  map[string]WagerLimit
 }
 
 type Patch struct {
-	Name           *string
-	Description    *string
-	CategorySlug   *string
-	Provider       *string
-	Status         *string
-	Currency       *string
-	MinWagerMinor  *int64
-	MaxWagerMinor  *int64
-	WagerStepMinor *int64
+	Name         *string
+	Description  *string
+	CategorySlug *string
+	Provider     *string
+	Status       *string
+	WagerLimits  map[string]WagerLimit
 }
 
 func Create(ctx context.Context, db *sql.DB, actorID string, in Input) (AdminGame, error) {
@@ -42,8 +37,7 @@ func Create(ctx context.Context, db *sql.DB, actorID string, in Input) (AdminGam
 
 	g := Game{
 		Slug: in.Slug, Name: in.Name, Description: in.Description, CategorySlug: in.CategorySlug,
-		Provider: in.Provider, Status: in.Status, Currency: in.Currency,
-		MinWagerMinor: in.MinWagerMinor, MaxWagerMinor: in.MaxWagerMinor, WagerStepMinor: in.WagerStepMinor,
+		Provider: in.Provider, Status: in.Status, WagerLimits: in.WagerLimits,
 	}
 	if g.Status == "" {
 		g.Status = StatusDraft
@@ -99,27 +93,8 @@ func Update(ctx context.Context, db *sql.DB, actorID, id string, patch Patch) (A
 	if patch.Status != nil {
 		next.Status = *patch.Status
 	}
-	if patch.Currency != nil {
-		next.Currency = *patch.Currency
-	}
-	if patch.MinWagerMinor != nil {
-		next.MinWagerMinor = *patch.MinWagerMinor
-	}
-	if patch.MaxWagerMinor != nil {
-		next.MaxWagerMinor = *patch.MaxWagerMinor
-	}
-	if patch.WagerStepMinor != nil {
-		next.WagerStepMinor = *patch.WagerStepMinor
-	}
-
-	if next.Currency != current.Currency {
-		played, err := hasRounds(ctx, tx, id)
-		if err != nil {
-			return AdminGame{}, err
-		}
-		if played {
-			return AdminGame{}, ErrCurrencyLocked
-		}
+	if patch.WagerLimits != nil {
+		next.WagerLimits = patch.WagerLimits
 	}
 	if err := validate(ctx, tx, next); err != nil {
 		return AdminGame{}, err
@@ -157,19 +132,28 @@ func validate(ctx context.Context, tx *sql.Tx, g Game) error {
 	if !exists {
 		return ErrNoCategory
 	}
-	minorUnits, err := currencyMinorUnits(ctx, tx, g.Currency)
-	if err != nil {
-		return err
+	if len(g.WagerLimits) != len(SupportedWagerCurrencies) {
+		return ErrWagerLimitsRequired
 	}
-	if g.MinWagerMinor <= 0 || g.WagerStepMinor <= 0 || g.MaxWagerMinor < g.MinWagerMinor || (g.MaxWagerMinor-g.MinWagerMinor)%g.WagerStepMinor != 0 {
-		return ErrWagerBounds
-	}
-	unit := int64(1)
-	for range minorUnits {
-		unit *= 10
-	}
-	if g.MinWagerMinor%unit != 0 || g.MaxWagerMinor%unit != 0 || g.WagerStepMinor%unit != 0 {
-		return ErrWagerNotWholeUnits
+	for _, currency := range SupportedWagerCurrencies {
+		limit, ok := g.WagerLimits[currency]
+		if !ok {
+			return ErrWagerLimitsRequired
+		}
+		minorUnits, err := currencyMinorUnits(ctx, tx, currency)
+		if err != nil {
+			return err
+		}
+		if !money.IsSafeMinor(limit.MinWagerMinor) || !money.IsSafeMinor(limit.MaxWagerMinor) || !money.IsSafeMinor(limit.WagerStepMinor) || limit.MinWagerMinor <= 0 || limit.WagerStepMinor <= 0 || limit.MaxWagerMinor < limit.MinWagerMinor || (limit.MaxWagerMinor-limit.MinWagerMinor)%limit.WagerStepMinor != 0 {
+			return ErrWagerBounds
+		}
+		unit := int64(1)
+		for range minorUnits {
+			unit *= 10
+		}
+		if limit.MinWagerMinor%unit != 0 || limit.MaxWagerMinor%unit != 0 || limit.WagerStepMinor%unit != 0 {
+			return ErrWagerNotWholeUnits
+		}
 	}
 	return nil
 }
@@ -177,8 +161,7 @@ func validate(ctx context.Context, tx *sql.Tx, g Game) error {
 func snapshot(g Game) map[string]any {
 	return map[string]any{
 		"slug": g.Slug, "name": g.Name, "description": g.Description, "category_slug": g.CategorySlug,
-		"provider": g.Provider, "status": g.Status, "currency": g.Currency,
-		"min_wager_minor": g.MinWagerMinor, "max_wager_minor": g.MaxWagerMinor, "wager_step_minor": g.WagerStepMinor,
+		"provider": g.Provider, "status": g.Status, "wager_limits": g.WagerLimits,
 		"rtp_basis_points": g.RTPBasisPoints,
 	}
 }

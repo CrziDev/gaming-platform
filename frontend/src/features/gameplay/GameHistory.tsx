@@ -7,7 +7,7 @@ import { SkeletonRows } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/States'
 import { useRecentRounds } from '@/features/wallet'
 import { formatMultiplier, formatRelative } from '@/lib/format'
-import { formatMoney, money, subtractMoney, type Money } from '@/lib/money'
+import { formatMoney, money, subtractMoney, type Currency, type Money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
 type HistoryRow = {
@@ -62,6 +62,7 @@ const columns: Column<HistoryRow>[] = [
 
 type GameHistoryProps = {
   gameId: string
+  currency: Currency
 }
 
 function HistorySection({ children }: { children: ReactNode }) {
@@ -79,8 +80,8 @@ function HistorySection({ children }: { children: ReactNode }) {
 // Under every title's board: the player's own recent rounds on this game. An
 // integrated game's session refetches rounds when a result is revealed, so a
 // bet appears here as it lands.
-export function GameHistory({ gameId }: GameHistoryProps) {
-  const query = useRecentRounds(gameId)
+export function GameHistory({ gameId, currency }: GameHistoryProps) {
+  const query = useRecentRounds(gameId, currency)
 
   if (query.isPending) {
     return (

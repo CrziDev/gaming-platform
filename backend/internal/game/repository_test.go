@@ -58,10 +58,14 @@ func createFavoriteFixture(t *testing.T, db *sql.DB, slugs map[string]string) fa
 	for slug, status := range slugs {
 		var id string
 		if err := db.QueryRow(`
-			INSERT INTO games (slug, name, category_slug, provider, status, currency, min_wager_minor, max_wager_minor, wager_step_minor)
-			VALUES ($1, $2, $3, 'Test', $4, 'PHP', 100, 1000, 100)
+			INSERT INTO games (slug, name, category_slug, provider, status)
+			VALUES ($1, $2, $3, 'Test', $4)
 			RETURNING id::text`, slug+"-"+suffix, "Game "+slug, fixture.Category, status).Scan(&id); err != nil {
 			t.Fatalf("create game %s: %v", slug, err)
+		}
+		if _, err := db.Exec(`INSERT INTO game_wager_limits (game_id, currency, min_wager_minor, max_wager_minor, wager_step_minor)
+			SELECT ($1::text)::uuid, currency, 100, 1000, 100 FROM (VALUES ('PHP'), ('USD')) currencies(currency)`, id); err != nil {
+			t.Fatalf("create limits for %s: %v", slug, err)
 		}
 		fixture.GameIDs[slug] = id
 	}

@@ -41,11 +41,10 @@ type opening struct {
 }
 
 // openTx binds a round and debits its wager inside the caller's transaction.
-// It locks the wallet before it rechecks the round key, so two requests sharing
-// a key serialize there and the second sees the first's committed round. A
-// replay returns that round with Created false and writes nothing. The game
-// row is locked before its return is read, so a round never binds to a return
-// an operator is changing underneath it.
+// It locks the requested wager configuration and wallet before it rechecks the
+// round key. A replay returns the committed round with Created false and writes
+// nothing. The game row is locked with the limits, so a round never binds to a
+// return or wager configuration an operator is changing underneath it.
 func openTx(ctx context.Context, tx *sql.Tx, options []engine.Option, in OpenInput) (opening, error) {
 	in.RoundKey = strings.TrimSpace(in.RoundKey)
 	if in.RoundKey == "" {
@@ -63,14 +62,17 @@ func openTx(ctx context.Context, tx *sql.Tx, options []engine.Option, in OpenInp
 		return opening{}, fmt.Errorf("round: find idempotent open: %w", err)
 	}
 
-	currency, err := gameCurrency(ctx, tx, in.GameID)
+	if in.Currency == "" {
+		return opening{}, ErrUnsupportedCurrency
+	}
+	config, err := lockGame(ctx, tx, in.GameID, in.Currency)
 	if err != nil {
 		return opening{}, err
 	}
-	if in.Currency != "" && in.Currency != currency {
-		return opening{}, ErrUnsupportedCurrency
+	if config.Status != "active" || config.Currency != in.Currency {
+		return opening{}, ErrGameUnavailable
 	}
-	walletID, err := lockWallet(ctx, tx, in.UserID, currency)
+	walletID, err := lockWallet(ctx, tx, in.UserID, in.Currency)
 	if errors.Is(err, sql.ErrNoRows) {
 		return opening{}, wallet.ErrNotFound
 	}
@@ -89,13 +91,6 @@ func openTx(ctx context.Context, tx *sql.Tx, options []engine.Option, in OpenInp
 		return opening{}, fmt.Errorf("round: recheck idempotent open: %w", err)
 	}
 
-	config, err := lockGame(ctx, tx, in.GameID)
-	if err != nil {
-		return opening{}, err
-	}
-	if config.Status != "active" || config.Currency != currency {
-		return opening{}, ErrGameUnavailable
-	}
 	if !validWager(config, in.StakeMinor) {
 		return opening{}, ErrInvalidWager
 	}
@@ -104,7 +99,7 @@ func openTx(ctx context.Context, tx *sql.Tx, options []engine.Option, in OpenInp
 		return opening{}, ErrProfileUnavailable
 	}
 
-	opened, created, err := insertOpen(ctx, tx, in, walletID, currency, option.BasisPoints)
+	opened, created, err := insertOpen(ctx, tx, in, walletID, in.Currency, option.BasisPoints)
 	if err != nil {
 		return opening{}, err
 	}
@@ -117,7 +112,7 @@ func openTx(ctx context.Context, tx *sql.Tx, options []engine.Option, in OpenInp
 
 	_, err = wallet.MoveTx(ctx, tx, wallet.Movement{
 		UserID:         in.UserID,
-		Currency:       currency,
+		Currency:       in.Currency,
 		Kind:           "wager",
 		AmountMinor:    -in.StakeMinor,
 		IdempotencyKey: "round:" + opened.ID + ":wager",
@@ -139,7 +134,7 @@ func validWager(config gameConfig, stakeMinor int64) bool {
 }
 
 func sameOpenRequest(item Round, in OpenInput) bool {
-	return item.RoundKey == in.RoundKey && item.UserID == in.UserID && item.GameID == in.GameID && item.StakeMinor == in.StakeMinor
+	return item.RoundKey == in.RoundKey && item.UserID == in.UserID && item.GameID == in.GameID && item.Currency == in.Currency && item.StakeMinor == in.StakeMinor
 }
 
 func Settle(ctx context.Context, db *sql.DB, in SettleInput) (Round, error) {

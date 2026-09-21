@@ -20,7 +20,7 @@ import {
 } from '@/features/admin'
 import { useCurrencies } from '@/features/wallet'
 import { cn } from '@/lib/cn'
-import { currencySymbol, formatMoney, money, parseMoneyInput, type Currency } from '@/lib/money'
+import { formatMoney, money, parseMoneyInput, type Currency } from '@/lib/money'
 
 type GameFormDialogProps = {
   open: boolean
@@ -52,10 +52,12 @@ const serverFields: Record<string, keyof GameFormInput> = {
   category_slug: 'category_slug',
   provider: 'provider',
   status: 'status',
-  currency: 'currency',
-  min_wager_minor: 'min_wager',
-  max_wager_minor: 'max_wager',
-  wager_step_minor: 'wager_step',
+  'wager_limits.PHP.min_wager_minor': 'php_min_wager',
+  'wager_limits.PHP.max_wager_minor': 'php_max_wager',
+  'wager_limits.PHP.wager_step_minor': 'php_wager_step',
+  'wager_limits.USD.min_wager_minor': 'usd_min_wager',
+  'wager_limits.USD.max_wager_minor': 'usd_max_wager',
+  'wager_limits.USD.wager_step_minor': 'usd_wager_step',
 }
 
 function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>) {
@@ -64,7 +66,6 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
   const currenciesQuery = useCurrencies()
   const create = useCreateGame()
   const update = useUpdateGame()
-  const [currency, setCurrency] = useState<Currency>(game?.currency ?? 'PHP')
   const [submitError, setSubmitError] = useState<string | undefined>(undefined)
 
   const {
@@ -73,7 +74,7 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
     setError,
     formState: { errors, isSubmitting },
   } = useForm<GameFormInput>({
-    resolver: zodResolver(createGameSchema(currency)),
+    resolver: zodResolver(createGameSchema()),
     defaultValues: game
       ? {
           slug: game.slug,
@@ -82,18 +83,22 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
           category_slug: game.category_slug,
           provider: game.provider,
           status: game.status,
-          currency: game.currency,
-          min_wager: wholeUnits(game.min_wager_minor, game.currency),
-          max_wager: wholeUnits(game.max_wager_minor, game.currency),
-          wager_step: wholeUnits(game.wager_step_minor, game.currency),
+          php_min_wager: wholeUnits(game.wager_limits.PHP.min_wager_minor, 'PHP'),
+          php_max_wager: wholeUnits(game.wager_limits.PHP.max_wager_minor, 'PHP'),
+          php_wager_step: wholeUnits(game.wager_limits.PHP.wager_step_minor, 'PHP'),
+          usd_min_wager: wholeUnits(game.wager_limits.USD.min_wager_minor, 'USD'),
+          usd_max_wager: wholeUnits(game.wager_limits.USD.max_wager_minor, 'USD'),
+          usd_wager_step: wholeUnits(game.wager_limits.USD.wager_step_minor, 'USD'),
         }
       : {
           status: 'draft',
-          currency: 'PHP',
           description: '',
-          min_wager: '',
-          max_wager: '',
-          wager_step: '',
+          php_min_wager: '',
+          php_max_wager: '',
+          php_wager_step: '',
+          usd_min_wager: '',
+          usd_max_wager: '',
+          usd_wager_step: '',
         },
   })
 
@@ -105,10 +110,18 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
       category_slug: values.category_slug,
       provider: values.provider,
       status: values.status,
-      currency: values.currency as Currency,
-      min_wager_minor: parseMoneyInput(values.min_wager, currency) ?? 0,
-      max_wager_minor: parseMoneyInput(values.max_wager, currency) ?? 0,
-      wager_step_minor: parseMoneyInput(values.wager_step, currency) ?? 0,
+      wager_limits: {
+        PHP: {
+          min_wager_minor: parseMoneyInput(values.php_min_wager, 'PHP') ?? 0,
+          max_wager_minor: parseMoneyInput(values.php_max_wager, 'PHP') ?? 0,
+          wager_step_minor: parseMoneyInput(values.php_wager_step, 'PHP') ?? 0,
+        },
+        USD: {
+          min_wager_minor: parseMoneyInput(values.usd_min_wager, 'USD') ?? 0,
+          max_wager_minor: parseMoneyInput(values.usd_max_wager, 'USD') ?? 0,
+          wager_step_minor: parseMoneyInput(values.usd_wager_step, 'USD') ?? 0,
+        },
+      },
     }
     try {
       const saved = editing
@@ -138,11 +151,13 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
     }
   })
 
-  const symbol = currencySymbol(currency)
   const pending = isSubmitting || create.isPending || update.isPending
   // The selects are uncontrolled: their default value only lands if the option
   // exists when they mount, so the form waits for both lists.
-  const listsReady = categoriesQuery.data !== undefined && currenciesQuery.data !== undefined
+  const listsReady =
+    categoriesQuery.data !== undefined &&
+    currenciesQuery.data?.some((entry) => entry.code === 'PHP') === true &&
+    currenciesQuery.data.some((entry) => entry.code === 'USD')
 
   return (
     <Modal
@@ -231,69 +246,84 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
             </Field>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Status" htmlFor="game-status" error={errors.status?.message}>
-              <Select id="game-status" {...register('status')}>
-                {gameStatuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field
-              label="Currency"
-              htmlFor="game-currency"
-              error={errors.currency?.message}
-              hint="Bets are placed from the player’s wallet in this currency."
-            >
-              <Select
-                id="game-currency"
-                {...register('currency', {
-                  onChange: (event) => setCurrency(event.target.value as Currency),
-                })}
-              >
-                {currenciesQuery.data.map((entry) => (
-                  <option key={entry.code} value={entry.code}>
-                    {entry.code} · {entry.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
+          <Field label="Status" htmlFor="game-status" error={errors.status?.message}>
+            <Select id="game-status" {...register('status')}>
+              {gameStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
-          <fieldset className="grid gap-4 sm:grid-cols-3">
-            <legend className="sr-only">Wager bounds in whole units</legend>
-            <Field label={`Minimum bet (${symbol})`} htmlFor="game-min" error={errors.min_wager?.message}>
+          <fieldset className="grid gap-4 rounded-input border border-white/5 p-3 sm:grid-cols-3">
+            <legend className="px-1 font-mono text-[12px] text-ink-mute">PHP wager limits</legend>
+            <Field label="Minimum bet (₱)" htmlFor="game-php-min" error={errors.php_min_wager?.message}>
               <Input
-                id="game-min"
+                id="game-php-min"
                 inputMode="numeric"
                 placeholder="1"
                 className="font-mono"
-                {...register('min_wager')}
+                {...register('php_min_wager')}
               />
             </Field>
-            <Field label={`Maximum bet (${symbol})`} htmlFor="game-max" error={errors.max_wager?.message}>
+            <Field label="Maximum bet (₱)" htmlFor="game-php-max" error={errors.php_max_wager?.message}>
               <Input
-                id="game-max"
+                id="game-php-max"
                 inputMode="numeric"
                 placeholder="5000"
                 className="font-mono"
-                {...register('max_wager')}
+                {...register('php_max_wager')}
               />
             </Field>
             <Field
-              label={`Bet step (${symbol})`}
-              htmlFor="game-step"
-              error={errors.wager_step?.message}
+              label="Bet step (₱)"
+              htmlFor="game-php-step"
+              error={errors.php_wager_step?.message}
               hint="The maximum must be the minimum plus a whole number of steps."
             >
               <Input
-                id="game-step"
+                id="game-php-step"
                 inputMode="numeric"
                 placeholder="1"
                 className="font-mono"
-                {...register('wager_step')}
+                {...register('php_wager_step')}
+              />
+            </Field>
+          </fieldset>
+
+          <fieldset className="grid gap-4 rounded-input border border-white/5 p-3 sm:grid-cols-3">
+            <legend className="px-1 font-mono text-[12px] text-ink-mute">USD wager limits</legend>
+            <Field label="Minimum bet ($)" htmlFor="game-usd-min" error={errors.usd_min_wager?.message}>
+              <Input
+                id="game-usd-min"
+                inputMode="numeric"
+                placeholder="1"
+                className="font-mono"
+                {...register('usd_min_wager')}
+              />
+            </Field>
+            <Field label="Maximum bet ($)" htmlFor="game-usd-max" error={errors.usd_max_wager?.message}>
+              <Input
+                id="game-usd-max"
+                inputMode="numeric"
+                placeholder="5000"
+                className="font-mono"
+                {...register('usd_max_wager')}
+              />
+            </Field>
+            <Field
+              label="Bet step ($)"
+              htmlFor="game-usd-step"
+              error={errors.usd_wager_step?.message}
+              hint="The maximum must be the minimum plus a whole number of steps."
+            >
+              <Input
+                id="game-usd-step"
+                inputMode="numeric"
+                placeholder="1"
+                className="font-mono"
+                {...register('usd_wager_step')}
               />
             </Field>
           </fieldset>

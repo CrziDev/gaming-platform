@@ -219,10 +219,6 @@ CREATE TABLE games (
     provider         TEXT NOT NULL,
     status           TEXT NOT NULL DEFAULT 'draft',
     integration      TEXT NOT NULL DEFAULT 'unreviewed',
-    currency         TEXT NOT NULL REFERENCES currencies (code),
-    min_wager_minor  BIGINT NOT NULL,
-    max_wager_minor  BIGINT NOT NULL,
-    wager_step_minor BIGINT NOT NULL,
     frontend_path    TEXT,
     thumbnail_path   TEXT,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -230,12 +226,22 @@ CREATE TABLE games (
 
     CONSTRAINT games_status_valid CHECK (status IN ('draft', 'active', 'maintenance', 'retired')),
     CONSTRAINT games_integration_valid CHECK (integration IN (
-        'unreviewed', 'under_review', 'supported', 'integrated', 'unsupported')),
-    CONSTRAINT games_wager_bounds CHECK (
+        'unreviewed', 'under_review', 'supported', 'integrated', 'unsupported'))
+);
+
+CREATE TABLE game_wager_limits (
+    game_id          UUID NOT NULL REFERENCES games (id) ON DELETE CASCADE,
+    currency         TEXT NOT NULL REFERENCES currencies (code),
+    min_wager_minor  BIGINT NOT NULL,
+    max_wager_minor  BIGINT NOT NULL,
+    wager_step_minor BIGINT NOT NULL,
+    PRIMARY KEY (game_id, currency),
+    CONSTRAINT game_wager_limits_bounds CHECK (
         min_wager_minor > 0
         AND max_wager_minor >= min_wager_minor
-        AND wager_step_minor > 0),
-    CONSTRAINT games_wagers_json_safe CHECK (
+        AND wager_step_minor > 0
+        AND mod(max_wager_minor - min_wager_minor, wager_step_minor) = 0),
+    CONSTRAINT game_wager_limits_json_safe CHECK (
         min_wager_minor <= 9007199254740991
         AND max_wager_minor <= 9007199254740991
         AND wager_step_minor <= 9007199254740991)
@@ -250,9 +256,10 @@ is set by the engine integration, never by a catalogue edit. `rtp_basis_points` 
 `000017`, nullable, checked to `5000..20000`) is the return the game plays at; §4.5 says
 what may go there.
 
-One game carries one currency, because that is the contract the web app is coded against.
-A title offered in two currencies needs per-currency bounds in a `game_wager_limits`
-table and a change to the game body — not a second catalogue row.
+Every game carries mandatory PHP and USD entries in `game_wager_limits`. Public and
+admin game bodies expose them as a `wager_limits` map keyed by currency; the singular
+currency and wager fields do not exist. The initial migration copies each game's old
+numeric range to both entries, which operators may then tune independently.
 
 The game body carries `thumbnail_path` as `thumbnail_url`, null until reviewed art is
 attached. The web app renders the flat placeholder slot regardless; switching it to the
@@ -620,10 +627,11 @@ player's round history can never contribute to that page. An operator sees
 every game, including `draft`, `maintenance`, and `retired`, through
 `GET /api/admin/games`, and creates and edits them through the two admin routes.
 
-Wager bounds are enforced server-side wherever a wager is accepted: at least
-`min_wager_minor`, at most `max_wager_minor`, and an exact multiple of
-`wager_step_minor`. A value from the browser is checked against the row, never trusted
-against the form that produced it.
+Wager bounds are enforced server-side wherever a wager is accepted. The server locks
+the `game_wager_limits` row for the requested currency and requires a stake of
+`min_wager_minor + n × wager_step_minor`, no greater than `max_wager_minor`. A value
+from the browser is checked against that row, never trusted against the form that
+produced it.
 
 A game whose status is not `active` refuses a round with `GAME_UNAVAILABLE`.
 
@@ -637,11 +645,12 @@ than that is decided by its integration, and adding a route is a contract change
 Round persistence and its lifecycle rules are platform work. Outcome generation is not,
 and cannot be invented here.
 
-Opening a round binds it to an account, a game, a wallet, and a currency, records the
-game's `rtp_basis_points` at that moment under the game row's lock, and debits the wager
+Opening a round binds it to an account, a game, the requested currency's wallet and its
+locked wager configuration, records the game's `rtp_basis_points` at that moment, and debits the wager
 as a `wager` movement in the same transaction. A round captures its return at creation:
 switching the game five seconds later does not touch a round already open. A game whose
-return is unset, or set to a value its engine no longer ships, opens no round.
+return is unset, or set to a value its engine no longer ships, opens no round. Currency
+is part of the idempotent request comparison, so a key cannot be replayed in another wallet.
 
 Settlement credits a `win` movement when the payout is positive and closes the round:
 

@@ -347,8 +347,8 @@ These features do not require an engine.
 - [x] Show draft, active, maintenance, and retired games to administrators.
 - [x] Create a game record through the admin interface.
 - [x] Edit game metadata and availability through the admin interface.
-- [x] Configure one currency per game.
-- [x] Configure minimum, maximum, and exact wager step in minor units.
+- [x] Configure mandatory PHP and USD wager limits independently for every game.
+- [x] Configure each currency's minimum, maximum, and exact wager step in minor units.
 - [x] Require whole-unit wager bounds for Phase 1 games (enforced on create and edit;
   the seed now uses whole units too).
 - [x] Audit game creation and status changes.
@@ -703,7 +703,8 @@ Plinko `plinko/9000`, `plinko/9500`, `plinko/10500`, `plinko/11000`: simulated o
 
 - [x] Launch the game from the authenticated platform host.
 - [x] Associate every round with the correct player, wallet, currency, game, and return.
-- [x] Validate wagers server-side.
+- [x] Resolve and lock the requested currency's game limits and validate wagers server-side.
+- [x] Include currency in round idempotency comparisons so a key cannot cross wallets.
 - [x] Record one authoritative round for every accepted wager.
 - [x] Deduct the wager atomically and credit the win at most once.
 - [x] Keep displayed balance synchronized with the server (refetched when the frame

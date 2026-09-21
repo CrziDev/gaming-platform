@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest'
 import { afterEach } from 'vitest'
 
 import { clearSessionExpired } from '@/features/auth/expiry'
+import { setActiveCurrency } from '@/features/wallet/activeCurrency'
 
 // Feature adapters load fixtures dynamically so application bundles can erase them.
 // Preload those modules once per test worker to keep UI waits deterministic.
@@ -12,8 +13,9 @@ import '@/mocks/games'
 import '@/mocks/plinko'
 import '@/mocks/wallet'
 
-// Session expiry is module state so a signed-in test must not make the next
-// test's guest look like a session that just ended.
+// Session expiry and the active currency are both module state, so a test that
+// changes either must not leak it into the next test or test file.
 afterEach(() => {
   clearSessionExpired()
+  setActiveCurrency('PHP')
 })

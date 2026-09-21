@@ -94,10 +94,10 @@ export function useRounds(filter: Parameters<typeof fetchRounds>[0], enabled = t
   return useQuery({ queryKey: ['rounds', filter], queryFn: () => fetchRounds(filter), enabled })
 }
 
-export function useRecentRounds(gameId: string) {
+export function useRecentRounds(gameId: string, currency: Currency) {
   return useQuery({
-    queryKey: ['rounds', 'recent', gameId],
-    queryFn: () => fetchRecentRounds(gameId),
+    queryKey: ['rounds', 'recent', gameId, currency],
+    queryFn: () => fetchRecentRounds(gameId, currency),
     enabled: gameId !== '',
   })
 }

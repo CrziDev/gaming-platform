@@ -42,6 +42,12 @@ export type GameStatus = 'draft' | 'active' | 'maintenance' | 'retired'
 
 export type GameFlag = 'hot' | 'new'
 
+export type WagerLimit = {
+  min_wager_minor: number
+  max_wager_minor: number
+  wager_step_minor: number
+}
+
 export type Game = {
   id: string
   slug: string
@@ -51,10 +57,7 @@ export type Game = {
   category_name: string
   provider: string
   status: GameStatus
-  currency: Currency
-  min_wager_minor: number
-  max_wager_minor: number
-  wager_step_minor: number
+  wager_limits: Record<Currency, WagerLimit>
   thumbnail_url: string | null
   flags: GameFlag[]
   created_at: string

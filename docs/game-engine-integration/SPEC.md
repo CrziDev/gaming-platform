@@ -194,9 +194,10 @@ console authority to supply or alter raw engine configuration.
 player requests play
     -> authenticate and authorize
     -> resolve the registered game engine
-    -> validate game status, currency, wager, and public parameters
-    -> snapshot the return the game is set to, under the game row's lock
-    -> lock wallet, debit wager, write ledger row, and create round
+    -> lock the requested currency's game wager configuration
+    -> validate game status, per-currency wager, and public parameters
+    -> snapshot the return the game is set to
+    -> provision and lock that currency wallet, debit wager, write ledger row, and create round
     -> produce the authoritative engine outcome
     -> settle the round once and credit any win
     -> return the safe result and current balance
@@ -204,7 +205,8 @@ player requests play
 ```
 
 Round creation requires an idempotency key. A retry returns the original result and
-cannot debit or pay twice.
+cannot debit or pay twice. Currency is part of the comparison, so reusing a key for a
+different wallet currency is a conflict.
 
 The source audit decides whether opening and settlement use one transaction or two. A
 two-transaction design must either reproduce the outcome deterministically or refund an
@@ -326,8 +328,8 @@ For every game:
 A game is integrated when:
 
 - it launches through the generic game host;
-- the authenticated player and correct currency wallet are used;
-- wagers and parameters are validated server-side;
+- the authenticated player and active PHP or USD wallet are used;
+- wagers are validated against that currency's locked game limits, and parameters are validated server-side;
 - outcomes and payouts are server-authoritative;
 - debit, credit, refund, and round records reconcile;
 - retries, concurrency, refreshes, and duplicate settlement are safe;

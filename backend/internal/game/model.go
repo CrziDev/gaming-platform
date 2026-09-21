@@ -12,7 +12,7 @@ var (
 	ErrCurrencyUnavailable = errors.New("game: currency is not enabled")
 	ErrWagerNotWholeUnits  = errors.New("game: wager bounds must be whole currency units")
 	ErrWagerBounds         = errors.New("game: wager bounds are out of order")
-	ErrCurrencyLocked      = errors.New("game: currency cannot change once rounds exist")
+	ErrWagerLimitsRequired = errors.New("game: PHP and USD wager limits are required")
 )
 
 const (
@@ -38,20 +38,17 @@ const newWindow = 30 * 24 * time.Hour
 const hotWindow = 7 * 24 * time.Hour
 
 type Game struct {
-	ID             string
-	Slug           string
-	Name           string
-	Description    string
-	CategorySlug   string
-	CategoryName   string
-	Provider       string
-	Status         string
-	Integration    string
-	Currency       string
-	MinWagerMinor  int64
-	MaxWagerMinor  int64
-	WagerStepMinor int64
-	ThumbnailPath  string
+	ID            string
+	Slug          string
+	Name          string
+	Description   string
+	CategorySlug  string
+	CategoryName  string
+	Provider      string
+	Status        string
+	Integration   string
+	WagerLimits   map[string]WagerLimit
+	ThumbnailPath string
 	// The return the game plays at, one of its engine's options; nil until an
 	// operator picks one, and the game cannot play until then.
 	RTPBasisPoints *int
@@ -59,6 +56,14 @@ type Game struct {
 	UpdatedAt      time.Time
 	Hot            bool
 }
+
+type WagerLimit struct {
+	MinWagerMinor  int64 `json:"min_wager_minor"`
+	MaxWagerMinor  int64 `json:"max_wager_minor"`
+	WagerStepMinor int64 `json:"wager_step_minor"`
+}
+
+var SupportedWagerCurrencies = []string{"PHP", "USD"}
 
 type AdminGame struct {
 	Game

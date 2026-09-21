@@ -252,13 +252,14 @@ session. Those two are omitted from the failure column.
 An admin game body is the catalogue body plus `integration`, `rtp_basis_points` (null
 until an operator sets one), `rtp_options` (the returns the game's engine ships,
 ascending; `[]` when no engine on this server plays it), `rounds_30d`, and `updated_at`.
-A game is created with `slug`, `name`, `description`, `category_slug`, `provider`,
-`currency`, and the three wager bounds; `status` is optional and defaults to `draft`.
-The slug never changes after creation. `integration` is set by the engine review, never
-by these routes. Wager bounds are whole units of the game's currency, the maximum is
-the minimum plus a whole number of steps, and the currency cannot change once a round
-has been played. A create is audited as `game.create`; a patch as `game.update`, or
-`game.status_change` when the status moved.
+A game is created with `slug`, `name`, `description`, `category_slug`, `provider`, and
+`wager_limits`; `status` is optional and defaults to `draft`. The slug never changes
+after creation. `integration` is set by the engine review, never by these routes.
+`wager_limits` is a map keyed by currency, each entry carrying `min_wager_minor`,
+`max_wager_minor`, and `wager_step_minor`; a PHP and a USD entry are both required,
+every bound is a whole unit of its own currency, and a currency's maximum is its
+minimum plus a whole number of that currency's step. A create is audited as
+`game.create`; a patch as `game.update`, or `game.status_change` when the status moved.
 
 A game's RTP is one of its `rtp_options`, nothing else: the engine compiles each option
 in with its tables, proves every board's return exactly, and records its simulation

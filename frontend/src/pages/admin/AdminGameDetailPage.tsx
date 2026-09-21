@@ -77,18 +77,22 @@ export function AdminGameDetailPage() {
           <Row label="Slug">
             <span className="font-mono">{game.slug}</span>
           </Row>
-          <Row label="Currency">
-            <span className="font-mono">{game.currency}</span>
-          </Row>
-          <Row label="Minimum bet">
-            <span className="font-mono tnum">{formatMoney(money(game.min_wager_minor, game.currency))}</span>
-          </Row>
-          <Row label="Maximum bet">
-            <span className="font-mono tnum">{formatMoney(money(game.max_wager_minor, game.currency))}</span>
-          </Row>
-          <Row label="Bet step">
-            <span className="font-mono tnum">{formatMoney(money(game.wager_step_minor, game.currency))}</span>
-          </Row>
+          {(['PHP', 'USD'] as const).map((currency) => {
+            const limits = game.wager_limits[currency]
+            return (
+              <div key={currency} className="flex flex-col gap-2 border-t border-white/5 pt-3 first:border-0 first:pt-0">
+                <Row label={`${currency} minimum`}>
+                  <span className="font-mono tnum">{formatMoney(money(limits.min_wager_minor, currency))}</span>
+                </Row>
+                <Row label={`${currency} maximum`}>
+                  <span className="font-mono tnum">{formatMoney(money(limits.max_wager_minor, currency))}</span>
+                </Row>
+                <Row label={`${currency} step`}>
+                  <span className="font-mono tnum">{formatMoney(money(limits.wager_step_minor, currency))}</span>
+                </Row>
+              </div>
+            )
+          })}
           <Row label="Integration">{game.integration.replace('_', ' ')}</Row>
           <Row label="Status">
             <StatusBadge status={game.status} />

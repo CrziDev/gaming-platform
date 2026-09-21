@@ -196,8 +196,8 @@ func insertDashboardGame(t *testing.T, db *sql.DB, slug, name string, rtpBasisPo
 	t.Helper()
 	var id string
 	if err := db.QueryRow(`
-		INSERT INTO games (slug, name, category_slug, provider, status, currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points)
-		VALUES ($1, $2, 'dashboard-test', 'Test', 'active', 'DSH', 100, 10000, 100, $3)
+		INSERT INTO games (slug, name, category_slug, provider, status, rtp_basis_points)
+		VALUES ($1, $2, 'dashboard-test', 'Test', 'active', $3)
 		RETURNING id::text`, slug, name, rtpBasisPoints).Scan(&id); err != nil {
 		t.Fatalf("create game %s: %v", slug, err)
 	}
@@ -227,7 +227,7 @@ func removeDashboardFixtures(t *testing.T, db *sql.DB) {
 		`DELETE FROM deposit_requests WHERE currency = 'DSH'`,
 		`DELETE FROM game_rounds WHERE currency = 'DSH'`,
 		`DELETE FROM wallet_transactions WHERE currency = 'DSH'`,
-		`DELETE FROM games WHERE currency = 'DSH'`,
+		`DELETE FROM games WHERE category_slug = 'dashboard-test'`,
 		`DELETE FROM wallets WHERE currency = 'DSH'`,
 		`DELETE FROM payment_methods WHERE name = 'Dashboard Method'`,
 		`DELETE FROM users WHERE email IN ('dashboard-first@example.com', 'dashboard-second@example.com')`,

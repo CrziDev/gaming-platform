@@ -5,12 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PlayRoundResponse, PlinkoManifest, Round } from '@/api/types'
 import { games } from '@/mocks/games'
 import { plinkoManifest } from '@/mocks/plinko'
+import { setActiveCurrency } from '@/features/wallet'
 import { liveShellStubs, renderApp, stubFetchRoutes, stubWebSocket, userBody, type StubResponse } from '@/test-utils'
 
 vi.mock('@/api/mode', () => ({ testFixturesEnabled: false }))
 
 beforeEach(() => {
   stubWebSocket()
+  setActiveCurrency('PHP')
 })
 
 afterEach(() => {
@@ -125,6 +127,29 @@ describe('Plinko against a server without the play endpoint', () => {
       currency: 'PHP',
       params: { rows: 8, risk: 'normal' },
     })
+  })
+
+  it('uses the active USD wallet and sends USD with the round', async () => {
+    setActiveCurrency('USD')
+    const user = userEvent.setup()
+    const fetchMock = stubFetchRoutes({
+      ...page,
+      'GET /wallets/USD': { status: 200, body: { currency: 'USD', balance_minor: 100_000 } },
+      'GET /games/plinko/manifest': { status: 200, body: servedManifest(9500, 55) },
+      'POST /games/plinko/rounds': { status: 404, body: { error: 'Not found' } },
+    })
+    renderApp('/game/plinko')
+
+    const { iframe, post } = await openFrame()
+    act(() => frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' }))
+    await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
+    await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
+
+    await screen.findByText("Plinko isn't available right now.")
+    const play = playRequests(fetchMock)[0]
+    expect(JSON.parse(String(play?.[1]?.body))).toMatchObject({ stake_minor: 100, currency: 'USD' })
+    const roundsUrl = new URL(String(roundsRequests(fetchMock)[0]?.[0]), window.location.href)
+    expect(roundsUrl.searchParams.get('currency')).toBe('USD')
   })
 })
 
@@ -276,6 +301,7 @@ describe('the history under the Plinko board', () => {
     expect(within(feed).queryByRole('columnheader', { name: 'Player' })).not.toBeInTheDocument()
     const roundsUrl = new URL(String(roundsRequests(fetchMock)[0]?.[0]), window.location.href)
     expect(roundsUrl.searchParams.get('game_id')).toBe(plinko.id)
+    expect(roundsUrl.searchParams.get('currency')).toBe('PHP')
     const before = roundsRequests(fetchMock).length
 
     const { iframe, post } = await openFrame()

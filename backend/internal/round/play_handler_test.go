@@ -162,6 +162,11 @@ func TestPlayHandlerConflictCodes(t *testing.T) {
 	slug := "round-game-" + fixture.Suffix
 	account := user.User{ID: fixture.UserID}
 	handler = NewHandler(db, logger, Engines{slug: winningEngine(340, 170)}, 0)
+	// Every game is configured with both currencies, so unsupported means the
+	// game's own configuration is missing one, not a player picking freely.
+	if _, err := db.Exec(`DELETE FROM game_wager_limits WHERE game_id = ($1::text)::uuid AND currency = 'USD'`, fixture.GameID); err != nil {
+		t.Fatal(err)
+	}
 	if code, body := handler.play(t, account, playCall{slug: slug, key: "k2", body: `{"stake_minor": 200, "currency": "USD", "params": {}}`}); code != http.StatusConflict || body["code"] != "UNSUPPORTED_CURRENCY" {
 		t.Fatalf("currency: %d %v", code, body)
 	}
@@ -199,7 +204,8 @@ func TestPlayHandlerAnswersUnsupportedCurrencyWhenNoWalletCanBeProvisioned(t *te
 	}
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM currencies WHERE code = 'RDX'`) })
 	fixture := createRoundFixture(t, db, 1_000)
-	if _, err := db.Exec(`UPDATE games SET currency = 'RDX' WHERE id = ($1::text)::uuid`, fixture.GameID); err != nil {
+	if _, err := db.Exec(`INSERT INTO game_wager_limits (game_id, currency, min_wager_minor, max_wager_minor, wager_step_minor)
+		VALUES (($1::text)::uuid, 'RDX', 100, 1000, 100)`, fixture.GameID); err != nil {
 		t.Fatal(err)
 	}
 	slug := "round-game-" + fixture.Suffix

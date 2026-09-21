@@ -112,6 +112,36 @@ func TestPlayDebitsDecidesAndCreditsInOneCommit(t *testing.T) {
 	}
 }
 
+func TestPlayUsesRequestedCurrencyLimitsAndWallet(t *testing.T) {
+	db := openRoundTestDB(t)
+	fixture := createRoundFixture(t, db, 1_000)
+	if _, err := db.Exec(`UPDATE game_wager_limits
+		SET min_wager_minor = 200, max_wager_minor = 1000, wager_step_minor = 200
+		WHERE game_id = ($1::text)::uuid AND currency = 'USD'`, fixture.GameID); err != nil {
+		t.Fatalf("set USD limits: %v", err)
+	}
+	if _, err := wallet.Move(context.Background(), db, fixture.UserID, "USD", "adjustment", 1_000, "usd-fixture:"+fixture.Suffix, "USD test credit"); err != nil {
+		t.Fatalf("credit USD wallet: %v", err)
+	}
+
+	in := playInput(fixture, "play-usd-"+fixture.Suffix, 400)
+	in.Currency = "USD"
+	result, err := Play(context.Background(), db, winningEngine(600, 150), in)
+	if err != nil {
+		t.Fatalf("play USD: %v", err)
+	}
+	if result.Round.Currency != "USD" || result.Wallet.Currency != "USD" || result.Wallet.BalanceMinor != 1_200 {
+		t.Fatalf("USD result = %+v wallet = %+v", result.Round, result.Wallet)
+	}
+	var phpBalance int64
+	if err := db.QueryRow(`SELECT balance_minor FROM wallets WHERE user_id = ($1::text)::uuid AND currency = 'PHP'`, fixture.UserID).Scan(&phpBalance); err != nil {
+		t.Fatalf("read PHP balance: %v", err)
+	}
+	if phpBalance != 1_000 {
+		t.Fatalf("PHP balance = %d, want unchanged 1000", phpBalance)
+	}
+}
+
 func notificationsFor(t *testing.T, fixture roundFixture) int {
 	t.Helper()
 	db := openRoundTestDB(t)
@@ -220,6 +250,11 @@ func TestPlayRetryReturnsTheCommittedRoundWithoutPlayingAgain(t *testing.T) {
 	if _, err := Play(context.Background(), db, eng, otherParams); !errors.Is(err, ErrRoundKeyConflict) {
 		t.Fatalf("other params: want %v, got %v", ErrRoundKeyConflict, err)
 	}
+	otherCurrency := in
+	otherCurrency.Currency = "USD"
+	if _, err := Play(context.Background(), db, eng, otherCurrency); !errors.Is(err, ErrRoundKeyConflict) {
+		t.Fatalf("other currency: want %v, got %v", ErrRoundKeyConflict, err)
+	}
 
 	otherPlayer := createRoundFixture(t, db, 1_000)
 	otherPlayer.GameID = fixture.GameID
@@ -327,7 +362,7 @@ func TestPlayWritesNothingWhenItCannotComplete(t *testing.T) {
 		want   error
 	}{
 		"wager off the step":  {winningEngine(340, 170), func(in *PlayInput) { in.StakeMinor = 150 }, ErrInvalidWager},
-		"wrong currency":      {winningEngine(340, 170), func(in *PlayInput) { in.Currency = "USD" }, ErrUnsupportedCurrency},
+		"wrong currency":      {winningEngine(340, 170), func(in *PlayInput) { in.Currency = "EUR" }, ErrUnsupportedCurrency},
 		"invalid params json": {winningEngine(340, 170), func(in *PlayInput) { in.Params = json.RawMessage(`{rows`) }, engine.ErrInvalidParams},
 		"no key":              {winningEngine(340, 170), func(in *PlayInput) { in.IdempotencyKey = " " }, ErrRoundKeyRequired},
 		"no engine":           {nil, func(*PlayInput) {}, ErrEngineRequired},
@@ -371,7 +406,7 @@ func TestPlayRetryOfAnUnsettledRoundIsRefused(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	key := "play-open-" + fixture.Suffix
-	if _, err := Open(context.Background(), db, testOptions, OpenInput{RoundKey: "play:" + fixture.UserID + ":" + key, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200}); err != nil {
+	if _, err := Open(context.Background(), db, testOptions, OpenInput{RoundKey: "play:" + fixture.UserID + ":" + key, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 200}); err != nil {
 		t.Fatal(err)
 	}
 	in := playInput(fixture, key, 200)

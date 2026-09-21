@@ -19,21 +19,21 @@ func TestPlayerRoundReadsAreOwnedAndPaginated(t *testing.T) {
 	owner := createRoundFixture(t, db, 10_000)
 	other := createRoundFixture(t, db, 10_000)
 
-	owned, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-owned-" + owner.Suffix, UserID: owner.UserID, GameID: owner.GameID, StakeMinor: 100})
+	owned, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-owned-" + owner.Suffix, UserID: owner.UserID, GameID: owner.GameID, Currency: "PHP", StakeMinor: 100})
 	if err != nil {
 		t.Fatalf("open owned round: %v", err)
 	}
 	if _, err := Settle(t.Context(), db, SettleInput{RoundID: owned.ID, WinMinor: 250, MultiplierHundredths: 250}); err != nil {
 		t.Fatalf("settle owned round: %v", err)
 	}
-	second, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-owned-second-" + owner.Suffix, UserID: owner.UserID, GameID: owner.GameID, StakeMinor: 200})
+	second, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-owned-second-" + owner.Suffix, UserID: owner.UserID, GameID: owner.GameID, Currency: "PHP", StakeMinor: 200})
 	if err != nil {
 		t.Fatalf("open second owned round: %v", err)
 	}
 	if _, err := Settle(t.Context(), db, SettleInput{RoundID: second.ID, WinMinor: 250, MultiplierHundredths: 125}); err != nil {
 		t.Fatalf("settle second owned round: %v", err)
 	}
-	foreign, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-foreign-" + other.Suffix, UserID: other.UserID, GameID: other.GameID, StakeMinor: 100})
+	foreign, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "read-foreign-" + other.Suffix, UserID: other.UserID, GameID: other.GameID, Currency: "PHP", StakeMinor: 100})
 	if err != nil {
 		t.Fatalf("open foreign round: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestPlayerRoundReadsAreOwnedAndPaginated(t *testing.T) {
 func TestAdminRoundListAppliesEveryFilter(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 10_000)
-	item, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "admin-read-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100})
+	item, err := Open(t.Context(), db, testOptions, OpenInput{RoundKey: "admin-read-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 100})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
 	}

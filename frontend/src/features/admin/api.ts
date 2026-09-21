@@ -17,6 +17,7 @@ import type {
   Round,
   Transaction,
   Wallet,
+  WagerLimit,
 } from '@/api/types'
 import type { Currency } from '@/lib/money'
 
@@ -602,10 +603,7 @@ export type GameInput = {
   category_slug: string
   provider: string
   status: GameStatus
-  currency: Currency
-  min_wager_minor: number
-  max_wager_minor: number
-  wager_step_minor: number
+  wager_limits: Record<Currency, WagerLimit>
 }
 
 export type GamePatch = Partial<Omit<GameInput, 'slug'>>

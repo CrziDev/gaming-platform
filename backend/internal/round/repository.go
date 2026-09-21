@@ -112,18 +112,6 @@ func lockByID(ctx context.Context, tx *sql.Tx, id string) (Round, error) {
 	return item, nil
 }
 
-func gameCurrency(ctx context.Context, tx *sql.Tx, gameID string) (string, error) {
-	var currency string
-	err := tx.QueryRowContext(ctx, `SELECT currency FROM games WHERE id = ($1::text)::uuid`, gameID).Scan(&currency)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", ErrGameUnavailable
-	}
-	if err != nil {
-		return "", fmt.Errorf("round: read game currency: %w", err)
-	}
-	return currency, nil
-}
-
 func lockWallet(ctx context.Context, tx *sql.Tx, userID, currency string) (string, error) {
 	var walletID string
 	err := tx.QueryRowContext(ctx, `SELECT id::text FROM wallets WHERE user_id = ($1::text)::uuid AND currency = $2 FOR UPDATE`, userID, currency).Scan(&walletID)
@@ -133,14 +121,16 @@ func lockWallet(ctx context.Context, tx *sql.Tx, userID, currency string) (strin
 	return walletID, nil
 }
 
-func lockGame(ctx context.Context, tx *sql.Tx, gameID string) (gameConfig, error) {
+func lockGame(ctx context.Context, tx *sql.Tx, gameID, currency string) (gameConfig, error) {
 	var config gameConfig
 	var rtp sql.NullInt64
 	err := tx.QueryRowContext(ctx, `
-		SELECT id::text, status, currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points
-		FROM games
-		WHERE id = ($1::text)::uuid
-	FOR UPDATE`, gameID).Scan(
+		SELECT g.id::text, g.status, limits.currency, limits.min_wager_minor,
+		       limits.max_wager_minor, limits.wager_step_minor, g.rtp_basis_points
+		FROM games g
+		JOIN game_wager_limits limits ON limits.game_id = g.id AND limits.currency = $2
+		WHERE g.id = ($1::text)::uuid
+		FOR UPDATE OF g, limits`, gameID, currency).Scan(
 		&config.ID, &config.Status, &config.Currency,
 		&config.MinWagerMinor, &config.MaxWagerMinor, &config.WagerStepMinor, &rtp,
 	)
@@ -149,6 +139,13 @@ func lockGame(ctx context.Context, tx *sql.Tx, gameID string) (gameConfig, error
 		config.RTPBasisPoints = &basisPoints
 	}
 	if errors.Is(err, sql.ErrNoRows) {
+		var exists bool
+		if findErr := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM games WHERE id = ($1::text)::uuid)`, gameID).Scan(&exists); findErr != nil {
+			return gameConfig{}, fmt.Errorf("round: check game: %w", findErr)
+		}
+		if exists {
+			return gameConfig{}, ErrUnsupportedCurrency
+		}
 		return gameConfig{}, ErrGameUnavailable
 	}
 	if err != nil {

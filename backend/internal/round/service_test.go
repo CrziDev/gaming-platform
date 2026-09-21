@@ -67,10 +67,14 @@ func createRoundFixture(t *testing.T, db *sql.DB, balanceMinor int64) roundFixtu
 		t.Fatalf("create category: %v", err)
 	}
 	if err := db.QueryRow(`
-		INSERT INTO games (slug, name, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points)
-		VALUES ($1, $2, $3, 'Test', 'active', 'integrated', 'PHP', 100, 1000, 100, 9600)
+		INSERT INTO games (slug, name, category_slug, provider, status, integration, rtp_basis_points)
+		VALUES ($1, $2, $3, 'Test', 'active', 'integrated', 9600)
 		RETURNING id::text`, gameSlug, "Round Game "+suffix, category).Scan(&fixture.GameID); err != nil {
 		t.Fatalf("create game: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO game_wager_limits (game_id, currency, min_wager_minor, max_wager_minor, wager_step_minor)
+		SELECT ($1::text)::uuid, currency, 100, 1000, 100 FROM (VALUES ('PHP'), ('USD')) currencies(currency)`, fixture.GameID); err != nil {
+		t.Fatalf("create game limits: %v", err)
 	}
 	if _, err := wallet.List(context.Background(), db, fixture.UserID); err != nil {
 		t.Fatalf("provision wallets: %v", err)
@@ -98,7 +102,7 @@ func TestOpenDebitsWagerAndBindsRoundAtomically(t *testing.T) {
 	fixture := createRoundFixture(t, db, 1_000)
 
 	opened, err := Open(context.Background(), db, testOptions, OpenInput{
-		RoundKey: "open-round-once-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200,
+		RoundKey: "open-round-once-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 200,
 	})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
@@ -136,7 +140,7 @@ func TestOpenDebitsWagerAndBindsRoundAtomically(t *testing.T) {
 func TestOpenDuplicateRoundKeyReturnsOneRoundAndDebitsOnce(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	input := OpenInput{RoundKey: "duplicate-open-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 300}
+	input := OpenInput{RoundKey: "duplicate-open-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 300}
 
 	start := make(chan struct{})
 	results := make(chan Round, 2)
@@ -191,7 +195,7 @@ func TestOpenDuplicateRoundKeyReturnsOneRoundAndDebitsOnce(t *testing.T) {
 func TestOpenRejectsConflictingRoundKeyWithoutAnotherDebit(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
-	input := OpenInput{RoundKey: "conflicting-open-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200}
+	input := OpenInput{RoundKey: "conflicting-open-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 200}
 	if _, err := Open(context.Background(), db, testOptions, input); err != nil {
 		t.Fatalf("first open: %v", err)
 	}
@@ -224,7 +228,7 @@ func TestOpenConcurrentStartsDoNotOverspendOrDeadlock(t *testing.T) {
 		go func() {
 			defer wait.Done()
 			<-start
-			_, err := Open(ctx, db, testOptions, OpenInput{RoundKey: key, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 800})
+			_, err := Open(ctx, db, testOptions, OpenInput{RoundKey: key, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 800})
 			errs <- err
 		}()
 	}
@@ -311,7 +315,7 @@ func TestOpenRejectsUnavailableGameProfileAndInvalidWagersWithoutMovingMoney(t *
 				test.prepare(t, db, fixture)
 			}
 			_, err := Open(context.Background(), db, testOptions, OpenInput{
-				RoundKey: "rejected-" + test.name + "-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: test.stake,
+				RoundKey: "rejected-" + test.name + "-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: test.stake,
 			})
 			if !errors.Is(err, test.want) {
 				t.Fatalf("open: want %v, got %v", test.want, err)
@@ -339,7 +343,7 @@ func TestOpenSnapshotsTheReturnInForce(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	opened, err := Open(context.Background(), db, testOptions, OpenInput{
-		RoundKey: "rtp-snapshot-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
+		RoundKey: "rtp-snapshot-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 100,
 	})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
@@ -352,7 +356,7 @@ func TestOpenSnapshotsTheReturnInForce(t *testing.T) {
 		t.Fatalf("switch RTP: %v", err)
 	}
 	next, err := Open(context.Background(), db, testOptions, OpenInput{
-		RoundKey: "rtp-snapshot-next-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
+		RoundKey: "rtp-snapshot-next-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 100,
 	})
 	if err != nil {
 		t.Fatalf("open next round: %v", err)
@@ -371,7 +375,7 @@ func TestSettleCreditsPositiveWinAndClosesRoundAtomically(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	opened, err := Open(context.Background(), db, testOptions, OpenInput{
-		RoundKey: "settle-positive-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200,
+		RoundKey: "settle-positive-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 200,
 	})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
@@ -417,7 +421,7 @@ func TestSettleRecordsZeroWinWithoutMovement(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	opened, err := Open(context.Background(), db, testOptions, OpenInput{
-		RoundKey: "settle-zero-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
+		RoundKey: "settle-zero-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 100,
 	})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
@@ -447,7 +451,7 @@ func TestConcurrentSettlementCreditsAtMostOnce(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	opened, err := Open(context.Background(), db, testOptions, OpenInput{
-		RoundKey: "concurrent-settle-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 200,
+		RoundKey: "concurrent-settle-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 200,
 	})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
@@ -503,7 +507,7 @@ func TestSettleRollsBackBalanceAndStatusWhenWinLedgerInsertFails(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	opened, err := Open(context.Background(), db, testOptions, OpenInput{
-		RoundKey: "settle-rollback-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
+		RoundKey: "settle-rollback-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 100,
 	})
 	if err != nil {
 		t.Fatalf("open round: %v", err)
@@ -553,7 +557,7 @@ func TestCancelAndFailRefundOnceAndBecomeTerminal(t *testing.T) {
 			db := openRoundTestDB(t)
 			fixture := createRoundFixture(t, db, 1_000)
 			opened, err := Open(context.Background(), db, testOptions, OpenInput{
-				RoundKey: test.name + "-refund-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 300,
+				RoundKey: test.name + "-refund-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 300,
 			})
 			if err != nil {
 				t.Fatalf("open round: %v", err)
@@ -602,7 +606,7 @@ func TestLifecycleRejectsInvalidOutcomeWithoutMovingMoney(t *testing.T) {
 	db := openRoundTestDB(t)
 	fixture := createRoundFixture(t, db, 1_000)
 	opened, err := Open(context.Background(), db, testOptions, OpenInput{
-		RoundKey: "invalid-outcome-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, StakeMinor: 100,
+		RoundKey: "invalid-outcome-" + fixture.Suffix, UserID: fixture.UserID, GameID: fixture.GameID, Currency: "PHP", StakeMinor: 100,
 	})
 	if err != nil {
 		t.Fatalf("open round: %v", err)

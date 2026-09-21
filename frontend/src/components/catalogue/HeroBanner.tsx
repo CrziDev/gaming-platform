@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import type { Game } from '@/api/types'
 import { buttonStyles } from '@/components/ui/Button'
 import { useAuthIntent, useSession } from '@/features/auth'
+import { useActiveCurrency } from '@/features/wallet'
 import { bannerArtUrl } from '@/lib/gameArt'
 import { formatMoney, money } from '@/lib/money'
 import { paths } from '@/routes/paths'
@@ -10,13 +11,14 @@ import { paths } from '@/routes/paths'
 export function HeroBanner({ featured }: { featured: Game | undefined }) {
   const { data: user } = useSession()
   const { open } = useAuthIntent()
+  const currency = useActiveCurrency()
 
   if (!featured) {
     return null
   }
 
   const destination = paths.game(featured.slug)
-  const minBet = formatMoney(money(featured.min_wager_minor, featured.currency))
+  const minBet = formatMoney(money(featured.wager_limits[currency].min_wager_minor, currency))
 
   const art = bannerArtUrl(featured)
 

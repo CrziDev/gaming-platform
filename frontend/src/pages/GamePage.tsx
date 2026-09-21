@@ -19,30 +19,29 @@ import { EmptyState, ErrorState } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { useFavorites, useGame, useSetFavorite } from '@/features/catalogue'
 import { GameHistory, gameModuleFor, useGameSession, type GameSession } from '@/features/gameplay'
-import { useWallet } from '@/features/wallet'
+import { useActiveCurrency, useWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { MOBILE_GAME_QUERY, useMediaQuery } from '@/lib/media'
-import { formatMoney, money, type Money } from '@/lib/money'
+import { formatMoney, money, type Currency, type Money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
 export function GamePage() {
   const { slug = '' } = useParams()
   const gameQuery = useGame(slug)
   const game = gameQuery.data
-  // A title is denominated in one currency, so the balance beside the bet
-  // controls is that wallet's — never whichever one the header happens to show.
-  const { data: wallet } = useWallet(game?.currency ?? 'PHP')
+  const currency = useActiveCurrency()
+  const { data: wallet } = useWallet(currency)
   const favorites = useFavorites(true)
   const setFavorite = useSetFavorite()
   const hostRef = useRef<HTMLElement>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const [shortfall, setShortfall] = useState(false)
-  const [stake, setStake] = useState<{ slug: string; amountMinor: number } | null>(null)
+  const [stake, setStake] = useState<{ slug: string; currency: Currency; amountMinor: number } | null>(null)
   const mobileGame = useMediaQuery(MOBILE_GAME_QUERY)
 
   const module = gameModuleFor(slug)
   const onShortfall = useCallback(() => setShortfall(true), [])
-  const session = useGameSession({ module, slug, currency: game?.currency ?? 'PHP', onShortfall })
+  const session = useGameSession({ module, slug, currency, onShortfall })
 
   useEffect(() => {
     const sync = () => setFullscreen(document.fullscreenElement !== null)
@@ -88,12 +87,15 @@ export function GamePage() {
   }
 
   const favorite = favorites.data?.some((entry) => entry.id === game.id) ?? false
-  const stakeMinor = stake?.slug === game.slug ? stake.amountMinor : game.min_wager_minor
+  const limits = game.wager_limits[currency]
+  const stakeMatches = stake?.slug === game.slug && stake.currency === currency
+  const stakeMinor = stakeMatches ? stake.amountMinor : limits.min_wager_minor
   const setStakeMinor: Dispatch<SetStateAction<number>> = (next) => {
     setStake((current) => {
-      const amount = current?.slug === game.slug ? current.amountMinor : game.min_wager_minor
+      const amount = current?.slug === game.slug && current.currency === currency ? current.amountMinor : limits.min_wager_minor
       return {
         slug: game.slug,
+        currency,
         amountMinor: typeof next === 'function' ? next(amount) : next,
       }
     })
@@ -167,9 +169,10 @@ export function GamePage() {
           stakeMinor={stakeMinor}
           setStakeMinor={setStakeMinor}
           balance={wallet ? money(wallet.balance_minor, wallet.currency) : null}
-          minMinor={game.min_wager_minor}
-          maxMinor={game.max_wager_minor}
-          stepMinor={game.wager_step_minor}
+          currency={currency}
+          minMinor={limits.min_wager_minor}
+          maxMinor={limits.max_wager_minor}
+          stepMinor={limits.wager_step_minor}
           session={module ? session : null}
           paramsSlot={paramsSlot}
           paramsSummary={paramsSummary}
@@ -178,7 +181,7 @@ export function GamePage() {
         />
 
         <div className="px-3.5">
-          <GameHistory gameId={game.id} />
+          <GameHistory gameId={game.id} currency={currency} />
         </div>
       </div>
     )
@@ -226,9 +229,10 @@ export function GamePage() {
             stakeMinor={stakeMinor}
             setStakeMinor={setStakeMinor}
             balance={wallet ? money(wallet.balance_minor, wallet.currency) : null}
-            minMinor={game.min_wager_minor}
-            maxMinor={game.max_wager_minor}
-            stepMinor={game.wager_step_minor}
+            currency={currency}
+            minMinor={limits.min_wager_minor}
+            maxMinor={limits.max_wager_minor}
+            stepMinor={limits.wager_step_minor}
             session={module ? session : null}
             paramsSlot={paramsSlot}
             paramsSummary={paramsSummary}
@@ -242,7 +246,7 @@ export function GamePage() {
         </div>
       </div>
 
-      <GameHistory gameId={game.id} />
+      <GameHistory gameId={game.id} currency={currency} />
     </div>
   )
 }
@@ -282,6 +286,7 @@ type BetControlsProps = {
   stakeMinor: number
   setStakeMinor: Dispatch<SetStateAction<number>>
   balance: Money | null
+  currency: Currency
   minMinor: number
   maxMinor: number
   stepMinor: number
@@ -298,6 +303,7 @@ function BetControls({
   stakeMinor,
   setStakeMinor,
   balance,
+  currency,
   minMinor,
   maxMinor,
   stepMinor,
@@ -309,7 +315,6 @@ function BetControls({
 }: BetControlsProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const toast = useToast()
-  const currency = balance?.currency ?? 'PHP'
   const busy = session?.playing ?? false
   // A title with an engine offers a bet only once its board is configured from the
   // server's manifest; the host overlay says why while it is not.

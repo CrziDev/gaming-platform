@@ -31,10 +31,14 @@ func createPlinko(t *testing.T, db *sql.DB) {
 	}
 	var gameID string
 	if err := db.QueryRow(`
-		INSERT INTO games (slug, name, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points)
-		VALUES ('plinko', 'Plinko', 'originals', 'In-house', 'active', 'integrated', 'PHP', 100, 500000, 100, 9500)
+		INSERT INTO games (slug, name, category_slug, provider, status, integration, rtp_basis_points)
+		VALUES ('plinko', 'Plinko', 'originals', 'In-house', 'active', 'integrated', 9500)
 		RETURNING id::text`).Scan(&gameID); err != nil {
 		t.Fatalf("create plinko: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO game_wager_limits (game_id, currency, min_wager_minor, max_wager_minor, wager_step_minor)
+		SELECT ($1::text)::uuid, currency, 100, 500000, 100 FROM (VALUES ('PHP'), ('USD')) currencies(currency)`, gameID); err != nil {
+		t.Fatalf("create plinko limits: %v", err)
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM game_favorites WHERE game_id = ($1::text)::uuid`, gameID)

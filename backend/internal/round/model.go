@@ -73,7 +73,7 @@ type OpenInput struct {
 	UserID     string
 	GameID     string
 	StakeMinor int64
-	// Optional: when set it must be the game's currency.
+	// Required: selects the game's wager limits and the player's wallet.
 	Currency string
 }
 

@@ -1905,18 +1905,19 @@ func sessionCookie(t *testing.T, client *http.Client, base string) *http.Cookie 
 }
 
 type catalogueGame struct {
-	ID           string   `json:"id"`
-	Slug         string   `json:"slug"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	CategorySlug string   `json:"category_slug"`
-	CategoryName string   `json:"category_name"`
-	Provider     string   `json:"provider"`
-	Status       string   `json:"status"`
-	Currency     string   `json:"currency"`
-	MinWager     int64    `json:"min_wager_minor"`
-	MaxWager     int64    `json:"max_wager_minor"`
-	WagerStep    int64    `json:"wager_step_minor"`
+	ID           string `json:"id"`
+	Slug         string `json:"slug"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	CategorySlug string `json:"category_slug"`
+	CategoryName string `json:"category_name"`
+	Provider     string `json:"provider"`
+	Status       string `json:"status"`
+	WagerLimits  map[string]struct {
+		MinWager  int64 `json:"min_wager_minor"`
+		MaxWager  int64 `json:"max_wager_minor"`
+		WagerStep int64 `json:"wager_step_minor"`
+	} `json:"wager_limits"`
 	ThumbnailURL *string  `json:"thumbnail_url"`
 	Flags        []string `json:"flags"`
 	CreatedAt    string   `json:"created_at"`
@@ -1948,8 +1949,8 @@ func seedCatalogueFixture(t *testing.T, db *sql.DB) (categoryA, categoryB, suffi
 		}
 	}
 
-	insertGame := `INSERT INTO games (slug, name, description, category_slug, provider, status, integration, currency, min_wager_minor, max_wager_minor, wager_step_minor, thumbnail_path, created_at)
-	               VALUES ($1, $2, $3, $4, $5, $6, 'supported', 'PHP', 100, 500000, 100, $7, $8)`
+	insertGame := `INSERT INTO games (slug, name, description, category_slug, provider, status, integration, thumbnail_path, created_at)
+	               VALUES ($1, $2, $3, $4, $5, $6, 'supported', $7, $8) RETURNING id::text`
 	for _, item := range []struct {
 		slug, name, category, status string
 		thumbnail                    *string
@@ -1962,8 +1963,13 @@ func seedCatalogueFixture(t *testing.T, db *sql.DB) (categoryA, categoryB, suffi
 		{"test-a-retired-" + suffix, "Retired Test " + suffix, categoryA, "retired", nil, time.Now()},
 		{"test-b-draft-" + suffix, "Hidden Test " + suffix, categoryB, "draft", nil, time.Now()},
 	} {
-		if _, err := db.Exec(insertGame, item.slug, item.name, "Description of "+item.name, item.category, "Test Studio "+suffix, item.status, item.thumbnail, item.createdAt); err != nil {
+		var gameID string
+		if err := db.QueryRow(insertGame, item.slug, item.name, "Description of "+item.name, item.category, "Test Studio "+suffix, item.status, item.thumbnail, item.createdAt).Scan(&gameID); err != nil {
 			t.Fatalf("insert game %s: %v", item.slug, err)
+		}
+		if _, err := db.Exec(`INSERT INTO game_wager_limits (game_id, currency, min_wager_minor, max_wager_minor, wager_step_minor)
+			SELECT ($1::text)::uuid, currency, 100, 500000, 100 FROM (VALUES ('PHP'), ('USD')) currencies(currency)`, gameID); err != nil {
+			t.Fatalf("insert limits for %s: %v", item.slug, err)
 		}
 	}
 
@@ -2006,7 +2012,9 @@ func TestCatalogueServesOnlyActiveGamesWithFiltersAndCategories(t *testing.T) {
 		t.Fatalf("default sort should be by name: %q, %q", page.Rows[0].Name, page.Rows[1].Name)
 	}
 	for _, row := range page.Rows {
-		if row.Status != "active" || row.CategoryName != "Test Category A "+suffix || row.Currency != "PHP" || row.MinWager != 100 || row.MaxWager != 500_000 || row.WagerStep != 100 {
+		php, phpOK := row.WagerLimits["PHP"]
+		usd, usdOK := row.WagerLimits["USD"]
+		if row.Status != "active" || row.CategoryName != "Test Category A "+suffix || !phpOK || !usdOK || php.MinWager != 100 || php.MaxWager != 500_000 || php.WagerStep != 100 || usd != php {
 			t.Fatalf("unexpected catalogue row: %+v", row)
 		}
 		if row.ID == "" || row.CreatedAt == "" || row.Description == "" {
@@ -2151,8 +2159,11 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 
 	newGame := map[string]any{
 		"slug": "test-created-" + suffix, "name": "Created Test " + suffix, "description": "Made by the admin API",
-		"category_slug": categoryA, "provider": "Test Studio " + suffix, "currency": "PHP",
-		"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100,
+		"category_slug": categoryA, "provider": "Test Studio " + suffix,
+		"wager_limits": map[string]any{
+			"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100},
+			"USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100},
+		},
 	}
 	if status, body := send(t, clientWithCookies(t), http.MethodPost, base+"/api/admin/games", newGame); status != http.StatusUnauthorized {
 		t.Fatalf("anonymous create: want 401, got %d (%s)", status, body)
@@ -2171,14 +2182,14 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 		"bad slug":            {map[string]any{"slug": "Bad Slug"}, "slug"},
 		"missing name":        {map[string]any{"name": " "}, "name"},
 		"unknown category":    {map[string]any{"category_slug": "no-such-category-" + suffix}, "category_slug"},
-		"disabled currency":   {map[string]any{"currency": "EUR"}, "currency"},
-		"fractional units":    {map[string]any{"min_wager_minor": 150, "wager_step_minor": 50}, "wager_step_minor"},
-		"max below min":       {map[string]any{"max_wager_minor": 50}, "max_wager_minor"},
-		"max off the step":    {map[string]any{"max_wager_minor": 10_050, "wager_step_minor": 100}, "max_wager_minor"},
-		"zero step":           {map[string]any{"wager_step_minor": 0}, "wager_step_minor"},
+		"missing currency":    {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits"},
+		"fractional units":    {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 150, "max_wager_minor": 10_000, "wager_step_minor": 50}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits"},
+		"max below min":       {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 50, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits.PHP.max_wager_minor"},
+		"max off the step":    {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_050, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits.PHP.max_wager_minor"},
+		"zero step":           {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 0}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits.PHP.wager_step_minor"},
 		"unknown status":      {map[string]any{"status": "live"}, "status"},
 		"unknown body field":  {map[string]any{"integration": "integrated"}, ""},
-		"fractional min only": {map[string]any{"min_wager_minor": 120, "max_wager_minor": 10_020}, "wager_step_minor"},
+		"fractional min only": {map[string]any{"wager_limits": map[string]any{"PHP": map[string]any{"min_wager_minor": 120, "max_wager_minor": 10_020, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}}, "wager_limits"},
 	}
 	for name, tc := range rejects {
 		t.Run("create rejects "+name, func(t *testing.T) {
@@ -2250,8 +2261,9 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 		}
 	}
 
-	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"max_wager_minor": 10_050})
-	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"max_wager_minor"`)) {
+	offStepLimits := map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_050, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"wager_limits": offStepLimits})
+	if status != http.StatusBadRequest || !bytes.Contains(body, []byte(`"wager_limits.PHP.max_wager_minor"`)) {
 		t.Fatalf("patch off-step max: want 400, got %d (%s)", status, body)
 	}
 	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"slug": "renamed"})
@@ -2259,7 +2271,8 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 		t.Fatalf("patch slug must be refused as an unknown field: want 400, got %d (%s)", status, body)
 	}
 
-	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"name": "Renamed Test " + suffix, "max_wager_minor": 20_000})
+	editedLimits := map[string]any{"PHP": map[string]any{"min_wager_minor": 100, "max_wager_minor": 20_000, "wager_step_minor": 100}, "USD": map[string]any{"min_wager_minor": 100, "max_wager_minor": 10_000, "wager_step_minor": 100}}
+	status, body = send(t, adminClient, http.MethodPatch, base+"/api/admin/games/"+created.ID, map[string]any{"name": "Renamed Test " + suffix, "wager_limits": editedLimits})
 	if status != http.StatusOK {
 		t.Fatalf("patch metadata: want 200, got %d (%s)", status, body)
 	}
@@ -2267,7 +2280,7 @@ func TestAdminGameAdministrationCreatesEditsAndAudits(t *testing.T) {
 	if err := json.Unmarshal(body, &edited); err != nil {
 		t.Fatalf("decode edited: %v (%s)", err, body)
 	}
-	if edited.Name != "Renamed Test "+suffix || edited.MaxWager != 20_000 || edited.Status != "draft" || edited.MinWager != 100 {
+	if edited.Name != "Renamed Test "+suffix || edited.WagerLimits["PHP"].MaxWager != 20_000 || edited.Status != "draft" || edited.WagerLimits["PHP"].MinWager != 100 {
 		t.Fatalf("unexpected edited game: %+v", edited)
 	}
 
