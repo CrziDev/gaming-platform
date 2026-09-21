@@ -2,12 +2,27 @@ package app
 
 import (
 	"log/slog"
+	"net"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gaming-platform/backend/internal/httpx"
 )
+
+func forwardedClientIP(enabled bool, next http.Handler) http.Handler {
+	if !enabled {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		forwarded := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0])
+		if ip := net.ParseIP(forwarded); ip != nil {
+			r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func browserRules(origins []string, next http.Handler) http.Handler {
 	allowed := make(map[string]struct{}, len(origins))

@@ -234,7 +234,7 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] HttpOnly session cookie.
 - [x] Indistinguishable login failures and matched work for an unknown email.
 - [x] Per-process rate limiting on registration and login.
-- [x] `make seed` creates or restores the development administrator.
+- [x] `make bootstrap` creates the initial administrator when absent and preserves an existing account and password.
 
 ### Remaining accounts work
 
@@ -308,7 +308,7 @@ wallet list needed by account details, is complete.
 ## 6. Manual deposits
 
 - [x] List enabled payment methods such as GCash and Maya.
-- [x] `make seed` enables GCash and Maya with development placeholder destinations; the
+- [x] `make seed-demo` enables GCash and Maya with non-production placeholder destinations; the
   migration alone leaves them disabled.
 - [x] Show payment instructions and destination details.
 - [x] Validate the selected method, wallet, currency, amount, and required reference on

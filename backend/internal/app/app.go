@@ -1,9 +1,11 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gaming-platform/backend/internal/announcement"
 	"github.com/gaming-platform/backend/internal/audit"
@@ -51,6 +53,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 	player, admin := authHandler.Player, authHandler.Admin
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/health", health(db))
 	mux.HandleFunc("POST /api/register", authHandler.Register)
 	mux.HandleFunc("POST /api/login", authHandler.Login)
 	mux.HandleFunc("POST /api/logout", authHandler.Logout)
@@ -112,7 +115,25 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 	mux.HandleFunc("PATCH /api/admin/announcements/{id}/status", admin(announcementHandler.SetStatus))
 	mux.HandleFunc("/", notFound)
 
-	return logAndRecover(logger, browserRules(cfg.AllowedOrigins, limitBody(cfg.MaxBodyBytes, mux)))
+	return logAndRecover(logger, browserRules(cfg.AllowedOrigins, limitBody(cfg.MaxBodyBytes, forwardedClientIP(cfg.TrustProxyHeaders, mux))))
+}
+
+func health(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if db == nil {
+			httpx.WriteError(w, http.StatusServiceUnavailable, "Database is unavailable")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := db.PingContext(ctx); err != nil {
+			httpx.WriteError(w, http.StatusServiceUnavailable, "Database is unavailable")
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, struct {
+			Status string `json:"status"`
+		}{Status: "ok"})
+	}
 }
 
 func notFound(w http.ResponseWriter, _ *http.Request) {

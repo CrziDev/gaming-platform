@@ -1,11 +1,11 @@
 import type { ApiErrorBody } from '@/api/types'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 // The socket shares the API origin, so the same allowlisted Origin header the
 // browser sends on every write also covers the upgrade.
 export function socketUrl(path: string): string {
-  const url = new URL(`${BASE_URL}${path}`, window.location.href)
+  const url = new URL(`${API_BASE_URL}${path}`, window.location.href)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return url.href
 }
@@ -48,7 +48,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers['Content-Type'] = 'application/json'
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers,
     credentials: 'include',

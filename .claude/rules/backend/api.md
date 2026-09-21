@@ -67,6 +67,12 @@ one game's RTP options — is a plain array.
 
 ## Endpoints
 
+### Operations
+
+| Method | Path | Success | Failures |
+| --- | --- | --- | --- |
+| `GET` | `/api/health` | `200` + `{ "status": "ok" }` when PostgreSQL is reachable | `503` database unavailable |
+
 ### Accounts
 
 | Method | Path | Success | Failures |
@@ -205,13 +211,10 @@ game is set to, plus `rtp_basis_points`, the return it describes: a settled roun
 rounds settle on. A round records the return it was opened at, so a switch never
 changes a round already open.
 
-Payment methods are configuration-managed. There is no operator
-payment-method mutation endpoint. The migration creates GCash and Maya disabled with a
-placeholder destination; deployment configuration must replace the destination and
-explicitly enable a method before players can submit deposits through it. `make seed`
-enables both for development with destinations that are visibly not real accounts, so
-the deposit flow can be exercised locally without a production destination ever being
-seeded.
+The migration creates GCash and Maya disabled with placeholder destinations. Operators
+manage payment methods through the admin endpoints. `make seed-demo` enables the two
+synthetic methods in development or staging with destinations that are visibly not real
+accounts; it is refused in production.
 
 ### Operator
 
@@ -228,6 +231,9 @@ session. Those two are omitted from the failure column.
 | `GET` | `/api/admin/transactions` | `200` + a page of movements | — |
 | `GET` | `/api/admin/rounds` | `200` + a page of rounds; accepts `user_id`, `game_id`, `status`, `currency`, `from`, `to` | `400` invalid filter |
 | `GET` | `/api/admin/deposits` | `200` + a page of requests; defaults to pending and accepts `user_id` plus `status=all|pending|approved|rejected` | `400` invalid filter |
+| `GET` | `/api/admin/payment-methods` | `200` + every payment method | — |
+| `POST` | `/api/admin/payment-methods` | `201` + the method | `400` invalid input · `409` name taken |
+| `PATCH` | `/api/admin/payment-methods/{id}` | `200` + the method | `400` invalid input · `404` · `409` name taken |
 | `GET` | `/api/admin/deposits/{id}/proof` | `200` + private image content | `404` |
 | `POST` | `/api/admin/deposits/{id}/review` | `200` + the request | `400` invalid action, amount, or reason · `404` · `409` `DEPOSIT_ALREADY_REVIEWED` / `DEPOSIT_APPROVAL_FAILED` / `AMOUNT_OVERFLOW` |
 | `GET` | `/api/admin/games` | `200` + a page of games in every status; accepts `status`, `category`, `search` | `400` invalid filter |
@@ -318,9 +324,10 @@ Timestamps are RFC 3339 UTC.
 
 ## Accounts
 
-Public registration always creates a player. Only `make seed` provisions the development
-administrator, and re-running it restores the admin role, activates the account, and
-resets the password.
+Public registration always creates a player. `make bootstrap` provisions the initial
+administrator when absent; re-running it preserves the existing account and password.
+`make seed-demo` provisions synthetic players only in an explicitly allowed development
+or staging environment.
 
 The account body carries `id`, `email`, `display_name`, `role`, and `created_at`. The
 admin listing adds `status`.

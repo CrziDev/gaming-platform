@@ -85,12 +85,12 @@ function manifestRequests(fetchMock: ReturnType<typeof stubFetchRoutes>) {
 }
 
 function roundsRequests(fetchMock: ReturnType<typeof stubFetchRoutes>) {
-  return fetchMock.mock.calls.filter(([input]) => new URL(String(input)).pathname.endsWith('/rounds'))
+  return fetchMock.mock.calls.filter(([input]) => new URL(String(input), window.location.href).pathname.endsWith('/rounds'))
 }
 
 function playRequests(fetchMock: ReturnType<typeof stubFetchRoutes>) {
   return fetchMock.mock.calls.filter(
-    ([input, init]) => init?.method === 'POST' && new URL(String(input)).pathname.endsWith('/games/plinko/rounds'),
+    ([input, init]) => init?.method === 'POST' && new URL(String(input), window.location.href).pathname.endsWith('/games/plinko/rounds'),
   )
 }
 
@@ -274,7 +274,7 @@ describe('the history under the Plinko board', () => {
     expect(within(feed).getByText('1.70×')).toBeInTheDocument()
     expect(within(feed).getByText('+₱1.40')).toBeInTheDocument()
     expect(within(feed).queryByRole('columnheader', { name: 'Player' })).not.toBeInTheDocument()
-    const roundsUrl = new URL(String(roundsRequests(fetchMock)[0]?.[0]))
+    const roundsUrl = new URL(String(roundsRequests(fetchMock)[0]?.[0]), window.location.href)
     expect(roundsUrl.searchParams.get('game_id')).toBe(plinko.id)
     const before = roundsRequests(fetchMock).length
 

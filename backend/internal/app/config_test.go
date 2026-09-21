@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -49,11 +50,56 @@ func TestConfigFromEnvDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("defaults rejected: %v", err)
 	}
-	if cfg.Port != 8080 || cfg.CookieName != "gp_session" || cfg.CookieSecure || cfg.LoginsPerMinute != 10 || cfg.ChatMessagesPerMinute != 20 || cfg.BigWinMultiplierHundredths != 1000 || cfg.EmailDeliveryProvider != "disabled" || cfg.PublicWebURL != "http://localhost:5173" {
+	if cfg.Environment != "development" || cfg.Port != 8080 || cfg.CookieName != "gp_session" || cfg.CookieSecure || cfg.TrustProxyHeaders || cfg.LoginsPerMinute != 10 || cfg.ChatMessagesPerMinute != 20 || cfg.BigWinMultiplierHundredths != 1000 || cfg.EmailDeliveryProvider != "disabled" || cfg.PublicWebURL != "http://localhost:5173" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:5173" {
 		t.Fatalf("unexpected default origins: %v", cfg.AllowedOrigins)
+	}
+}
+
+func TestConfigFromEnvValidatesStagingSafety(t *testing.T) {
+	valid := map[string]string{
+		"APP_ENV": "staging", "DATABASE_URL": "postgres://example", "SESSION_SECURE": "true",
+		"CORS_ALLOWED_ORIGINS": " https://stage.example.com/,https://stage.example.com ",
+		"TRUST_PROXY_HEADERS":  "true",
+	}
+	cfg, err := ConfigFromEnv(func(key string) string { return valid[key] })
+	if err != nil {
+		t.Fatalf("valid staging configuration rejected: %v", err)
+	}
+	if !cfg.CookieSecure || !cfg.TrustProxyHeaders || len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "https://stage.example.com" {
+		t.Fatalf("unexpected staging configuration: %+v", cfg)
+	}
+
+	for name, mutate := range map[string]func(map[string]string){
+		"insecure cookie": func(env map[string]string) { env["SESSION_SECURE"] = "false" },
+		"HTTP origin":     func(env map[string]string) { env["CORS_ALLOWED_ORIGINS"] = "http://stage.example.com" },
+		"origin path":     func(env map[string]string) { env["CORS_ALLOWED_ORIGINS"] = "https://stage.example.com/api" },
+		"bad boolean":     func(env map[string]string) { env["TRUST_PROXY_HEADERS"] = "sometimes" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			env := cloneEnv(valid)
+			mutate(env)
+			if _, err := ConfigFromEnv(func(key string) string { return env[key] }); err == nil {
+				t.Fatal("unsafe staging configuration was accepted")
+			}
+		})
+	}
+}
+
+func TestConfigFromEnvRejectsInvalidNumericSettings(t *testing.T) {
+	for _, key := range []string{
+		"APP_PORT", "DATABASE_MAX_CONNS", "DATABASE_MIN_CONNS", "HTTP_MAX_BODY_BYTES",
+		"LOGIN_ATTEMPTS_PER_MINUTE", "CHAT_MESSAGES_PER_MINUTE", "BIG_WIN_MULTIPLIER_HUNDREDTHS",
+	} {
+		t.Run(key, func(t *testing.T) {
+			env := map[string]string{"DATABASE_URL": "postgres://example", key: "not-a-number"}
+			_, err := ConfigFromEnv(func(name string) string { return env[name] })
+			if err == nil || !strings.Contains(err.Error(), key) {
+				t.Fatalf("%s error = %v", key, err)
+			}
+		})
 	}
 }
 
@@ -76,14 +122,19 @@ func TestConfigFromEnvValidatesResend(t *testing.T) {
 		"bad sender":  func(env map[string]string) { env["RESEND_FROM"] = "not an address" },
 	} {
 		t.Run(name, func(t *testing.T) {
-			env := make(map[string]string, len(valid))
-			for key, value := range valid {
-				env[key] = value
-			}
+			env := cloneEnv(valid)
 			mutate(env)
 			if _, err := ConfigFromEnv(func(key string) string { return env[key] }); err == nil {
 				t.Fatal("invalid email configuration was accepted")
 			}
 		})
 	}
+}
+
+func cloneEnv(source map[string]string) map[string]string {
+	copy := make(map[string]string, len(source))
+	for key, value := range source {
+		copy[key] = value
+	}
+	return copy
 }

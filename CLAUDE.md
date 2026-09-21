@@ -23,7 +23,7 @@ action that changes money is confirmed before it happens and recorded after.
 | Database | PostgreSQL |
 | Web | React, TypeScript, Vite, Tailwind, TanStack Query, React Hook Form, Zod, React Router |
 
-`make dev` · `test` · `lint` · `fmt` · `migrate-up` · `seed` · `db-reset`. `make help`
+`make dev` · `test` · `lint` · `fmt` · `migrate-up` · `bootstrap` · `seed-demo` · `db-reset`. `make help`
 lists everything. Ports: web 5173, API 8080, PostgreSQL 5432.
 
 Configuration reaches the server through its environment. The Makefile or the developer

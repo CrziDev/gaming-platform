@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { socketUrl } from '@/api/client'
 import type { ChatMessage } from '@/api/types'
 import { FakeWebSocket, errorBody, renderApp, stubFetchRoutes, stubWebSocket, userBody } from '@/test-utils'
 
@@ -34,7 +35,7 @@ function room(online: number, messages: ChatMessage[]) {
 async function openSocket() {
   await waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1))
   const socket = FakeWebSocket.instances[0]!
-  expect(socket.url).toBe('ws://localhost:8080/api/chat/socket')
+  expect(socket.url).toBe(socketUrl('/chat/socket'))
   socket.emit('open')
   return socket
 }

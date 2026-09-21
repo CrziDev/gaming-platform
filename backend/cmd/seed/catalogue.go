@@ -13,36 +13,14 @@ const upsertCategory = `
 	   SET name       = EXCLUDED.name,
 	       sort_order = EXCLUDED.sort_order`
 
-// A development fixture: the seed resets an integrated game's return to the
-// option listed below, the way it resets the admin password. Production picks a
-// return through the console.
+// Bootstrap inserts the initial catalogue but never overwrites changes made
+// through the operator console.
 const upsertGame = `
 	INSERT INTO games (
 		slug, name, description, category_slug, provider, status, integration,
 		currency, min_wager_minor, max_wager_minor, wager_step_minor, rtp_basis_points)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	ON CONFLICT (slug) DO UPDATE
-	   SET name             = EXCLUDED.name,
-	       description      = EXCLUDED.description,
-	       category_slug    = EXCLUDED.category_slug,
-	       provider         = EXCLUDED.provider,
-	       status           = EXCLUDED.status,
-	       integration      = EXCLUDED.integration,
-	       currency         = EXCLUDED.currency,
-	       min_wager_minor  = EXCLUDED.min_wager_minor,
-	       max_wager_minor  = EXCLUDED.max_wager_minor,
-	       wager_step_minor = EXCLUDED.wager_step_minor,
-	       rtp_basis_points = EXCLUDED.rtp_basis_points,
-	       thumbnail_path   = NULL,
-	       updated_at       = now()`
-
-// The slug the integrated title replaced; a development database that still has
-// it converges on the new row unless rounds reference the old one, in which case
-// the row stays rather than the seed failing on their foreign key.
-const deleteLegacyPlinko = `
-	DELETE FROM games
-	 WHERE slug = 'plinko-drop'
-	   AND NOT EXISTS (SELECT 1 FROM game_rounds WHERE game_rounds.game_id = games.id)`
+	ON CONFLICT (slug) DO NOTHING`
 
 type category struct {
 	slug      string
@@ -146,9 +124,6 @@ func seedCatalogue(ctx context.Context, tx *sql.Tx) error {
 		if err != nil {
 			return fmt.Errorf("seed: upsert game %s: %w", g.slug, err)
 		}
-	}
-	if _, err := tx.ExecContext(ctx, deleteLegacyPlinko); err != nil {
-		return fmt.Errorf("seed: remove legacy plinko-drop: %w", err)
 	}
 	return nil
 }

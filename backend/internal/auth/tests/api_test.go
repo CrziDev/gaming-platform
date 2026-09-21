@@ -149,6 +149,22 @@ func send(t *testing.T, client *http.Client, method, url string, body any) (int,
 	return resp.StatusCode, responseBody
 }
 
+func TestHealthReportsDatabaseReadiness(t *testing.T) {
+	db := requireDB(t)
+	base, client := newServer(t, db)
+	status, body := send(t, client, http.MethodGet, base+"/api/health", nil)
+	if status != http.StatusOK || string(body) != `{"status":"ok"}` {
+		t.Fatalf("healthy database: status=%d body=%s", status, body)
+	}
+
+	server := httptest.NewServer(newHandler(nil))
+	defer server.Close()
+	status, _ = send(t, clientWithCookies(t), http.MethodGet, server.URL+"/api/health", nil)
+	if status != http.StatusServiceUnavailable {
+		t.Fatalf("unavailable database: status=%d, want %d", status, http.StatusServiceUnavailable)
+	}
+}
+
 func sendDeposit(t *testing.T, client *http.Client, url, methodID, currency, amount, reference, idempotencyKey, filename string, proof []byte) (int, []byte) {
 	t.Helper()
 	var body bytes.Buffer

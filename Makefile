@@ -29,7 +29,7 @@ PSQL := psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1
 
 .PHONY: help setup dev backend frontend install build build-backend build-frontend \
         test test-backend test-frontend lint lint-backend lint-frontend \
-        fmt fmt-backend fmt-frontend tools seed simulate-plinko clean \
+        fmt fmt-backend fmt-frontend tools bootstrap seed-demo seed simulate-plinko clean \
         migrate-up migrate-test-up migrate-down migrate-down-all migrate-create migrate-version migrate-force \
         db-shell db-reset publish
 
@@ -135,8 +135,15 @@ db-reset: ## Roll every migration back, re-apply, and re-seed
 db-shell: ## Open a psql session against the development database
 	psql "$(DATABASE_URL)"
 
-seed: ## Create or reset the development admin, funded demo players, game catalogue, and enabled payment methods
-	cd $(BACKEND_DIR) && go run ./cmd/seed
+bootstrap: ## Ensure the initial admin and game catalogue exist without resetting operator changes
+	cd $(BACKEND_DIR) && go run ./cmd/seed bootstrap
+
+seed-demo: ## Load guarded synthetic players, balances, and placeholder payment methods
+	cd $(BACKEND_DIR) && go run ./cmd/seed demo
+
+seed: ## Bootstrap and load local/staging demo data
+	$(MAKE) --no-print-directory bootstrap
+	$(MAKE) --no-print-directory seed-demo
 
 simulate-plinko: ## Play every board of every Plinko RTP option through the production engine and report the observed return
 	cd $(BACKEND_DIR) && go run ./cmd/gameverify simulate
@@ -171,3 +178,41 @@ $(MIGRATE):
 
 clean: ## Remove build output and installed tools
 	rm -rf $(BIN_DIR) $(BACKEND_DIR)/tmp $(FRONTEND_DIR)/dist $(FRONTEND_DIR)/coverage
+
+
+## --- Docker ----------------------------------------------------------------
+
+docker-up: ## Build and start all Docker services
+	docker compose up --build
+
+docker-down: ## Stop Docker services but preserve data
+	docker compose down
+
+docker-logs: ## Follow Docker logs
+	docker compose logs -f
+
+docker-ps: ## Show Docker service status
+	docker compose ps
+
+docker-migrate-up: ## Apply pending database migrations inside Docker
+	docker compose exec api /migrate \
+		-path /migrations \
+		-database "$(DATABASE_URL)" up
+
+docker-migrate-down: ## Roll back the latest migration inside Docker
+	docker compose exec api /migrate \
+		-path /migrations \
+		-database "$(DATABASE_URL)" down 1
+
+docker-migrate-version: ## Show current migration version
+	docker compose exec api /migrate \
+		-path /migrations \
+		-database "$(DATABASE_URL)" version
+
+docker-bootstrap: ## Create required initial application data
+	docker compose exec api /seed bootstrap
+
+docker-seed-demo: ## Add development/demo data
+	docker compose exec api /seed demo
+
+docker-seed: docker-bootstrap docker-seed-demo ## Bootstrap and add demo data

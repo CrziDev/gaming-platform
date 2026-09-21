@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+docs
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/coverage
+backend/bin
+backend/tmp
+backend/storage
+.env
+.env.*
+!.env.example

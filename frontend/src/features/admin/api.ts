@@ -1,4 +1,4 @@
-import { api, ApiError } from '@/api/client'
+import { API_BASE_URL, api, ApiError } from '@/api/client'
 import { mockRequest, paginate, type Page } from '@/api/mock'
 import { testFixturesEnabled } from '@/api/mode'
 import type {
@@ -32,8 +32,7 @@ const adjustmentReasons = [
 export const ADMIN_PAGE_SIZE = 20
 
 export function adminDepositProofUrl(id: string): string {
-  const base = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'
-  return `${base}/admin/deposits/${encodeURIComponent(id)}/proof`
+  return `${API_BASE_URL}/admin/deposits/${encodeURIComponent(id)}/proof`
 }
 
 export type UserFilter = {
