@@ -21,10 +21,11 @@ export function Header() {
   const { open } = useAuthIntent()
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 bg-panel px-3 sm:gap-3 sm:px-3.5">
+    <header className="flex h-14 shrink-0 items-center gap-1 bg-panel px-2.5 sm:gap-3 sm:px-3.5">
       <IconButton
         label="Toggle navigation"
         data-navigation-toggle
+        size="compact"
         className="bg-inset"
         onClick={() => {
           if (railVisible()) {
@@ -39,7 +40,7 @@ export function Header() {
 
       <Link
         to={paths.lobby}
-        className="text-[17px] font-semibold tracking-[-0.02em] text-ink sm:mr-1 sm:text-[18px]"
+        className="text-[16px] font-semibold tracking-[-0.02em] text-ink sm:mr-1 sm:text-[18px]"
       >
         HeziBet
       </Link>
@@ -47,19 +48,19 @@ export function Header() {
       <div className="flex-1" />
 
       {user ? (
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           {wallet ? <WalletIndicator balance={money(wallet.balance_minor, wallet.currency)} /> : null}
           <Link
             to={paths.deposit}
             aria-label="Deposit"
-            className={cn(buttonStyles('primary', 'md'), 'gap-1.5 px-3 sm:px-3.5')}
+            className={cn(buttonStyles('primary', 'md'), 'gap-1.5')}
           >
             <Wallet aria-hidden size={15} strokeWidth={1.8} />
             <span className="hidden sm:inline">Deposit</span>
           </Link>
         </div>
       ) : (
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           <Button variant="ghost" size="sm" onClick={() => open({ tab: 'signin' })}>
             Sign in
           </Button>
@@ -69,7 +70,7 @@ export function Header() {
         </div>
       )}
 
-      <div className="flex items-center gap-0.5 sm:ml-1">
+      <div className="flex shrink-0 items-center gap-0.5 sm:ml-1">
         <span className="hidden chat:contents">
           <IconButton
             label="Toggle chat"

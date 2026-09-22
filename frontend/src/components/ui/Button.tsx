@@ -19,21 +19,23 @@ const variants: Record<ButtonVariant, string> = {
   ghost: 'font-medium text-ink-mute hover:bg-wash hover:text-ink-soft disabled:text-ink-mute',
   destructive:
     'bg-danger/12 text-danger hover:bg-danger/20 disabled:bg-surface-2 disabled:text-ink-mute',
-  play: 'min-h-13 rounded-tile bg-accent text-on-accent hover:bg-accent-hi disabled:bg-surface-2 disabled:text-ink-mute',
+  play: 'rounded-tile bg-accent text-on-accent hover:bg-accent-hi disabled:bg-surface-2 disabled:text-ink-mute',
 }
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'min-h-11 px-3.5 text-[12.5px] lg:min-h-8 lg:px-3',
-  md: 'min-h-11 px-4 text-[13px] lg:min-h-[34px]',
-  lg: 'min-h-12 px-5 text-[13.5px] lg:min-h-[38px]',
+  sm: 'tap-target min-h-[34px] px-3 text-[12.5px] lg:min-h-8',
+  md: 'tap-target min-h-9 px-3.5 text-[13px] lg:min-h-[34px] lg:px-4',
+  lg: 'tap-target min-h-10 px-4 text-[13.5px] lg:min-h-[38px] lg:px-5',
 }
+
+const playSize = 'min-h-13 px-5 text-[13.5px]'
 
 export function buttonStyles(
   variant: ButtonVariant = 'primary',
   size: ButtonSize = 'md',
   fullWidth = false,
 ): string {
-  return cn(base, sizes[size], variants[variant], fullWidth && 'w-full')
+  return cn(base, variant === 'play' ? playSize : sizes[size], variants[variant], fullWidth && 'w-full')
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -57,16 +59,23 @@ export function Button({
 
 type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string
+  size?: 'compact' | 'md'
 }
 
-export function IconButton({ label, className, type = 'button', ...props }: IconButtonProps) {
+const iconSizes: Record<NonNullable<IconButtonProps['size']>, string> = {
+  compact: 'tap-target size-9 lg:size-8',
+  md: 'size-11 lg:size-8',
+}
+
+export function IconButton({ label, size = 'md', className, type = 'button', ...props }: IconButtonProps) {
   return (
     <button
       type={type}
       aria-label={label}
       title={label}
       className={cn(
-        'relative inline-flex size-11 shrink-0 items-center justify-center rounded-input text-ink-mute lg:size-8',
+        'relative inline-flex shrink-0 items-center justify-center rounded-input text-ink-mute',
+        iconSizes[size],
         'transition-[color,background-color,opacity,transform] duration-fast ease-standard hover:bg-wash hover:text-ink-soft active:translate-y-px disabled:pointer-events-none disabled:opacity-55 motion-reduce:transform-none',
         className,
       )}
