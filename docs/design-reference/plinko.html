@@ -1654,6 +1654,25 @@
                       </div>
                     </div>
                   </section>
+
+                  <!--
+                    Not part of the page. The phone layout is the tree above; this frames
+                    this same file in a 390px viewport so both read at once on a desktop.
+                    It sits inside the desktop tree, which is hidden below 760px, so the
+                    embedded copy never draws a frame of its own.
+                  -->
+                  <section aria-label="Phone preview" class="flex flex-col items-center gap-2.5 pt-2">
+                    <span class="label-mono text-ink-mute">Phone · 390 × 844</span>
+                    <div class="overflow-hidden rounded-card bg-surface-1">
+                      <iframe
+                        data-src="plinko.html"
+                        title="Plinko at phone width"
+                        width="390"
+                        height="844"
+                        class="block border-0"
+                      ></iframe>
+                    </div>
+                  </section>
                 </div>
               </div>
             </main>
@@ -1835,5 +1854,12 @@
         </div>
       </div>
     </div>
+    <script>
+      if (window.self === window.top) {
+        for (const frame of document.querySelectorAll('iframe[data-src]')) {
+          frame.src = frame.dataset.src
+        }
+      }
+    </script>
   </body>
 </html>

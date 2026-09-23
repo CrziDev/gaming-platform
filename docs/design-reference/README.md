@@ -43,10 +43,20 @@ default state.
   rail, chat rail and bottom nav because `AppShell` matches a media query in JavaScript.
   The reference marks up both layouts and gates them with the `rail:` variant instead.
   The bottom nav is absent because it never renders on this route at either width.
+- **`plinko.html` ends with a phone preview**, so both views read at once on a desktop.
+  It is a 390 × 844 iframe of `plinko.html` itself, which gives the phone layout a real
+  viewport — its media queries, `100dvh` and the fixed bet bar all resolve against the
+  frame rather than the window, and there is no second copy of the markup to keep in
+  step. The preview is not part of the page; it disappears below 760px, where the phone
+  layout is simply what the file renders.
 - **Icons are inlined Lucide paths**, not `lucide-react`, so a Lucide release could drift
   a glyph. Sizes and stroke widths are the ones each component passes.
 - **Nothing is interactive.** Menus, dialogs, the drawer and the search results panel are
   not in the markup; hover and focus styling still works because it is pure CSS.
+- **There is one script, in `plinko.html`**, and it only hands the phone preview its
+  `src`, and only when the file is the top-level page. Hiding the frame with CSS is not
+  enough — a `display: none` iframe still fetches, so an embedded copy would load a
+  third. With scripting off, everything renders except that preview.
 - The banner and Plinko artwork are inlined from `games/plinko/art/*.svg` rather than the
   `frontend/src/assets` PNGs, so a file can be moved without breaking.
 
