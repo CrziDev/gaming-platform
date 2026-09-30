@@ -43,7 +43,7 @@ export function NotificationsPanel() {
       <IconButton label="Notifications" size="round" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <Bell aria-hidden size={17} strokeWidth={1.6} />
         {unread ? (
-          <span className="absolute top-2.5 right-2.5 size-[7px] rounded-full bg-danger sm:top-3 sm:right-3" />
+          <span className="absolute top-2.5 right-2.5 size-[7px] rounded-full bg-danger" />
         ) : null}
       </IconButton>
 

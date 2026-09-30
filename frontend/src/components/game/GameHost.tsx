@@ -121,7 +121,7 @@ export function GameHost({
           className="flex items-start justify-between gap-3 game-side:col-start-2 game-side:row-start-1 game-side:flex-col game-side:justify-start"
         >
           <div className="min-w-0">
-            <h1 className="text-[26px] leading-none font-bold tracking-[-0.03em] text-white [text-shadow:0_2px_18px_rgb(0_0_0/0.5)] sm:text-[32px] game-side:text-[26px]">
+            <h1 className="text-[24px] leading-none font-bold tracking-[-0.03em] text-white [text-shadow:0_2px_18px_rgb(0_0_0/0.5)] sm:text-[28px] game-side:text-[24px]">
               {name}
             </h1>
             {subtitle ? (
@@ -142,7 +142,7 @@ export function GameHost({
               '--stage-aspect': stageAspect,
             } as CSSProperties
           }
-          className="-mx-4.5 mt-1.5 min-h-0 [container-type:size] game-side:col-start-1 game-side:row-span-2 game-side:row-start-1 game-side:mx-0 game-side:mt-0 game-side:h-(--stage-side-height) game-side:w-[min(calc(var(--stage-side-height)_*_var(--stage-aspect)),calc(100cqw_-_340px_-_1.5rem))] game-side:[--stage-side-height:min(calc(100dvh_-_6.5rem),calc(600px_/_var(--stage-aspect)))]"
+          className="-mx-4.5 mt-1.5 min-h-0 [container-type:size] game-side:col-start-1 game-side:row-span-2 game-side:row-start-1 game-side:mx-0 game-side:mt-0 game-side:h-(--stage-side-height) game-side:w-[min(calc(var(--stage-side-height)_*_var(--stage-aspect)),calc(100cqw_-_340px_-_1.5rem))] game-side:[--stage-side-height:min(calc(100dvh_-_5.75rem),calc(600px_/_var(--stage-aspect)))]"
         >
           <div
             ref={stageRef}

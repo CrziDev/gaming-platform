@@ -48,7 +48,7 @@ on every page was traced to its adapter in `features/*/api.ts`.
 Features that live in the chrome rather than on one route. The same rule applies: checked
 means the server is behind it.
 
-- [x] **Header wallet pill** — the v24 top bar's pill: the active wallet's real balance on every authenticated route, linking to the wallet, with a round + that opens a deposit; switching happens on the wallet page
+- [x] **Header wallet pill** — the top bar's pill: the active wallet's real balance on every authenticated route, linking to the wallet, with a round + that opens a deposit; switching happens on the wallet page
 - [x] **Search games** — inline box at the top of the rail and drawer; real catalogue results list beneath it, above the navigation, until the box is cleared; `⌘K` focuses it; Enter and "See all results" hand off to `/games?q=`
 - [x] **Auth modal and deep links** — `/login` and `/register` open the modal over the lobby, a guest picking a game or a locked nav item is sent back to where they were after signing in
 - [x] **Session expired dialog** — raised when a live session stops being recognised, never on a deliberate sign-out; tested

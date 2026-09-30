@@ -96,7 +96,7 @@ export function GamePage() {
   return (
     <div className="flex flex-col">
       <GameHost
-        className="max-h-[max(28rem,calc(100dvh-4.5rem))]"
+        className="max-h-[max(28rem,calc(100dvh-3.75rem))]"
         name={game.name}
         subtitle={module?.subtitle}
         frame={
@@ -122,7 +122,7 @@ export function GamePage() {
               aria-haspopup="dialog"
               disabled={!module}
               onClick={() => setFairGame(true)}
-              className="tap-target glass-float flex h-9 items-center justify-center gap-2 rounded-input px-3 text-[13px] font-semibold tracking-[0.08em] text-ink-control transition-colors duration-fast ease-standard hover:bg-float-hover disabled:cursor-default max-[429px]:w-9 max-[429px]:px-0 sm:h-11"
+              className="tap-target glass-float flex h-9 items-center justify-center gap-2 rounded-input px-3 text-[13px] font-semibold tracking-[0.08em] text-ink-control transition-colors duration-fast ease-standard hover:bg-float-hover disabled:cursor-default max-[429px]:w-9 max-[429px]:px-0 sm:h-9.5"
             >
               <ShieldCheck aria-hidden size={18} strokeWidth={1.8} />
               <span className="max-[429px]:sr-only">FAIR GAME</span>
@@ -256,7 +256,7 @@ function BetPanel({
     void session.play(stakeMinor)
   }
 
-  // Space drops a ball, as on the v24 board, unless focus is in a control or a dialog.
+  // Space drops a ball unless focus is in a control or a dialog.
   const placeRef = useRef(place)
   useLayoutEffect(() => {
     placeRef.current = place
@@ -280,19 +280,19 @@ function BetPanel({
   return (
     <section
       aria-label="Bet controls"
-      className="glass-panel flex flex-col gap-2.5 rounded-card p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.06),var(--shadow-panel)] sm:gap-3.5 sm:p-4"
+      className="glass-panel flex flex-col gap-2 rounded-card p-2.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.06),var(--shadow-panel)] sm:gap-2.5 sm:p-3"
     >
-      <div className="flex items-center gap-3 game-side:flex-col game-side:items-stretch">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="flex items-center gap-2.5 game-side:flex-col game-side:items-stretch">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <span
             aria-hidden
-            className="hidden size-12.5 shrink-0 items-center justify-center rounded-input border border-hairline bg-inset text-ink-control sm:flex"
+            className="flex size-10 shrink-0 items-center justify-center rounded-input border border-hairline bg-inset text-ink-control max-[379px]:hidden sm:size-10.5"
           >
-            <Wallet size={22} strokeWidth={1.7} />
+            <Wallet size={19} strokeWidth={1.7} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="label-mono text-[10px] text-ink-cool sm:text-[11px]">Balance</div>
-            <div className="mt-px truncate text-[18px] font-medium text-ink tnum sm:text-[21px]">
+            <div className="label-mono text-[10px] text-ink-cool">Balance</div>
+            <div className="truncate text-[16px] leading-tight font-medium text-ink tnum sm:text-[18px]">
               {balance ? formatMoney(balance) : '—'}
             </div>
           </div>
@@ -300,26 +300,26 @@ function BetPanel({
         {paramsSlot}
       </div>
 
-      <div className="flex gap-2.5 sm:gap-3 game-side:flex-col">
-        <div className="flex h-13 min-w-[182px] flex-1 items-stretch overflow-hidden rounded-input border border-hairline bg-field sm:h-15 game-side:flex-none">
+      <div className="flex gap-2 sm:gap-2.5 game-side:flex-col">
+        <div className="flex h-10 min-w-0 flex-1 items-stretch overflow-hidden rounded-input border border-hairline bg-field sm:h-12 sm:min-w-[168px] game-side:flex-none">
           <button
             type="button"
             aria-label="Decrease bet"
             onClick={() => setStakeMinor((value) => stepStake(ladder, value, -1))}
-            className="flex w-11 shrink-0 items-center justify-center bg-inset text-ink-control transition-colors duration-fast hover:bg-wash sm:w-14"
+            className="flex w-10 shrink-0 items-center justify-center bg-inset text-ink-control transition-colors duration-fast hover:bg-wash sm:w-12"
           >
-            <Minus aria-hidden size={18} strokeWidth={2.4} />
+            <Minus aria-hidden size={16} strokeWidth={2.4} />
           </button>
-          <div className="flex min-w-0 flex-1 items-center justify-center border-x border-hairline px-0.5 text-[16px] font-medium text-ink tnum sm:text-[21px]">
+          <div className="flex min-w-0 flex-1 items-center justify-center border-x border-hairline px-0.5 text-[15px] font-medium text-ink tnum sm:text-[18px]">
             <span className="truncate">{formatMoney(money(stakeMinor, currency))}</span>
           </div>
           <button
             type="button"
             aria-label="Increase bet"
             onClick={() => setStakeMinor((value) => stepStake(ladder, value, 1))}
-            className="flex w-11 shrink-0 items-center justify-center bg-inset text-ink-control transition-colors duration-fast hover:bg-wash sm:w-14"
+            className="flex w-10 shrink-0 items-center justify-center bg-inset text-ink-control transition-colors duration-fast hover:bg-wash sm:w-12"
           >
-            <Plus aria-hidden size={18} strokeWidth={2.4} />
+            <Plus aria-hidden size={16} strokeWidth={2.4} />
           </button>
         </div>
 
@@ -327,10 +327,10 @@ function BetPanel({
           variant="play"
           onClick={place}
           disabled={busy || !offered}
-          className="min-w-0 flex-[1.1] gap-3 game-side:flex-none"
+          className="min-w-0 flex-1 gap-2 sm:gap-2.5 game-side:flex-none"
         >
           PLACE BET
-          <svg aria-hidden width="16" height="18" viewBox="0 0 18 20" className="shrink-0 max-[399px]:hidden">
+          <svg aria-hidden viewBox="0 0 18 20" className="h-3.5 w-3 shrink-0 sm:h-4 sm:w-3.5">
             <polygon points="2,1 17,10 2,19" fill="currentColor" />
           </svg>
         </Button>

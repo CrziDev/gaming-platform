@@ -28,7 +28,7 @@ export function StatCard({ label, value, meta, help, tone = 'default', className
   return (
     <div className={cn('relative flex flex-col gap-1.5 rounded-card p-4', style.frame, className)}>
       <span className={cn('label-mono', style.label, help ? 'pr-8' : null)}>{label}</span>
-      <span className="text-[21px] leading-tight font-medium text-ink tnum">{value}</span>
+      <span className="text-[18px] leading-tight font-medium text-ink tnum">{value}</span>
       {meta ? <span className="text-[12px] text-ink-mute">{meta}</span> : null}
       {help ? <HelpTip subject={label}>{help}</HelpTip> : null}
     </div>

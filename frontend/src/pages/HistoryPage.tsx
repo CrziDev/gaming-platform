@@ -54,7 +54,7 @@ export function HistoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">History</h1>
+        <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">History</h1>
 
         <Select
           aria-label="Date range"

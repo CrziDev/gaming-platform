@@ -1,5 +1,5 @@
 /* The frame is the game's scene: a full-bleed canvas the host lays its controls over.
-   The values below are the v24 Plinko art, not platform tokens. */
+   The values below are Plinko's own art, not platform tokens. */
 *,
 *::before,
 *::after {

@@ -83,7 +83,7 @@ export function DepositStatusPage() {
         >
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
-        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Request {deposit.reference}</h1>
+        <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Request {deposit.reference}</h1>
       </header>
 
       <section
@@ -92,7 +92,7 @@ export function DepositStatusPage() {
         <span className={cn('flex size-14 items-center justify-center rounded-full', state.ring)}>
           <Icon aria-hidden size={24} strokeWidth={1.5} />
         </span>
-        <h2 className="text-[22px] font-bold tracking-[-0.02em] text-ink">{state.heading}</h2>
+        <h2 className="text-[20px] font-bold tracking-[-0.02em] text-ink">{state.heading}</h2>
         <span className="text-[28px] font-medium text-ink tnum">
           {formatMoney(money(deposit.amount_minor, deposit.currency))}
         </span>

@@ -355,7 +355,7 @@ These features do not require an engine.
 - [x] Reject a wager when its game is not active.
 - [x] Plinko's art is captured from the game's own frame: the 3:4 tile at
   `frontend/src/assets/games/plinko.jpg` and the landscape lobby banner at
-  `frontend/src/assets/banners/plinko.jpg`, both the v24 glass board over the city
+  `frontend/src/assets/banners/plinko.jpg`, both the glass board over the city
   (`docs/games/plinko-runtime.md`, Art).
   The tile renders `assets/games/<slug>.*` or `thumbnail_url` when present; the banner
   renders `assets/banners/<slug>.*`, then the thumbnail, then the placeholder.

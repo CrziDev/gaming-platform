@@ -42,7 +42,7 @@ export function HeroBanner({ featured }: { featured: Game | undefined }) {
           Featured
         </span>
 
-        <h1 className="text-[22px] leading-[1.1] font-bold tracking-[-0.02em] text-ink text-balance @min-[640px]:text-[28px]">
+        <h1 className="text-[20px] leading-[1.1] font-bold tracking-[-0.02em] text-ink text-balance @min-[640px]:text-[24px]">
           {featured.name}
         </h1>
 

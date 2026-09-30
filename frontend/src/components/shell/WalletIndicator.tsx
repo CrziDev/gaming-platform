@@ -9,17 +9,17 @@ export function WalletIndicator({ balance }: { balance: Money }) {
 
   return (
     <>
-      <div className="glass-pill flex h-11 shrink-0 items-center gap-1.5 rounded-pill pr-1 pl-2.5 sm:h-11.5 sm:gap-2 sm:pr-[5px] sm:pl-3">
+      <div className="glass-pill flex h-10 shrink-0 items-center gap-1.5 rounded-pill pr-1 pl-2.5 sm:gap-2 sm:pr-[5px] sm:pl-3">
         <Link
           to={paths.wallet}
           aria-label={`Wallet balance ${full}`}
-          className="flex min-h-11 items-center gap-2 text-ink transition-opacity duration-fast ease-standard hover:opacity-85"
+          className="tap-target flex h-full items-center gap-2 text-ink transition-opacity duration-fast ease-standard hover:opacity-85"
         >
           <WalletGlyph />
           <span
             key={`${balance.currency}-${balance.amount_minor}`}
             aria-hidden
-            className="value-update text-[13.5px] font-medium tnum sm:text-[15px]"
+            className="value-update text-[13.5px] font-medium tnum sm:text-[14px]"
           >
             <span className="hidden sm:inline">{full}</span>
             <span className="sm:hidden">{formatMoney(balance, { decimals: 'trim' })}</span>
@@ -29,9 +29,9 @@ export function WalletIndicator({ balance }: { balance: Money }) {
           to={paths.deposit}
           aria-label="Deposit"
           title="Deposit"
-          className="cta-gradient cta-glow flex size-8.5 shrink-0 items-center justify-center rounded-full transition-[filter] duration-fast ease-standard hover:brightness-110 sm:size-9"
+          className="cta-gradient cta-glow flex size-8.5 shrink-0 items-center justify-center rounded-full transition-[filter] duration-fast ease-standard hover:brightness-110 sm:size-8"
         >
-          <Plus aria-hidden size={17} strokeWidth={3} />
+          <Plus aria-hidden size={16} strokeWidth={3} />
         </Link>
       </div>
       <span className="sr-only" aria-live="polite">

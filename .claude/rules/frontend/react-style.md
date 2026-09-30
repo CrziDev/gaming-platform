@@ -21,8 +21,9 @@ A page composes features and primitives. A primitive never imports a page or a f
 ## Mobile first
 
 Write the base styles for small screens and add larger breakpoints upward. Never build
-desktop-first and retrofit. Every tap target is 44px minimum, 52px for primary play
-actions.
+desktop-first and retrofit. Every tap target is 44px minimum. A control may draw
+smaller than that — down to 38px — when `tap-target` keeps its hit area at 44px; a
+control clipped by its container, so its hit area cannot extend, draws at 40px at least.
 
 Tables become stacked cards below 1024px. Never horizontal scroll.
 

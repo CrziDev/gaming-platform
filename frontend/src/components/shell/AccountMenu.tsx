@@ -44,7 +44,7 @@ export function AccountMenu({ user }: { user: User }) {
         onClick={() => setOpen((value) => !value)}
         title={user.display_name}
         className={cn(
-          'glass-pill flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors duration-fast hover:bg-wash sm:size-11.5',
+          'tap-target glass-pill flex size-10 items-center justify-center rounded-full text-ink-soft transition-colors duration-fast hover:bg-wash',
           open && 'bg-wash',
         )}
       >

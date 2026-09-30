@@ -45,7 +45,7 @@ export function ResetPasswordPage() {
 
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Choose a new password</h1>
+            <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Choose a new password</h1>
             <p className="text-[13.5px] leading-relaxed text-ink-mute">
               You&rsquo;ll be signed out on any other devices.
             </p>

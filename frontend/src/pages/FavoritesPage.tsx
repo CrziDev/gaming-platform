@@ -12,7 +12,7 @@ export function FavoritesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Favorites</h1>
+      <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Favorites</h1>
 
       {favoritesQuery.isPending ? (
         <SkeletonGrid count={4} className={gameGrid} />

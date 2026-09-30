@@ -45,11 +45,10 @@ Recommendation: port critical logic — wallet, wager, outcome, and payout to Go
 
 ## Integrated frame — `games/plinko/web/`
 
-The frame is the v24 design's glass board (`docs/design-reference/plinko-v24.html`): eight
-rows of pegs on a bent acrylic pane over nine glowing cups, in front of a night-city
-backdrop. It replaced the port of the supplied Canvas 2D and Matter.js board on
-2026-09-30. The supplied package is still the reference for what the platform took over
-from the vendor; nothing of its drawing code remains.
+The frame is a three.js glass board: eight rows of pegs on a bent acrylic pane over nine
+glowing cups, in front of a night-city backdrop. It replaced the port of the supplied
+Canvas 2D and Matter.js board on 2026-09-30. The supplied package is still the reference
+for what the platform took over from the vendor; nothing of its drawing code remains.
 
 | File | Role |
 | --- | --- |
@@ -66,11 +65,11 @@ from the vendor; nothing of its drawing code remains.
 | `js/board/background.js` | The city backdrop shader, shared with the tinted back panel so the panel samples the same pixels |
 | `js/board/pane.js`, `tray.js`, `fins.js`, `cups.js` | The pane and pegs; the base slab, front sheet, back panel, and opening shadow; the raked fins and side plates; the cups and drop mouths |
 | `js/board/flight.js` | The drop path to a given slot and the ball's position along it |
-| `img/city.jpg` | The 1916×821 backdrop, taken unchanged from the v24 design |
+| `img/city.jpg` | The 1916×821 backdrop |
 | `js/vendor/` | three.js 0.169.0 (`three.module.min.js`, and the postprocessing addons the bloom pass needs) with its MIT licence |
 
 three.js is vendored under `packages.md`'s rule for a supplied game's libraries: it never
-enters the React bundle. WebGL has no standard-library alternative, and the v24 board is
+enters the React bundle. WebGL has no standard-library alternative, and the board is
 a three.js scene; the addons are the four postprocessing passes and three shaders the
 bloom pass imports, copied from the same release.
 
@@ -100,7 +99,7 @@ at or above 1× and in grey below it.
 
 ### Backdrop
 
-The v24 cover fit showed about a fifth of the photo's width on a phone, which upscaled it
+A plain cover fit showed about a fifth of the photo's width on a phone, which upscaled it
 past its resolution. `js/board/background.js` shows at least 40% of the width on a narrow
 screen and 15% beyond cover on every screen, centres the photo's band on the board, and
 fades its edges into the ground; mipmaps keep desktop downscaling clean.

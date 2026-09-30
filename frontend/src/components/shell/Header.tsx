@@ -20,7 +20,7 @@ export function Header() {
   const { open } = useAuthIntent()
 
   return (
-    <header className="glass-chrome relative z-30 flex h-18 shrink-0 items-center gap-1.5 chrome-edge px-2.5 sm:gap-3 sm:px-3.5">
+    <header className="glass-chrome relative z-30 flex h-15 shrink-0 items-center gap-1.5 chrome-edge px-2.5 sm:gap-3 sm:px-3.5">
       <IconButton
         label="Toggle navigation"
         data-navigation-toggle

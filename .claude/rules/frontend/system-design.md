@@ -1,15 +1,17 @@
 # Design system
 
-The look and feel of the platform, v3 — the v24 Plinko design carried to every screen.
-Tokens are defined once in `frontend/src/styles/index.css` under `@theme`, with the
-surface recipes as utilities beside them; nothing reintroduces a raw value that a token
-or utility already names. Where this file and a reference mockup disagree, this file wins.
-The reference for v3 is `docs/design-reference/plinko-v24.html`.
+The look and feel of the platform, v3. Tokens are defined once in
+`frontend/src/styles/index.css` under `@theme`, with the surface recipes as utilities
+beside them; nothing reintroduces a raw value that a token or utility already names.
+
+This file is the platform-wide design: the tokens, surfaces, primitives, shell, lobby, and
+account and admin screens every game sits among. It describes no game. Each integrated
+game's page is designed in its own file under `.claude/rules/games/` (see Games below).
 
 ## Direction
 
 Cool navy glass over a near-black ground, one saturated green, and game art that glows. The
-energy comes from content — the 3D board, game art, win amounts, live chat — and from
+energy comes from content — the game scene, game art, win amounts, live chat — and from
 the one primary action on a screen. Everything else is quiet glass that lets the content
 through.
 
@@ -22,11 +24,12 @@ through.
   width, in tabular figures that never reflow. A player may hold a wallet per currency,
   but the top bar shows exactly one — the active wallet. Switching is a deliberate act on
   the wallet page, never a second figure in the chrome.
-- **The host is agnostic.** Bet controls and side panels are slots the platform may fill,
-  or leave empty when the game supplies its own.
+- **Every game is designed on its own.** A game's page — its layout, controls, and scene —
+  is defined by that game's file, built from these tokens and primitives. Nothing about
+  one game's page is a rule for another.
 - **Mobile is the source layout.** Each screen is authored at 390px and expanded. Desktop
   adds room; it never adds features. Every page works down to 360px without a horizontal
-  scrollbar, and the touch shell keeps its 44px targets.
+  scrollbar, and the touch shell keeps its 44px hit areas.
 
 ## Hard rules
 
@@ -53,8 +56,8 @@ through.
    and dragging is not obvious or accessible. Hide a track only on deliberate touch-first
    carousels that remain keyboard-scrollable and expose another overflow cue.
 7. **Two platform typefaces.** IBM Plex Sans for everything read, including money; IBM
-   Plex Mono for micro-labels, IDs, and timestamps. Inter and IBM Plex Sans Condensed are
-   permitted only inside the Plinko frame (cup labels and taglines).
+   Plex Mono for micro-labels, IDs, and timestamps. A game frame may use its own
+   typefaces, named in its game file; nothing outside a frame uses them.
 8. **Weight 700 for display only.** Page and game titles, the wordmark, and CTA labels.
    Everything else is 400–600.
 9. **Round only where named.** Avatars, status dots, round utility buttons (profile, bell,
@@ -62,10 +65,9 @@ through.
 
 ## Brand lines
 
-`PLAY SMART` under the wordmark, a game's subtitle (Plinko: `RISK · PLAY · WIN`), and
-the Plinko taglines (`GOOD PLAYERS BET BETTER`, `SAME GAME BIGGER VIEWS`) are brand art,
-not interface copy. They are not governed by the copy standard and are never extended
-into explanatory text.
+`PLAY SMART` under the wordmark is brand art, not interface copy. It is not governed by
+the copy standard and is never extended into explanatory text. A game's own brand lines
+are named in its game file and follow the same rule.
 
 ## Surfaces and ink
 
@@ -73,8 +75,8 @@ into explanatory text.
 | --- | --- | --- |
 | `base` | `#04070d` | The page ground and the modal scrim (`base/70`) |
 | `glass-chrome` | `panel`, `rgb(4 13 27 / .86)` + `blur(14px) saturate(1.2)` | Top bar, sidebar, bottom nav, drawer, chat rail |
-| `glass-panel` | `rgb(6 15 29 / .82)` + `blur(16px) saturate(1.2)`, `hairline`, `rim-light`, inset highlight | Cards, panels, the bet panel |
-| `glass-float` | `rgb(4 16 32 / .6)` + `blur(10px)`, `hairline-strong`, `rim-light`; `float-hover` on hover | Glass controls over game art (FAIR GAME, sound, favourite) |
+| `glass-panel` | `rgb(6 15 29 / .82)` + `blur(16px) saturate(1.2)`, `hairline`, `rim-light`, inset highlight | Cards and panels |
+| `glass-float` | `rgb(4 16 32 / .6)` + `blur(10px)`, `hairline-strong`, `rim-light`; `float-hover` on hover | Glass controls over game art |
 | `glass-menu` | `rgb(12 20 32 / .96)`, cool hairline 14%, overlay shadow | Menus, popovers, dialogs |
 | `surface-1` | `#0a111c` | Solid card ground where blur would be wasted (tables, long lists) |
 | `surface-2` | `#111a27` | Raised object inside a card; row hover |
@@ -82,14 +84,14 @@ into explanatory text.
 | `banner` | `#0b1420` | The lobby banner panel, edged with `edge-lit` over its art |
 | `wash` | `rgb(150 190 255 / .08)` | Hover wash on chrome and glass controls |
 | `inset` | `rgb(140 180 240 / .06)` | Glass controls at rest |
-| `field` | `rgb(125 165 225 / .05)` | Inputs and the bet stepper, raised slightly above the panel |
+| `field` | `rgb(125 165 225 / .05)` | Inputs and steppers, raised slightly above the panel |
 | `chrome-edge` | A 6px bevel: dark lip, faint halo, 1px ice-blue core with cyan and white glints, a halo below, dark shadow; ends fade | The top bar's bottom edge |
 | `rim-light` | 1px ring, `rgb(185 218 255 / .22)` at the top fading out by mid-height | Top-lit edge of `glass-panel`, `glass-float`, and `edge-lit` |
 | `edge-lit` | `hairline` border + `rim-light` | Solid objects that must separate from the ground: the lobby banner, big-wins rows |
 | `ink` | `#f2f6fb` | Headings and strong values |
 | `ink-soft` | `#e6ebf2` | Body and UI text — the `body` default |
 | `ink-control` | `#d4e1f7` | Labels on glass controls |
-| `ink-cool` | `#9db9e8` | Micro-labels and a game's subtitle |
+| `ink-cool` | `#9db9e8` | Micro-labels and subtitles |
 | `ink-mute` | `#8fa4c2` | Secondary text. **The floor: nothing renders dimmer.** |
 
 ## Accent and status
@@ -119,12 +121,11 @@ never jump width. IBM Plex Mono for micro-labels with wide tracking.
 
 | Role | Size · weight | Notes |
 | --- | --- | --- |
-| game title | 32 · 700 (26 under 640 and in the side panel) | `1`, `-.03em`, `ink` |
-| banner headline | 28 · 700 (22 under 760) | `1.1`, `-.02em`, `ink`, `text-balance` |
-| page title | 22 · 700 | `-.02em`, `ink` |
+| banner headline | 24 · 700 (20 under 760) | `1.1`, `-.02em`, `ink`, `text-balance` |
+| page title | 20 · 700 | `-.02em`, `ink` |
 | section / panel heading | 15 · 600 | `-.01em`, `ink-soft` |
 | body | 13.5 · 400 | `1.5`, `ink-mute` for copy, `ink-soft` for UI text, `text-pretty` |
-| money, prominent | 21 · 500 (18 in the bet panel under 640) | `tnum`, `ink` |
+| money, prominent | 18 · 500 | `tnum`, `ink` |
 | UI label / button | 13.5–14 · 500–600 | CTA labels 700 |
 | card title | 12.5 · 500 | |
 | meta | 11 · 400 | `ink-mute` |
@@ -134,9 +135,8 @@ never jump width. IBM Plex Mono for micro-labels with wide tracking.
 ## Spacing
 
 Gaps: 2px within a menu list · 8–12px within a control cluster · 10px grid gutters ·
-14px section internals · 20px between sections. Main padding 14px (18px inside the game
-column), content max-width 1320px. Panel padding 16px; under 640px the bet panel uses
-12px with 10px internals.
+14px section internals · 20px between sections. Main padding 14px, content max-width
+1320px. Panel padding 16px.
 
 ## Radius and elevation
 
@@ -150,23 +150,23 @@ panel shadow (`0 20px 50px rgb(0 0 0 / .5)`) when it floats over art.
 
 ## Controls
 
-Heights: 36 menu item · 42 menu button · 44 game title-row controls (FAIR GAME, sound,
-favourite) · 46 top-bar utilities and wallet pill · 50 secondary glass control (risk menu)
-· 60 stepper and play action.
-Below 1024px every tap target is at least 44px.
+Heights: 36 menu item · 40 top-bar utilities and wallet pill · 42 menu button · 48 play
+button (40 under 640). Controls drawn under 44px carry `tap-target`, so below 1024px
+every hit area is still at least 44px. A game file sets the heights of its own page's
+controls within this rule.
 
 Variants: primary (CTA gradient + glow, 700), secondary (`inset` fill + hairline, `wash`
-on hover), ghost, destructive (`danger` tint), play (primary at 60px, `input` radius).
+on hover), ghost, destructive (`danger` tint), play (primary at the play height, `input` radius).
 Hover is a background swap or a 1.08–1.1 brightness on the CTA. Pressed feedback may use
 colour, opacity, or at most 1px of translation; controls never bounce or scale.
 
 ## Shell
 
-- Top bar 72px on `glass-chrome` with a `chrome-edge` bottom edge: plain three-bar menu button
+- Top bar 60px on `glass-chrome` with a `chrome-edge` bottom edge: plain three-bar menu button
   (42px) · a 1px divider · the wordmark (`Hezi` in white, `Bet` in `brand`, the gold crown
-  above the `B`, `PLAY SMART` beneath) · the wallet pill (46px: `brand` wallet icon,
-  balance in Sans 15 · 500 `tnum`, round 36px CTA + that opens a deposit; the balance links
-  to the wallet) · chat toggle · bell with a `danger` dot · round 46px profile button.
+  above the `B`, `PLAY SMART` beneath) · the wallet pill (40px: `brand` wallet icon,
+  balance in Sans 14 · 500 `tnum`, round 32px CTA + that opens a deposit; the balance links
+  to the wallet) · chat toggle · bell with a `danger` dot · round 40px profile button.
 - Left rail on `glass-chrome`: 192px expanded / 56px collapsed. Search above; Home, Games,
   Wallet, History; the category browse group; Support and Language pinned to the bottom.
   No separators, no badges, no counts. Active row is `selected` + `ink`.
@@ -174,21 +174,15 @@ colour, opacity, or at most 1px of translation; controls never bounce or scale.
 - Below the rail breakpoint the rail becomes a drawer and a bottom nav on `glass-chrome`.
 - The game route drops the bottom nav, rail, and chat on phones and keeps the top bar.
 
-## Game page
+## Games
 
-A single centred column, 600px at most, as tall as its content up to the available
-height: the title row (game title, subtitle, FAIR GAME, sound, favourite), the board
-stage, and the bet panel.
-The stage keeps its aspect and shrinks so the play action is always visible without
-scrolling. The game's own scene fills the whole area behind the column; for Plinko that
-is the night-city background, which belongs to the Plinko page only. Round history follows
-below on the page ground.
-
-On a short screen — a viewport under 900px tall where the game zone is at least 640px
-wide — the column splits so the board keeps its size: the stage fills the available
-height, up to the board at its full 600px width, and a 340px side panel stands beside it
-with the title row at the top (the actions on a second line) and the bet panel level with
-the foot of the board. The bet panel stacks balance, risk, stake, and play.
+Each integrated game has one file, `.claude/rules/games/<slug>.md`, that designs its page:
+layout, stage, controls and their sizes, type on the page, and the art inside its frame. A
+game page sits inside the shell above and follows this file's hard rules, tokens, glass
+recipes, and primitives for everything it draws outside its frame. What a game draws
+inside its frame — scene, palette, glow, typefaces, brand lines, sound, and motion — is
+its own and never becomes a platform token or component. A game file never changes the
+shell or redefines a token, and one game's file never binds another.
 
 ## Game tile
 
@@ -242,7 +236,7 @@ everything else in `ink-mute` on `wash`.
 A single outline set — 1.5–1.9px stroke, 24px grid, rounded caps. Lucide is the library;
 the custom glyphs are the crown in the wordmark and the filled wallet icon in the pill.
 Icons are always paired with a label in navigation; icon-only is permitted for top-bar
-utilities and game-page controls at 44px targets on touch.
+utilities and controls over game art at 44px targets on touch.
 
 ## Motion
 
@@ -283,15 +277,17 @@ Nothing ever emits a horizontal page scrollbar.
 
 - **The flat v2 ladder** (`panel`, `#0b0f14` base, `#151b23` cards) — replaced by glass
   over a darker ground so game scenes read through the chrome.
-- **"No gradients / no glows / no glass"** — v24 made the call to action and the surfaces
+- **"No gradients / no glows / no glass"** — v3 makes the call to action and the surfaces
   the design; they are now named recipes instead of bans.
 - **The `#2fa96c` accent and the ₱ disc in the top bar** — one brighter green, and a wallet
   icon in the pill.
-- **Plex Mono for money** — v24 sets money in Plex Sans with tabular figures, which keeps
+- **Plex Mono for money** — v3 sets money in Plex Sans with tabular figures, which keeps
   the no-reflow guarantee at a friendlier size.
-- **The 56px top bar and the asymmetric menu glyph** — the v24 top bar is 72px with a
+- **The 56px top bar and the asymmetric menu glyph** — the top bar is 60px with a
   plain three-bar menu and the crown wordmark.
+- **The 72px top bar and 46px utilities** — they read oversized on real screens; v3 runs
+  one step denser (60 · 40) with 44px hit areas held by `tap-target`.
 - **The 600 weight cap** — display titles and CTA labels are 700.
-- **Neutral grey glass and white hairlines** — the v24 glass carries navy chroma at the
+- **Neutral grey glass and white hairlines** — v3 glass carries navy chroma at the
   same darkness and its edges catch light; surfaces, hairlines, and secondary ink are now
   cool, with the top bar's `chrome-edge` and the panels' `rim-light`.

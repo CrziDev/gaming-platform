@@ -175,7 +175,7 @@ export function DepositPage() {
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
         <div className="flex flex-col gap-0.5 pt-0.5">
-          <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Deposit</h1>
+          <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Deposit</h1>
           <p className="text-[13px] text-ink-mute">
             Send your payment, then submit the details for approval.
           </p>

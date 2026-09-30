@@ -56,7 +56,7 @@ export function RiskMenu({ params, onChange, disabled, board }: GameControlsProp
         aria-controls={open ? menuId : undefined}
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
-        className="flex h-11 items-center gap-2.5 rounded-input border border-hairline bg-inset pr-2.5 pl-3.5 text-[14px] whitespace-nowrap text-ink-control transition-colors duration-fast ease-standard hover:bg-wash disabled:cursor-not-allowed disabled:opacity-55 sm:h-12.5 game-side:w-full"
+        className="tap-target flex h-10 items-center gap-2 rounded-input border border-hairline bg-inset pr-2 pl-3 text-[13.5px] whitespace-nowrap text-ink-control transition-colors duration-fast ease-standard hover:bg-wash disabled:cursor-not-allowed disabled:opacity-55 sm:h-10.5 game-side:w-full"
       >
         <SlidersHorizontal aria-hidden size={18} strokeWidth={1.8} className="max-[429px]:hidden" />
         <span className="game-side:flex-1 game-side:text-left">{summarizePlinko(params)}</span>

@@ -44,7 +44,7 @@ export function ForgotPasswordPage() {
 
         {sent ? (
           <div className="flex flex-col gap-4">
-            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Check your email</h1>
+            <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Check your email</h1>
             <p className="text-[13.5px] leading-relaxed text-ink-mute text-pretty">
               If that address has an account, a reset link is on its way. The link expires in 30
               minutes.
@@ -56,7 +56,7 @@ export function ForgotPasswordPage() {
         ) : (
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Forgot password</h1>
+              <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Forgot password</h1>
               <p className="text-[13.5px] leading-relaxed text-ink-mute">
                 Enter your email and we&rsquo;ll send a reset link.
               </p>

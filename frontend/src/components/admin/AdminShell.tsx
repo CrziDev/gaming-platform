@@ -112,13 +112,13 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   const { data: operator } = useSession()
 
   return (
-    <header className="glass-chrome chrome-edge relative flex h-18 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-3.5">
+    <header className="glass-chrome chrome-edge relative flex h-15 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-3.5">
       <IconButton label="Open navigation" onClick={onOpenDrawer} className="text-ink-soft rail:hidden">
         <MenuGlyph />
       </IconButton>
 
       <div className="flex items-center gap-2.5">
-        <span className="text-[18px] font-bold tracking-[-0.03em] text-ink sm:text-[21px]">
+        <span className="text-[18px] font-bold tracking-[-0.03em] text-ink sm:text-[20px]">
           Hezi<span className="text-brand">Bet</span> <span className="font-semibold text-ink-soft">Console</span>
         </span>
         <span className="label-mono hidden rounded-[5px] bg-wash px-1.5 py-1 text-ink-cool sm:inline">
