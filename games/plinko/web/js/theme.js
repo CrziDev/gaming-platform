@@ -1,51 +1,25 @@
-const read = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-
-let palette = null
-
-function load() {
-  palette = {
-    surface1: read('--color-surface-1'),
-    surface2: read('--color-surface-2'),
-    surface3: read('--color-surface-3'),
-    panel: read('--color-panel'),
-    ink: read('--color-ink'),
-    inkSoft: read('--color-ink-soft'),
-    inkMute: read('--color-ink-mute'),
-    accent: read('--color-accent'),
-    accentInk: read('--color-accent-ink'),
-    onAccent: read('--color-on-accent'),
-    gold: read('--color-gold'),
-    onGold: read('--color-on-gold'),
-    win: read('--color-win'),
-    red: read('--plinko-red'),
-    orange: read('--plinko-orange'),
-    purple: read('--plinko-purple'),
-    teal: read('--plinko-teal'),
-    tealInk: read('--plinko-teal-ink'),
-    lavender: read('--plinko-lavender'),
-    lavenderInk: read('--plinko-lavender-ink'),
-    ball: read('--plinko-ball'),
-    pegHit: read('--plinko-peg-hit'),
-    mono: read('--font-mono') || 'ui-monospace, monospace',
-  }
-  return palette
-}
+// The board's own colours. They are game art, not platform chrome, so they live here
+// rather than in the platform tokens. Each band shades a cup's glass from deep to
+// light, paints its label in `ink`, and spills `glow` onto the tray around it.
+const bands = [
+  { deep: '#7d879a', base: '#bcc4d1', hi: '#dde3ec', light: '#ffffff', ink: '#141a24', shade: 0.12, glow: '#eef4ff' },
+  { deep: '#006a58', base: '#00d9b8', hi: '#3cf0d2', light: '#aefcee', ink: '#ffffff', shade: 0.35, glow: '#2ef5d6' },
+  { deep: '#2e0a8a', base: '#6a1eff', hi: '#8f55ff', light: '#c9adff', ink: '#ffffff', shade: 0.35, glow: '#8d55ff' },
+  { deep: '#8a3600', base: '#ff8a00', hi: '#ffa630', light: '#ffd690', ink: '#ffffff', shade: 0.35, glow: '#ffa028' },
+  { deep: '#7a0020', base: '#f5003a', hi: '#ff4d78', light: '#ff9ab2', ink: '#ffffff', shade: 0.35, glow: '#ff3a6a' },
+]
 
 export const theme = {
-  get colors() {
-    return palette ?? load()
+  ground: 0x05070b,
+
+  labelFont(size) {
+    return `700 ${size}px Inter, "IBM Plex Sans", sans-serif`
   },
 
-  // The supplied game's bands by distance from the centre, as flat fills: red at
-  // the edge where the pay is highest, then orange, purple, teal, lavender.
-  bucketBand(index, total) {
-    const colors = this.colors
-    const centre = (total - 1) / 2
-    const distance = centre === 0 ? 0 : Math.abs(index - centre) / centre
-    if (distance > 0.8) return { fill: colors.red, ink: colors.ink }
-    if (distance > 0.6) return { fill: colors.orange, ink: colors.ink }
-    if (distance > 0.4) return { fill: colors.purple, ink: colors.ink }
-    if (distance > 0.2) return { fill: colors.teal, ink: colors.tealInk }
-    return { fill: colors.lavender, ink: colors.lavenderInk }
+  // By distance from the centre: silver in the middle, then teal, purple, orange, and
+  // red at the edge where the pay is highest.
+  cupBand(index, total) {
+    const distance = Math.round(Math.abs(index - (total - 1) / 2))
+    return bands[Math.min(distance, bands.length - 1)]
   },
 }

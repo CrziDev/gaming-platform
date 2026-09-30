@@ -19,7 +19,8 @@ describe('the wallet page', () => {
 
     renderApp('/wallet')
 
-    expect(await screen.findByText('₱5,250.00')).toBeInTheDocument()
+    const main = within(await screen.findByRole('main'))
+    expect(await main.findByText('₱5,250.00')).toBeInTheDocument()
     const header = within(await screen.findByRole('banner'))
     expect(header.getByRole('link', { name: 'Wallet balance ₱5,250.00' })).toBeInTheDocument()
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
@@ -30,7 +31,7 @@ describe('the wallet page', () => {
     await user.click(sheet.getByRole('button', { name: /^USD/ }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(await screen.findByText('$142.50')).toBeInTheDocument()
+    expect(await main.findByText('$142.50')).toBeInTheDocument()
     expect(await header.findByRole('link', { name: 'Wallet balance $142.50' })).toBeInTheDocument()
     expect(screen.queryByText(/nothing converts/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/fixed at registration/i)).not.toBeInTheDocument()

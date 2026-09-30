@@ -51,7 +51,7 @@ export function AdminRtpConfigurationPage() {
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{game.name} configuration</h1>
+            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">{game.name} configuration</h1>
             <p className="mt-1 hidden text-[13.5px] text-ink-mute sm:block">
               Inspect the multiplier and chance for every possible landing slot.
             </p>
@@ -76,7 +76,7 @@ export function AdminRtpConfigurationPage() {
                 aria-pressed={selected}
                 onClick={() => setProfileChoice(option)}
                 className={cn(
-                  'min-h-12 border-r border-base px-3 font-mono text-[13px] tnum last:border-r-0 hover:bg-wash',
+                  'min-h-12 border-r border-base px-3 text-[13px] tnum last:border-r-0 hover:bg-wash',
                   selected ? 'bg-wash text-ink' : 'text-ink-mute',
                 )}
               >
@@ -234,7 +234,7 @@ function ChanceChart({ slots }: { slots: AdminRtpSlot[] }) {
         <div className="flex h-60 items-end gap-1 border-b border-surface-3 px-1">
           {slots.map((slot) => (
             <div key={slot.slot} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
-              <span className="font-mono text-[10px] text-ink-mute tnum">{formatChance(slot.chance_thousandths_percent)}</span>
+              <span className="text-[10px] text-ink-mute tnum">{formatChance(slot.chance_thousandths_percent)}</span>
               <div
                 aria-hidden
                 className="w-full max-w-12 rounded-t-sm bg-accent/65"
@@ -282,7 +282,7 @@ function ValueRow({ label, slots, render }: { label: string; slots: AdminRtpSlot
   return (
     <tr className="border-b border-surface-3 last:border-b-0">
       <th scope="row" className="py-2.5 pr-5 text-[12px] font-medium text-ink-mute">{label}</th>
-      {slots.map((slot) => <td key={slot.slot} className="px-2 py-2.5 text-center font-mono text-[11px] text-ink-soft tnum">{render(slot)}</td>)}
+      {slots.map((slot) => <td key={slot.slot} className="px-2 py-2.5 text-center text-[11px] text-ink-soft tnum">{render(slot)}</td>)}
     </tr>
   )
 }
@@ -291,19 +291,19 @@ function MobileOutcomes({ slots, total }: { slots: AdminRtpSlot[]; total: number
   return (
     <section aria-labelledby="slot-outcomes-heading" className="wide:hidden">
       <h2 id="slot-outcomes-heading" className="label-mono mb-2.5 text-ink-mute">Slot outcomes</h2>
-      <div className="overflow-hidden rounded-card bg-surface-1">
+      <div className="overflow-hidden rounded-card glass-panel">
         <ul>
           {slots.map((slot) => (
             <li key={slot.slot} className="grid grid-cols-[1fr_auto_auto] gap-5 border-b border-surface-3 px-4 py-3 text-[12.5px]">
               <span className="text-ink-mute">Slot {slot.slot}</span>
               <span className="font-mono font-medium text-ink-soft">{formatMultiplier(slot.multiplier_hundredths)}</span>
-              <span className="w-18 text-right font-mono text-ink tnum">{formatChance(slot.chance_thousandths_percent)}</span>
+              <span className="w-18 text-right text-ink tnum">{formatChance(slot.chance_thousandths_percent)}</span>
             </li>
           ))}
         </ul>
         <div className="flex justify-between px-4 py-3 text-[12.5px] font-medium">
           <span className="text-ink-mute">Total chance</span>
-          <span className="font-mono text-ink tnum">{formatChance(total)}</span>
+          <span className="text-ink tnum">{formatChance(total)}</span>
         </div>
       </div>
     </section>

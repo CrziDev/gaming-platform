@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, Receipt, User as UserIcon, Wallet } from 'lucide-react'
+import { LogOut, Receipt, User as UserIcon, Wallet } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn'
 import { paths } from '@/routes/paths'
 
 const itemClass =
-  'flex min-h-11 w-full items-center gap-2.5 rounded-input px-3 text-[13px] text-ink-mute transition-colors duration-fast hover:bg-wash hover:text-ink-soft lg:min-h-9'
+  'flex min-h-11 w-full items-center gap-2.5 rounded-chip px-3 text-[13.5px] text-ink-control transition-colors duration-fast hover:bg-white/7 hover:text-ink lg:min-h-10'
 
 export function AccountMenu({ user }: { user: User }) {
   const [open, setOpen] = useState(false)
@@ -42,30 +42,20 @@ export function AccountMenu({ user }: { user: User }) {
         aria-label="Account menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex min-h-11 items-center gap-2 rounded-chip px-1 py-1 text-ink-soft transition-colors duration-fast hover:bg-wash sm:pr-2 lg:min-h-8"
+        title={user.display_name}
+        className={cn(
+          'glass-pill flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors duration-fast hover:bg-white/8 sm:size-11.5',
+          open && 'bg-white/8',
+        )}
       >
-        <span
-          aria-hidden
-          className="flex size-[26px] items-center justify-center rounded-full bg-surface-3 font-mono text-[10.5px] font-medium text-ink-mute uppercase"
-        >
-          {initials(user.display_name)}
-        </span>
-        <span aria-hidden className="hidden text-[13px] font-medium sm:inline">
-          {surname(user.display_name)}
-        </span>
-        <ChevronDown
-          aria-hidden
-          size={12}
-          strokeWidth={2.2}
-          className={cn(
-            'hidden text-ink-mute transition-transform duration-standard ease-standard motion-reduce:transition-none sm:inline',
-            open && 'rotate-180',
-          )}
-        />
+        <svg aria-hidden width="21" height="21" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="8" r="4.2" />
+          <path d="M3.5 21c.6-4.4 4-7 8.5-7s7.9 2.6 8.5 7z" />
+        </svg>
       </button>
 
       {open ? (
-        <div className="pop-enter overlay-shadow absolute right-0 z-40 mt-1.5 w-56 rounded-card bg-surface-2 p-1">
+        <div className="pop-enter glass-menu absolute right-0 z-40 mt-2 w-56 rounded-card p-1.5">
           <div className="px-3 pt-2 pb-2.5">
             <p className="truncate text-[13px] font-medium text-ink-soft">{user.display_name}</p>
             <p className="truncate text-[12px] text-ink-mute">{user.email}</p>
@@ -95,17 +85,4 @@ export function AccountMenu({ user }: { user: User }) {
       ) : null}
     </div>
   )
-}
-
-function surname(displayName: string): string {
-  const words = displayName.trim().split(/\s+/)
-  return words[words.length - 1] ?? displayName
-}
-
-function initials(displayName: string): string {
-  const words = displayName.trim().split(/\s+/).filter(Boolean)
-  if (words.length >= 2) {
-    return `${words[0]?.charAt(0) ?? ''}${words[words.length - 1]?.charAt(0) ?? ''}`
-  }
-  return displayName.slice(0, 2)
 }

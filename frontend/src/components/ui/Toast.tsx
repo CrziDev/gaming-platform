@@ -17,7 +17,7 @@ type ToastContextValue = {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 const tones: Record<ToastTone, string> = {
-  info: 'bg-surface-3 text-ink-soft',
+  info: 'glass-menu text-ink-soft',
   success: 'bg-success/12 text-ink-soft',
   danger: 'bg-danger/12 text-ink-soft',
 }

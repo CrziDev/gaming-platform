@@ -55,7 +55,7 @@ function useMobileViewport() {
 
 async function readyBoard() {
   const opened = await openPlinko()
-  frameSays(opened.iframe, { v: 1, type: 'ready', game: 'plinko' })
+  frameSays(opened.iframe, { v: 3, type: 'ready', game: 'plinko' })
   await waitFor(() => expect(opened.post).toHaveBeenCalledWith(expect.objectContaining({ type: 'configure' }), window.location.origin))
   return opened
 }
@@ -69,6 +69,10 @@ async function untilDropped(post: ReturnType<typeof vi.spyOn>) {
   expect(lastDrop(post)).toBeDefined()
 }
 
+function riskButton() {
+  return screen.getByRole('button', { name: /8 rows ·/ })
+}
+
 function lastDrop(post: ReturnType<typeof vi.spyOn>) {
   const call = [...post.mock.calls].reverse().find((entry) => (entry[0] as { type: string }).type === 'drop')
   return call?.[0] as { round_id: string; slot: number; result_label: string } | undefined
@@ -79,9 +83,9 @@ describe('a title without an engine', () => {
     stubFetchRoutes({ 'GET /me': player })
     renderApp('/game/aurora-dice')
 
-    expect(await screen.findByRole('region', { name: 'Aurora Dice game canvas' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Aurora Dice game' })).toBeInTheDocument()
     expect(screen.queryByTitle(/game$/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('radiogroup', { name: 'Rows' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /rows ·/ })).not.toBeInTheDocument()
 
     const history = await screen.findByRole('table', { name: 'History' })
     expect(within(history).getAllByRole('row').length).toBeGreaterThan(1)
@@ -91,7 +95,7 @@ describe('a title without an engine', () => {
 })
 
 describe('the Plinko game page', () => {
-  it('embeds the frame and configures the board once it is ready', async () => {
+  it('embeds the frame and configures the eight-row board once it is ready', async () => {
     const { post } = await readyBoard()
 
     const configure = post.mock.calls.find((entry) => (entry[0] as { type: string }).type === 'configure')?.[0] as {
@@ -105,66 +109,90 @@ describe('the Plinko game page', () => {
     expect(configure.multipliers_hundredths).toEqual(plinkoManifest().multipliers_hundredths['8']?.normal)
     expect(configure.sound).toBe(true)
     expect(screen.queryByRole('status', { name: 'Loading Plinko' })).not.toBeInTheDocument()
-
-    const rows = screen.getByRole('radiogroup', { name: 'Rows' })
-    expect(within(rows).getByRole('radio', { name: '8' })).toHaveAttribute('aria-checked', 'true')
-    expect(within(screen.getByRole('tablist', { name: 'Risk' })).getByRole('tab', { name: 'Normal' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
+    expect(riskButton()).toHaveTextContent('8 rows · Normal')
   })
 
-  it('uses an immersive mobile shell with an always-available wager dock and settings sheet', async () => {
-    useMobileViewport()
-    const user = userEvent.setup()
-    await readyBoard()
-
-    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
-    expect(screen.queryByRole('navigation', { name: 'Primary' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('complementary', { name: 'Main navigation' })).not.toBeInTheDocument()
-
-    const toolbar = screen.getByRole('navigation', { name: 'Game toolbar' })
-    expect(within(toolbar).getByRole('link', { name: 'Back to games' })).toHaveAttribute('href', '/games')
-    expect(within(toolbar).getByRole('heading', { name: 'Plinko' })).toBeInTheDocument()
-
-    const dock = screen.getByRole('region', { name: 'Bet controls' })
-    expect(within(dock).getByRole('link', { name: /Balance/ })).toHaveAttribute('href', '/wallet/deposit')
-    expect(within(dock).getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
-
-    await user.click(within(dock).getByRole('button', { name: /8 rows · Normal/ }))
-    const settings = screen.getByRole('dialog', { name: 'Bet settings' })
-    await user.click(within(settings).getByRole('button', { name: '2×' }))
-    await user.click(within(settings).getByRole('radio', { name: '12' }))
-    await user.click(within(settings).getByRole('tab', { name: 'High' }))
-    await user.click(within(settings).getByRole('button', { name: 'Done' }))
-
-    expect(screen.queryByRole('dialog', { name: 'Bet settings' })).not.toBeInTheDocument()
-    expect(within(dock).getByRole('button', { name: /12 rows · High/ })).toBeInTheDocument()
-    expect(within(dock).getByText('₱2.00')).toBeInTheDocument()
-  })
-
-  it('reconfigures the board when rows or risk change', async () => {
-    const user = userEvent.setup()
+  it('tells the frame where the board sits once it is ready', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('aria-label') === 'Plinko game') return new DOMRect(0, 72, 390, 772)
+      if (this.tagName === 'HEADER') return new DOMRect(18, 84, 354, 44)
+      if (this.querySelector(':scope > [aria-label="Bet controls"]')) return new DOMRect(18, 585, 354, 180)
+      return new DOMRect(0, 168, 390, 413)
+    })
     const { post } = await readyBoard()
-
-    await user.click(screen.getByRole('radio', { name: '12' }))
-    await user.click(screen.getByRole('tab', { name: 'High' }))
 
     await waitFor(() =>
       expect(post).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'configure', rows: 12, risk: 'high' }),
+        {
+          v: 3,
+          type: 'layout',
+          x: 0,
+          y: 96,
+          width: 390,
+          height: 413,
+          controls: [
+            { x: 18, y: 12, width: 354, height: 44 },
+            { x: 18, y: 513, width: 354, height: 180 },
+          ],
+        },
         window.location.origin,
       ),
     )
-    const configure = post.mock.calls.at(-1)?.[0] as { multipliers_hundredths: number[] }
-    expect(configure.multipliers_hundredths).toHaveLength(13)
+  })
+
+  it('keeps the top bar on a phone and gives the game the bottom nav\'s place', async () => {
+    useMobileViewport()
+    await readyBoard()
+
+    expect(screen.getByRole('link', { name: /Wallet balance/ })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Primary' })).not.toBeInTheDocument()
+    const controls = screen.getByRole('region', { name: 'Bet controls' })
+    expect(within(controls).getByRole('button', { name: /PLACE BET/ })).toBeEnabled()
+  })
+
+  it('reconfigures the board when the risk changes', async () => {
+    const user = userEvent.setup()
+    const { post } = await readyBoard()
+
+    await user.click(riskButton())
+    const menu = screen.getByRole('menu', { name: 'Risk' })
+    expect(within(menu).getByRole('menuitemradio', { name: /Normal/ })).toHaveAttribute('aria-checked', 'true')
+    await user.click(within(menu).getByRole('menuitemradio', { name: /High/ }))
+
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'configure',
+          rows: 8,
+          risk: 'high',
+          multipliers_hundredths: plinkoManifest().multipliers_hundredths['8']?.high,
+        }),
+        window.location.origin,
+      ),
+    )
+    expect(riskButton()).toHaveTextContent('8 rows · High')
+    expect(window.localStorage.getItem('game.plinko.risk')).toBe('high')
+  })
+
+  it('walks the stake along a ladder of stakes the server accepts', async () => {
+    const user = userEvent.setup()
+    await readyBoard()
+    const controls = screen.getByRole('region', { name: 'Bet controls' })
+
+    expect(within(controls).getByText('₱1.00')).toBeInTheDocument()
+    await user.click(within(controls).getByRole('button', { name: 'Increase bet' }))
+    expect(within(controls).getByText('₱2.00')).toBeInTheDocument()
+    await user.click(within(controls).getByRole('button', { name: 'Increase bet' }))
+    expect(within(controls).getByText('₱5.00')).toBeInTheDocument()
+    await user.click(within(controls).getByRole('button', { name: 'Decrease bet' }))
+    expect(within(controls).getByText('₱2.00')).toBeInTheDocument()
   })
 
   it('settles a round on the server, drops the ball, and reveals the result when it lands', async () => {
     const user = userEvent.setup()
     const { iframe, post } = await readyBoard()
 
-    await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
+    await user.click(screen.getByRole('button', { name: /PLACE BET/ }))
 
     await waitFor(() => expect(lastDrop(post)).toBeDefined())
     const drop = lastDrop(post)!
@@ -172,21 +200,29 @@ describe('the Plinko game page', () => {
     expect(drop.slot).toBeLessThanOrEqual(8)
     expect(drop.result_label).toMatch(/^\+₱/)
 
-    // Rows and risk are locked while the ball is falling.
-    expect(screen.getByRole('radio', { name: '8' })).toHaveAttribute('aria-disabled', 'true')
-    expect(screen.getByText('locked while a ball falls')).toBeInTheDocument()
+    // The risk is locked while the ball is falling.
+    expect(riskButton()).toBeDisabled()
 
-    frameSays(iframe, { v: 1, type: 'landed', round_id: drop.round_id, slot: drop.slot })
+    frameSays(iframe, { v: 3, type: 'landed', round_id: drop.round_id, slot: drop.slot })
 
-    await waitFor(() => expect(screen.getByRole('radio', { name: '8' })).not.toHaveAttribute('aria-disabled'))
+    await waitFor(() => expect(riskButton()).toBeEnabled())
     const php = wallets.find((wallet) => wallet.currency === 'PHP')!
     expect(php.balance_minor).not.toBe(startingBalance)
+  })
+
+  it('places a bet with the space bar', async () => {
+    const user = userEvent.setup()
+    const { post } = await readyBoard()
+
+    await user.keyboard(' ')
+
+    await waitFor(() => expect(lastDrop(post)).toBeDefined())
   })
 
   it('accepts only one bet until its ball lands, including clicks before React rerenders', async () => {
     const { iframe, post } = await readyBoard()
     const before = rounds.length
-    const placeBet = screen.getByRole('button', { name: 'PLACE BET' })
+    const placeBet = screen.getByRole('button', { name: /PLACE BET/ })
 
     act(() => {
       placeBet.click()
@@ -200,7 +236,7 @@ describe('the Plinko game page', () => {
     expect(placeBet).toBeDisabled()
 
     const drop = lastDrop(post)!
-    frameSays(iframe, { v: 1, type: 'landed', round_id: drop.round_id, slot: drop.slot })
+    frameSays(iframe, { v: 3, type: 'landed', round_id: drop.round_id, slot: drop.slot })
 
     await waitFor(() => expect(placeBet).toBeEnabled())
   })
@@ -209,17 +245,14 @@ describe('the Plinko game page', () => {
     const user = userEvent.setup()
     const { iframe, post } = await readyBoard()
 
-    expect(screen.queryByRole('tab', { name: 'My Activity' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Rules' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/^More Originals/)).not.toBeInTheDocument()
     // No fixture round belongs to Plinko, so the feed only says where bets will go.
     expect(await screen.findByText('Your bets on this game will appear here.')).toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'History' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
+    await user.click(screen.getByRole('button', { name: /PLACE BET/ }))
     await waitFor(() => expect(lastDrop(post)).toBeDefined())
     const drop = lastDrop(post)!
-    frameSays(iframe, { v: 1, type: 'landed', round_id: drop.round_id, slot: drop.slot })
+    frameSays(iframe, { v: 3, type: 'landed', round_id: drop.round_id, slot: drop.slot })
 
     const feed = await screen.findByRole('table', { name: 'History' })
     const settled = rounds.find((round) => round.id === drop.round_id)!
@@ -233,29 +266,27 @@ describe('the Plinko game page', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const { post } = await readyBoard()
 
-    await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
+    await user.click(screen.getByRole('button', { name: /PLACE BET/ }))
     await untilDropped(post)
-    expect(screen.getByRole('radio', { name: '8' })).toHaveAttribute('aria-disabled', 'true')
+    expect(riskButton()).toBeDisabled()
 
     await vi.advanceTimersByTimeAsync(8_100)
 
-    await waitFor(() => expect(screen.getByRole('radio', { name: '8' })).not.toHaveAttribute('aria-disabled'), {
-      timeout: 3000,
-    })
-    expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
+    await waitFor(() => expect(riskButton()).toBeEnabled(), { timeout: 3000 })
+    expect(screen.getByRole('button', { name: /PLACE BET/ })).toBeEnabled()
   })
 
   it('treats a second ready as a reloaded frame and reconfigures it', async () => {
     const user = userEvent.setup()
     const { iframe, post } = await readyBoard()
 
-    await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
+    await user.click(screen.getByRole('button', { name: /PLACE BET/ }))
     await waitFor(() => expect(lastDrop(post)).toBeDefined())
     const before = post.mock.calls.length
 
-    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' })
 
-    await waitFor(() => expect(screen.getByRole('radio', { name: '8' })).not.toHaveAttribute('aria-disabled'))
+    await waitFor(() => expect(riskButton()).toBeEnabled())
     expect(post.mock.calls.slice(before).some((entry) => (entry[0] as { type: string }).type === 'configure')).toBe(true)
   })
 
@@ -264,10 +295,22 @@ describe('the Plinko game page', () => {
     wallets.find((wallet) => wallet.currency === 'PHP')!.balance_minor = 50
     const { post } = await readyBoard()
 
-    await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
+    await user.click(screen.getByRole('button', { name: /PLACE BET/ }))
 
     expect(await screen.findByRole('dialog', { name: 'Not enough balance' })).toBeInTheDocument()
     expect(lastDrop(post)).toBeUndefined()
+  })
+
+  it('shows the return and the payouts of the board in play', async () => {
+    const user = userEvent.setup()
+    await readyBoard()
+
+    await user.click(screen.getByRole('button', { name: 'Fair game' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Fair game' })
+    expect(within(dialog).getByText('95.00%')).toBeInTheDocument()
+    expect(within(dialog).getByText('Payouts · 8 rows · Normal')).toBeInTheDocument()
+    expect(within(dialog).getAllByText(formatMultiplier(600))).toHaveLength(2)
   })
 
   it('mutes the game and remembers it', async () => {
@@ -277,7 +320,7 @@ describe('the Plinko game page', () => {
     await user.click(screen.getByRole('button', { name: 'Mute game sound' }))
 
     await waitFor(() =>
-      expect(post).toHaveBeenCalledWith({ v: 1, type: 'set_sound', enabled: false }, window.location.origin),
+      expect(post).toHaveBeenCalledWith({ v: 3, type: 'set_sound', enabled: false }, window.location.origin),
     )
     expect(window.localStorage.getItem('game.sound')).toBe('false')
   })

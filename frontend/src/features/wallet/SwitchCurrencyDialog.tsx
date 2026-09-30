@@ -41,7 +41,7 @@ export function SwitchCurrencyDialog({ open, onClose }: SwitchCurrencyDialogProp
                 {wallet.currency}
                 {current ? <Check aria-hidden size={14} strokeWidth={2} className="text-accent-ink" /> : null}
               </span>
-              <span className="font-mono text-[13.5px] font-medium tnum">
+              <span className="text-[13.5px] font-medium tnum">
                 {formatMoney(money(wallet.balance_minor, wallet.currency))}
               </span>
             </button>

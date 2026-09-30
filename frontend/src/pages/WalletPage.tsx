@@ -38,9 +38,9 @@ export function WalletPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Wallet</h1>
+      <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Wallet</h1>
 
-      <section className="flex flex-col gap-5 rounded-card bg-surface-1 p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
+      <section className="flex flex-col gap-5 rounded-card glass-panel p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
             <span className="label-mono text-ink-mute">Available balance · {currency}</span>
@@ -51,7 +51,7 @@ export function WalletPage() {
             ) : null}
           </div>
           {walletQuery.data ? (
-            <span className="font-mono text-[32px] leading-none font-medium tracking-[-0.02em] text-ink tnum wide:text-[40px]">
+            <span className="text-[32px] leading-none font-medium tracking-[-0.02em] text-ink tnum wide:text-[40px]">
               {formatMoney(money(walletQuery.data.balance_minor, walletQuery.data.currency))}
             </span>
           ) : walletQuery.isError ? (

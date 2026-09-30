@@ -65,7 +65,7 @@ export const games: Game[] = [
     id: 'gm-004',
     slug: 'plinko',
     name: 'Plinko',
-    description: 'Drop a ball through eight to sixteen rows of pegs and land a multiplier.',
+    description: 'Drop a ball through eight rows of pegs and land a multiplier.',
     category_slug: 'originals',
     category_name: 'Originals',
     provider: 'In-house',

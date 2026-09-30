@@ -83,7 +83,7 @@ export function DepositStatusPage() {
         >
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
-        <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Request {deposit.reference}</h1>
+        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Request {deposit.reference}</h1>
       </header>
 
       <section
@@ -92,8 +92,8 @@ export function DepositStatusPage() {
         <span className={cn('flex size-14 items-center justify-center rounded-full', state.ring)}>
           <Icon aria-hidden size={24} strokeWidth={1.5} />
         </span>
-        <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{state.heading}</h2>
-        <span className="font-mono text-[28px] font-medium text-ink tnum">
+        <h2 className="text-[22px] font-bold tracking-[-0.02em] text-ink">{state.heading}</h2>
+        <span className="text-[28px] font-medium text-ink tnum">
           {formatMoney(money(deposit.amount_minor, deposit.currency))}
         </span>
         <p className="max-w-[34ch] text-[13px] leading-relaxed text-ink-mute text-pretty">{state.body}</p>
@@ -104,7 +104,7 @@ export function DepositStatusPage() {
         ) : null}
       </section>
 
-      <dl className="flex flex-col gap-2.5 rounded-card bg-surface-1 p-4 text-[13.5px]">
+      <dl className="flex flex-col gap-2.5 rounded-card glass-panel p-4 text-[13.5px]">
         <Row label="Method">{deposit.method_name}</Row>
         <Row label="Reference">
           <span className="font-mono">{deposit.reference}</span>

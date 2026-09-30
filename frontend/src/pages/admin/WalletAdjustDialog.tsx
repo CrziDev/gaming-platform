@@ -136,7 +136,7 @@ function AdjustForm({
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="0.00"
-              className="min-w-0 flex-1 bg-transparent font-mono text-[17px] font-medium tnum placeholder:text-ink-mute focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-[17px] font-medium tnum placeholder:text-ink-mute focus:outline-none"
             />
           </div>
         </Field>

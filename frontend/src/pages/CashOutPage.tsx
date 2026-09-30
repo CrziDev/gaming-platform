@@ -20,9 +20,9 @@ export function CashOutPage() {
         >
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
-        <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Cash out</h1>
+        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Cash out</h1>
         {walletQuery.data ? (
-          <span className="ml-auto rounded-chip bg-inset px-2.5 py-1.5 font-mono text-[12.5px] font-medium tnum">
+          <span className="ml-auto rounded-chip bg-inset px-2.5 py-1.5 text-[12.5px] font-medium tnum">
             {formatMoney(money(walletQuery.data.balance_minor, walletQuery.data.currency), { decimals: 'trim' })}
           </span>
         ) : null}

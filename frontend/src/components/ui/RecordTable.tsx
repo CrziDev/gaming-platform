@@ -130,7 +130,7 @@ export function RecordCard({
     </>
   )
 
-  const className = 'flex w-full flex-col gap-3 rounded-tile bg-surface-1 p-3 text-left'
+  const className = 'flex w-full flex-col gap-3 rounded-tile border border-hairline bg-surface-1 p-3 text-left'
 
   if (!onClick) {
     return <div className={className}>{content}</div>

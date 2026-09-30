@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Ref } f
 
 import { ApiError } from '@/api/client'
 import type { Wallet } from '@/api/types'
-import type { GameFrameStatus } from '@/components/game/GameHost'
+import type { GameFrameStatus, GameLayout } from '@/components/game/GameHost'
 import { useToast } from '@/components/ui/Toast'
 import { walletQueryKey } from '@/features/wallet'
 import { formatMoney, money, type Currency } from '@/lib/money'
@@ -12,7 +12,7 @@ import { createUUID } from '@/lib/uuid'
 
 import { createGameBridge, frameOriginOf, type GameBridge } from './bridge'
 import { gameManifestQueryKey, useGameManifest, useGameSound, usePlayRound } from './hooks'
-import { PLINKO_RISKS, PLINKO_ROWS, type PlinkoParams, type PlinkoRisk, type PlinkoRows } from './multipliers'
+import { PLINKO_BOARD_ROWS, PLINKO_RISKS, type PlinkoBoard, type PlinkoParams, type PlinkoRisk } from './multipliers'
 import type { GameModule } from './registry'
 import { PROTOCOL_VERSION, type FrameMessage, type PlinkoBoards } from './schemas'
 
@@ -20,9 +20,17 @@ const READY_TIMEOUT_MS = 10_000
 const SETTLE_FALLBACK_MS = 8_000
 const NOT_ON_THIS_SERVER = "Plinko isn't available right now."
 
+// The board's rect inside the game frame, and the rects the platform's controls cover,
+// in CSS pixels.
+export type GameStage = GameLayout
+
 export type GameSession = {
   attachFrame: Ref<HTMLIFrameElement | null>
   frame: { status: GameFrameStatus; key: number; error?: string | undefined; retry: () => void }
+  setStage: (stage: GameStage) => void
+  // The played board's payouts and the return they settle at, from the manifest.
+  board: PlinkoBoard | null
+  rtpBasisPoints: number | null
   params: PlinkoParams
   setParams: (params: PlinkoParams) => void
   canChangeParams: boolean
@@ -45,14 +53,11 @@ type GameSessionOptions = {
   onShortfall: () => void
 }
 
-const rowChoices = PLINKO_ROWS.map(String)
-
-type Board = { rows: PlinkoRows; risk: PlinkoRisk; multipliers: readonly number[] }
+type Board = { risk: PlinkoRisk; multipliers: readonly number[] }
 type PendingRound = { timer: number; wallet: Wallet }
 
 function sameBoard(a: Board, b: Board): boolean {
   return (
-    a.rows === b.rows &&
     a.risk === b.risk &&
     a.multipliers.length === b.multipliers.length &&
     a.multipliers.every((value, index) => value === b.multipliers[index])
@@ -78,7 +83,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   // An error after data removes the table too: the server no longer offers
   // what the board shows.
   const boards: PlinkoBoards | null = manifest.isError ? null : (manifest.data ?? null)
-  const table = boards?.table ?? null
+  const board = boards?.board ?? null
 
   // A callback ref, so the bridge is built when the iframe actually mounts —
   // which is after the game loads, and again after every retry.
@@ -90,6 +95,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   // several clicks could otherwise start several mutations before React paints.
   const playLockedRef = useRef(false)
   const sentRef = useRef<Board | null>(null)
+  const stageRef = useRef<GameStage | null>(null)
 
   const [status, setStatus] = useState<GameFrameStatus>('loading')
   const [frameKey, setFrameKey] = useState(0)
@@ -97,12 +103,10 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   const [inFlight, setInFlight] = useState(0)
   const [playLocked, setPlayLocked] = useState(false)
 
-  const [rememberedRows, rememberRows] = useRememberedChoice(`game.${slug}.rows`, rowChoices)
   const [rememberedRisk, rememberRisk] = useRememberedChoice(`game.${slug}.risk`, PLINKO_RISKS)
-  const defaults = module?.defaultParams ?? { rows: 8, risk: 'normal' }
   const params: PlinkoParams = {
-    rows: (PLINKO_ROWS.find((rows) => String(rows) === rememberedRows) ?? defaults.rows) as PlinkoParams['rows'],
-    risk: rememberedRisk ?? defaults.risk,
+    rows: PLINKO_BOARD_ROWS,
+    risk: rememberedRisk ?? module?.defaultParams.risk ?? 'normal',
   }
 
   // Handlers read the latest values through this ref. It is synced in a layout
@@ -148,19 +152,34 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   const configure = useCallback(() => {
     const { params: current, sound: enabled, module: active, boards: served } = latest.current
     if (!active || !served || pendingRef.current.size > 0) return
-    const board: Board = { rows: current.rows, risk: current.risk, multipliers: active.multipliers(served.table, current) }
-    if (sentRef.current && sameBoard(sentRef.current, board)) return
+    const next: Board = { risk: current.risk, multipliers: active.multipliers(served.board, current) }
+    if (sentRef.current && sameBoard(sentRef.current, next)) return
     const delivered =
       bridgeRef.current?.send({
         v: PROTOCOL_VERSION,
         type: 'configure',
-        rows: board.rows,
-        risk: board.risk,
-        multipliers_hundredths: [...board.multipliers],
+        rows: PLINKO_BOARD_ROWS,
+        risk: next.risk,
+        multipliers_hundredths: [...next.multipliers],
         sound: enabled,
       }) ?? false
-    if (delivered) sentRef.current = board
+    if (delivered) sentRef.current = next
   }, [])
+
+  const sendLayout = useCallback(() => {
+    const stage = stageRef.current
+    if (stage) bridgeRef.current?.send({ v: PROTOCOL_VERSION, type: 'layout', ...stage })
+  }, [])
+
+  // The host measures where the board sits over the frame; before the frame is ready
+  // the rect is kept and sent with the first configure.
+  const setStage = useCallback(
+    (stage: GameStage) => {
+      stageRef.current = stage
+      if (latest.current.status === 'ready') sendLayout()
+    },
+    [sendLayout],
+  )
 
   useEffect(() => {
     if (!module || !iframe) return
@@ -175,6 +194,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
           setStatus('ready')
           setFrameError(undefined)
           configure()
+          sendLayout()
           break
         case 'landed':
           settle(message.round_id)
@@ -201,7 +221,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
       bridge.dispose()
       bridgeRef.current = null
     }
-  }, [module, iframe, configure, settle, settleAll, toast])
+  }, [module, iframe, configure, sendLayout, settle, settleAll, toast])
 
   useEffect(() => {
     const pending = pendingRef.current
@@ -213,7 +233,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
 
   useEffect(() => {
     if (status === 'ready') configure()
-  }, [status, params.rows, params.risk, table, inFlight, configure])
+  }, [status, params.risk, board, inFlight, configure])
 
   useEffect(() => {
     if (status === 'ready') bridgeRef.current?.send({ v: PROTOCOL_VERSION, type: 'set_sound', enabled: sound })
@@ -289,13 +309,7 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
     [currency, mutation, onShortfall, queryClient, settle, slug, toast, unlockPlay],
   )
 
-  const setParams = useCallback(
-    (next: PlinkoParams) => {
-      rememberRows(String(next.rows))
-      rememberRisk(next.risk)
-    },
-    [rememberRisk, rememberRows],
-  )
+  const setParams = useCallback((next: PlinkoParams) => rememberRisk(next.risk), [rememberRisk])
 
   const { isError: manifestFailed, refetch: refetchManifest } = manifest
   const retry = useCallback(() => {
@@ -316,11 +330,14 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
   return {
     attachFrame,
     frame,
+    setStage,
+    board,
+    rtpBasisPoints: boards?.rtp_basis_points ?? null,
     params,
     setParams,
     canChangeParams: !playLocked,
     inFlight,
-    canPlay: table !== null,
+    canPlay: board !== null,
     play,
     playing: playLocked,
     sound,

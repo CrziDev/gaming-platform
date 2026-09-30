@@ -23,7 +23,7 @@ export function ChatRail() {
       aria-hidden={!chatOpen}
       inert={!chatOpen}
       className={cn(
-        'hidden shrink-0 overflow-hidden bg-panel transition-[width,opacity] duration-layout ease-standard motion-reduce:transition-none @chat:block',
+        'glass-chrome hidden shrink-0 overflow-hidden border-l border-white/8 transition-[width,opacity] duration-layout ease-standard motion-reduce:transition-none @chat:block',
         chatOpen ? 'w-[272px] opacity-100' : 'w-0 opacity-0',
       )}
     >
@@ -135,13 +135,13 @@ function Composer() {
         placeholder="Message"
         aria-label="Message"
         maxLength={280}
-        className="min-h-11 min-w-0 flex-1 rounded-input bg-inset px-2.75 text-[12.5px] text-ink-soft placeholder:text-ink-mute focus:bg-wash lg:min-h-[34px]"
+        className="min-h-11 min-w-0 flex-1 rounded-input border border-hairline bg-field px-3 text-[12.5px] text-ink-soft placeholder:text-ink-mute focus:border-hairline-strong lg:min-h-9"
       />
       <button
         type="submit"
         aria-label="Send"
         disabled={send.isPending}
-        className="flex size-11 shrink-0 items-center justify-center rounded-input bg-accent text-on-accent transition-colors duration-fast hover:bg-accent-hi disabled:bg-surface-2 disabled:text-ink-mute lg:size-[34px]"
+        className="cta-gradient flex size-11 shrink-0 items-center justify-center rounded-input transition-[filter] duration-fast hover:brightness-110 disabled:bg-none disabled:bg-surface-2 disabled:text-ink-mute lg:size-9"
       >
         <Send aria-hidden size={15} strokeWidth={1.8} />
       </button>

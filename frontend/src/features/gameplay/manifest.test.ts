@@ -6,30 +6,38 @@ import { PLINKO_MULTIPLIERS_HUNDREDTHS } from './multipliers'
 import { plinkoManifestSchema } from './schemas'
 
 describe('the Plinko manifest schema', () => {
-  it('parses the served shape into a table keyed by rows and risk', () => {
+  it('parses the served shape into the eight-row board by risk', () => {
     const parsed = plinkoManifestSchema.parse(plinkoManifest())
 
     expect(parsed.rtp_basis_points).toBe(9500)
-    expect(parsed.table[8].normal).toEqual(PLINKO_MULTIPLIERS_HUNDREDTHS[8].normal)
-    expect(parsed.table[16].high).toHaveLength(17)
+    expect(parsed.board.normal).toEqual(PLINKO_MULTIPLIERS_HUNDREDTHS[8].normal)
+    expect(parsed.board.high).toHaveLength(9)
   })
 
   it('tolerates fields it does not know', () => {
     expect(() => plinkoManifestSchema.parse({ ...plinkoManifest(), engine: 'plinko' })).not.toThrow()
   })
 
-  it('refuses a board with the wrong number of slots', () => {
+  it('ignores the boards players are not offered', () => {
     const manifest = plinkoManifest()
+    delete manifest.multipliers_hundredths['16']
     manifest.multipliers_hundredths['12']!.low = manifest.multipliers_hundredths['12']!.low!.slice(1)
+
+    expect(plinkoManifestSchema.safeParse(manifest).success).toBe(true)
+  })
+
+  it('refuses the played board with the wrong number of cups', () => {
+    const manifest = plinkoManifest()
+    manifest.multipliers_hundredths['8']!.low = manifest.multipliers_hundredths['8']!.low!.slice(1)
 
     const result = plinkoManifestSchema.safeParse(manifest)
     expect(result.success).toBe(false)
-    expect(result.error?.issues[0]?.path).toEqual(['multipliers_hundredths', '12', 'low'])
+    expect(result.error?.issues[0]?.path).toEqual(['multipliers_hundredths', '8', 'low'])
   })
 
-  it('refuses a manifest missing a board the controls offer', () => {
+  it('refuses a manifest without the played board', () => {
     const manifest = plinkoManifest()
-    delete manifest.multipliers_hundredths['16']
+    delete manifest.multipliers_hundredths['8']
 
     expect(plinkoManifestSchema.safeParse(manifest).success).toBe(false)
   })

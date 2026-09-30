@@ -13,10 +13,10 @@ type PanelProps = {
 
 export function Panel({ title, action, children, className, bodyClassName }: PanelProps) {
   return (
-    <section className={cn('rounded-card bg-surface-1', className)}>
+    <section className={cn('rounded-card glass-panel', className)}>
       {title ? (
         <header className="flex items-center justify-between gap-3 px-4 pt-4 pb-1">
-          <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">{title}</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-ink-soft">{title}</h2>
           {action}
         </header>
       ) : null}
@@ -42,7 +42,7 @@ export function CollapsiblePanel({
   const bodyId = useId()
 
   return (
-    <section className={cn('rounded-card bg-surface-1', className)}>
+    <section className={cn('rounded-card glass-panel', className)}>
       <div className="flex items-center gap-2 px-4">
         <button
           type="button"
@@ -51,7 +51,7 @@ export function CollapsiblePanel({
           onClick={() => setOpen((current) => !current)}
           className="flex min-h-11 flex-1 items-center justify-between gap-3 text-left"
         >
-          <span className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">{title}</span>
+          <span className="text-[15px] font-semibold tracking-[-0.01em] text-ink-soft">{title}</span>
           <ChevronDown
             aria-hidden
             size={16}

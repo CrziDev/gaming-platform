@@ -1,257 +1,123 @@
-/* Tokens copied from frontend/src/styles/index.css. The frame cannot share the
-   bundle, so the values are duplicated here and must move with that file. */
-:root {
-  --color-base: #0b0f14;
-  --color-panel: #11161d;
-  --color-surface-1: #151b23;
-  --color-surface-2: #1b232c;
-  --color-surface-3: #252c36;
-  --color-wash: rgb(255 255 255 / 0.06);
-  --color-inset: rgb(255 255 255 / 0.045);
-  --color-ink: #f2f6fb;
-  --color-ink-soft: #e6ebf2;
-  --color-ink-mute: #8a99ad;
-  --color-on-accent: #07160e;
-  --color-accent: #2fa96c;
-  --color-accent-hi: #37bd79;
-  --color-accent-ink: #3ec07d;
-  --color-gold: #caa04a;
-  --color-on-gold: #17120a;
-  --color-win: #e8c883;
-  --color-danger: #e05a5a;
-
-  /* Game art, from the supplied game. Mirrors frontend/src/features/gameplay/plinkoPalette.ts. */
-  --plinko-red: #ff1e56;
-  --plinko-orange: #ff9e00;
-  --plinko-purple: #9d4edd;
-  --plinko-teal: #20e3b2;
-  --plinko-teal-ink: #0b3d33;
-  --plinko-lavender: #ebdffd;
-  --plinko-lavender-ink: #5d2682;
-  --plinko-ball: #ff0a54;
-  --plinko-peg-hit: #ff4081;
-
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-
-  --radius-chip: 8px;
-  --radius-input: 9px;
-  --radius-card: 12px;
-}
-
-* {
+/* The frame is the game's scene: a full-bleed canvas the host lays its controls over.
+   The values below are the v24 Plinko art, not platform tokens. */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-}
-
-/* The same scrollbar as the platform, see frontend/src/styles/index.css. */
-:root {
-  --scrollbar-thumb: rgb(255 255 255 / 0.12);
-  --scrollbar-thumb-active: rgb(255 255 255 / 0.32);
-}
-
-@supports selector(::-webkit-scrollbar) {
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-
-  ::-webkit-scrollbar-track,
-  ::-webkit-scrollbar-corner {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-button {
-    display: none;
-    width: 0;
-    height: 0;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    border: 3px solid transparent;
-    border-radius: 5px;
-    background-clip: content-box;
-    background-color: var(--scrollbar-thumb);
-  }
-
-  [data-scrolling]::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb-active);
-  }
-}
-
-@supports not selector(::-webkit-scrollbar) {
-  :root {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-
-  [data-scrolling] {
-    scrollbar-color: var(--scrollbar-thumb-active) transparent;
-  }
 }
 
 html,
 body {
+  height: 100%;
   margin: 0;
-  height: 100%;
   overflow: hidden;
-  background: var(--color-surface-1);
-  color: var(--color-ink-soft);
-  font-family: var(--font-sans);
-  font-size: 13.5px;
-  line-height: 1.5;
+  background: #05070b;
+  color: #e6ebf2;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  -webkit-tap-highlight-color: transparent;
 }
 
-.board {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  user-select: none;
+.scene {
+  position: fixed;
+  inset: 0;
 }
 
-#game-canvas {
+.scene canvas {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.label-mono {
-  font-family: var(--font-mono);
-  font-size: 10px;
+.tagline {
+  position: fixed;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  pointer-events: none;
+  font-family: 'IBM Plex Sans Condensed', sans-serif;
   font-weight: 500;
+  line-height: 1.1;
+}
+
+.tagline-left {
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: #ffe5bd;
+  text-shadow:
+    0 0 6px rgb(255 180 90 / 0.9),
+    0 0 18px rgb(255 150 60 / 0.55);
+}
+
+.tagline-right {
+  align-items: flex-end;
+  font-size: 12.5px;
   letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-ink-mute);
+  color: #f3f6ff;
+  text-shadow: 0 0 6px rgb(190 210 255 / 0.8);
 }
 
-.how-to-button {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: var(--radius-input);
-  background: var(--color-inset);
-  color: var(--color-ink-mute);
-  font: 500 13px var(--font-mono);
-  cursor: pointer;
-  transition: background-color 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+.tagline-rule {
+  width: 18px;
+  height: 1.5px;
+  margin-top: 6px;
+  background: currentColor;
 }
 
-.how-to-button:hover {
-  background: var(--color-wash);
-  color: var(--color-ink-soft);
+.tagline-left .tagline-rule {
+  box-shadow: 0 0 8px rgb(255 170 80 / 0.9);
 }
 
-@media (max-width: 1023px) {
-  .how-to-button {
-    width: 44px;
-    height: 44px;
+.tagline-right .tagline-rule {
+  width: 16px;
+}
+
+/* A phone's board leaves only narrow gutters, so the taglines shrink to stand in them. */
+@media (width < 768px) {
+  .tagline {
+    gap: 5px;
+  }
+
+  .tagline-left {
+    font-size: 11px;
+  }
+
+  .tagline-right {
+    font-size: 9px;
+  }
+
+  .tagline-rule {
+    width: 13px;
+    margin-top: 4px;
+  }
+
+  .tagline-right .tagline-rule {
+    width: 11px;
   }
 }
 
-.splash {
-  position: absolute;
+.toasts {
+  position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--color-surface-1);
+  z-index: 6;
+  pointer-events: none;
 }
 
-.splash[hidden] {
-  display: none;
-}
-
-.splash-title {
-  font-size: 20px;
+.toast {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 5px 9px;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 9px;
+  background: rgb(8 12 18 / 0.86);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+  color: #b3bfcf;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.how-to {
-  width: min(100% - 32px, 400px);
-  max-height: calc(100% - 72px);
-  margin: 56px auto 16px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-card);
-  background: var(--color-surface-1);
-  color: var(--color-ink-soft);
-}
-
-.how-to::backdrop {
-  background: rgb(11 15 20 / 0.7);
-}
-
-.how-to-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-height: calc(100vh - 72px);
-  padding: 16px;
-}
-
-.how-to-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.how-to-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  list-style: none;
-}
-
-.how-to-step {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px;
-  border-radius: var(--radius-input);
-  background: var(--color-inset);
-}
-
-.how-to-step p {
-  margin: 0;
-  color: var(--color-ink-mute);
-  text-wrap: pretty;
-}
-
-.how-to-close {
-  min-height: 44px;
-  border: 0;
-  border-radius: var(--radius-chip);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font: 600 13px var(--font-sans);
-  cursor: pointer;
-  transition: background-color 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.how-to-close:hover {
-  background: var(--color-accent-hi);
-}
-
-@media (min-width: 1024px) {
-  .how-to-close {
-    min-height: 34px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition-duration: 0.01ms !important;
-  }
+.toast-win {
+  color: #4af2a4;
 }

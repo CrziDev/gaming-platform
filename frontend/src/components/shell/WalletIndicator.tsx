@@ -1,7 +1,7 @@
-import { ChevronDown } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { currencySymbol, formatMoney, type Money } from '@/lib/money'
+import { formatMoney, type Money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
 export function WalletIndicator({ balance }: { balance: Money }) {
@@ -9,30 +9,46 @@ export function WalletIndicator({ balance }: { balance: Money }) {
 
   return (
     <>
-      <Link
-        to={paths.wallet}
-        aria-label={`Wallet balance ${full}`}
-        className="tap-target flex min-h-9 shrink-0 items-center gap-1.5 rounded-input bg-inset py-1 pr-2 pl-1.5 text-ink-soft transition-[color,background-color,transform] duration-fast ease-standard hover:bg-wash active:translate-y-px motion-reduce:transform-none sm:gap-2 sm:pr-2.5 sm:pl-2 lg:min-h-[34px]"
-      >
-        <span
-          aria-hidden
-          className="flex size-[19px] items-center justify-center rounded-full bg-gold text-[11px] font-semibold text-on-gold"
+      <div className="glass-pill flex h-11 shrink-0 items-center gap-1.5 rounded-pill pr-1 pl-2.5 sm:h-11.5 sm:gap-2 sm:pr-[5px] sm:pl-3">
+        <Link
+          to={paths.wallet}
+          aria-label={`Wallet balance ${full}`}
+          className="flex min-h-11 items-center gap-2 text-ink transition-opacity duration-fast ease-standard hover:opacity-85"
         >
-          {currencySymbol(balance.currency)}
-        </span>
-        <span
-          key={`${balance.currency}-${balance.amount_minor}`}
-          aria-hidden
-          className="value-update font-mono text-[12.5px] font-medium tnum sm:text-[13.5px]"
+          <WalletGlyph />
+          <span
+            key={`${balance.currency}-${balance.amount_minor}`}
+            aria-hidden
+            className="value-update text-[13.5px] font-medium tnum sm:text-[15px]"
+          >
+            <span className="hidden sm:inline">{full}</span>
+            <span className="sm:hidden">{formatMoney(balance, { decimals: 'trim' })}</span>
+          </span>
+        </Link>
+        <Link
+          to={paths.deposit}
+          aria-label="Deposit"
+          title="Deposit"
+          className="cta-gradient cta-glow flex size-8.5 shrink-0 items-center justify-center rounded-full transition-[filter] duration-fast ease-standard hover:brightness-110 sm:size-9"
         >
-          <span className="hidden sm:inline">{formatMoney(balance, { symbol: false })}</span>
-          <span className="sm:hidden">{formatMoney(balance, { symbol: false, decimals: 'trim' })}</span>
-        </span>
-        <ChevronDown aria-hidden size={12} strokeWidth={2.2} className="hidden text-ink-mute sm:inline" />
-      </Link>
+          <Plus aria-hidden size={17} strokeWidth={3} />
+        </Link>
+      </div>
       <span className="sr-only" aria-live="polite">
         Wallet balance {full}
       </span>
     </>
+  )
+}
+
+function WalletGlyph() {
+  return (
+    <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" className="shrink-0 text-brand max-[379px]:hidden">
+      <path
+        fill="currentColor"
+        d="M4 6.5A2.5 2.5 0 0 1 6.5 4H18v3H6.5a.5.5 0 0 0 0 1H20a1 1 0 0 1 1 1v9.5a1.5 1.5 0 0 1-1.5 1.5h-13A2.5 2.5 0 0 1 4 17.5z"
+      />
+      <circle cx="16.5" cy="13.5" r="1.4" fill="#0a0f16" />
+    </svg>
   )
 }

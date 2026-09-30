@@ -43,7 +43,7 @@ export function Sidebar() {
       onFocusCapture={expandRail}
       data-state={mode}
       className={cn(
-        'hidden shrink-0 flex-col gap-3 overflow-x-clip overflow-y-auto bg-panel px-2 py-3 @rail:flex',
+        'glass-chrome hidden shrink-0 flex-col gap-3 overflow-x-clip overflow-y-auto border-r border-white/8 px-2 py-3 @rail:flex',
         'transition-[width] duration-layout ease-standard motion-reduce:transition-none',
         railWidth[mode],
       )}

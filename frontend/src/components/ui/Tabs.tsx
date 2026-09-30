@@ -35,7 +35,7 @@ export function ChipTabs<T extends string>({ items, value, onChange, label, clas
             className={cn(
               'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-chip px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-8',
               'transition-[color,background-color,opacity,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none',
-              active ? 'bg-surface-3 text-ink-soft' : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
+              active ? 'bg-selected text-ink' : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
               disabled && 'cursor-not-allowed text-ink-mute hover:bg-transparent',
             )}
           >
@@ -63,7 +63,7 @@ export function SegmentedTrack<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className={cn('scrollbar-hidden inline-flex max-w-full gap-0.5 overflow-x-auto rounded-input bg-inset p-0.5', className)}
+      className={cn('scrollbar-hidden inline-flex max-w-full gap-0.5 overflow-x-auto rounded-input border border-hairline bg-field p-0.5', className)}
     >
       {items.map((item) => {
         const active = item.id === value
@@ -76,9 +76,9 @@ export function SegmentedTrack<T extends string>({
             aria-disabled={disabled || undefined}
             onClick={() => !disabled && onChange(item.id)}
             className={cn(
-              'inline-flex min-h-10 shrink-0 items-center gap-2 rounded-[7px] px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-[26px]',
+              'inline-flex min-h-10 shrink-0 items-center gap-2 rounded-chip px-3 text-[12.5px] font-medium whitespace-nowrap lg:min-h-8',
               'transition-[color,background-color,opacity,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none',
-              active ? 'bg-wash text-ink-soft' : 'text-ink-mute hover:text-ink-soft',
+              active ? 'bg-selected text-ink' : 'text-ink-mute hover:text-ink-soft',
               disabled && 'cursor-not-allowed hover:text-ink-mute',
             )}
           >

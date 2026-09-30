@@ -82,13 +82,13 @@ export function AdminGameDetailPage() {
             return (
               <div key={currency} className="flex flex-col gap-2 border-t border-white/5 pt-3 first:border-0 first:pt-0">
                 <Row label={`${currency} minimum`}>
-                  <span className="font-mono tnum">{formatMoney(money(limits.min_wager_minor, currency))}</span>
+                  <span className="tnum">{formatMoney(money(limits.min_wager_minor, currency))}</span>
                 </Row>
                 <Row label={`${currency} maximum`}>
-                  <span className="font-mono tnum">{formatMoney(money(limits.max_wager_minor, currency))}</span>
+                  <span className="tnum">{formatMoney(money(limits.max_wager_minor, currency))}</span>
                 </Row>
                 <Row label={`${currency} step`}>
-                  <span className="font-mono tnum">{formatMoney(money(limits.wager_step_minor, currency))}</span>
+                  <span className="tnum">{formatMoney(money(limits.wager_step_minor, currency))}</span>
                 </Row>
               </div>
             )
@@ -107,12 +107,12 @@ export function AdminGameDetailPage() {
       {game.rtp_options.length > 0 ? (
         <Panel title="RTP" bodyClassName="flex flex-col gap-2.5 p-5">
           <Row label="Playing at">
-            <span className="font-mono tnum">
+            <span className="tnum">
               {game.rtp_basis_points === null ? 'not set' : formatPercent(game.rtp_basis_points)}
             </span>
           </Row>
           <Row label="Options">
-            <span className="font-mono tnum">{game.rtp_options.map((option) => formatPercent(option)).join(' · ')}</span>
+            <span className="tnum">{game.rtp_options.map((option) => formatPercent(option)).join(' · ')}</span>
           </Row>
           <Link to={adminPaths.rtp} className="pt-1 text-[13px] text-accent-ink hover:text-accent-hi">
             Change on the RTP page →

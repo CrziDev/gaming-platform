@@ -119,7 +119,7 @@ export function Modal({
           if (!open) setPresent(false)
         }}
         className={cn(
-          'overlay-shadow relative flex max-h-[calc(100dvh-1.5rem)] w-full flex-col bg-surface-1 sm:max-h-[calc(100dvh-3rem)]',
+          'glass-menu relative flex max-h-[calc(100dvh-1.5rem)] w-full flex-col sm:max-h-[calc(100dvh-3rem)]',
           open ? 'dialog-enter' : 'dialog-exit',
           placement === 'bottom' ? 'rounded-t-card' : 'rounded-t-card sm:rounded-card',
           sizes[size],

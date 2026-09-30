@@ -49,7 +49,7 @@ export function GamesPage({ flag }: { flag?: GameFlag }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{shelf?.title ?? 'Games'}</h1>
+      <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">{shelf?.title ?? 'Games'}</h1>
 
       <div className="flex flex-col gap-4">
         <ChipTabs

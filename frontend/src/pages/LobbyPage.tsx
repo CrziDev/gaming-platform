@@ -60,7 +60,7 @@ export function LobbyPage() {
         ) : gamesQuery.isError ? (
           <ErrorState message={gamesQuery.error.message} onRetry={() => void gamesQuery.refetch()} />
         ) : gamesQuery.data.length === 0 ? (
-          <p className="rounded-card bg-surface-1 px-4 py-6 text-center text-[13.5px] text-ink-mute">
+          <p className="rounded-card glass-panel px-4 py-6 text-center text-[13.5px] text-ink-mute">
             Nothing in this category yet.
           </p>
         ) : (

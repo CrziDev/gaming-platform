@@ -1,87 +1,101 @@
 # Design system
 
-The look and feel of the platform, v2. Tokens are defined once in
-`frontend/src/styles/index.css` under `@theme`; nothing reintroduces a raw hex that a
-token already names. Where this file and a reference mockup disagree, this file wins.
+The look and feel of the platform, v3 — the v24 Plinko design carried to every screen.
+Tokens are defined once in `frontend/src/styles/index.css` under `@theme`, with the
+surface recipes as utilities beside them; nothing reintroduces a raw value that a token
+or utility already names. Where this file and a reference mockup disagree, this file wins.
+The reference for v3 is `docs/design-reference/plinko-v24.html`.
 
 ## Direction
 
-Restrained, dense, product-like. The energy comes from content — game art, win amounts,
-live chat — never from chrome. If a surface competes with a game tile for attention, it
-is wrong. The lobby merchandises, the game page gets out of the way, the wallet is
-visible in every header, and the admin console is the same tokens with the decoration
-removed.
+Dark glass over a near-black ground, one saturated green, and game art that glows. The
+energy comes from content — the 3D board, game art, win amounts, live chat — and from
+the one primary action on a screen. Everything else is quiet glass that lets the content
+through.
 
-- **Artwork is the colour.** Chrome is a ladder of neutral greys plus one accent. Every
-  other hue on screen comes from game art, the gold currency mark, and win amounts.
-- **Wallet is ambient.** One balance renders in the header on every route, at every
+- **Glass is the surface language.** Chrome, panels, menus, and dialogs are translucent
+  dark glass with a backdrop blur, a white hairline, and a 1px inset top highlight.
+- **One call to action glows.** The primary or play action is the only filled, gradient,
+  glowing control in a region. Everything else is a glass or ghost control.
+- **Wallet is ambient.** One balance renders in the top bar on every route, at every
   width, in tabular figures that never reflow. A player may hold a wallet per currency,
-  but the header shows exactly one — the active wallet. Switching is a deliberate act on
+  but the top bar shows exactly one — the active wallet. Switching is a deliberate act on
   the wallet page, never a second figure in the chrome.
 - **The host is agnostic.** Bet controls and side panels are slots the platform may fill,
   or leave empty when the game supplies its own.
 - **Mobile is the source layout.** Each screen is authored at 390px and expanded. Desktop
-  adds columns; it never adds features. Every page works down to 720px without a
-  horizontal scrollbar, and the touch shell keeps its 44px targets.
+  adds room; it never adds features. Every page works down to 360px without a horizontal
+  scrollbar, and the touch shell keeps its 44px targets.
 
 ## Hard rules
 
-1. **No gradients** on backgrounds, buttons, text, or badges. Flat fills only. The
-   exceptions are the two scrims that fade artwork into chrome so text over it stays
-   legible: `tile-scrim` at the bottom of a game tile and `banner-scrim` over the lobby
-   banner's artwork.
-2. **Background steps before borders.** Regions are separated by background step
-   (`base` → `panel` → `surface-1` → `surface-2` → `surface-3`). A quiet neutral
-   hairline is allowed where it communicates selection, separates dense tabular data,
-   or defines an edge that moves over content. It is not routine card decoration and
-   there are no general-purpose `line` tokens.
-3. **No glows or coloured shadows.** Elevation is primarily background lightness.
-   Floating overlays and fixed sheets may add the shared neutral overlay shadow when a
-   surface step alone does not separate them from moving content; routine cards do not.
-4. **No decorative texture** — no stripe overlays, radial blooms, noise, glass, or blur.
-5. **One accent.** Green `accent` fills primary actions; `accent-ink` is the same accent as
-   text, link, or live dot. Gold is reserved for the currency mark and win amounts.
-   Status tints (`success`, `warning`, `danger`) exist only for state a person must act
-   on — pending, rejected, credit — and never as decoration.
+1. **Gradients only where named.** The primary and play fill (`cta-gradient`) and the two
+   scrims that fade artwork into chrome (`tile-scrim`, `banner-scrim`). Never on text,
+   badges, cards, or backgrounds.
+2. **Glow only on the call to action.** `cta-glow` sits on primary and play buttons and
+   the round + deposit. Status, links, and cards never glow. Glow inside a game frame is
+   game art and is not governed here.
+3. **Glass recipes, not ad-hoc blur.** A surface is one of `glass-chrome`, `glass-panel`,
+   or `glass-menu`. No other blur values, no noise, no stripes, no radial blooms.
+4. **Hairlines are white at 8–16%.** They edge glass surfaces and separate dense tabular
+   data. There are no coloured borders except a status badge's own tint.
+5. **One green.** `brand` is the wordmark and the wallet icon; `accent-ink` is links and
+   live dots; the CTA gradient is the only green fill; `selected` is the green tint behind
+   a chosen option. Gold is reserved for the crown and win amounts. Status tints
+   (`success`, `warning`, `danger`) exist only for state a person must act on.
 6. Keep chrome visually quiet, but preserve a visible scrollbar when content can overflow
    and dragging is not obvious or accessible. Hide a track only on deliberate touch-first
    carousels that remain keyboard-scrollable and expose another overflow cue.
-7. **Two typefaces, no display font.** IBM Plex Sans for everything; IBM Plex Mono for
-   numbers, timestamps, and uppercase micro-labels only.
-8. **Max weight 600.** No 700 anywhere.
-9. **Nothing fully round** except avatars and status dots.
+7. **Two platform typefaces.** IBM Plex Sans for everything read, including money; IBM
+   Plex Mono for micro-labels, IDs, and timestamps. Inter and IBM Plex Sans Condensed are
+   permitted only inside the Plinko frame (cup labels and taglines).
+8. **Weight 700 for display only.** Page and game titles, the wordmark, and CTA labels.
+   Everything else is 400–600.
+9. **Round only where named.** Avatars, status dots, round utility buttons (profile, bell,
+   chat, + deposit), and the wallet pill. Every other control uses the radius scale.
+
+## Brand lines
+
+`PLAY SMART` under the wordmark, a game's subtitle (Plinko: `RISK · PLAY · WIN`), and
+the Plinko taglines (`GOOD PLAYERS BET BETTER`, `SAME GAME BIGGER VIEWS`) are brand art,
+not interface copy. They are not governed by the copy standard and are never extended
+into explanatory text.
 
 ## Surfaces and ink
 
-| Token | Value | Use |
+| Token / utility | Value | Use |
 | --- | --- | --- |
-| `base` | `#0b0f14` | The page ground and the modal scrim (`base/70`) |
-| `panel` | `#11161d` | Persistent chrome — top bar, sidebar, bottom nav, chat rail |
-| `surface-1` | `#151b23` | Cards, list rows, table rows |
-| `surface-2` | `#1b232c` | Card hover; popovers and menus; raised objects inside a card |
-| `surface-3` | `#252c36` | Media placeholders, active chips, avatars |
-| `banner` | `#16202a` | The lobby banner panel |
-| `wash` | `rgb(255 255 255 / .06)` | Hover wash on chrome, active nav row |
-| `inset` | `rgb(255 255 255 / .045)` | Inset fields and quiet buttons at rest |
+| `base` | `#05070b` | The page ground and the modal scrim (`base/70`) |
+| `glass-chrome` | `rgb(7 10 15 / .8)` + `blur(14px) saturate(1.2)` | Top bar, sidebar, bottom nav, drawer, chat rail |
+| `glass-panel` | `rgb(10 14 20 / .8)` + `blur(16px) saturate(1.2)`, hairline 10%, inset highlight | Cards, panels, the bet panel |
+| `glass-menu` | `rgb(14 19 27 / .96)`, hairline 12%, overlay shadow | Menus, popovers, dialogs |
+| `surface-1` | `#0c1017` | Solid card ground where blur would be wasted (tables, long lists) |
+| `surface-2` | `#121821` | Raised object inside a card; row hover |
+| `surface-3` | `#1a212c` | Media placeholders, active chips, avatars |
+| `banner` | `#0d131b` | The lobby banner panel |
+| `wash` | `rgb(255 255 255 / .06)` | Hover wash on chrome and glass controls |
+| `inset` | `rgb(255 255 255 / .045)` | Glass controls at rest |
+| `field` | `rgb(0 0 0 / .35)` | Inputs and the bet stepper |
 | `ink` | `#f2f6fb` | Headings and strong values |
 | `ink-soft` | `#e6ebf2` | Body and UI text — the `body` default |
+| `ink-control` | `#dfe6f0` | Labels on glass controls |
 | `ink-mute` | `#8a99ad` | Secondary text. **The floor: nothing renders dimmer.** |
-
-`ink-mute` is the only muted ink. Anything that used to be fainter renders as `ink-mute`
-or does not render.
 
 ## Accent and status
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `accent` | `#2fa96c` | Primary button fill |
-| `accent-hi` | `#37bd79` | Primary button hover |
-| `accent-ink` | `#3ec07d` | Accent as text, link, or live dot |
-| `on-accent` | `#07160e` | Ink on an accent fill |
-| `gold` / `on-gold` | `#caa04a` / `#17120a` | The ₱ disc beside a balance or a win |
+| `brand` | `#2fe38a` | "Bet" in the wordmark, the wallet icon |
+| `accent-ink` | `#3ee08e` | Links, live dots, focus ring |
+| `accent-hi` | `#7cf0b5` | Link hover |
+| `cta-gradient` | `#4af2a4 → #1dcf7b → #11a860` (180deg) | Primary and play fill |
+| `cta-glow` | `0 0 26px rgb(40 230 130 / .42)` + inset highlights | Primary and play |
+| `on-accent` | `#04150b` | Ink on the CTA fill |
+| `selected` | `rgb(47 227 138 / .14)` | Chosen option, active nav row |
+| `gold` | `#f2c14e` | The crown; the ₱ disc beside a win |
 | `win` | `#e8c883` | Win amounts in the big-wins strip |
 | `success` | `#3ec07d` | Credit figures, approved, active |
-| `warning` | `#f5b23b` | Pending, in review — the one status hue v2 did not name |
+| `warning` | `#f5b23b` | Pending, in review |
 | `danger` | `#e05a5a` | Rejected, suspended, destructive, the alert dot |
 
 Status colours never fill behind body text. A badge is a 12% tint carrying full-strength
@@ -89,60 +103,81 @@ ink, with no border.
 
 ## Typography
 
-IBM Plex Sans for everything read; IBM Plex Mono for every number that can change —
-balances, bets, IDs, timestamps, RTP values — so digits never jump width. Money always
-renders with tabular figures (`tnum`). Numerals are Mono 500.
+IBM Plex Sans with tabular figures (`tnum`) for every amount that can change, so digits
+never jump width. IBM Plex Mono for micro-labels with wide tracking.
 
 | Role | Size · weight | Notes |
 | --- | --- | --- |
-| banner headline | 28 · 600 (22 under 760) | `1.1`, `-.02em`, `ink`, `text-balance` |
-| page title | 20 · 600 | `-.01em`, `ink` — the one size the v2 source did not specify |
-| section / panel heading | 14 · 600 | `-.01em`, `ink-soft` |
+| game title | 32 · 700 (26 under 640 and in the side panel) | `1`, `-.03em`, `ink` |
+| banner headline | 28 · 700 (22 under 760) | `1.1`, `-.02em`, `ink`, `text-balance` |
+| page title | 22 · 700 | `-.02em`, `ink` |
+| section / panel heading | 15 · 600 | `-.01em`, `ink-soft` |
 | body | 13.5 · 400 | `1.5`, `ink-mute` for copy, `ink-soft` for UI text, `text-pretty` |
-| UI label / button | 12.5–13.5 · 500–600 | |
-| card title | 12 · 500 | |
-| studio / meta | 11 · 400 | `ink-mute` |
-| micro-label (`label-mono`) | Mono 10 · 500 | `.12em`, uppercase |
+| money, prominent | 21 · 500 (18 in the bet panel under 640) | `tnum`, `ink` |
+| UI label / button | 13.5–14 · 500–600 | CTA labels 700 |
+| card title | 12.5 · 500 | |
+| meta | 11 · 400 | `ink-mute` |
+| micro-label (`label-mono`) | Mono 10–11 · 500 | `.14em`, uppercase |
+| wordmark sub-line | Mono 8.5 · 400 | `.34em`, `ink-mute` |
 
 ## Spacing
 
-Gaps: 1–2px within a nav list · 6–8px within a control cluster · 10px grid gutters ·
-12px section internals · 20px between sections. Main padding 14px, content max-width
-1320px. Card padding 12–16px.
+Gaps: 2px within a menu list · 8–12px within a control cluster · 10px grid gutters ·
+14px section internals · 20px between sections. Main padding 14px (18px inside the game
+column), content max-width 1320px. Panel padding 16px; under 640px the bet panel uses
+12px with 10px internals.
 
 ## Radius and elevation
 
-`chip 8` (chips, buttons) · `input 9` (controls, inset fields) · `tile 10` (tiles, rows) ·
-`card 12` (cards, panels, modals). Avatars and status dots are the only full circles.
+`chip 10` (chips, icon buttons, menu items) · `input 14` (controls, inputs, steppers,
+buttons) · `tile 14` (tiles, rows) · `card 20` (panels, dialogs) · `pill` (the wallet
+pill). Round utility buttons and avatars are full circles.
 
-Depth starts with the surface ladder: a card is `surface-1` on `base`; a menu is
-`surface-2`; a modal is `surface-1` over the `base/70` scrim. A subtle neutral overlay
-shadow is reserved for floating menus, dialogs, drawers, and fixed sheets. A neutral
-hairline may clarify a selected control or an edge that moves over content, but it is
-not used to divide routine page regions.
+Depth is glass over ground: a panel is `glass-panel` on `base`; a menu or dialog is
+`glass-menu` over the `base/70` scrim with the overlay shadow. A panel may carry the deep
+panel shadow (`0 20px 50px rgb(0 0 0 / .5)`) when it floats over art.
 
 ## Controls
 
-Heights on the desktop shell (1024px and up): 26 segmented · 32 icon button and chip ·
-34 input, balance chip, Deposit · 36 nav row · 38 banner CTA. Below 1024px every tap
-target is 44px; the in-game play action is 52px everywhere.
+Heights: 36 menu item · 42 menu button · 44 game title-row controls (FAIR GAME, sound,
+favourite) · 46 top-bar utilities and wallet pill · 50 secondary glass control (risk menu)
+· 60 stepper and play action.
+Below 1024px every tap target is at least 44px.
 
-Variants: primary (accent fill), secondary (`inset` fill, `wash` on hover), ghost,
-destructive (`danger` tint), play (primary at 52px, `tile` radius). Hover is primarily a
-background swap. Pressed feedback may use colour, opacity, or at most 1px of translation;
-controls never bounce or scale.
+Variants: primary (CTA gradient + glow, 700), secondary (`inset` fill + hairline, `wash`
+on hover), ghost, destructive (`danger` tint), play (primary at 60px, `input` radius).
+Hover is a background swap or a 1.08–1.1 brightness on the CTA. Pressed feedback may use
+colour, opacity, or at most 1px of translation; controls never bounce or scale.
 
 ## Shell
 
-- Top bar 56px on `panel`: menu glyph (asymmetric 4-bar in an `inset` container) ·
-  `HeziBet` wordmark, no mark · balance chip (₱ disc on `gold`, mono figure, chevron;
-  links to the wallet) **visually separate from** the green Deposit button · chat toggle ·
-  bell with a `danger` dot · avatar → surname → chevron.
-- Left rail on `panel`: 192px expanded / 56px collapsed. Search above; Home, Games,
-  Wallet, History; the category browse group; Support and Language pinned to the
-  bottom. No separators, no badges, no counts. Active row is `wash` + `ink-soft`.
-- Chat rail on the right, 272px on `panel`, closable, with a toggle in the top bar.
-- Below the rail breakpoint the rail becomes a drawer and a bottom nav on `panel`.
+- Top bar 72px on `glass-chrome` with a hairline bottom edge: plain three-bar menu button
+  (42px) · a 1px divider · the wordmark (`Hezi` in white, `Bet` in `brand`, the gold crown
+  above the `B`, `PLAY SMART` beneath) · the wallet pill (46px: `brand` wallet icon,
+  balance in Sans 15 · 500 `tnum`, round 36px CTA + that opens a deposit; the balance links
+  to the wallet) · chat toggle · bell with a `danger` dot · round 46px profile button.
+- Left rail on `glass-chrome`: 192px expanded / 56px collapsed. Search above; Home, Games,
+  Wallet, History; the category browse group; Support and Language pinned to the bottom.
+  No separators, no badges, no counts. Active row is `selected` + `ink`.
+- Chat rail on the right, 272px on `glass-chrome`, closable, with a toggle in the top bar.
+- Below the rail breakpoint the rail becomes a drawer and a bottom nav on `glass-chrome`.
+- The game route drops the bottom nav, rail, and chat on phones and keeps the top bar.
+
+## Game page
+
+A single centred column, 600px at most, as tall as its content up to the available
+height: the title row (game title, subtitle, FAIR GAME, sound, favourite), the board
+stage, and the bet panel.
+The stage keeps its aspect and shrinks so the play action is always visible without
+scrolling. The game's own scene fills the whole area behind the column; for Plinko that
+is the night-city background, which belongs to the Plinko page only. Round history follows
+below on the page ground.
+
+On a short screen — a viewport under 900px tall where the game zone is at least 640px
+wide — the column splits so the board keeps its size: the stage fills the available
+height, up to the board at its full 600px width, and a 340px side panel stands beside it
+with the title row at the top (the actions on a second line) and the bet panel level with
+the foot of the board. The bet panel stacks balance, risk, stake, and play.
 
 ## Game tile
 
@@ -154,10 +189,10 @@ reveals a Play chip by a 120ms opacity fade — no scale.
 
 ## Placeholders
 
-Until a title has art, its tile is a flat `surface-3` block with a centred uppercase
-mono caption (`game art`), and the lobby banner is the bare `banner` panel. Keep the slot
-and the aspect ratio; swap the fill when assets land. Never a gradient, an SVG
-illustration, or an emoji.
+Until a title has art, its tile is a flat `surface-3` block with a centred uppercase mono
+caption (`game art`), and the lobby banner is the bare `banner` panel. Keep the slot and
+the aspect ratio; swap the fill when assets land. Never a gradient, an SVG illustration,
+or an emoji.
 
 ## Lobby composition (top to bottom)
 
@@ -166,12 +201,17 @@ illustration, or an emoji.
    text sits on the left half over a horizontal scrim; below that it is 300px tall and the
    text sits above the art over a vertical one
 2. Big wins — horizontal snap row of 172px rows: avatar slot · username · ₱ disc · amount
-3. Category tabs — quiet chips, active = `surface-3`; `See all` pushed right
+3. Category tabs — glass chips, active = `selected`; `See all` pushed right
 4. Game grid
 5. Promotions — rows of 56px art slot + kicker / title / sub; 3 up / 2 up / 1 up
 6. Game grid (second set)
 
 A section with nothing to show does not render.
+
+## Admin console
+
+The same tokens and primitives as the player side, without background art or brand
+lines beyond the wordmark. Dense tables use `surface-1` rows with hairline separators.
 
 ## Money and status
 
@@ -188,9 +228,10 @@ everything else in `ink-mute` on `wash`.
 
 ## Icons
 
-A single outline set — 1.5px stroke, 24px grid, rounded caps. Lucide is the library; the
-only custom glyph is the top bar menu. Icons are always paired with a label in
-navigation; icon-only is permitted for header utilities at 44px targets on touch.
+A single outline set — 1.5–1.9px stroke, 24px grid, rounded caps. Lucide is the library;
+the custom glyphs are the crown in the wordmark and the filled wallet icon in the pill.
+Icons are always paired with a label in navigation; icon-only is permitted for top-bar
+utilities and game-page controls at 44px targets on touch.
 
 ## Motion
 
@@ -205,6 +246,8 @@ added merely to decorate, increase urgency, or keep a player engaged.
   with `transform` and `opacity`.
 - Directly interactive cards may translate by at most 2px. Media never zooms, bounces,
   pulses, or animates automatically.
+- A game frame animates its own play; a result is still only a display hint until the
+  server confirms settlement.
 - Loading indicators do not loop unless progress cannot otherwise be understood. Static,
   shape-matched skeletons are preferred.
 - `prefers-reduced-motion` is honoured. Under reduced motion, state remains legible and
@@ -222,26 +265,19 @@ overlays (bottom nav, drawer) use the matching viewport breakpoints.
 | 760–899 | Rail collapsed to icons unless the menu button expands it |
 | ≥ 900 | Rail expanded unless collapsed |
 | ≥ 1024 | Desktop control heights |
-| ≥ 1440 | Game page opens its third zone |
 
 Nothing ever emits a horizontal page scrollbar.
 
-## Retired in v2 and why
+## Retired in v3 and why
 
-- **Gradients** (game art, banner fades) — chrome must not compete with art; flat
-  placeholders until real assets land. The banner fade came back as `banner-scrim` once
-  Plinko's art did, because it fades art into chrome rather than decorating chrome.
-- **Multi-level and coloured shadow systems** (`shadow-e1`, `shadow-e2`,
-  `shadow-glow`) — background lightness remains the default; one neutral overlay shadow
-  is enough for floating UI.
-- **`line`, `line-strong`, `line-hover`** — dividers were the main source of visual
-  noise; every region is now a background step.
-- **Sora / `font-display` and weight 700** — one text face, max 600, reads calmer at
-  density.
-- **`ink-faint` (`#6b7a93`) and `highlight` (`#ff4e7a`)** — the grey failed contrast; the
-  pink was a second accent.
-- **`accent-press`** — hover is the only interactive state.
-- **`radius-sheet` (20px)** and full-pill controls — nothing is rounder than 12px except
-  an avatar or a dot.
-- **Pulsing skeletons, scale-on-hover, the header blur** — no loops, no scale
-  transforms, no glass.
+- **The flat v2 ladder** (`panel`, `#0b0f14` base, `#151b23` cards) — replaced by glass
+  over a darker ground so game scenes read through the chrome.
+- **"No gradients / no glows / no glass"** — v24 made the call to action and the surfaces
+  the design; they are now named recipes instead of bans.
+- **The `#2fa96c` accent and the ₱ disc in the top bar** — one brighter green, and a wallet
+  icon in the pill.
+- **Plex Mono for money** — v24 sets money in Plex Sans with tabular figures, which keeps
+  the no-reflow guarantee at a friendlier size.
+- **The 56px top bar and the asymmetric menu glyph** — the v24 top bar is 72px with a
+  plain three-bar menu and the crown wordmark.
+- **The 600 weight cap** — display titles and CTA labels are 700.

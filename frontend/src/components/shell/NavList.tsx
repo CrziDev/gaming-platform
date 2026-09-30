@@ -37,7 +37,7 @@ export function NavList({ items, mode = 'expanded', onNavigate }: NavListProps) 
         )
 
         const shape = cn(
-          'flex min-h-11 items-center gap-2.75 rounded-input px-2.75 text-[13.5px] lg:min-h-9',
+          'flex min-h-11 items-center gap-2.75 rounded-chip px-2.75 text-[13.5px] lg:min-h-9',
           'relative transition-[color,background-color,transform] duration-fast ease-standard active:translate-y-px motion-reduce:transform-none',
           railRow[mode],
         )
@@ -66,7 +66,7 @@ export function NavList({ items, mode = 'expanded', onNavigate }: NavListProps) 
                   cn(
                     shape,
                     isActive
-                      ? 'bg-wash font-medium text-ink-soft before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-sm before:bg-accent-ink'
+                      ? 'bg-selected font-medium text-ink'
                       : 'text-ink-mute hover:bg-wash hover:text-ink-soft',
                   )
                 }

@@ -3,9 +3,9 @@ import type { ComponentProps, ReactNode, SelectHTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 
 export const inputClass =
-  'w-full min-h-11 rounded-input bg-inset px-3 text-[13.5px] text-ink-soft lg:min-h-[34px] ' +
-  'placeholder:text-ink-mute transition-[color,background-color,opacity] duration-fast ease-standard ' +
-  'focus:bg-wash disabled:cursor-not-allowed disabled:text-ink-mute disabled:opacity-55'
+  'w-full min-h-11 rounded-input border border-hairline bg-field px-3.5 text-[13.5px] text-ink-soft lg:min-h-10 ' +
+  'placeholder:text-ink-mute transition-[color,background-color,border-color,opacity] duration-fast ease-standard ' +
+  'focus:border-hairline-strong disabled:cursor-not-allowed disabled:text-ink-mute disabled:opacity-55'
 
 type FieldProps = {
   label: string

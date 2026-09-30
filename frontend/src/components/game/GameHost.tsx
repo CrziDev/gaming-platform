@@ -1,5 +1,4 @@
-import { ShieldCheck } from 'lucide-react'
-import type { ReactNode, Ref, RefObject } from 'react'
+import { useLayoutEffect, useRef, type CSSProperties, type ReactNode, type Ref } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
@@ -12,117 +11,183 @@ export type GameFrame = {
   status: GameFrameStatus
   error?: string | undefined
   onRetry: () => void
-  aspect: 'portrait' | 'landscape'
 }
+
+export type GameStageRect = { x: number; y: number; width: number; height: number }
+
+// The stage rect plus the rects the platform's own controls cover, so the frame can keep
+// its art clear of them.
+export type GameLayout = GameStageRect & { controls: GameStageRect[] }
 
 type GameHostProps = {
   name: string
-  className?: string
-  ref?: RefObject<HTMLElement | null>
+  subtitle?: string | undefined
   frame?: GameFrame | undefined
   // Receives the iframe element once it mounts, so the caller can bind to it.
   frameRef?: Ref<HTMLIFrameElement | null> | undefined
-  chrome?: ReactNode
-  // True while this host is the fullscreen element, so the frame can keep its
-  // aspect ratio instead of stretching to whatever the screen's shape is.
-  fullscreen?: boolean
-  // Fits the frame inside a height-constrained mobile stage instead of using
-  // the desktop host's fixed height at wider phone orientations.
-  fitAvailable?: boolean
+  // Width over height of the board inside the stage.
+  stageAspect?: number | undefined
+  // Pixels the stage keeps clear between the board and each side of the screen, for
+  // art the frame draws beside it.
+  stageGutter?: number | undefined
+  // Where the stage and the controls sit over the frame, so the game can draw its board
+  // there and its art around them.
+  onStage?: ((layout: GameLayout) => void) | undefined
+  actions?: ReactNode
+  controls?: ReactNode
+  className?: string
 }
 
-// The one place a game renders. Without a frame it is the aspect-locked slot a
-// title without an engine still shows; with one it embeds the game page and
-// keeps the platform's chrome on top of it. It knows nothing about the bridge.
+// The one place a game renders: a zone the game's frame fills edge to edge, with the
+// platform's title row, the board's stage, and the bet panel laid over it in a single
+// centred column. The zone is as tall as that column, up to the height its caller
+// allows; below that the stage keeps the board's shape and shrinks so the bet panel
+// always fits. On a short, wide screen the column splits: the stage takes the full
+// height and the title row and bet panel stand beside it. It knows nothing about the
+// bridge.
 export function GameHost({
   name,
-  className,
-  ref,
+  subtitle,
   frame,
   frameRef,
-  chrome,
-  fullscreen = false,
-  fitAvailable = false,
+  stageAspect = 10 / 10.6,
+  stageGutter = 0,
+  onStage,
+  actions,
+  controls,
+  className,
 }: GameHostProps) {
-  // A portrait board keeps its ratio on a phone; beside a bet panel it takes a
-  // fixed height instead, and the game fits its board inside whatever it gets.
-  const ratio = frame?.aspect === 'portrait' ? 'aspect-4/5' : 'aspect-4/3 wide:aspect-16/10'
+  const zoneRef = useRef<HTMLElement>(null)
+  const headerRef = useRef<HTMLElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const controlsRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const zone = zoneRef.current
+    const stage = stageRef.current
+    if (!zone || !stage || !onStage) return
+
+    const measure = () => {
+      const outer = zone.getBoundingClientRect()
+      const within = (element: Element): GameStageRect => {
+        const inner = element.getBoundingClientRect()
+        return { x: inner.left - outer.left, y: inner.top - outer.top, width: inner.width, height: inner.height }
+      }
+      const board = within(stage)
+      if (board.width <= 0 || board.height <= 0) return
+      const controls = [headerRef.current, controlsRef.current]
+        .filter((element) => element !== null)
+        .map(within)
+        .filter((rect) => rect.width > 0 && rect.height > 0)
+      onStage({ ...board, controls })
+    }
+    measure()
+
+    window.addEventListener('resize', measure)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    for (const element of [zone, headerRef.current, stage, controlsRef.current]) {
+      if (element) observer?.observe(element)
+    }
+    return () => {
+      window.removeEventListener('resize', measure)
+      observer?.disconnect()
+    }
+  }, [onStage])
+
+  const clearOfGutters = `calc(100vw - ${2 * stageGutter}px)`
 
   return (
     <section
-      ref={ref}
-      aria-label={`${name} game canvas`}
-      className={cn(
-        'relative',
-        (fullscreen || fitAvailable) && 'flex size-full items-center justify-center',
-        fullscreen && 'bg-base [container-type:size]',
-        className,
-      )}
+      ref={zoneRef}
+      aria-label={`${name} game`}
+      className={cn('@container/game relative isolate flex min-h-0 flex-col overflow-hidden bg-base', className)}
     >
-      <div
-        className={cn(
-          'relative overflow-hidden bg-surface-3',
-          // A board is width-driven and can't grow past its container, so a
-          // screen taller than its ratio would otherwise stretch dead canvas
-          // below it. Fullscreen keeps the ratio and lets the screen letterbox
-          // instead of forcing the frame to fill a shape it wasn't drawn for.
-          fullscreen
-            ? frame?.aspect === 'portrait'
-              ? 'aspect-4/5 h-[min(100cqh,calc(100cqw*1.25))] max-h-full max-w-full rounded-card'
-              : 'aspect-4/3 w-[min(100cqw,calc(100cqh*1.3333))] max-h-full max-w-full rounded-card'
-            : fitAvailable
-              ? 'size-full rounded-card'
-            : cn(
-                'w-full rounded-card',
-                frame?.aspect === 'portrait' ? 'aspect-4/5 sm:aspect-auto sm:h-[600px]' : ratio,
-              ),
-        )}
-      >
-        {frame ? (
-          <iframe
-            key={frame.key}
-            ref={frameRef}
-            title={`${name} game`}
-            src={frame.url}
-            referrerPolicy="same-origin"
-            className="block size-full border-0"
-          />
-        ) : null}
+      {frame ? (
+        <iframe
+          key={frame.key}
+          ref={frameRef}
+          title={`${name} game`}
+          src={frame.url}
+          referrerPolicy="same-origin"
+          tabIndex={-1}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 block size-full border-0"
+        />
+      ) : null}
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-end gap-1.5 p-3">
-          <span className="label-mono inline-flex items-center gap-1.5 rounded-chip bg-base/70 px-2.5 py-1.5 text-ink-mute">
-            <ShieldCheck aria-hidden size={12} strokeWidth={1.5} />
-            Fair game
-          </span>
-          {chrome ? <div className="pointer-events-auto flex items-center gap-1">{chrome}</div> : null}
+      <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-col px-4.5 pt-3 pb-3.5 [container-type:inline-size] sm:pt-4 sm:pb-4 game-side:grid game-side:max-w-[1000px] game-side:grid-cols-[auto_340px] game-side:grid-rows-[auto_1fr] game-side:justify-center game-side:gap-x-6 game-side:gap-y-4">
+        <header
+          ref={headerRef}
+          className="flex items-start justify-between gap-3 game-side:col-start-2 game-side:row-start-1 game-side:flex-col game-side:justify-start"
+        >
+          <div className="min-w-0">
+            <h1 className="text-[26px] leading-none font-bold tracking-[-0.03em] text-white [text-shadow:0_2px_18px_rgb(0_0_0/0.5)] sm:text-[32px] game-side:text-[26px]">
+              {name}
+            </h1>
+            {subtitle ? (
+              <p className="mt-1.5 font-mono text-[10px] leading-none tracking-[0.24em] whitespace-nowrap text-[#d3dce8] [text-shadow:0_1px_2px_rgb(0_0_0/0.9),0_0_10px_rgb(0_0_0/0.85)] min-[480px]:tracking-[0.32em] sm:mt-2.5">
+                {subtitle}
+              </p>
+            ) : null}
+          </div>
+          {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
+        </header>
+
+        {/* As tall as the board at full width, less its gutters; shrinks when the zone runs out of height.
+            Beside the controls it is as tall as the screen allows, up to the board at full width. */}
+        <div
+          style={
+            {
+              flexBasis: `calc(min(100cqw + 2.25rem, ${clearOfGutters}) / ${stageAspect})`,
+              '--stage-aspect': stageAspect,
+            } as CSSProperties
+          }
+          className="-mx-4.5 mt-1.5 min-h-0 [container-type:size] game-side:col-start-1 game-side:row-span-2 game-side:row-start-1 game-side:mx-0 game-side:mt-0 game-side:h-(--stage-side-height) game-side:w-[min(calc(var(--stage-side-height)_*_var(--stage-aspect)),calc(100cqw_-_340px_-_1.5rem))] game-side:[--stage-side-height:min(calc(100dvh_-_6.5rem),calc(600px_/_var(--stage-aspect)))]"
+        >
+          <div
+            ref={stageRef}
+            style={{
+              aspectRatio: stageAspect,
+              width: `min(100cqw, calc(100cqh * ${stageAspect}), ${clearOfGutters})`,
+            }}
+            className="relative mx-auto max-h-full"
+          >
+            {!frame ? (
+              <div className="absolute inset-4 flex items-center justify-center rounded-card bg-surface-3">
+                <span className="label-mono text-ink-mute">{name}</span>
+              </div>
+            ) : null}
+
+            {frame?.status === 'loading' ? (
+              <div
+                role="status"
+                aria-label={`Loading ${name}`}
+                className="absolute inset-0 flex items-center justify-center font-mono text-[11px] tracking-[0.2em] text-ink-mute"
+              >
+                LOADING BOARD
+              </div>
+            ) : null}
+
+            {frame?.status === 'error' ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                <p className="text-[15px] font-semibold tracking-[-0.01em] text-ink">The game didn&rsquo;t load</p>
+                <p role="alert" className="max-w-[42ch] text-[13.5px] text-ink-mute text-pretty">
+                  {frame.error ?? 'It took too long to respond.'}
+                </p>
+                <Button variant="secondary" size="sm" onClick={frame.onRetry}>
+                  Try again
+                </Button>
+              </div>
+            ) : null}
+          </div>
         </div>
 
-        {!frame ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-            <span className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{name}</span>
-          </div>
-        ) : null}
-
-        {frame?.status === 'loading' ? (
+        {controls ? (
           <div
-            role="status"
-            aria-label={`Loading ${name}`}
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-1 text-center"
+            ref={controlsRef}
+            className="relative mt-1 shrink-0 game-side:col-start-2 game-side:row-start-2 game-side:mt-0 game-side:self-end"
           >
-            <span className="text-[20px] font-semibold tracking-[-0.01em] text-ink">{name}</span>
-            <span className="label-mono text-ink-mute">loading game</span>
-          </div>
-        ) : null}
-
-        {frame?.status === 'error' ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-1 px-6 text-center">
-            <p className="text-[15px] font-semibold tracking-[-0.01em] text-ink">The game didn&rsquo;t load</p>
-            <p role="alert" className="max-w-[42ch] text-[13.5px] text-ink-mute text-pretty">
-              {frame.error ?? 'It took too long to respond.'}
-            </p>
-            <Button variant="secondary" size="sm" onClick={frame.onRetry}>
-              Try again
-            </Button>
+            {controls}
           </div>
         ) : null}
       </div>

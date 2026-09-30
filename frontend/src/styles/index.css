@@ -1,24 +1,30 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-base: #0b0f14;
-  --color-panel: #11161d;
-  --color-surface-1: #151b23;
-  --color-surface-2: #1b232c;
-  --color-surface-3: #252c36;
-  --color-banner: #16202a;
+  --color-base: #05070b;
+  --color-panel: rgb(7 10 15 / 0.8);
+  --color-surface-1: #0c1017;
+  --color-surface-2: #121821;
+  --color-surface-3: #1a212c;
+  --color-banner: #0d131b;
   --color-wash: rgb(255 255 255 / 0.06);
   --color-inset: rgb(255 255 255 / 0.045);
+  --color-field: rgb(0 0 0 / 0.35);
+  --color-hairline: rgb(255 255 255 / 0.1);
+  --color-hairline-strong: rgb(255 255 255 / 0.16);
 
   --color-ink: #f2f6fb;
   --color-ink-soft: #e6ebf2;
+  --color-ink-control: #dfe6f0;
   --color-ink-mute: #8a99ad;
-  --color-on-accent: #07160e;
+  --color-on-accent: #04150b;
 
-  --color-accent: #2fa96c;
-  --color-accent-hi: #37bd79;
-  --color-accent-ink: #3ec07d;
-  --color-gold: #caa04a;
+  --color-brand: #2fe38a;
+  --color-accent: #1dcf7b;
+  --color-accent-hi: #7cf0b5;
+  --color-accent-ink: #3ee08e;
+  --color-selected: rgb(47 227 138 / 0.14);
+  --color-gold: #f2c14e;
   --color-on-gold: #17120a;
   --color-win: #e8c883;
   --color-success: #3ec07d;
@@ -28,16 +34,18 @@
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --radius-chip: 8px;
-  --radius-input: 9px;
-  --radius-tile: 10px;
-  --radius-card: 12px;
+  --radius-chip: 10px;
+  --radius-input: 14px;
+  --radius-tile: 14px;
+  --radius-card: 20px;
+  --radius-pill: 999px;
 
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
   --duration-fast: 120ms;
   --duration-standard: 180ms;
   --duration-layout: 220ms;
-  --shadow-overlay: 0 16px 40px rgb(0 0 0 / 0.28), 0 2px 8px rgb(0 0 0 / 0.18);
+  --shadow-overlay: 0 16px 40px rgb(0 0 0 / 0.5);
+  --shadow-panel: 0 20px 50px rgb(0 0 0 / 0.5);
 
   --breakpoint-chat: 720px;
   --breakpoint-rail: 760px;
@@ -46,6 +54,15 @@
   --container-chat: 720px;
   --container-rail: 760px;
   --container-rail-wide: 900px;
+}
+
+/* A short, wide game zone sets the board beside its controls instead of above them. */
+@custom-variant game-side {
+  @media (height < 900px) {
+    @container game (width >= 640px) {
+      @slot;
+    }
+  }
 }
 
 :root {
@@ -283,8 +300,54 @@ body {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+@utility glass-chrome {
+  background-color: rgb(7 10 15 / 0.8);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+@utility glass-panel {
+  background-color: rgb(10 14 20 / 0.8);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid var(--color-hairline);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+@utility glass-menu {
+  background-color: rgb(14 19 27 / 0.96);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: var(--shadow-overlay);
+}
+
+@utility glass-float {
+  background-color: rgb(10 14 20 / 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-hairline-strong);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
+}
+
+@utility glass-pill {
+  background-color: rgb(0 0 0 / 0.4);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+@utility cta-gradient {
+  background-image: linear-gradient(180deg, #4af2a4 0%, #1dcf7b 50%, #11a860 100%);
+  color: var(--color-on-accent);
+}
+
+@utility cta-glow {
+  box-shadow:
+    0 0 26px rgb(40 230 130 / 0.42),
+    inset 0 1px 0 rgb(255 255 255 / 0.55),
+    inset 0 -2px 0 rgb(0 0 0 / 0.15);
 }
 
 @utility tap-target {
@@ -304,7 +367,7 @@ body {
 }
 
 @utility tile-scrim {
-  background-image: linear-gradient(180deg, rgb(11 15 20 / 0), rgb(11 15 20 / 0.85));
+  background-image: linear-gradient(180deg, rgb(5 7 11 / 0), rgb(5 7 11 / 0.85));
 }
 
 @utility banner-scrim {
@@ -312,7 +375,7 @@ body {
     var(--banner-scrim-angle, 180deg),
     var(--color-banner) 0%,
     var(--color-banner) 55%,
-    rgb(22 32 42 / 0) 100%
+    rgb(13 19 27 / 0) 100%
   );
 }
 

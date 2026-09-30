@@ -353,9 +353,10 @@ These features do not require an engine.
   the seed now uses whole units too).
 - [x] Audit game creation and status changes.
 - [x] Reject a wager when its game is not active.
-- [x] Plinko's art is rendered from the game's own geometry and palette: the 3:4 tile at
-  `frontend/src/assets/games/plinko.png` and the landscape lobby banner at
-  `frontend/src/assets/banners/plinko.png`, from the SVG sources in `games/plinko/art/`.
+- [x] Plinko's art is captured from the game's own frame: the 3:4 tile at
+  `frontend/src/assets/games/plinko.jpg` and the landscape lobby banner at
+  `frontend/src/assets/banners/plinko.jpg`, both the v24 glass board over the city
+  (`docs/games/plinko-runtime.md`, Art).
   The tile renders `assets/games/<slug>.*` or `thumbnail_url` when present; the banner
   renders `assets/banners/<slug>.*`, then the thumbnail, then the placeholder.
 - [ ] Art for the remaining catalogue titles when assets arrive; they keep the

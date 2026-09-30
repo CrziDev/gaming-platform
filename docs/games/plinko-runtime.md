@@ -45,62 +45,75 @@ Recommendation: port critical logic — wallet, wager, outcome, and payout to Go
 
 ## Integrated frame — `games/plinko/web/`
 
+The frame is the v24 design's glass board (`docs/design-reference/plinko-v24.html`): eight
+rows of pegs on a bent acrylic pane over nine glowing cups, in front of a night-city
+backdrop. It replaced the port of the supplied Canvas 2D and Matter.js board on
+2026-09-30. The supplied package is still the reference for what the platform took over
+from the vendor; nothing of its drawing code remains.
+
 | File | Role |
 | --- | --- |
-| `index.html` | Canvas, the `?` how-to trigger, the static splash, the how-to `<dialog>`; loads Matter as a classic script and `js/main.js` as a module |
-| `css/plinko.css` | The design tokens copied from `frontend/src/styles/index.css` as custom properties, plus the splash, button, and dialog |
-| `js/main.js` | Boot order: `ui.mount` → `physics.init` → `bridge.start`; posts `ready` |
-| `js/state.js` | Rows, risk, multiplier table, sound flag, active bucket, result labels |
+| `index.html` | The full-viewport `#scene`, the two taglines, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
+| `css/plinko.css` | The frame's own art values: ground, taglines (smaller under 768px), and the result toast. It copies no platform tokens |
+| `js/main.js` | Boot: loads three.js, the optional bloom pass, and the label and tagline fonts (at most 2.5 s), builds the board, starts the bridge, posts `ready` |
+| `js/state.js` | Risk, the configured multipliers, sound flag, configured flag, and the host's stage rect |
 | `js/bridge.js` | The frame side of the protocol: guards origin, source, version, type, and fields |
-| `js/physics.js` | Board geometry, peg grid, ball drop, steering, the landing guard, peg-tick audio |
-| `js/theme.js` | Reads the tokens once and maps a bucket to a flat fill |
-| `js/ui.js` | Canvas sizing with device pixel ratio, splash, how-to dialog, multiplier text |
-| `js/vendor/` | `matter.min.js` 0.19.0 with its MIT licence |
+| `js/board.js` | The board: renderer, lighting, bloom, camera framing inside the stage rect, cup labels, the drop, the render-on-demand loop, and peg and landing tones |
+| `js/theme.js` | The cup bands (silver, teal, purple, orange, red by distance from the centre) and the label font |
+| `js/ui.js` | Tagline placement in the gutters between each frame edge and the nearest glass or host control at the tagline's own height: 40px from the edge where the gutter has room, centred in it otherwise, and hidden when a gutter cannot hold them clear; the result toast; and `formatMultiplier` |
+| `js/board/geometry.js` | Every dimension of the board and the curves the pane, fins, and mouths follow |
+| `js/board/kit.js` | Shared builders: canvas textures, glow sprites, highlight tubes, glass, subdivision, ribbons |
+| `js/board/background.js` | The city backdrop shader, shared with the tinted back panel so the panel samples the same pixels |
+| `js/board/pane.js`, `tray.js`, `fins.js`, `cups.js` | The pane and pegs; the base slab, front sheet, back panel, and opening shadow; the raked fins and side plates; the cups and drop mouths |
+| `js/board/flight.js` | The drop path to a given slot and the ball's position along it |
+| `img/city.jpg` | The 1916×821 backdrop, taken unchanged from the v24 design |
+| `js/vendor/` | three.js 0.169.0 (`three.module.min.js`, and the postprocessing addons the bloom pass needs) with its MIT licence |
 
-What was removed from the supplied game: the paytable, the outcome picker, the wallet
-and bet arithmetic, the bet and refill modals, the risk and rows pills, the play and
-auto controls, and the toasts. The platform supplies the rest; auto play and the
-refill modal are not carried over.
+three.js is vendored under `packages.md`'s rule for a supplied game's libraries: it never
+enters the React bundle. WebGL has no standard-library alternative, and the v24 board is
+a three.js scene; the addons are the four postprocessing passes and three shaders the
+bloom pass imports, copied from the same release.
 
 The board's table is the one behind the return the game is set to, read from
-`GET /api/games/{slug}/manifest` in integer hundredths.
-`frontend/src/features/gameplay/multipliers.ts` holds the supplied paytable as the demo
-fixture only; every shipped option differs from it on some low-risk boards
-(`plinko-rtp.md` §9).
+`GET /api/games/{slug}/manifest` in integer hundredths. The player plays only the 8-row
+board; the server still settles every row count, and the admin RTP inspector still
+offers each one. `frontend/src/features/gameplay/multipliers.ts` holds the supplied
+paytable as the demo fixture and the inspector's fixture only; every shipped option
+differs from it on some low-risk boards (`plinko-rtp.md` §9).
 
-### Landing guard
+### Landing
 
-The ball is steered toward the settled slot as in the supplied game. Below the last peg
-row it is held inside that bucket's lane, at the ribbon it is reported `landed` for that
-slot, a ball older than twelve seconds is removed and reported the same way, and a board
-reset reports every live ball first. The frame never pays on a physical position.
+The frame never decides an outcome. A `drop` names the slot the server settled; the
+frame builds a path of eight half-peg turns with exactly `slot` of them to the right,
+shuffles their order, and plays it as a fall onto the top peg, a bounce per row, an arc
+into the chute mouth, and a sink into the cup. It posts `landed` for that slot when the
+path ends. Under reduced motion the cup lights at once and `landed` is posted without
+the flight. A `drop` before the board is configured is reported landed at once.
 
 ### Palette
 
-The platform tokens plus the supplied game's own hues, declared once in `css/plinko.css`
-and mirrored in `frontend/src/features/gameplay/plinkoPalette.ts`. Pegs `ink-mute`,
-`--plinko-peg-hit` at 1.25× radius on contact. Ball `--plinko-ball`. Dropper `surface-2`
-over `panel`. Buckets are flat bands by distance from the centre: red at the edge where
-the pay is highest, then orange, purple, teal, lavender. The landing bucket lifts a few
-pixels for 260 ms with an `ink` outline and the host's result label is drawn above it in
-`win`. No gradients, shadows, or glows.
+The board's colours are game art, declared once in `js/theme.js` and nowhere in the
+platform. Each cup band shades its glass from deep to light, paints its label in its ink,
+and spills its glow onto the back wall, the front sheet, and the tray. The landing cup
+pulses for about half a second. The frame's toast shows the host's result label in green
+at or above 1× and in grey below it.
 
-### Art — `games/plinko/art/`
+### Backdrop
 
-| File | Role |
-| --- | --- |
-| `thumbnail.svg` | The 3:4 catalogue tile: the whole 8-row high-risk board, rendered to `frontend/src/assets/games/plinko.png` at 720×960 |
-| `banner.svg` | The lobby banner's background: the lower rows of the 12-row high-risk board and its 13-bucket ribbon on the `banner` ground, anchored to the right and bottom of a 2000×600 canvas so the panel keeps the ribbon at every width while its scrim fades the left into the text. Rendered to `frontend/src/assets/banners/plinko.png` |
+The v24 cover fit showed about a fifth of the photo's width on a phone, which upscaled it
+past its resolution. `js/board/background.js` shows at least 40% of the width on a narrow
+screen and 15% beyond cover on every screen, centres the photo's band on the board, and
+fades its edges into the ground; mipmaps keep desktop downscaling clean.
 
-Both are drawn from the frame's own numbers — `getBoardConfig` and the peg grid in
-`js/physics.js`, `bucketBand` in `js/theme.js`, the tokens above, `formatMultiplier` in
-`js/ui.js` — on the multipliers of the seeded 95% option, so the art is the board a
-player sees. The folder sits beside `web/`, not inside it, so `frontend/vite/gameFrames.ts`
-never copies the sources into `dist`. Re-render with
-`rsvg-convert -w 720 thumbnail.svg -o …/games/plinko.png` and
-`rsvg-convert -w 2000 banner.svg -o …/banners/plinko.png`; the labels are set in IBM Plex
-Mono, which the renderer must be able to find. `frontend/src/lib/gameArt.ts` resolves both
-PNGs by slug, and the lobby banner features the first catalogue title with a module in
+### Art
+
+The lobby banner (`frontend/src/assets/banners/plinko.jpg`, 2000×600) and the catalogue
+tile (`frontend/src/assets/games/plinko.jpg`, 720×960) are captures of this frame with the
+taglines hidden, the banner's board placed at the right so the phone crop keeps it and
+the tile's board full width over its lower scrim. To re-render, open the frame in a
+headless Chromium, send `configure` and a `layout` for the board's rect at that size with
+no `controls`, and screenshot the page. `frontend/src/lib/gameArt.ts` resolves both by slug, and the lobby
+banner features the first catalogue title with a module in
 `frontend/src/features/gameplay/registry.ts`.
 
 ## Server engine — `backend/internal/engine/`
@@ -166,29 +179,47 @@ the SPA.
 
 ## Host and bridge
 
-`frontend/src/components/game/GameHost.tsx` embeds the frame and overlays the platform
-chrome. `frontend/src/features/gameplay/` owns the protocol (`schemas.ts`, `bridge.ts`),
-the manifest query and the round request (`api.ts`), the page session (`session.ts`),
-the Plinko controls, and `GameHistory.tsx`, which `GamePage` renders under every title's
-board, engine or not: the player's own recent rounds on the game, read through the wallet
-feature's `useRecentRounds` from `GET /api/rounds?game_id=`, with a one-line empty state
-until the first bet settles and a link to the full history. The manifest is validated before it
-configures anything: every board the controls offer must be present with exactly
-rows + 1 positive integers.
-`GamePage` wires them; a slug with no module in `registry.ts`
-keeps the display-slot placeholder.
+`frontend/src/components/game/GameHost.tsx` is the game zone: the frame fills it edge to
+edge, and the platform lays a single centred column over it — the title row (name,
+subtitle, FAIR GAME, sound, favourite), the board's stage, and the bet panel. The stage
+keeps the board's 10:11.2 shape and shrinks so the bet panel always fits, and the zone is
+only as tall as the column, so round history follows straight after the bet panel. On a
+narrow screen the stage keeps the module's `stageGutter` (44px) clear on each side, so
+the board narrows and the taglines stand beside it. On a short screen (a viewport under
+900px tall, the zone at least 640px wide) the column splits through the `game-side`
+variant in `frontend/src/styles/index.css`: the stage takes the full height and the title
+row and bet panel stand in a 340px panel beside it. The stage's rect and the rects of the
+title row and bet panel, measured against the frame, are sent to the frame as `layout`;
+the frame frames its camera inside the stage and keeps the taglines clear of the
+controls. `frontend/src/features/gameplay/` owns the protocol (`schemas.ts`,
+`bridge.ts`), the manifest query and the round request (`api.ts`), the page session
+(`session.ts`), the risk menu (`RiskMenu.tsx`), the stake ladder (`stake.ts`), and
+`GameHistory.tsx`, which `GamePage` renders under every title's board, engine or not: the
+player's own recent rounds on the game, read through the wallet feature's
+`useRecentRounds` from `GET /api/rounds?game_id=`, with a one-line empty state until the
+first bet settles and a link to the full history. The manifest is validated before it
+configures anything: the 8-row board must be present for every risk with exactly nine
+positive integers; the other boards the server serves are ignored. `GamePage` wires them;
+a slug with no module in `registry.ts` keeps the display-slot placeholder.
 
-Protocol version 1, same-origin. The host accepts a message only when its origin is the
+The stepper walks a 1-2-5 ladder of stakes the server accepts — `min + n × step` inside
+the currency's wager limits, the limits themselves always included. Space places a bet
+unless focus is in a control or a dialog is open. FAIR GAME shows the manifest's return
+and the payouts of the board in play.
+
+Protocol version 3, same-origin. The host accepts a message only when its origin is the
 frame's and its source is the iframe's own window; the frame accepts only its parent on
-its own origin. Every message carries `v: 1`; an unknown version, type, or field is
-rejected.
+its own origin. Every message carries `v: 3`; an unknown version, type, or field is
+rejected, so a frame cached from an earlier version fails cleanly as
+`unsupported_version`.
 
 | Direction | Type | Fields |
 | --- | --- | --- |
 | frame → host | `ready` | `game` |
-| frame → host | `landed` | `round_id`, `slot` |
+| frame → host | `landed` | `round_id`, `slot` (0–8) |
 | frame → host | `error` | `code` (`bad_message`, `unsupported_version`, `runtime`), `message` |
-| host → frame | `configure` | `rows`, `risk`, `multipliers_hundredths`, `sound` |
+| host → frame | `configure` | `rows` (always 8), `risk`, `multipliers_hundredths` (nine), `sound` |
+| host → frame | `layout` | `x`, `y`, `width`, `height` — the stage rect in the frame, in CSS pixels; `controls` — up to four rects of the same shape that the host's controls cover |
 | host → frame | `drop` | `round_id`, `slot`, `multiplier_hundredths`, `result_label` |
 | host → frame | `set_sound` | `enabled` |
 
@@ -197,18 +228,22 @@ rejected.
 ### Lifecycle
 
 1. The iframe mounts and the host waits ten seconds for `ready`; silence is the error
-   state with a retry that remounts the frame.
-2. `ready` is answered with `configure` once the manifest has loaded, which builds the
-   board and hides the splash; until then the host shows the loading state and Place
-   bet is disabled. A manifest 404 or 409 is the error state with a retry that refetches
-   it and remounts the frame; no bet is offered against a table the player cannot see.
-   A second `ready` is a reloaded frame: the host settles everything outstanding and
-   configures again. The host sends only a board the frame does not already have.
-3. Place bet calls `POST /api/games/{slug}/rounds` with an `Idempotency-Key`, served by
-   `round.Handler.Play` through the engine registered for the slug, and a 404 is
-   reported as the game not being available on this server. Component tests settle
-   against the deterministic fixture in `src/mocks/plinko.ts`.
-4. The first submitted bet synchronously locks Place bet, rows, and risk, so rapid
+   state with a retry that remounts the frame. The frame sends `ready` only once its
+   board is built.
+2. `ready` is answered with `configure` once the manifest has loaded, and with `layout`
+   as soon as the stage has been measured; the host sends `layout` again whenever the
+   stage moves or resizes. Until the manifest has configured the board the host shows
+   LOADING BOARD and Place bet is disabled. A manifest 404 or 409 is the error state with
+   a retry that refetches it and remounts the frame; no bet is offered against a table
+   the player cannot see. A second `ready` is a reloaded frame: the host settles
+   everything outstanding and configures again. The host sends only a board the frame
+   does not already have.
+3. Place bet calls `POST /api/games/{slug}/rounds` with an `Idempotency-Key` and
+   `params: { rows: 8, risk }`, served by `round.Handler.Play` through the engine
+   registered for the slug, and a 404 is reported as the game not being available on
+   this server. Component tests settle against the deterministic fixture in
+   `src/mocks/plinko.ts`.
+4. The first submitted bet synchronously locks Place bet and the risk menu, so rapid
    clicks cannot start a second round before React renders the disabled controls. The
    lock remains through the request and the ball's flight; Plinko permits one active
    ball per page session. A request error releases it without dropping a ball.
@@ -223,8 +258,8 @@ rejected.
    carries its own multiplier and label. The board can therefore show a superseded
    option's table for at most one round after a switch.
 
-Sound is remembered per browser under `game.sound`; rows and risk under
-`game.plinko.rows` and `game.plinko.risk`.
+Sound is remembered per browser under `game.sound`, and risk under `game.plinko.risk`.
+A `game.plinko.rows` value left by an earlier version is ignored.
 
 ## Demo-only fixtures
 
@@ -235,4 +270,6 @@ entry never reach a production bundle.
 ## Checks
 
 `cd frontend && npm run typecheck && npm run lint && npm test && npm run build`. The
-frame itself is exercised through the host tests and a browser run of the demo.
+frame itself is exercised through the host tests and a headless Chromium run that drives
+the bridge: a board configured and laid out, a drop that lands in the requested slot and
+reports `landed`, and captures at phone and desktop sizes.

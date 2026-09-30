@@ -126,13 +126,13 @@ export function AdminUserDetailPage() {
         </section>
 
         <aside className="order-1 flex flex-col gap-5 wide:sticky wide:top-21 wide:order-2">
-          <section className="flex flex-col gap-4 rounded-card bg-surface-1 p-5">
+          <section className="flex flex-col gap-4 rounded-card glass-panel p-5">
             <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Wallets</h2>
             {wallets.map((wallet) => (
               <div key={wallet.currency} className="flex flex-col gap-3 pb-4 last:pb-0">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="label-mono text-ink-mute">{wallet.currency}</span>
-                  <span className="font-mono text-xl font-medium tnum">
+                  <span className="text-xl font-medium tnum">
                     {formatMoney(money(wallet.balance_minor, wallet.currency))}
                   </span>
                 </div>
@@ -152,7 +152,7 @@ export function AdminUserDetailPage() {
             ))}
           </section>
 
-          <section className="flex flex-col gap-3 rounded-card bg-surface-1 p-5">
+          <section className="flex flex-col gap-3 rounded-card glass-panel p-5">
             <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Account</h2>
             <dl className="flex flex-col gap-2 text-[13px]">
               <Row label="Account id">
@@ -279,7 +279,7 @@ function DepositsTab({ userId }: { userId: string }) {
           align: 'right',
           width: '150px',
           cell: (row) => (
-            <span className="font-mono text-sm font-medium tnum">
+            <span className="text-sm font-medium tnum">
               {formatMoney(money(row.amount_minor, row.currency))}
             </span>
           ),
@@ -290,7 +290,7 @@ function DepositsTab({ userId }: { userId: string }) {
           title={row.method_name}
           meta={`${row.reference} · ${formatRelative(row.created_at)}`}
           value={
-            <span className="font-mono text-sm font-medium tnum">
+            <span className="text-sm font-medium tnum">
               {formatMoney(money(row.amount_minor, row.currency))}
             </span>
           }
