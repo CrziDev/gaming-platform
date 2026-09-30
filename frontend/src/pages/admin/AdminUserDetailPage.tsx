@@ -131,7 +131,7 @@ export function AdminUserDetailPage() {
             {wallets.map((wallet) => (
               <div key={wallet.currency} className="flex flex-col gap-3 pb-4 last:pb-0">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="label-mono text-ink-mute">{wallet.currency}</span>
+                  <span className="label-mono text-ink-cool">{wallet.currency}</span>
                   <span className="text-xl font-medium tnum">
                     {formatMoney(money(wallet.balance_minor, wallet.currency))}
                   </span>

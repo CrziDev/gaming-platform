@@ -60,7 +60,7 @@ from the vendor; nothing of its drawing code remains.
 | `js/bridge.js` | The frame side of the protocol: guards origin, source, version, type, and fields |
 | `js/board.js` | The board: renderer, lighting, bloom, camera framing inside the stage rect, cup labels, the drop, the render-on-demand loop, and peg and landing tones |
 | `js/theme.js` | The cup bands (silver, teal, purple, orange, red by distance from the centre) and the label font |
-| `js/ui.js` | Tagline placement in the gutters between each frame edge and the nearest glass or host control at the tagline's own height: 40px from the edge where the gutter has room, centred in it otherwise, and hidden when a gutter cannot hold them clear; the result toast; and `formatMultiplier` |
+| `js/ui.js` | Tagline placement in the gutters between each frame edge and the nearest glass or host control at the tagline's own height: 40px from the glass or control beside it where the gutter has room, and never nearer the frame's edge than 40px; centred in the gutter otherwise, and hidden when a gutter cannot hold them clear; the result toast; and `formatMultiplier` |
 | `js/board/geometry.js` | Every dimension of the board and the curves the pane, fins, and mouths follow |
 | `js/board/kit.js` | Shared builders: canvas textures, glow sprites, highlight tubes, glass, subdivision, ribbons |
 | `js/board/background.js` | The city backdrop shader, shared with the tinted back panel so the panel samples the same pixels |

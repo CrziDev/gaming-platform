@@ -12,7 +12,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="glass-chrome grid shrink-0 grid-cols-5 border-t border-white/8 pb-[env(safe-area-inset-bottom)] rail:hidden"
+      className="glass-chrome grid shrink-0 grid-cols-5 border-t border-hairline pb-[env(safe-area-inset-bottom)] rail:hidden"
     >
       {playerNav.map((item) => {
         const Icon = item.icon

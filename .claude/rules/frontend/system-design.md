@@ -8,13 +8,14 @@ The reference for v3 is `docs/design-reference/plinko-v24.html`.
 
 ## Direction
 
-Dark glass over a near-black ground, one saturated green, and game art that glows. The
+Cool navy glass over a near-black ground, one saturated green, and game art that glows. The
 energy comes from content — the 3D board, game art, win amounts, live chat — and from
 the one primary action on a screen. Everything else is quiet glass that lets the content
 through.
 
 - **Glass is the surface language.** Chrome, panels, menus, and dialogs are translucent
-  dark glass with a backdrop blur, a white hairline, and a 1px inset top highlight.
+  navy glass with a backdrop blur, a cool hairline, a top-lit rim, and a 1px inset top
+  highlight. The blue lives in the glass; the ground stays near-black.
 - **One call to action glows.** The primary or play action is the only filled, gradient,
   glowing control in a region. Everything else is a glass or ghost control.
 - **Wallet is ambient.** One balance renders in the top bar on every route, at every
@@ -29,16 +30,21 @@ through.
 
 ## Hard rules
 
-1. **Gradients only where named.** The primary and play fill (`cta-gradient`) and the two
-   scrims that fade artwork into chrome (`tile-scrim`, `banner-scrim`). Never on text,
-   badges, cards, or backgrounds.
+1. **Gradients only where named.** The primary and play fill (`cta-gradient`), the two
+   scrims that fade artwork into chrome (`tile-scrim`, `banner-scrim`), and the two light
+   edges: `chrome-edge` under the top bar and `rim-light` on `glass-panel`,
+   `glass-float`, and `edge-lit`. Never on text, badges, cards, or backgrounds.
 2. **Glow only on the call to action.** `cta-glow` sits on primary and play buttons and
-   the round + deposit. Status, links, and cards never glow. Glow inside a game frame is
-   game art and is not governed here.
+   the round + deposit; the only other light is the `chrome-edge` bevel. Status,
+   links, and cards never glow. Glow inside a game frame is game art and is not governed
+   here.
 3. **Glass recipes, not ad-hoc blur.** A surface is one of `glass-chrome`, `glass-panel`,
-   or `glass-menu`. No other blur values, no noise, no stripes, no radial blooms.
-4. **Hairlines are white at 8–16%.** They edge glass surfaces and separate dense tabular
-   data. There are no coloured borders except a status badge's own tint.
+   `glass-float`, or `glass-menu`. No other blur values, no noise, no stripes, no radial
+   blooms.
+4. **Hairlines are cool white at 7–20%** (`hairline-soft`, `hairline`, `hairline-strong`,
+   all `rgb(170 205 255 / …)`). They edge glass surfaces, the lobby banner and big-wins
+   rows (`edge-lit`), and separate dense tabular data.
+   There are no hue-coloured borders except a status badge's own tint.
 5. **One green.** `brand` is the wordmark and the wallet icon; `accent-ink` is links and
    live dots; the CTA gradient is the only green fill; `selected` is the green tint behind
    a chosen option. Gold is reserved for the crown and win amounts. Status tints
@@ -65,21 +71,26 @@ into explanatory text.
 
 | Token / utility | Value | Use |
 | --- | --- | --- |
-| `base` | `#05070b` | The page ground and the modal scrim (`base/70`) |
-| `glass-chrome` | `rgb(7 10 15 / .8)` + `blur(14px) saturate(1.2)` | Top bar, sidebar, bottom nav, drawer, chat rail |
-| `glass-panel` | `rgb(10 14 20 / .8)` + `blur(16px) saturate(1.2)`, hairline 10%, inset highlight | Cards, panels, the bet panel |
-| `glass-menu` | `rgb(14 19 27 / .96)`, hairline 12%, overlay shadow | Menus, popovers, dialogs |
-| `surface-1` | `#0c1017` | Solid card ground where blur would be wasted (tables, long lists) |
-| `surface-2` | `#121821` | Raised object inside a card; row hover |
-| `surface-3` | `#1a212c` | Media placeholders, active chips, avatars |
-| `banner` | `#0d131b` | The lobby banner panel |
-| `wash` | `rgb(255 255 255 / .06)` | Hover wash on chrome and glass controls |
-| `inset` | `rgb(255 255 255 / .045)` | Glass controls at rest |
-| `field` | `rgb(0 0 0 / .35)` | Inputs and the bet stepper |
+| `base` | `#04070d` | The page ground and the modal scrim (`base/70`) |
+| `glass-chrome` | `panel`, `rgb(4 13 27 / .86)` + `blur(14px) saturate(1.2)` | Top bar, sidebar, bottom nav, drawer, chat rail |
+| `glass-panel` | `rgb(6 15 29 / .82)` + `blur(16px) saturate(1.2)`, `hairline`, `rim-light`, inset highlight | Cards, panels, the bet panel |
+| `glass-float` | `rgb(4 16 32 / .6)` + `blur(10px)`, `hairline-strong`, `rim-light`; `float-hover` on hover | Glass controls over game art (FAIR GAME, sound, favourite) |
+| `glass-menu` | `rgb(12 20 32 / .96)`, cool hairline 14%, overlay shadow | Menus, popovers, dialogs |
+| `surface-1` | `#0a111c` | Solid card ground where blur would be wasted (tables, long lists) |
+| `surface-2` | `#111a27` | Raised object inside a card; row hover |
+| `surface-3` | `#182333` | Media placeholders, active chips, avatars |
+| `banner` | `#0b1420` | The lobby banner panel, edged with `edge-lit` over its art |
+| `wash` | `rgb(150 190 255 / .08)` | Hover wash on chrome and glass controls |
+| `inset` | `rgb(140 180 240 / .06)` | Glass controls at rest |
+| `field` | `rgb(125 165 225 / .05)` | Inputs and the bet stepper, raised slightly above the panel |
+| `chrome-edge` | A 6px bevel: dark lip, faint halo, 1px ice-blue core with cyan and white glints, a halo below, dark shadow; ends fade | The top bar's bottom edge |
+| `rim-light` | 1px ring, `rgb(185 218 255 / .22)` at the top fading out by mid-height | Top-lit edge of `glass-panel`, `glass-float`, and `edge-lit` |
+| `edge-lit` | `hairline` border + `rim-light` | Solid objects that must separate from the ground: the lobby banner, big-wins rows |
 | `ink` | `#f2f6fb` | Headings and strong values |
 | `ink-soft` | `#e6ebf2` | Body and UI text — the `body` default |
-| `ink-control` | `#dfe6f0` | Labels on glass controls |
-| `ink-mute` | `#8a99ad` | Secondary text. **The floor: nothing renders dimmer.** |
+| `ink-control` | `#d4e1f7` | Labels on glass controls |
+| `ink-cool` | `#9db9e8` | Micro-labels and a game's subtitle |
+| `ink-mute` | `#8fa4c2` | Secondary text. **The floor: nothing renders dimmer.** |
 
 ## Accent and status
 
@@ -117,7 +128,7 @@ never jump width. IBM Plex Mono for micro-labels with wide tracking.
 | UI label / button | 13.5–14 · 500–600 | CTA labels 700 |
 | card title | 12.5 · 500 | |
 | meta | 11 · 400 | `ink-mute` |
-| micro-label (`label-mono`) | Mono 10–11 · 500 | `.14em`, uppercase |
+| micro-label (`label-mono`) | Mono 10–11 · 500 | `.14em`, uppercase, `ink-cool` |
 | wordmark sub-line | Mono 8.5 · 400 | `.34em`, `ink-mute` |
 
 ## Spacing
@@ -151,7 +162,7 @@ colour, opacity, or at most 1px of translation; controls never bounce or scale.
 
 ## Shell
 
-- Top bar 72px on `glass-chrome` with a hairline bottom edge: plain three-bar menu button
+- Top bar 72px on `glass-chrome` with a `chrome-edge` bottom edge: plain three-bar menu button
   (42px) · a 1px divider · the wordmark (`Hezi` in white, `Bet` in `brand`, the gold crown
   above the `B`, `PLAY SMART` beneath) · the wallet pill (46px: `brand` wallet icon,
   balance in Sans 15 · 500 `tnum`, round 36px CTA + that opens a deposit; the balance links
@@ -281,3 +292,6 @@ Nothing ever emits a horizontal page scrollbar.
 - **The 56px top bar and the asymmetric menu glyph** — the v24 top bar is 72px with a
   plain three-bar menu and the crown wordmark.
 - **The 600 weight cap** — display titles and CTA labels are 700.
+- **Neutral grey glass and white hairlines** — the v24 glass carries navy chroma at the
+  same darkness and its edges catch light; surfaces, hairlines, and secondary ink are now
+  cool, with the top bar's `chrome-edge` and the panels' `rim-light`.

@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn'
 import { paths } from '@/routes/paths'
 
 const itemClass =
-  'flex min-h-11 w-full items-center gap-2.5 rounded-chip px-3 text-[13.5px] text-ink-control transition-colors duration-fast hover:bg-white/7 hover:text-ink lg:min-h-10'
+  'flex min-h-11 w-full items-center gap-2.5 rounded-chip px-3 text-[13.5px] text-ink-control transition-colors duration-fast hover:bg-wash hover:text-ink lg:min-h-10'
 
 export function AccountMenu({ user }: { user: User }) {
   const [open, setOpen] = useState(false)
@@ -44,8 +44,8 @@ export function AccountMenu({ user }: { user: User }) {
         onClick={() => setOpen((value) => !value)}
         title={user.display_name}
         className={cn(
-          'glass-pill flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors duration-fast hover:bg-white/8 sm:size-11.5',
-          open && 'bg-white/8',
+          'glass-pill flex size-11 items-center justify-center rounded-full text-ink-soft transition-colors duration-fast hover:bg-wash sm:size-11.5',
+          open && 'bg-wash',
         )}
       >
         <svg aria-hidden width="21" height="21" viewBox="0 0 24 24" fill="currentColor">

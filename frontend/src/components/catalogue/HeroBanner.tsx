@@ -81,6 +81,8 @@ export function HeroBanner({ featured }: { featured: Game | undefined }) {
           </Link>
         </div>
       </div>
+
+      <span aria-hidden className="edge-lit pointer-events-none absolute inset-0 rounded-card" />
     </section>
   )
 }

@@ -102,7 +102,7 @@ export function HistoryPage() {
             <div className="lg:hidden">
               {groupedRounds.map(([day, rows]) => (
                 <section key={day} className="flex flex-col gap-2.5 pb-5">
-                  <h2 className="label-mono pt-1 text-ink-mute">{day}</h2>
+                  <h2 className="label-mono pt-1 text-ink-cool">{day}</h2>
                   {rows.map((round) => (
                     <RecordCard
                       key={round.id}
@@ -194,7 +194,7 @@ export function HistoryPage() {
           <div className="lg:hidden">
             {grouped.map(([day, rows]) => (
               <section key={day} className="flex flex-col gap-2.5 pb-5">
-                <h2 className="label-mono pt-1 text-ink-mute">{day}</h2>
+                <h2 className="label-mono pt-1 text-ink-cool">{day}</h2>
                 {rows.map((row) => (
                   <RecordCard
                     key={row.id}

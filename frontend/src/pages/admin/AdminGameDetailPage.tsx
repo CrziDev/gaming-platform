@@ -80,7 +80,7 @@ export function AdminGameDetailPage() {
           {(['PHP', 'USD'] as const).map((currency) => {
             const limits = game.wager_limits[currency]
             return (
-              <div key={currency} className="flex flex-col gap-2 border-t border-white/5 pt-3 first:border-0 first:pt-0">
+              <div key={currency} className="flex flex-col gap-2 border-t border-hairline-soft pt-3 first:border-0 first:pt-0">
                 <Row label={`${currency} minimum`}>
                   <span className="tnum">{formatMoney(money(limits.min_wager_minor, currency))}</span>
                 </Row>

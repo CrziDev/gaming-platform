@@ -68,8 +68,8 @@ type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 const iconSizes: Record<NonNullable<IconButtonProps['size']>, string> = {
   compact: 'tap-target size-9 rounded-chip text-ink-mute hover:bg-wash hover:text-ink-soft lg:size-8',
   md: 'size-11 rounded-chip text-ink-mute hover:bg-wash hover:text-ink-soft lg:size-8',
-  round: 'glass-pill size-11 rounded-full text-ink-soft hover:bg-white/8 sm:size-11.5',
-  float: 'tap-target glass-float size-9 rounded-input text-ink-control hover:bg-[rgb(30_38_50/0.7)] sm:size-11',
+  round: 'glass-pill size-11 rounded-full text-ink-soft hover:bg-wash sm:size-11.5',
+  float: 'tap-target glass-float size-9 rounded-input text-ink-control hover:bg-float-hover sm:size-11',
 }
 
 export function IconButton({ label, size = 'md', className, type = 'button', ...props }: IconButtonProps) {

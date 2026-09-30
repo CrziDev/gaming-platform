@@ -22,7 +22,7 @@ export function BigWins() {
       >
         {Array.from({ length: placeholderCount }, (_, index) => (
           <li key={index} className="w-[172px] shrink-0 snap-start">
-            <div aria-hidden className="flex items-center gap-2 rounded-tile bg-surface-1 py-[7px] pr-2.5 pl-[7px]">
+            <div aria-hidden className="flex items-center gap-2 edge-lit rounded-tile bg-surface-1 py-1.5 pr-[9px] pl-1.5">
               <span className="size-[34px] shrink-0 rounded-chip bg-surface-3" />
               <span className="flex min-w-0 flex-col gap-1.5">
                 <span className="h-2.5 w-16 rounded-chip bg-surface-3" />

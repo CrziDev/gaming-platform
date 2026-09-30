@@ -55,7 +55,7 @@ export function AdminShell() {
       <AdminTopBar onOpenDrawer={() => setDrawerOpen(true)} />
 
       <div className="flex min-h-0 flex-1">
-        <div className="glass-chrome hidden w-52 shrink-0 overflow-y-auto border-r border-white/8 rail:block">
+        <div className="glass-chrome hidden w-52 shrink-0 overflow-y-auto border-r border-hairline rail:block">
           <AdminNavPanel />
         </div>
 
@@ -86,7 +86,7 @@ export function AdminShell() {
           aria-modal="true"
           aria-label="Console navigation"
           className={cn(
-            'overlay-shadow glass-chrome relative flex w-72 max-w-[85vw] flex-col border-r border-white/8 transition-[transform,opacity] duration-layout ease-standard motion-reduce:transition-none',
+            'overlay-shadow glass-chrome relative flex w-72 max-w-[85vw] flex-col border-r border-hairline transition-[transform,opacity] duration-layout ease-standard motion-reduce:transition-none',
             drawerOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0',
           )}
         >
@@ -112,7 +112,7 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   const { data: operator } = useSession()
 
   return (
-    <header className="glass-chrome flex h-18 shrink-0 items-center gap-2 border-b border-white/8 px-3 sm:gap-3 sm:px-3.5">
+    <header className="glass-chrome chrome-edge relative flex h-18 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-3.5">
       <IconButton label="Open navigation" onClick={onOpenDrawer} className="text-ink-soft rail:hidden">
         <MenuGlyph />
       </IconButton>
@@ -121,7 +121,7 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
         <span className="text-[18px] font-bold tracking-[-0.03em] text-ink sm:text-[21px]">
           Hezi<span className="text-brand">Bet</span> <span className="font-semibold text-ink-soft">Console</span>
         </span>
-        <span className="label-mono hidden rounded-[5px] bg-wash px-1.5 py-1 text-ink-mute sm:inline">
+        <span className="label-mono hidden rounded-[5px] bg-wash px-1.5 py-1 text-ink-cool sm:inline">
           Live
         </span>
       </div>

@@ -23,7 +23,7 @@ export function ChatRail() {
       aria-hidden={!chatOpen}
       inert={!chatOpen}
       className={cn(
-        'glass-chrome hidden shrink-0 overflow-hidden border-l border-white/8 transition-[width,opacity] duration-layout ease-standard motion-reduce:transition-none @chat:block',
+        'glass-chrome hidden shrink-0 overflow-hidden border-l border-hairline transition-[width,opacity] duration-layout ease-standard motion-reduce:transition-none @chat:block',
         chatOpen ? 'w-[272px] opacity-100' : 'w-0 opacity-0',
       )}
     >

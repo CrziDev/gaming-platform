@@ -164,7 +164,7 @@ function SearchOptions({
     previous = option.group
     return (
       <div key={option.key}>
-        {heading ? <p className="label-mono px-3 pt-2 pb-1 text-ink-mute">{option.group}</p> : null}
+        {heading ? <p className="label-mono px-3 pt-2 pb-1 text-ink-cool">{option.group}</p> : null}
         <button
           id={`${listId}-${index}`}
           type="button"

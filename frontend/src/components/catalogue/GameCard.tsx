@@ -12,7 +12,7 @@ export function GameCard({ game }: { game: Game }) {
 
   const card = (
     <>
-      <span className="relative flex aspect-3/4 items-end overflow-hidden rounded-tile bg-surface-3 ring-1 ring-white/0 transition-[transform,box-shadow] duration-standard ease-standard group-hover:-translate-y-0.5 group-hover:ring-white/10 group-focus-visible:ring-accent-ink/70 group-active:translate-y-px motion-reduce:transform-none">
+      <span className="relative flex aspect-3/4 items-end overflow-hidden rounded-tile bg-surface-3 ring-1 ring-transparent transition-[transform,box-shadow] duration-standard ease-standard group-hover:-translate-y-0.5 group-hover:ring-hairline-strong group-focus-visible:ring-accent-ink/70 group-active:translate-y-px motion-reduce:transform-none">
         {art ? (
           <img
             src={art}
@@ -24,7 +24,7 @@ export function GameCard({ game }: { game: Game }) {
         ) : (
           <span
             aria-hidden
-            className="label-mono absolute inset-x-0 bottom-[40%] text-center text-[9.5px] text-ink-mute"
+            className="label-mono absolute inset-x-0 bottom-[40%] text-center text-[9.5px] text-ink-cool"
           >
             game art
           </span>

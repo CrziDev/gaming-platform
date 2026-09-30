@@ -188,7 +188,7 @@ export function DepositPage() {
         className="grid min-w-0 items-start gap-5 @rail-wide:grid-cols-[minmax(0,1fr)_18rem]"
       >
         <div className="flex min-w-0 flex-col gap-6 rounded-card glass-panel p-4 sm:p-5">
-          <fieldset className="min-w-0 border-b border-white/5 pb-6">
+          <fieldset className="min-w-0 border-b border-hairline-soft pb-6">
             <legend className="text-[14px] font-semibold text-ink-soft">Payment method</legend>
             <p className="mt-0.5 text-[12.5px] text-ink-mute">
               Choose the account you used to send your payment.
@@ -205,7 +205,7 @@ export function DepositPage() {
                       'transition-colors duration-fast focus-within:ring-2 focus-within:ring-accent-ink',
                       selected
                         ? 'border-accent/60 bg-accent/10'
-                        : 'border-transparent bg-inset hover:border-white/10 hover:bg-wash',
+                        : 'border-transparent bg-inset hover:border-hairline hover:bg-wash',
                     )}
                   >
                     <input type="radio" value={method.id} className="sr-only" {...register('method_id')} />
@@ -251,7 +251,7 @@ export function DepositPage() {
             </div>
           </fieldset>
 
-          <section className="flex flex-col gap-3 border-b border-white/5 pb-6">
+          <section className="flex flex-col gap-3 border-b border-hairline-soft pb-6">
             <div className="flex items-baseline justify-between gap-3">
               <label htmlFor="amount" className="text-[14px] font-semibold text-ink-soft">
                 Amount
@@ -303,7 +303,7 @@ export function DepositPage() {
             </div>
           </section>
 
-          <section className="flex flex-col gap-3 border-b border-white/5 pb-6">
+          <section className="flex flex-col gap-3 border-b border-hairline-soft pb-6">
             <div className="flex flex-col gap-0.5">
               <h2 className="text-[14px] font-semibold text-ink-soft">
                 Reference number{selectedMethodDetails?.reference_required ? '' : ' (optional)'}
@@ -426,7 +426,7 @@ function SummaryRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-3 last:border-0 last:pb-0">
+    <div className="flex items-start justify-between gap-4 border-b border-hairline-soft pb-3 last:border-0 last:pb-0">
       <dt className="text-ink-mute">{label}</dt>
       <dd
         className={cn(

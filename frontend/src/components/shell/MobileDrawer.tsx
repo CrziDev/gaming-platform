@@ -74,7 +74,7 @@ export function MobileDrawer() {
         aria-modal="true"
         aria-label="Navigation"
         className={cn(
-          'overlay-shadow glass-chrome relative flex w-72 max-w-[85vw] flex-col border-r border-white/8 transition-[transform,opacity] duration-layout ease-standard motion-reduce:transition-none',
+          'overlay-shadow glass-chrome relative flex w-72 max-w-[85vw] flex-col border-r border-hairline transition-[transform,opacity] duration-layout ease-standard motion-reduce:transition-none',
           drawerOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0',
         )}
       >

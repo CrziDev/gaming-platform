@@ -122,7 +122,7 @@ export function GamePage() {
               aria-haspopup="dialog"
               disabled={!module}
               onClick={() => setFairGame(true)}
-              className="tap-target glass-float flex h-9 items-center justify-center gap-2 rounded-input px-3 text-[13px] font-semibold tracking-[0.08em] text-ink-control transition-colors duration-fast ease-standard hover:bg-[rgb(30_38_50/0.7)] disabled:cursor-default max-[429px]:w-9 max-[429px]:px-0 sm:h-11"
+              className="tap-target glass-float flex h-9 items-center justify-center gap-2 rounded-input px-3 text-[13px] font-semibold tracking-[0.08em] text-ink-control transition-colors duration-fast ease-standard hover:bg-float-hover disabled:cursor-default max-[429px]:w-9 max-[429px]:px-0 sm:h-11"
             >
               <ShieldCheck aria-hidden size={18} strokeWidth={1.8} />
               <span className="max-[429px]:sr-only">FAIR GAME</span>
@@ -286,12 +286,12 @@ function BetPanel({
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span
             aria-hidden
-            className="hidden size-12.5 shrink-0 items-center justify-center rounded-input border border-hairline bg-white/5 text-[#aab7c8] sm:flex"
+            className="hidden size-12.5 shrink-0 items-center justify-center rounded-input border border-hairline bg-inset text-ink-control sm:flex"
           >
             <Wallet size={22} strokeWidth={1.7} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="label-mono text-[10px] text-ink-mute sm:text-[11px]">Balance</div>
+            <div className="label-mono text-[10px] text-ink-cool sm:text-[11px]">Balance</div>
             <div className="mt-px truncate text-[18px] font-medium text-ink tnum sm:text-[21px]">
               {balance ? formatMoney(balance) : '—'}
             </div>
@@ -306,18 +306,18 @@ function BetPanel({
             type="button"
             aria-label="Decrease bet"
             onClick={() => setStakeMinor((value) => stepStake(ladder, value, -1))}
-            className="flex w-11 shrink-0 items-center justify-center bg-white/4 text-[#c9d3df] transition-colors duration-fast hover:bg-white/9 sm:w-14"
+            className="flex w-11 shrink-0 items-center justify-center bg-inset text-ink-control transition-colors duration-fast hover:bg-wash sm:w-14"
           >
             <Minus aria-hidden size={18} strokeWidth={2.4} />
           </button>
-          <div className="flex min-w-0 flex-1 items-center justify-center border-x border-white/7 px-0.5 text-[16px] font-medium text-ink tnum sm:text-[21px]">
+          <div className="flex min-w-0 flex-1 items-center justify-center border-x border-hairline px-0.5 text-[16px] font-medium text-ink tnum sm:text-[21px]">
             <span className="truncate">{formatMoney(money(stakeMinor, currency))}</span>
           </div>
           <button
             type="button"
             aria-label="Increase bet"
             onClick={() => setStakeMinor((value) => stepStake(ladder, value, 1))}
-            className="flex w-11 shrink-0 items-center justify-center bg-white/4 text-[#c9d3df] transition-colors duration-fast hover:bg-white/9 sm:w-14"
+            className="flex w-11 shrink-0 items-center justify-center bg-inset text-ink-control transition-colors duration-fast hover:bg-wash sm:w-14"
           >
             <Plus aria-hidden size={18} strokeWidth={2.4} />
           </button>

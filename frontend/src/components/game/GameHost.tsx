@@ -125,7 +125,7 @@ export function GameHost({
               {name}
             </h1>
             {subtitle ? (
-              <p className="mt-1.5 font-mono text-[10px] leading-none tracking-[0.24em] whitespace-nowrap text-[#d3dce8] [text-shadow:0_1px_2px_rgb(0_0_0/0.9),0_0_10px_rgb(0_0_0/0.85)] min-[480px]:tracking-[0.32em] sm:mt-2.5">
+              <p className="mt-1.5 font-mono text-[10px] leading-none tracking-[0.24em] whitespace-nowrap text-ink-cool [text-shadow:0_1px_2px_rgb(0_0_0/0.9),0_0_10px_rgb(0_0_0/0.85)] min-[480px]:tracking-[0.32em] sm:mt-2.5">
                 {subtitle}
               </p>
             ) : null}
@@ -154,7 +154,7 @@ export function GameHost({
           >
             {!frame ? (
               <div className="absolute inset-4 flex items-center justify-center rounded-card bg-surface-3">
-                <span className="label-mono text-ink-mute">{name}</span>
+                <span className="label-mono text-ink-cool">{name}</span>
               </div>
             ) : null}
 

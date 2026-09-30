@@ -43,7 +43,7 @@ export function WalletPage() {
       <section className="flex flex-col gap-5 rounded-card glass-panel p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
-            <span className="label-mono text-ink-mute">Available balance · {currency}</span>
+            <span className="label-mono text-ink-cool">Available balance · {currency}</span>
             {canSwitch ? (
               <Button variant="secondary" size="sm" onClick={() => setSwitching(true)}>
                 Switch currency

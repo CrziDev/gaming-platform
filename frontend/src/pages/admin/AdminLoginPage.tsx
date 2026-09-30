@@ -31,7 +31,7 @@ export function AdminLoginPage() {
       <div className="w-full max-w-100 rounded-card glass-panel p-6">
         <header className="mb-6 flex flex-col gap-1">
           <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">Operations console</h1>
-          <span className="label-mono text-ink-mute">Staff access only</span>
+          <span className="label-mono text-ink-cool">Staff access only</span>
         </header>
 
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">

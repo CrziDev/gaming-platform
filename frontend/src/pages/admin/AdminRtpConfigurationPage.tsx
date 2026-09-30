@@ -62,7 +62,7 @@ export function AdminRtpConfigurationPage() {
 
       <section aria-labelledby="rtp-profile-heading" className="flex flex-col gap-2.5">
         <div className="flex items-end justify-between gap-3">
-          <h2 id="rtp-profile-heading" className="label-mono text-ink-mute">RTP profile</h2>
+          <h2 id="rtp-profile-heading" className="label-mono text-ink-cool">RTP profile</h2>
           <p className="hidden text-[12px] text-ink-mute sm:block">Viewing does not change the active RTP.</p>
         </div>
         <div className="hidden grid-cols-4 overflow-hidden rounded-input bg-surface-1 sm:grid">
@@ -149,7 +149,7 @@ function BoardControls({
 }) {
   return (
     <section aria-labelledby="board-heading" className="flex flex-col gap-2.5">
-      <h2 id="board-heading" className="label-mono text-ink-mute">Board</h2>
+      <h2 id="board-heading" className="label-mono text-ink-cool">Board</h2>
       <div className="hidden flex-wrap items-center gap-x-6 gap-y-3 sm:flex">
         <div className="flex items-center gap-2" role="group" aria-label="Rows">
           <span className="mr-1 text-[12.5px] font-medium text-ink-mute">Rows</span>
@@ -290,7 +290,7 @@ function ValueRow({ label, slots, render }: { label: string; slots: AdminRtpSlot
 function MobileOutcomes({ slots, total }: { slots: AdminRtpSlot[]; total: number }) {
   return (
     <section aria-labelledby="slot-outcomes-heading" className="wide:hidden">
-      <h2 id="slot-outcomes-heading" className="label-mono mb-2.5 text-ink-mute">Slot outcomes</h2>
+      <h2 id="slot-outcomes-heading" className="label-mono mb-2.5 text-ink-cool">Slot outcomes</h2>
       <div className="overflow-hidden rounded-card glass-panel">
         <ul>
           {slots.map((slot) => (

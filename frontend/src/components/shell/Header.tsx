@@ -20,7 +20,7 @@ export function Header() {
   const { open } = useAuthIntent()
 
   return (
-    <header className="glass-chrome relative z-30 flex h-18 shrink-0 items-center gap-1.5 border-b border-white/8 px-2.5 sm:gap-3 sm:px-3.5">
+    <header className="glass-chrome relative z-30 flex h-18 shrink-0 items-center gap-1.5 chrome-edge px-2.5 sm:gap-3 sm:px-3.5">
       <IconButton
         label="Toggle navigation"
         data-navigation-toggle
@@ -36,7 +36,7 @@ export function Header() {
         <MenuGlyph />
       </IconButton>
 
-      <span aria-hidden className="hidden h-8 w-px bg-white/10 sm:block" />
+      <span aria-hidden className="hidden h-8 w-px bg-hairline sm:block" />
 
       <Wordmark />
 

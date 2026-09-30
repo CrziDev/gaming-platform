@@ -49,7 +49,7 @@ export function RecordTable<T>({
                   scope="col"
                   style={column.width ? { width: column.width } : undefined}
                   className={cn(
-                    'label-mono px-3 pt-1 pb-2 font-medium text-ink-mute',
+                    'label-mono px-3 pt-1 pb-2 font-medium text-ink-cool',
                     column.align === 'right' && 'text-right',
                     column.columnClass,
                   )}

@@ -17,9 +17,9 @@ export const ui = {
   // The taglines stand in the gutters between each edge of the frame and whatever is
   // nearest at their height, the left one high on the pane and the right one at
   // mid-depth. That is the glass, measured down to the tagline's foot, or a host control
-  // beside the board. Where the gutter has room they sit close to the frame's edge;
-  // otherwise they centre in it. When either gutter cannot hold its tagline clear, both
-  // step aside.
+  // beside the board. Where the gutter has room they stand a short reach from what they
+  // are beside, and no nearer the frame's edge than its inset; otherwise they centre in
+  // the gutter. When either gutter cannot hold its tagline clear, both step aside.
   placeTaglines(board, width, controls) {
     const { left, right } = this.taglines
     const centre = (board.left + board.right) / 2
@@ -81,6 +81,7 @@ export const ui = {
 
 const TAGLINE_CLEARANCE = 8
 const TAGLINE_EDGE_INSET = 40
+const TAGLINE_REACH = 40
 
 // The host controls that share any height with a tagline standing at top.
 function beside(controls, top, height) {
@@ -91,7 +92,9 @@ function beside(controls, top, height) {
 // that edge and the nearest obstacle cannot hold it clear of both.
 function fitTagline(tagline, gutter) {
   const width = tagline.offsetWidth
-  if (TAGLINE_EDGE_INSET + width <= gutter - TAGLINE_CLEARANCE) return TAGLINE_EDGE_INSET
+  if (TAGLINE_EDGE_INSET + width <= gutter - TAGLINE_CLEARANCE) {
+    return Math.max(TAGLINE_EDGE_INSET, gutter - TAGLINE_REACH - width)
+  }
   const offset = (gutter - width) / 2
   return offset >= TAGLINE_CLEARANCE && offset + width <= gutter - TAGLINE_CLEARANCE ? offset : null
 }

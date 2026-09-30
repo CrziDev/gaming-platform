@@ -166,7 +166,7 @@ function SearchResults({ games, error, loading, term, onNavigate }: SearchResult
               <GameArt src={gameArtUrl(game)} caption="" className="size-7 shrink-0 rounded-chip" />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-[13px] font-medium">{game.name}</span>
-                <span className="label-mono truncate text-ink-mute">{game.category_name}</span>
+                <span className="label-mono truncate text-ink-cool">{game.category_name}</span>
               </span>
             </>
           )
