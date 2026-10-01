@@ -6,12 +6,12 @@ import { PLINKO_MULTIPLIERS_HUNDREDTHS } from './multipliers'
 import { plinkoManifestSchema } from './schemas'
 
 describe('the Plinko manifest schema', () => {
-  it('parses the served shape into the eight-row board by risk', () => {
+  it('parses the served shape into the ten-row board by risk', () => {
     const parsed = plinkoManifestSchema.parse(plinkoManifest())
 
     expect(parsed.rtp_basis_points).toBe(9500)
-    expect(parsed.board.normal).toEqual(PLINKO_MULTIPLIERS_HUNDREDTHS[8].normal)
-    expect(parsed.board.high).toHaveLength(9)
+    expect(parsed.board.normal).toEqual(PLINKO_MULTIPLIERS_HUNDREDTHS[10].normal)
+    expect(parsed.board.high).toHaveLength(11)
   })
 
   it('tolerates fields it does not know', () => {
@@ -28,27 +28,27 @@ describe('the Plinko manifest schema', () => {
 
   it('refuses the played board with the wrong number of cups', () => {
     const manifest = plinkoManifest()
-    manifest.multipliers_hundredths['8']!.low = manifest.multipliers_hundredths['8']!.low!.slice(1)
+    manifest.multipliers_hundredths['10']!.low = manifest.multipliers_hundredths['10']!.low!.slice(1)
 
     const result = plinkoManifestSchema.safeParse(manifest)
     expect(result.success).toBe(false)
-    expect(result.error?.issues[0]?.path).toEqual(['multipliers_hundredths', '8', 'low'])
+    expect(result.error?.issues[0]?.path).toEqual(['multipliers_hundredths', '10', 'low'])
   })
 
   it('refuses a manifest without the played board', () => {
     const manifest = plinkoManifest()
-    delete manifest.multipliers_hundredths['8']
+    delete manifest.multipliers_hundredths['10']
 
     expect(plinkoManifestSchema.safeParse(manifest).success).toBe(false)
   })
 
   it('refuses a multiplier that is not a positive integer', () => {
     const fractional = plinkoManifest()
-    fractional.multipliers_hundredths['8']!.normal![4] = 0.5
+    fractional.multipliers_hundredths['10']!.normal![5] = 0.5
     expect(plinkoManifestSchema.safeParse(fractional).success).toBe(false)
 
     const zero = plinkoManifest()
-    zero.multipliers_hundredths['8']!.normal![4] = 0
+    zero.multipliers_hundredths['10']!.normal![5] = 0
     expect(plinkoManifestSchema.safeParse(zero).success).toBe(false)
   })
 

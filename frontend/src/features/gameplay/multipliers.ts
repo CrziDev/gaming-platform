@@ -5,8 +5,8 @@ export type PlinkoRows = (typeof PLINKO_ROWS)[number]
 export const PLINKO_RISKS = ['low', 'normal', 'high'] as const
 export type PlinkoRisk = (typeof PLINKO_RISKS)[number]
 
-// Players play one board: eight rows of pegs over nine cups.
-export const PLINKO_BOARD_ROWS = 8
+// Players play one board: ten rows of pegs over eleven cups.
+export const PLINKO_BOARD_ROWS = 10
 export const PLINKO_BOARD_SLOTS = PLINKO_BOARD_ROWS + 1
 
 export type PlinkoParams = { rows: typeof PLINKO_BOARD_ROWS; risk: PlinkoRisk }

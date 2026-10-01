@@ -15,7 +15,7 @@ import { adminPaths } from '@/routes/paths'
 
 type Risk = 'low' | 'normal' | 'high'
 
-const DEFAULT_ROWS = 8
+const DEFAULT_ROWS = 10
 const DEFAULT_RISK: Risk = 'normal'
 const riskLabels: Record<Risk, string> = { low: 'Low', normal: 'Normal', high: 'High' }
 

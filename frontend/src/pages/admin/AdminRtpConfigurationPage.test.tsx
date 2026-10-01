@@ -28,7 +28,7 @@ describe('Plinko RTP configuration', () => {
 
     const outcomes = within(screen.getByRole('heading', { name: 'Slot outcomes' }).closest('section')!)
     expect(outcomes.getByText('Slot 0')).toBeInTheDocument()
-    expect(outcomes.getAllByText('0.485%')).toHaveLength(2)
+    expect(outcomes.getAllByText('0.303%')).toHaveLength(2)
     expect(outcomes.getByText('100.000%')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '105.00%' }))

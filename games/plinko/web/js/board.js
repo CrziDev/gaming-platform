@@ -112,7 +112,7 @@ export const board = {
       measure.font = theme.labelFont(size)
       return Math.max(...texts.map((text) => measure.measureText(text).width))
     }
-    while (widest() > width * 0.8 && size > 30) size -= 2
+    while (widest() > width * 0.86 && size > 30) size -= 2
     this.cups.forEach((cup, i) => paintLabel(cup, texts[i], size))
     this.wake()
   },

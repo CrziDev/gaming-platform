@@ -72,12 +72,12 @@ export function addPockets(kit, upper, apron, materials) {
     ring.renderOrder = 6
     upper.add(ring)
 
-    const glow = kit.glowSprite(band.glow, 0, 1.1)
+    const glow = kit.glowSprite(band.glow, 0, 0.9)
     glow.position.set(x, POCKET_Y, 0.12)
     glow.renderOrder = 12
     upper.add(glow)
 
-    const labelTexture = kit.canvasTexture(() => {}, 320, 190)
+    const labelTexture = kit.canvasTexture(() => {}, 512, Math.round((512 * PLATE_HEIGHT) / PLATE_WIDTH))
     const label = labelTexture.image.getContext('2d')
     const plate = new T.Mesh(
       plateGeometry,
@@ -106,6 +106,17 @@ export function applyPulse(cup) {
   cup.plate.material.emissiveIntensity = PLATE_REST + level * 0.8
 }
 
+const SIGN_SCALE = 0.6
+
+// The payout is a large figure with a smaller sign after it, so on a narrow plate the
+// figure keeps most of the width.
+export function measurePlate(g, text, size) {
+  g.font = theme.labelFont(size)
+  const number = g.measureText(text.slice(0, -1)).width
+  g.font = theme.labelFont(Math.round(size * SIGN_SCALE))
+  return number + g.measureText(text.slice(-1)).width
+}
+
 // An enamelled plate in a brass bezel, in the pocket's band, with the payout in its ink.
 export function paintPlate(cup, text, size) {
   const g = cup.label
@@ -113,39 +124,48 @@ export function paintPlate(cup, text, size) {
   const { band } = cup
   g.clearRect(0, 0, width, height)
 
+  const u = width / 320
   const rounded = (x, y, w, h, r) => {
     g.beginPath()
-    g.roundRect(x, y, w, h, r)
+    g.roundRect(x * u, y * u, w * u, h * u, r * u)
   }
+  const w = width / u
+  const h = height / u
   const bezel = g.createLinearGradient(0, 0, 0, height)
   bezel.addColorStop(0, '#f6dc94')
   bezel.addColorStop(0.35, '#b98a36')
   bezel.addColorStop(0.65, '#e9c878')
   bezel.addColorStop(1, '#7d5a1f')
-  rounded(4, 4, width - 8, height - 8, 26)
+  rounded(2, 2, w - 4, h - 4, 22)
   g.fillStyle = bezel
   g.fill()
 
-  const enamel = g.createLinearGradient(0, 16, 0, height - 16)
+  const enamel = g.createLinearGradient(0, 10 * u, 0, height - 10 * u)
   enamel.addColorStop(0, band.hi)
   enamel.addColorStop(0.45, band.base)
   enamel.addColorStop(1, band.deep)
-  rounded(16, 16, width - 32, height - 32, 16)
+  rounded(10, 10, w - 20, h - 20, 14)
   g.fillStyle = enamel
   g.fill()
   g.fillStyle = 'rgba(255,255,255,.22)'
-  rounded(24, 20, width - 48, (height - 40) * 0.36, 12)
+  rounded(17, 14, w - 34, (h - 28) * 0.34, 10)
   g.fill()
 
+  const number = text.slice(0, -1)
+  const sign = text.slice(-1)
+  const start = (width - measurePlate(g, text, size)) / 2
   g.font = theme.labelFont(size)
-  g.textAlign = 'center'
+  g.textAlign = 'left'
   g.textBaseline = 'alphabetic'
-  const capHeight = g.measureText('0').actualBoundingBoxAscent
+  const baseline = height / 2 + g.measureText('0').actualBoundingBoxAscent / 2
   g.shadowColor = `rgba(0,0,0,${band.shade})`
-  g.shadowBlur = 6
-  g.shadowOffsetY = 2
+  g.shadowBlur = 6 * u
+  g.shadowOffsetY = 2 * u
   g.fillStyle = band.ink
-  g.fillText(text, width / 2, height / 2 + capHeight / 2)
+  g.fillText(number, start, baseline)
+  const numberWidth = g.measureText(number).width
+  g.font = theme.labelFont(Math.round(size * SIGN_SCALE))
+  g.fillText(sign, start + numberWidth, baseline)
   g.shadowColor = 'transparent'
   cup.labelTexture.needsUpdate = true
 }

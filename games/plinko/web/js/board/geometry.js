@@ -1,17 +1,17 @@
 // Dimensions of the glass board, in scene units: y is up and z points at the camera.
-// The platform plays one board, eight rows of pegs over nine cups.
+// The platform plays one board, ten rows of pegs over eleven cups.
 
-export const ROWS = 8
+export const ROWS = 10
 export const SLOTS = ROWS + 1
 
 // Peg field on the leaning pane.
-export const PEG_SPACING = 0.9
-export const ROW_HEIGHT = 0.95
+export const PEG_SPACING = 0.74
+export const ROW_HEIGHT = 0.74
 export const ROW_BOTTOM = 3.1
 export const ROW_TOP = ROW_BOTTOM + (ROWS - 1) * ROW_HEIGHT
 export const TOP = ROW_TOP + 1.45
-export const PEG_RADIUS = 0.13
-export const BALL_RADIUS = 0.16
+export const PEG_RADIUS = 0.11
+export const BALL_RADIUS = 0.135
 export const NOTCH_RADIUS = 0.4
 export const NOTCH_Y = TOP - 0.2
 
@@ -37,8 +37,8 @@ export const FIN_FRONT_Z = FRONT_SHEET_Z + 0.05
 export const TRAY_FRONT_Z = FIN_FRONT_Z + 0.16
 
 // Cups: a rounded box (a superellipse of CUP_ROUNDNESS) filled to CUP_TOP.
-export const CUP_RX = 0.42
-export const CUP_RZ = 0.34
+export const CUP_RX = 0.39
+export const CUP_RZ = 0.3
 export const CUP_ROUNDNESS = 8
 export const CUP_TOP = FLOOR + 1.0
 export const CUP_HEIGHT = CUP_TOP - FLOOR
@@ -48,8 +48,8 @@ export const CUP_Z = (FACE + FRONT_SHEET_Z) / 2
 
 // Drop mouths: an elliptical opening cut into the top of each chute. The front of the
 // collar sits just behind the front sheet; SADDLE_Y is where that sheet meets the walls.
-export const MOUTH_RX = 0.3
-export const MOUTH_RZ = 0.26
+export const MOUTH_RX = 0.28
+export const MOUTH_RZ = 0.22
 export const MOUTH_LIP = 0.036
 export const MOUTH_COLLAR = 0.08
 export const MOUTH_Y = TUBE_TOP + 0.05
@@ -71,8 +71,8 @@ export const BAY_PITCH = (2 * BAY_HALF_WIDTH) / SLOTS
 // is the [base, tip] half-width of an inner fin or an outer wall.
 export const FIN_RISE = 0.45
 export const FIN_TOP = FIN_HEIGHT + FIN_RISE
-export const INNER_FIN = [0.075, 0.034]
-export const OUTER_FIN = [0.06, 0.034]
+export const INNER_FIN = [0.05, 0.028]
+export const OUTER_FIN = [0.05, 0.028]
 export const FIN_BACK_Z = TRAY_FRONT_Z - 0.03
 export const FILLET_RADIUS = 0.1
 
@@ -167,7 +167,7 @@ export const PANE_TOP_HALF_WIDTH = paneX(TOP - CORNER_RADIUS)
 // their feet splay slightly outward while their tops lean in.
 export function finLean(fin, y) {
   const x = finX(fin)
-  const reach = (Math.abs(x) / (3.5 * BAY_PITCH)) ** 1.3
+  const reach = (Math.abs(x) / finX(SLOTS - 1)) ** 1.3
   return -Math.sign(x) * LEAN * reach * (clamp01((y - FLOOR) / (FIN_TOP - FLOOR)) ** LEAN_POWER - LEAN_BASE)
 }
 

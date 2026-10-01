@@ -9,7 +9,7 @@ import {
   seeded,
 } from './geometry.js'
 
-// The rack: fifty-two numbered balls on the peg positions, the 8-ball on top and the
+// The rack: seventy-five numbered balls on the peg positions, the 8-ball on top and the
 // rest cycling through 1–15. Each is turned a little so the numbers face the eye at
 // different angles, and each casts a real shadow over a soft contact patch.
 export function addRack(kit, upper) {

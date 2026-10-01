@@ -19,7 +19,7 @@ describe('parseFrameMessage', () => {
     ['an extra field', { ...landed, win_minor: 5000 }],
     ['a fractional slot', { ...landed, slot: 4.5 }],
     ['a negative slot', { ...landed, slot: -1 }],
-    ['a slot past the board', { ...landed, slot: 9 }],
+    ['a slot past the board', { ...landed, slot: 11 }],
     ['a string', 'ready'],
     ['null', null],
   ])('rejects %s', (_label, data) => {
@@ -142,18 +142,18 @@ describe('createGameBridge', () => {
     bridge.dispose()
   })
 
-  it('configures only the eight-row board', () => {
+  it('configures only the ten-row board', () => {
     const { bridge } = mount()
     const configure: Extract<HostMessage, { type: 'configure' }> = {
       v: 3,
       type: 'configure',
-      rows: 8,
+      rows: 10,
       risk: 'normal',
-      multipliers_hundredths: [600, 300, 170, 110, 50, 110, 170, 300, 600],
+      multipliers_hundredths: [1000, 500, 250, 150, 80, 50, 80, 150, 250, 500, 1000],
       sound: true,
     }
     expect(bridge.send(configure)).toBe(true)
-    expect(() => bridge.send({ ...configure, multipliers_hundredths: [...configure.multipliers_hundredths, 600] })).toThrow()
+    expect(() => bridge.send({ ...configure, multipliers_hundredths: [...configure.multipliers_hundredths, 1000] })).toThrow()
     bridge.dispose()
   })
 
