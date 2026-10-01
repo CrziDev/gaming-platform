@@ -30,8 +30,11 @@ A three.js billiard table: the green cloth leans back over an upright mahogany a
 the ten peg rows are a rack of numbered pool balls, and the cue ball waits on the head
 spot, rolls through the rack, and sinks into one of eleven leather pockets along the foot
 cushion. Each pocket's payout is an enamelled plate in a brass bezel on the apron. The
-hall behind it is drawn in the scene, with no photograph: panelled walls under a warm
-lamp cone.
+hall behind it is drawn in the scene, with no photograph: panelled walls with a chair
+rail, wainscot, and baseboard over a plank floor, lit by a row of hanging lamps whose
+pools fall down the wall, the brightest over the table. The hall is measured in stage
+heights from the table's centre line, so a wide screen shows more wall, not a stretched
+one, and its edges are antialiased to one screen pixel at any size.
 
 | File | Role |
 | --- | --- |
@@ -39,14 +42,15 @@ lamp cone.
 | `css/billiards.css` | The frame's ground, taglines, and result toast in the hall's warm tones |
 | `js/main.js`, `js/bridge.js`, `js/state.js`, `js/ui.js` | The same boot, protocol-3 bridge, state, and tagline and toast placement as Plinko's frame, and the same `ready` with `game: 'plinko'`, the engine's protocol |
 | `js/theme.js` | The pocket bands (ivory, blue, purple, orange, red by distance from the centre) and the pool-ball colours |
-| `js/board.js` | Renderer, hall lighting, bloom, camera framing inside the stage rect, the drop, the render-on-demand loop, and the click and thud tones |
+| `js/board.js` | Renderer, its pixel budget (full device density up to 3x and 4.5 million device pixels), hall lighting, bloom, sharpen, camera framing inside the stage rect, the drop, the render-on-demand loop, and the click and thud tones |
 | `js/board/geometry.js` | Every dimension of the table, the rack, the pockets, and the apron |
 | `js/board/kit.js` | Canvas textures (cloth, mahogany, leather, pool balls, cue ball, chalk dust), glow sprites, contact shadows |
 | `js/board/background.js` | The hall shader |
+| `js/board/sharpen.js` | The contrast-adaptive sharpen run over the tone-mapped frame, held inside each pixel's neighbourhood range |
 | `js/board/table.js`, `pockets.js`, `rack.js` | Cloth, cushions, rails, sights, and apron; pockets and their plates; the rack and the cue ball |
 | `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
 | `js/board/trail.js` | The marks the cue ball leaves, sampled backwards along the flight path: the ivory smear, the nap track, and the chalk puffed off each strike |
-| `js/vendor/` | three.js 0.169.0 and the bloom pass's addons with their MIT licence, vendored beside this game as `packages.md` requires |
+| `js/vendor/` | three.js 0.169.0 and the bloom and shader passes' addons with their MIT licence, vendored beside this game as `packages.md` requires |
 
 The frame never decides an outcome. As in Plinko, a `drop` names the settled slot, the
 path turns right exactly `slot` times in shuffled order, a struck ball gives a little

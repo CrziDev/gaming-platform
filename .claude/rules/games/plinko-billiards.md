@@ -63,11 +63,13 @@ platform's.
 ## Scene
 
 A pool hall fills the whole game area behind the column and belongs to this page only:
-dark panelled walls under a warm lamp cone. In front of it a billiard table leans back
-over an upright mahogany apron: green cloth, cushions, varnished rails with pearl sights,
-a rack of numbered pool balls in ten rows, the cue ball on the head spot, and eleven
-leather pockets with brass lips along the foot cushion. Each pocket's payout is an
-enamelled plate in a brass bezel on the apron.
+dark panelled mahogany walls with a chair rail, wainscot, and baseboard over a dark plank
+floor, under a row of warm hanging lamps, the brightest over the table. The hall keeps
+its scale beside the table, so a wider screen shows more of it. In front of it a billiard
+table leans back over an upright mahogany apron: green cloth, cushions, varnished rails
+with pearl sights, a rack of numbered pool balls in ten rows, the cue ball on the head
+spot, and eleven leather pockets with brass lips along the foot cushion. Each pocket's
+payout is an enamelled plate in a brass bezel on the apron.
 
 ## Brand lines
 
