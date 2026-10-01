@@ -28,7 +28,7 @@ vec3 backgroundAt(vec2 q) {
   }
   c *= 1. - shade(1. - q.y);
   vec2 p = (q - vec2(.5, .58)) / vec2(.55, .6);
-  c *= 1. - smoothstep(.45, 1., length(p)) * .2;
+  c *= 1. - smoothstep(.6, 1.2, length(p)) * .08;
   return c;
 }
 `

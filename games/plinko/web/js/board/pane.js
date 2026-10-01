@@ -25,7 +25,7 @@ import {
 
 // The bent acrylic pane with its pegs and the ball waiting in the top notch. Pegs and
 // the waiting ball live in `upper`, a frame aligned with the leaning part of the pane.
-export function buildPane(kit) {
+export function buildPane(kit, chromeEnvironment) {
   const { T, scene } = kit
   const shape = paneOutline(T)
   const upper = leaningFrame(T)
@@ -35,8 +35,8 @@ export function buildPane(kit) {
   addSheen(kit, shape)
   addRim(kit, shape)
 
-  const chrome = new T.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.07, envMapIntensity: 2.8 })
-  const pegs = addPegs(kit, upper)
+  const chrome = new T.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.17, envMap: chromeEnvironment, envMapIntensity: 1 })
+  const pegs = addPegs(kit, upper, chrome)
   const waitingBall = addWaitingBall(kit, upper, chrome)
 
   return { upper, pegs, waitingBall, chrome }
@@ -168,7 +168,8 @@ function addSheen(kit, shape) {
 }
 
 // Dark glass over the trapezoid the pegs span, half a spacing past the outer pegs and
-// feathered over one more. The sheen's UVs carry the flat pane position.
+// feathered over one more, thinning toward its sides so the city still shows there. The
+// sheen's UVs carry the flat pane position.
 function pegFieldDim(T) {
   return new T.ShaderMaterial({
     transparent: true,
@@ -183,7 +184,7 @@ function pegFieldDim(T) {
       const float SPACING = ${PEG_SPACING.toFixed(4)}, ROW_HEIGHT = ${ROW_HEIGHT.toFixed(4)};
       const float ROW_TOP = ${ROW_TOP.toFixed(4)}, ROW_BOTTOM = ${ROW_BOTTOM.toFixed(4)};
       const float BAY = ${BAY_HALF_WIDTH.toFixed(4)}, PANE_TOP = ${TOP.toFixed(4)};
-      const float PAD = SPACING * .5, FEATHER = SPACING, DIM = .5;
+      const float PAD = SPACING * .5, FEATHER = SPACING, DIM = .42;
       varying vec2 vUv;
       void main() {
         float x = abs(vUv.x * 2. - 1.) * BAY;
@@ -192,7 +193,8 @@ function pegFieldDim(T) {
         float slope = .5 * SPACING / ROW_HEIGHT;
         float side = (x - halfWidth - PAD) / sqrt(1. + slope * slope);
         float d = max(side, max(y - ROW_TOP - PAD, ROW_BOTTOM - PAD - y));
-        gl_FragColor = vec4(vec3(.001, .002, .004), DIM * (1. - smoothstep(0., FEATHER, d)));
+        float across = smoothstep(.35, 1., x / (halfWidth + PAD));
+        gl_FragColor = vec4(vec3(.001, .002, .004), DIM * (1. - .7 * across) * (1. - smoothstep(0., FEATHER, d)));
       }`,
   })
 }
@@ -251,18 +253,10 @@ function addRim(kit, shape) {
 
 // Row r holds r + 3 pegs. Each peg keeps a hidden glow that lights when the ball hits it;
 // the returned map is keyed "row-index".
-function addPegs(kit, upper) {
+function addPegs(kit, upper, chrome) {
   const { T } = kit
   const scale = PEG_RADIUS / 0.17
   const geometry = new T.SphereGeometry(PEG_RADIUS, 32, 20)
-  const material = new T.MeshStandardMaterial({
-    color: 0xe8eef6,
-    metalness: 0.85,
-    roughness: 0.16,
-    envMapIntensity: 3.4,
-    emissive: 0x5a6474,
-    emissiveIntensity: 0.55,
-  })
   const shadowGeometry = new T.PlaneGeometry(0.46 * scale, 0.46 * scale)
   const shadowMaterial = new T.MeshBasicMaterial({ map: kit.shadowTexture, transparent: true, opacity: 0.6, depthWrite: false })
 
@@ -273,7 +267,7 @@ function addPegs(kit, upper) {
       const x = (index - (count - 1) / 2) * PEG_SPACING
       const y = ROW_TOP - row * ROW_HEIGHT
 
-      const peg = new T.Mesh(geometry, material)
+      const peg = new T.Mesh(geometry, chrome)
       peg.position.set(x, y, FACE + PEG_RADIUS * 0.85)
       upper.add(peg)
 

@@ -68,7 +68,7 @@ export const board = {
     const kit = createKit(T, this.scene)
     this.background = createBackground(kit, () => this.fit())
     this.pulses = { value: new Array(SLOTS).fill(0) }
-    const pane = buildPane(kit)
+    const pane = buildPane(kit, chromeStudio(T, this.renderer, PITCH))
     this.upper = pane.upper
     this.pegs = pane.pegs
     this.waitingBall = pane.waitingBall
@@ -309,6 +309,53 @@ function studioLighting(T, renderer) {
   strip(2, 26, 30, 10, -8, 0xffffff, 4)
   strip(44, 5, 0, -6, -32, 0xffb070, 1.6)
   strip(40, 3, 0, -14, 30, 0x5d86ff, 0.6)
+  return new T.PMREMGenerator(renderer).fromScene(studio, 0.02).texture
+}
+
+// The studio the polished steel reflects, laid out in the camera's frame (x right, y up,
+// z toward the camera) and turned by its pitch: a soft cap overhead, a window on each
+// side, a warm lamp low on each side, a cool bounce below, and a shaded waist.
+function chromeStudio(T, renderer, pitch) {
+  const studio = new T.Scene()
+  studio.add(
+    new T.Mesh(
+      new T.SphereGeometry(50, 64, 32),
+      new T.ShaderMaterial({
+        side: T.BackSide,
+        uniforms: { pitch: { value: pitch } },
+        vertexShader: `
+          varying vec3 vDir;
+          void main() {
+            vDir = normalize(position);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+          }`,
+        fragmentShader: `
+          uniform float pitch;
+          varying vec3 vDir;
+          void main() {
+            float c = cos(pitch), s = sin(pitch);
+            vec3 d = vec3(vDir.x, vDir.y * c + vDir.z * s, -vDir.y * s + vDir.z * c);
+            vec3 cool = vec3(.48, .57, .8);
+            float level = .07 + .42 * smoothstep(.05, .85, d.y) + .22 * smoothstep(-.25, -.9, d.y) + .45 * smoothstep(-.25, -.95, d.z);
+            level *= 1. - .7 * smoothstep(.4, .95, d.z) * (1. - smoothstep(.1, .5, d.y));
+            gl_FragColor = vec4(cool * level, 1.);
+          }`,
+      }),
+    ),
+  )
+  const turn = new T.Euler(-pitch, 0, 0)
+  const add = (geometry, x, y, z, color, intensity) => {
+    const mesh = new T.Mesh(geometry, new T.MeshBasicMaterial({ color: new T.Color(color).multiplyScalar(intensity), side: T.DoubleSide }))
+    mesh.position.set(x, y, z).applyEuler(turn)
+    mesh.lookAt(0, 0, 0)
+    studio.add(mesh)
+  }
+  add(new T.CircleGeometry(22, 48), 0, 34, 24, 0xffffff, 4.5)
+  add(new T.PlaneGeometry(10, 20), -42, 12, 4, 0xf2f6ff, 5)
+  add(new T.PlaneGeometry(10, 20), 42, 12, 4, 0xf2f6ff, 5)
+  add(new T.CircleGeometry(4.6, 32), -38, -14, 12, 0xff9636, 8)
+  add(new T.CircleGeometry(4.6, 32), 38, -14, 12, 0xff9636, 8)
+  add(new T.CircleGeometry(11, 32), 0, -36, 22, 0xe2ecff, 4)
   return new T.PMREMGenerator(renderer).fromScene(studio, 0.02).texture
 }
 

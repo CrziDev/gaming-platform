@@ -110,9 +110,15 @@ one's width. The tall photo paints the left tagline on its pillar, so the frame'
 tagline stands down while it shows. Mipmaps keep desktop downscaling clean.
 
 The city stays bright: a light shade at the top behind the title row and at the bottom
-behind the bet panel, a soft vignette, and a slight saturation lift. On the pane, only the
-peg field is dimmed, half a peg spacing past the outer pegs and feathered over one more,
-so the rest of the glass shows the city clear.
+behind the bet panel, a faint vignette at the far edges, and a slight saturation lift. On
+the pane, only the peg field is dimmed, half a peg spacing past the outer pegs and
+feathered over one more, and the dimming thins toward its left and right sides, so the
+rest of the glass shows the city clear.
+
+The pegs and the ball are one polished chrome. It reflects a studio of its own, laid out
+around the camera's view: a broad soft cap overhead, a white window on each side, a warm
+lamp low on each side, a cool spot below, a shaded waist, and a bright rim. The glass and
+the cups keep the board's general studio.
 
 ### Art
 
