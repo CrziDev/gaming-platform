@@ -1,0 +1,2886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Plinko Billiards</title>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@700&display=swap" rel="stylesheet" />
+<style>
+/* ── Platform tokens (frontend/src/styles/index.css, design system v3) ── */
+:root {
+  color-scheme: dark;
+  --base: #04070d;
+  --panel: rgb(4 13 27 / 0.86);
+  --surface-1: #0a111c;
+  --surface-2: #111a27;
+  --surface-3: #182333;
+  --wash: rgb(150 190 255 / 0.08);
+  --inset: rgb(140 180 240 / 0.06);
+  --field: rgb(125 165 225 / 0.05);
+  --float-hover: rgb(22 38 60 / 0.7);
+  --hairline-soft: rgb(170 205 255 / 0.07);
+  --hairline: rgb(170 205 255 / 0.12);
+  --hairline-strong: rgb(170 205 255 / 0.2);
+  --ink: #f2f6fb;
+  --ink-soft: #e6ebf2;
+  --ink-control: #d4e1f7;
+  --ink-mute: #8fa4c2;
+  --ink-cool: #9db9e8;
+  --on-accent: #04150b;
+  --brand: #2fe38a;
+  --accent-hi: #7cf0b5;
+  --accent-ink: #3ee08e;
+  --selected: rgb(47 227 138 / 0.14);
+  --gold: #f2c14e;
+  --success: #3ec07d;
+  --danger: #e05a5a;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --radius-chip: 10px;
+  --radius-input: 14px;
+  --radius-tile: 14px;
+  --radius-card: 20px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fast: 120ms;
+  --standard: 180ms;
+  --shadow-overlay: 0 16px 40px rgb(0 0 0 / 0.5);
+  --shadow-panel: 0 20px 50px rgb(0 0 0 / 0.5);
+  --device-h: 844px;
+  --stage-aspect: 0.892857; /* 10 / 11.2 */
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; height: 100%; }
+
+body {
+  background: var(--base);
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+svg { display: block; flex-shrink: 0; }
+:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.tnum { font-variant-numeric: tabular-nums; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.label-mono {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-cool);
+}
+
+.glass-chrome {
+  background-color: var(--panel);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.glass-panel, .glass-float { position: relative; }
+
+.glass-panel {
+  background-color: rgb(6 15 29 / 0.82);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid var(--hairline);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.glass-float {
+  background-color: rgb(4 16 32 / 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--hairline-strong);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
+}
+
+.glass-panel::after, .glass-float::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(185 218 255 / 0.22), rgb(185 218 255 / 0) 45%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.glass-menu {
+  background-color: rgb(12 20 32 / 0.96);
+  border: 1px solid rgb(170 205 255 / 0.14);
+  box-shadow: var(--shadow-overlay);
+}
+
+.glass-pill {
+  background-color: rgb(2 8 18 / 0.45);
+  border: 1px solid rgb(170 205 255 / 0.16);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.chrome-edge { border-bottom: 1px solid transparent; }
+.chrome-edge::after {
+  content: '';
+  position: absolute;
+  top: calc(100% - 2px);
+  right: 0;
+  left: 0;
+  height: 6px;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 8%, rgb(90 230 240 / 0.55) 12%, transparent 17%, transparent 40%, rgb(230 240 250 / 0.35) 47%, transparent 54%, transparent 64%, rgb(120 220 240 / 0.45) 70%, transparent 76%, transparent 88%, rgb(235 240 245 / 0.45) 93%, transparent 97%) 0 2px / 100% 2px no-repeat,
+    linear-gradient(180deg, rgb(0 0 0 / 0.25) 0 1px, rgb(150 200 235 / 0.14) 1px 2px, rgb(160 210 240 / 0.62) 2px 3px, rgb(80 140 200 / 0.24) 3px 4px, rgb(0 4 12 / 0.5) 4px 5px, rgb(0 4 12 / 0.15) 5px 6px);
+  mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.3), #000 12%, #000 88%, rgb(0 0 0 / 0.2));
+}
+
+.cta {
+  background-image: linear-gradient(180deg, #4af2a4 0%, #1dcf7b 50%, #11a860 100%);
+  color: var(--on-accent);
+  box-shadow: 0 0 26px rgb(40 230 130 / 0.42), inset 0 1px 0 rgb(255 255 255 / 0.55), inset 0 -2px 0 rgb(0 0 0 / 0.15);
+  transition: filter var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+.cta:hover { filter: brightness(1.1); }
+
+.tap-target { position: relative; }
+.tap-target::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+@keyframes pop-enter { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@keyframes value-update { from { opacity: 0.45; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+.pop-enter { animation: pop-enter var(--standard) var(--ease) both; }
+.value-update { animation: value-update var(--standard) var(--ease) both; }
+
+/* ── Device: full-bleed on a phone, a 390 × 844 preview frame on a wider screen ── */
+.stagebed {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  gap: 16px;
+  padding: 32px 16px;
+  background:
+    radial-gradient(60% 50% at 50% 40%, rgb(40 70 120 / 0.14), transparent 70%),
+    var(--base);
+}
+
+.device {
+  position: relative;
+  width: 390px;
+  height: var(--device-h);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 46px;
+  background: var(--base);
+  box-shadow:
+    0 0 0 10px #0b1119,
+    0 0 0 11px rgb(170 205 255 / 0.14),
+    0 40px 90px rgb(0 0 0 / 0.65);
+  container: device / inline-size;
+}
+
+.caption {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+@media (max-width: 499px) {
+  :root { --device-h: 100dvh; }
+  .stagebed { display: block; padding: 0; background: var(--base); }
+  .device { width: 100%; border-radius: 0; box-shadow: none; }
+  .caption { display: none; }
+}
+
+.scroller {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.12) transparent;
+}
+
+/* ── Top bar (components/shell/Header.tsx) ── */
+.topbar {
+  position: relative;
+  z-index: 30;
+  flex-shrink: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.icon-btn:active { transform: translateY(1px); }
+
+.menu-btn { width: 44px; height: 44px; border-radius: var(--radius-chip); color: var(--ink-soft); }
+.menu-btn:hover { background: var(--wash); }
+
+.wordmark { display: flex; flex-direction: column; align-items: center; line-height: 1; color: #fff; flex-shrink: 0; }
+.wordmark-name { position: relative; font-size: 20px; font-weight: 700; letter-spacing: -0.035em; }
+.wordmark-name b { font-weight: 700; color: var(--brand); }
+.wordmark-crown { position: absolute; top: -9px; left: 57%; width: 14px; height: auto; color: var(--gold); }
+.wordmark-sub { margin-top: 4px; padding-left: 0.34em; font-family: var(--font-mono); font-size: 7.5px; letter-spacing: 0.34em; color: var(--ink-mute); }
+
+.spacer { flex: 1; }
+
+.wallet-pill {
+  flex-shrink: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+}
+.wallet-link { display: flex; align-items: center; gap: 8px; height: 100%; color: var(--ink); transition: opacity var(--fast) var(--ease); }
+.wallet-link:hover { opacity: 0.85; }
+.wallet-glyph { color: var(--brand); }
+.wallet-amount { font-size: 13.5px; font-weight: 500; }
+.deposit-btn { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+.utilities { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.round-btn { width: 40px; height: 40px; border-radius: 50%; color: var(--ink-soft); }
+.round-btn:hover { background-color: var(--wash); }
+.bell-dot { position: absolute; top: 10px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
+
+@container device (max-width: 379px) { .wallet-glyph { display: none; } }
+
+/* ── Game zone (components/game/GameHost.tsx) ── */
+.zone {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: max(28rem, calc(var(--device-h) - 60px));
+  overflow: hidden;
+  background: var(--base);
+}
+
+.column {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 600px;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 12px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+}
+
+.title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.title-row h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.5);
+}
+.subtitle {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.24em;
+  white-space: nowrap;
+  color: var(--ink-cool);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.9), 0 0 10px rgb(0 0 0 / 0.85);
+}
+@container device (min-width: 480px) { .subtitle { letter-spacing: 0.32em; } }
+
+.actions { display: flex; gap: 8px; flex-shrink: 0; }
+.float-btn {
+  height: 36px;
+  min-width: 36px;
+  border-radius: var(--radius-input);
+  color: var(--ink-control);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color var(--fast) var(--ease);
+}
+.float-btn:hover { background-color: var(--float-hover); }
+.float-btn:active { transform: translateY(1px); }
+.float-btn[aria-pressed='true'].fav { color: var(--accent-ink); }
+.fair-btn { padding: 0 12px; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; }
+@container device (max-width: 429px) {
+  .fair-btn { width: 36px; padding: 0; }
+  .fair-btn span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+
+/* As tall as the board at full width less its 44px gutters; shrinks when the zone runs out of height. */
+.stage-box {
+  margin: 6px -18px 0;
+  min-height: 0;
+  flex: 0 1 calc((100cqw - 52px) / var(--stage-aspect));
+  container-type: size;
+}
+.stage {
+  position: relative;
+  margin: 0 auto;
+  max-height: 100%;
+  aspect-ratio: 10 / 11.2;
+  width: min(100cqw - 88px, 100cqh * var(--stage-aspect));
+}
+.stage-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink-mute);
+}
+
+.controls { position: relative; margin-top: 4px; flex-shrink: 0; }
+
+/* ── Bet panel (pages/GamePage.tsx BetPanel) ── */
+.bet-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-card);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), var(--shadow-panel);
+}
+@container device (min-width: 640px) { .bet-panel { gap: 10px; padding: 12px; } }
+
+.bet-row { display: flex; align-items: center; gap: 10px; }
+.balance { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.wallet-tile {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-input);
+  border: 1px solid var(--hairline);
+  background: var(--inset);
+  color: var(--ink-control);
+}
+@container device (max-width: 379px) { .wallet-tile { display: none; } }
+.balance-text { min-width: 0; flex: 1; }
+.balance-value { font-size: 16px; line-height: 1.25; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.risk { position: relative; flex-shrink: 0; }
+.risk-btn {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 12px;
+  border-radius: var(--radius-input);
+  border: 1px solid var(--hairline);
+  background: var(--inset);
+  font-size: 13.5px;
+  white-space: nowrap;
+  color: var(--ink-control);
+  transition: background-color var(--fast) var(--ease);
+}
+.risk-btn:hover { background: var(--wash); }
+.risk-btn:disabled { cursor: not-allowed; opacity: 0.55; }
+.risk-rule { width: 1px; height: 22px; background: var(--hairline); }
+.risk-chevron { transition: transform var(--standard) var(--ease); }
+.risk-btn[aria-expanded='true'] .risk-chevron { transform: rotate(180deg); }
+@container device (max-width: 429px) { .risk-sliders { display: none; } }
+
+.risk-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  width: 208px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--radius-input);
+}
+.risk-menu-head { padding: 6px 10px 4px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--ink-mute); }
+.risk-item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  border-radius: var(--radius-chip);
+  font-size: 13.5px;
+  text-align: left;
+  color: var(--ink-soft);
+  transition: background-color var(--fast) var(--ease);
+}
+.risk-item:hover { background: var(--wash); }
+.risk-item[aria-checked='true'] { background: var(--selected); }
+.risk-range { font-size: 11px; color: var(--ink-mute); }
+
+.stake-row { display: flex; gap: 8px; }
+.stepper {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border-radius: var(--radius-input);
+  border: 1px solid var(--hairline);
+  background: var(--field);
+}
+.step-btn {
+  width: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--inset);
+  color: var(--ink-control);
+  transition: background-color var(--fast) var(--ease);
+}
+.step-btn:hover { background: var(--wash); }
+.stake-value {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+  border-inline: 1px solid var(--hairline);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.stake-value span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.play-btn {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-input);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.play-btn:active { transform: translateY(1px); }
+.play-btn:disabled {
+  cursor: not-allowed;
+  background-image: none;
+  background-color: var(--surface-2);
+  color: var(--ink-mute);
+  box-shadow: none;
+  opacity: 0.55;
+  filter: none;
+}
+
+/* ── History (features/gameplay/GameHistory.tsx) ── */
+.history-wrap { max-width: 1120px; margin: 0 auto; padding: 20px 14px 32px; }
+.history { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: var(--radius-card); }
+.history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.history-head h2 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink-soft); }
+.see-all { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-size: 12.5px; font-weight: 500; color: var(--ink-mute); transition: color var(--fast) var(--ease); }
+.see-all:hover { color: var(--ink-soft); }
+.history-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.record {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-tile);
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+}
+.record-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.record-title { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+.record-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-mute); }
+.record-value { font-size: 13.5px; font-weight: 500; color: var(--ink-soft); }
+.record-value.credit { color: var(--success); }
+.history-empty { margin: 0; font-size: 13px; color: var(--ink-mute); }
+
+/* ── Dialogs (components/ui/Modal.tsx) ── */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(4 7 13 / 0.7);
+}
+.dialog {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--radius-card);
+}
+.dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.dialog-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+.dialog-desc { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-mute); }
+.close-btn { width: 36px; height: 36px; margin: -8px -8px 0 0; border-radius: var(--radius-chip); color: var(--ink-mute); }
+.close-btn:hover { background: var(--wash); color: var(--ink-soft); }
+.facts { display: flex; flex-direction: column; gap: 12px; margin: 0; font-size: 13.5px; }
+.fact { display: flex; justify-content: space-between; gap: 16px; }
+.fact dt { color: var(--ink-mute); }
+.fact dd { margin: 0; font-weight: 500; color: var(--ink); }
+.payouts-label { color: var(--ink-mute); }
+.payouts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 0; }
+@container device (min-width: 400px) { .payouts { grid-template-columns: repeat(5, 1fr); } }
+.payout { padding: 6px 8px; border-radius: var(--radius-chip); background: var(--inset); text-align: center; font-size: 12px; color: var(--ink-soft); }
+.dialog-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: var(--radius-input);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.btn-secondary { border: 1px solid var(--hairline); background: var(--inset); font-weight: 500; color: var(--ink-control); }
+.btn-secondary:hover { background: var(--wash); }
+.btn-primary { font-weight: 700; }
+
+/* ── Frame art: the billiard table theme, at its phone sizes ── */
+.scene { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.scene canvas { display: block; width: 100%; height: 100%; }
+
+.tagline {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: none;
+  visibility: hidden;
+  font-family: 'IBM Plex Sans Condensed', sans-serif;
+  font-weight: 500;
+  line-height: 1.1;
+}
+.tagline-left {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #ffe2b4;
+  text-shadow: 0 0 6px rgb(255 190 110 / 0.85), 0 0 18px rgb(230 150 60 / 0.5);
+}
+.tagline-right {
+  align-items: flex-end;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #f4ecdc;
+  text-shadow: 0 0 6px rgb(255 225 180 / 0.6);
+}
+.tagline-rule { width: 13px; height: 1.5px; margin-top: 4px; background: currentColor; }
+.tagline-left .tagline-rule { box-shadow: 0 0 8px rgb(255 180 90 / 0.9); }
+.tagline-right .tagline-rule { width: 11px; }
+
+.toasts { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.toast {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 5px 9px;
+  border: 1px solid rgb(255 230 190 / 0.18);
+  border-radius: 9px;
+  background: rgb(14 10 7 / 0.86);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+  color: #b3bfcf;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.toast-win { color: #4af2a4; }
+
+/* ── Billiard skin: game zone (mockup, not platform) ──
+   The controls over the table wear the table's materials: a mahogany rail around a felt
+   bed, a brass balance plate, an ivory risk chip, a felt well with cue-ball steppers, and
+   leather for the menu and the title-row buttons. Sizes, type, money figures, the focus
+   ring, and the play button stay the platform's. */
+.zone {
+  --brass-ink: #2a1c0c;
+  --ivory-ink: #2a1f14;
+  --leather-ink: #f1e3c4;
+  --brass-edge: rgb(216 172 85 / 0.5);
+  --nap: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .32 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.bet-panel {
+  position: relative;
+  border: 7px solid transparent;
+  background:
+    var(--nap) padding-box,
+    radial-gradient(120% 90% at 50% 0%, #178250, #0f6039 58%, #0a4a2b) padding-box,
+    linear-gradient(180deg, rgb(255 222 184 / 0.2), rgb(255 222 184 / 0) 32%, rgb(0 0 0 / 0) 70%, rgb(0 0 0 / 0.3)) border-box,
+    repeating-linear-gradient(178deg, rgb(20 6 2 / 0) 0 3px, rgb(20 6 2 / 0.3) 3px 4px, rgb(20 6 2 / 0) 4px 9px, rgb(196 104 52 / 0.14) 9px 10px, rgb(20 6 2 / 0) 10px 14px) border-box,
+    linear-gradient(90deg, #461a0a, #5c2511 28%, #4b1d0c 52%, #612814 78%, #451a0a) border-box;
+  box-shadow:
+    inset 0 3px 7px rgb(0 0 0 / 0.6),
+    inset 0 0 0 1px rgb(0 0 0 / 0.45),
+    0 0 0 1px rgb(20 8 3 / 0.9),
+    var(--shadow-panel);
+}
+/* Brass rivets at the corners and pearl diamond sights on the rim. */
+.bet-panel::before,
+.bet-panel::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.bet-panel::before {
+  background:
+    radial-gradient(circle at 11px 11px, #fdeaa8 0, #d6a751 2.5px, #86601f 4.5px, rgb(0 0 0 / 0.5) 5.5px, transparent 6.5px),
+    radial-gradient(circle at calc(100% - 11px) 11px, #fdeaa8 0, #d6a751 2.5px, #86601f 4.5px, rgb(0 0 0 / 0.5) 5.5px, transparent 6.5px),
+    radial-gradient(circle at 11px calc(100% - 11px), #fdeaa8 0, #d6a751 2.5px, #86601f 4.5px, rgb(0 0 0 / 0.5) 5.5px, transparent 6.5px),
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px), #fdeaa8 0, #d6a751 2.5px, #86601f 4.5px, rgb(0 0 0 / 0.5) 5.5px, transparent 6.5px);
+}
+.bet-panel::after {
+  background:
+    radial-gradient(4.5px 1.8px at 33% 3.5px, #f7f2e8 55%, transparent 100%),
+    radial-gradient(4.5px 1.8px at 50% 3.5px, #f7f2e8 55%, transparent 100%),
+    radial-gradient(4.5px 1.8px at 67% 3.5px, #f7f2e8 55%, transparent 100%),
+    radial-gradient(4.5px 1.8px at 33% calc(100% - 3.5px), #f7f2e8 55%, transparent 100%),
+    radial-gradient(4.5px 1.8px at 50% calc(100% - 3.5px), #f7f2e8 55%, transparent 100%),
+    radial-gradient(4.5px 1.8px at 67% calc(100% - 3.5px), #f7f2e8 55%, transparent 100%);
+}
+
+.balance {
+  align-self: stretch;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 12px;
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.07) 0 1px, rgb(255 255 255 / 0) 1px 3px),
+    linear-gradient(180deg, #f5dc95, #d7ad57 38%, #b88a36 64%, #e0bf70);
+  box-shadow:
+    inset 0 1px 0 rgb(255 250 220 / 0.75),
+    inset 0 -1px 0 rgb(90 60 20 / 0.55),
+    0 0 0 1px rgb(60 35 10 / 0.7),
+    0 2px 5px rgb(0 0 0 / 0.5);
+}
+.balance .wallet-tile {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border-color: rgb(80 50 15 / 0.45);
+  background: rgb(255 245 210 / 0.2);
+  box-shadow: inset 0 1px 2px rgb(60 35 10 / 0.45);
+  color: #3b2810;
+}
+.balance .label-mono { color: #5a3d17; }
+.balance-value { color: var(--brass-ink); text-shadow: 0 1px 0 rgb(255 240 200 / 0.45); }
+@container device (max-width: 379px) { .balance { padding-left: 10px; } }
+
+.risk-btn {
+  border-color: rgb(70 45 20 / 0.5);
+  background: linear-gradient(180deg, #fbf7ec, #ece2cb 55%, #d9cba9);
+  color: var(--ivory-ink);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -2px 0 rgb(120 90 50 / 0.2), 0 2px 5px rgb(0 0 0 / 0.45);
+}
+.risk-btn:hover { background: linear-gradient(180deg, #fffcf4, #f3ead6 55%, #e2d5b6); }
+.risk-rule { background: rgb(70 45 20 / 0.3); }
+
+.risk-menu {
+  border: 1px solid var(--brass-edge);
+  outline: 1px dashed rgb(216 172 85 / 0.32);
+  outline-offset: -5px;
+  background:
+    var(--nap),
+    linear-gradient(180deg, #33200f, #1d110a);
+  box-shadow: var(--shadow-overlay), inset 0 1px 0 rgb(255 220 170 / 0.1);
+}
+.risk-menu-head { color: #c9a868; }
+.risk-item { color: var(--leather-ink); }
+.risk-item:hover { background: rgb(255 220 170 / 0.09); }
+.risk-item[aria-checked='true'] { background: rgb(28 140 82 / 0.34); }
+.risk-range { color: #bba98a; }
+
+.stepper {
+  border-color: rgb(0 0 0 / 0.55);
+  background:
+    var(--nap),
+    radial-gradient(120% 140% at 50% 0%, #0b4c2e, #073620);
+  box-shadow: inset 0 2px 7px rgb(0 0 0 / 0.7), inset 0 -1px 0 rgb(120 220 160 / 0.08), 0 1px 0 rgb(255 220 170 / 0.12);
+}
+/* Each step is a cue ball sunk in the well; the cell around it keeps the whole hit area. */
+.step-btn {
+  position: relative;
+  background: transparent;
+  color: var(--ivory-ink);
+}
+.step-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 72% 72%, #c8202c 0 1.6px, transparent 2.2px),
+    radial-gradient(circle at 36% 30%, #ffffff, #f2ecdd 45%, #cdbf9f 100%);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.55);
+  transition: filter var(--fast) var(--ease);
+}
+.step-btn:hover { background: rgb(255 255 255 / 0.04); }
+.step-btn:hover::before { filter: brightness(1.06); }
+.step-btn:focus-visible { outline-offset: -3px; border-radius: var(--radius-input); }
+.step-btn svg { position: relative; }
+.stake-value {
+  border-inline: 1px solid rgb(216 172 85 / 0.3);
+  color: #f6efdc;
+}
+
+.float-btn {
+  border: 1px solid var(--brass-edge);
+  background: linear-gradient(180deg, #3a2416, #25160d);
+  color: var(--leather-ink);
+  box-shadow: inset 0 1px 0 rgb(255 220 170 / 0.12), 0 2px 6px rgb(0 0 0 / 0.45);
+}
+.float-btn:hover { background: linear-gradient(180deg, #4a311f, #2e1c10); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="stagebed">
+  <div class="device" id="device">
+
+    <header class="topbar glass-chrome chrome-edge">
+      <button type="button" class="icon-btn menu-btn" aria-label="Toggle navigation">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="18" height="2.2" rx="1.1"/><rect x="3" y="10.9" width="18" height="2.2" rx="1.1"/><rect x="3" y="16.8" width="18" height="2.2" rx="1.1"/></svg>
+      </button>
+      <a href="#" class="wordmark" aria-label="HeziBet">
+        <span class="wordmark-name" aria-hidden="true">Hezi<b>Bet</b><svg class="wordmark-crown" width="17" height="11" viewBox="0 0 18 11"><polygon points="0,11 1.5,2 6,6.5 9,0 12,6.5 16.5,2 18,11" fill="currentColor"/></svg></span>
+        <span class="wordmark-sub" aria-hidden="true">PLAY SMART</span>
+      </a>
+      <div class="spacer"></div>
+      <div class="wallet-pill glass-pill">
+        <a href="#" class="wallet-link tap-target" id="pill-link" aria-label="Wallet balance">
+          <svg class="wallet-glyph" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6.5A2.5 2.5 0 0 1 6.5 4H18v3H6.5a.5.5 0 0 0 0 1H20a1 1 0 0 1 1 1v9.5a1.5 1.5 0 0 1-1.5 1.5h-13A2.5 2.5 0 0 1 4 17.5z"/><circle cx="16.5" cy="13.5" r="1.4" fill="#0a0f16"/></svg>
+          <span class="wallet-amount tnum" id="pill-balance" aria-hidden="true"></span>
+        </a>
+        <a href="#" class="deposit-btn cta" aria-label="Deposit" title="Deposit">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </a>
+      </div>
+      <div class="utilities">
+        <button type="button" class="icon-btn round-btn glass-pill tap-target" aria-label="Notifications" title="Notifications">
+          <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+          <span class="bell-dot"></span>
+        </button>
+        <button type="button" class="icon-btn round-btn glass-pill tap-target" aria-label="Account menu" title="Account">
+          <svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.6-4.4 4-7 8.5-7s7.9 2.6 8.5 7z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="scroller" id="scroller">
+      <section class="zone" id="zone" aria-label="Plinko game">
+        <div id="scene" class="scene" aria-hidden="true"></div>
+        <div id="tagline-left" class="tagline tagline-left" aria-hidden="true">
+          <span>GOOD</span><span>PLAYERS</span><span>BET</span><span>BETTER</span><span class="tagline-rule"></span>
+        </div>
+        <div id="tagline-right" class="tagline tagline-right" aria-hidden="true">
+          <span>SAME</span><span>GAME</span><span>BIGGER</span><span>VIEWS</span><span class="tagline-rule"></span>
+        </div>
+        <div id="toasts" class="toasts" aria-hidden="true"></div>
+
+        <div class="column">
+          <header class="title-row" id="title-row">
+            <div>
+              <h1>Plinko</h1>
+              <p class="subtitle">RISK · PLAY · WIN</p>
+            </div>
+            <div class="actions">
+              <button type="button" class="float-btn tap-target fair-btn" id="fair-open" aria-label="Fair game" aria-haspopup="dialog">
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+                <span>FAIR GAME</span>
+              </button>
+              <button type="button" class="float-btn tap-target" id="sound" aria-pressed="true" aria-label="Mute game sound" title="Mute game sound">
+                <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/>
+                  <g id="sound-on"><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></g>
+                  <g id="sound-off" hidden><path d="m16.5 14.5 5-5"/><path d="m16.5 9.5 5 5"/></g>
+                </svg>
+              </button>
+              <button type="button" class="float-btn tap-target fav" id="favorite" aria-pressed="false" aria-label="Add to favorites" title="Add to favorites">
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/></svg>
+              </button>
+            </div>
+          </header>
+
+          <div class="stage-box">
+            <div class="stage" id="stage">
+              <div class="stage-status" id="stage-status" role="status">LOADING BOARD</div>
+            </div>
+          </div>
+
+          <div class="controls" id="controls">
+            <section class="bet-panel" aria-label="Bet controls">
+              <div class="bet-row">
+                <div class="balance">
+                  <span class="wallet-tile" aria-hidden="true">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+                  </span>
+                  <div class="balance-text">
+                    <div class="label-mono">Balance</div>
+                    <div class="balance-value tnum" id="panel-balance"></div>
+                  </div>
+                </div>
+                <div class="risk" id="risk">
+                  <button type="button" class="risk-btn tap-target" id="risk-btn" aria-haspopup="menu" aria-expanded="false">
+                    <svg class="risk-sliders" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg>
+                    <span id="risk-label"></span>
+                    <span class="risk-rule" aria-hidden="true"></span>
+                    <svg class="risk-chevron" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                  <div class="risk-menu pop-enter" id="risk-menu" role="menu" aria-label="Risk" hidden>
+                    <div class="risk-menu-head">RISK · 8 ROWS</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stake-row">
+                <div class="stepper">
+                  <button type="button" class="step-btn" id="stake-down" aria-label="Decrease bet">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+                  </button>
+                  <div class="stake-value tnum"><span id="stake"></span></div>
+                  <button type="button" class="step-btn" id="stake-up" aria-label="Increase bet">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  </button>
+                </div>
+                <button type="button" class="play-btn cta tap-target" id="play" disabled>
+                  PLACE BET
+                  <svg aria-hidden="true" width="12" height="14" viewBox="0 0 18 20"><polygon points="2,1 17,10 2,19" fill="currentColor"/></svg>
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <div class="history-wrap">
+        <section class="history glass-panel" aria-label="History">
+          <div class="history-head">
+            <h2>History</h2>
+            <a href="#" class="see-all" aria-label="See all history">
+              See all
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </a>
+          </div>
+          <ul class="history-list" id="history"></ul>
+          <p class="history-empty" id="history-empty" hidden>Your bets on this game will appear here.</p>
+        </section>
+      </div>
+    </div>
+
+    <div class="scrim" id="fair-dialog" hidden>
+      <div class="dialog glass-menu pop-enter" role="dialog" aria-modal="true" aria-labelledby="fair-title">
+        <div class="dialog-head">
+          <h2 id="fair-title">Fair game</h2>
+          <button type="button" class="icon-btn close-btn" data-close aria-label="Close">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <dl class="facts">
+          <div class="fact"><dt>Return to player</dt><dd class="tnum" id="fair-rtp"></dd></div>
+          <div>
+            <dt class="payouts-label" id="fair-board"></dt>
+            <dd class="payouts" id="fair-payouts"></dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="scrim" id="shortfall-dialog" hidden>
+      <div class="dialog glass-menu pop-enter" role="dialog" aria-modal="true" aria-labelledby="shortfall-title">
+        <div class="dialog-head">
+          <div>
+            <h2 id="shortfall-title">Not enough balance</h2>
+            <p class="dialog-desc">This stake is more than your wallet holds. Deposit to keep playing.</p>
+          </div>
+          <button type="button" class="icon-btn close-btn" data-close aria-label="Close">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <dl class="facts">
+          <div class="fact"><dt>Stake</dt><dd class="tnum" id="shortfall-stake"></dd></div>
+          <div class="fact"><dt>Balance</dt><dd class="tnum" id="shortfall-balance"></dd></div>
+        </dl>
+        <div class="dialog-foot">
+          <button type="button" class="btn btn-secondary" data-close>Change stake</button>
+          <a href="#" class="btn btn-primary cta" data-close>Deposit</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="caption">Plinko · Theme 2 · Billiards v2 · Phone 390 × 844</div>
+</div>
+
+<script type="module">
+// The Plinko frame, themed as a billiard table and inlined. It draws only what the mock
+// host below tells it: the payouts it is configured with and the slot each round lands in.
+// ── board/theme.js ──
+
+// The table's own colours. They are game art, not platform chrome, so they live here
+// rather than in the platform tokens. Each band enamels a pocket's plate from deep to
+// light, paints its label in `ink`, and lights the cloth around the pocket in `glow`.
+const bands = [
+  { deep: '#a8987a', base: '#e9dfc6', hi: '#fffaf0', ink: '#241a10', shade: 0.1, glow: '#ffeccb' },
+  { deep: '#0a2a70', base: '#1d58cc', hi: '#5c8ff0', ink: '#ffffff', shade: 0.35, glow: '#4f8cff' },
+  { deep: '#2f0f58', base: '#6428ae', hi: '#9a63e0', ink: '#ffffff', shade: 0.35, glow: '#9b5cff' },
+  { deep: '#7c3000', base: '#ea7010', hi: '#ffa650', ink: '#ffffff', shade: 0.35, glow: '#ff9a30' },
+  { deep: '#640812', base: '#cf1c2a', hi: '#ff5a64', ink: '#ffffff', shade: 0.35, glow: '#ff4050' },
+]
+
+// The solids 1–8; a stripe wears the colour of its number less eight.
+const ballColours = ['#f2b705', '#1846b8', '#cf1f2b', '#57287f', '#ee6a10', '#127040', '#7a1d1d', '#101010']
+
+const theme = {
+  ground: 0x080605,
+
+  labelFont(size) {
+    return `700 ${size}px Inter, "IBM Plex Sans", sans-serif`
+  },
+
+  // By distance from the centre: ivory in the middle, then blue, purple, orange, and
+  // red at the edge where the pay is highest.
+  cupBand(index, total) {
+    const distance = Math.round(Math.abs(index - (total - 1) / 2))
+    return bands[Math.min(distance, bands.length - 1)]
+  },
+
+  ballColour(number) {
+    return ballColours[(number - 1) % 8]
+  },
+}
+
+// ── games/plinko/web/js/state.js ──
+
+// The board's whole mutable state. Nothing here is money: the host owns the stake, the
+// outcome, and the balance, and tells the frame only what to draw.
+const state = {
+  risk: 'normal',
+  multipliers: [],
+  sound: true,
+  configured: false,
+  // The host's board rect inside this frame, in CSS pixels. The canvas fills the frame;
+  // the board is framed inside this rect so the host's controls sit around it.
+  stage: null,
+  // The rects the host's controls cover, in the same pixels; art keeps clear of them.
+  controls: [],
+}
+
+// ── games/plinko/web/js/ui.js ──
+
+// The frame's DOM around the canvas: the brand taglines beside the board and the
+// result toast over the cup that paid.
+const ui = {
+  scene: null,
+  toasts: null,
+  taglines: null,
+
+  mount() {
+    this.scene = document.getElementById('scene')
+    this.toasts = document.getElementById('toasts')
+    this.taglines = {
+      left: document.getElementById('tagline-left'),
+      right: document.getElementById('tagline-right'),
+    }
+  },
+
+  // The taglines stand in the gutters between each edge of the frame and whatever is
+  // nearest at their height, the left one high on the pane and the right one at
+  // mid-depth. That is the glass, measured down to the tagline's foot, or a host control
+  // beside the board. Where the gutter has room they stand a short reach from what they
+  // are beside, and no nearer the frame's edge than its inset; otherwise they centre in
+  // the gutter. When either gutter cannot hold its tagline clear, both step aside.
+  placeTaglines(board, width, controls) {
+    const { left, right } = this.taglines
+    const centre = (board.left + board.right) / 2
+    const depth = board.bottom - board.top
+    const leftTop = board.top + depth * 0.13
+    const rightTop = board.top + depth * 0.45
+    const leftBeside = beside(controls, leftTop, left.offsetHeight)
+    const rightBeside = beside(controls, rightTop, right.offsetHeight)
+    const leftGutter = Math.min(
+      centre - board.halfWidthAt(leftTop + left.offsetHeight),
+      ...leftBeside.map((rect) => rect.x),
+    )
+    const rightGutter =
+      width -
+      Math.max(
+        centre + board.halfWidthAt(rightTop + right.offsetHeight),
+        ...rightBeside.map((rect) => rect.x + rect.width),
+      )
+    const leftOffset = fitTagline(left, leftGutter)
+    const rightOffset = fitTagline(right, rightGutter)
+    const visibility = leftOffset !== null && rightOffset !== null ? 'visible' : 'hidden'
+    Object.assign(left.style, { top: `${leftTop}px`, left: `${leftOffset ?? 0}px`, visibility })
+    Object.assign(right.style, { top: `${rightTop}px`, right: `${rightOffset ?? 0}px`, visibility })
+  },
+
+  // The host formats the amount; the frame only places it. Wins read green, returns
+  // under the stake read grey.
+  toast(x, y, text, win) {
+    const toast = document.createElement('div')
+    toast.className = win ? 'toast toast-win' : 'toast'
+    toast.textContent = text
+    toast.style.left = `${x}px`
+    toast.style.top = `${y}px`
+    this.toasts.appendChild(toast)
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setTimeout(() => toast.remove(), 1300)
+      return
+    }
+    toast.animate(
+      [
+        { opacity: 0, transform: 'translate(-50%,-30%)' },
+        { opacity: 1, transform: 'translate(-50%,-60%)', offset: 0.2 },
+        { opacity: 1, transform: 'translate(-50%,-100%)', offset: 0.75 },
+        { opacity: 0, transform: 'translate(-50%,-150%)' },
+      ],
+      { duration: 1300, easing: 'ease-out' },
+    ).onfinish = () => toast.remove()
+  },
+
+  // 170 reads 1.7x, 600 reads 6x, 50 reads 0.5x.
+  formatMultiplier(hundredths) {
+    const whole = Math.floor(hundredths / 100)
+    const fraction = hundredths % 100
+    const text = fraction === 0 ? String(whole) : `${whole}.${String(fraction).padStart(2, '0').replace(/0$/, '')}`
+    return `${text}x`
+  },
+}
+
+const TAGLINE_CLEARANCE = 8
+const TAGLINE_EDGE_INSET = 40
+const TAGLINE_REACH = 40
+
+// The host controls that share any height with a tagline standing at top.
+function beside(controls, top, height) {
+  return controls.filter((rect) => rect.y < top + height && rect.y + rect.height > top)
+}
+
+// The tagline's offset from its own edge of the frame, or null when the gutter between
+// that edge and the nearest obstacle cannot hold it clear of both.
+function fitTagline(tagline, gutter) {
+  const width = tagline.offsetWidth
+  if (TAGLINE_EDGE_INSET + width <= gutter - TAGLINE_CLEARANCE) {
+    return Math.max(TAGLINE_EDGE_INSET, gutter - TAGLINE_REACH - width)
+  }
+  const offset = (gutter - width) / 2
+  return offset >= TAGLINE_CLEARANCE && offset + width <= gutter - TAGLINE_CLEARANCE ? offset : null
+}
+
+// ── board/geometry.js ──
+
+// Dimensions of the billiard table, in scene units. The playing surface lives in the
+// table frame: x across, y up the slope from the foot cushion's nose, z out of the
+// cloth. The platform plays one board, eight rows of balls over nine pockets.
+
+const ROWS = 8
+const SLOTS = ROWS + 1
+
+// The rack of object balls on the cloth.
+const PEG_SPACING = 0.9
+const ROW_HEIGHT = 0.95
+const ROW_BOTTOM = 1.5
+const ROW_TOP = ROW_BOTTOM + (ROWS - 1) * ROW_HEIGHT
+const PEG_RADIUS = 0.22
+const BALL_RADIUS = 0.22
+const NOTCH_Y = ROW_TOP + 1.05
+const TOP = ROW_TOP + 1.8
+
+// The table leans back TILT from upright over a vertical apron; the camera looks down
+// at PITCH, so the cloth is seen a quarter of the way to edge-on.
+const TILT = 0.85
+const PITCH = 0.42
+const BASE_Y = 1.6
+
+// Cloth, cushions, and the mitred rails, from the cushion nose outward.
+const CLOTH_HALF_WIDTH = 5.0
+const CUSHION_WIDTH = 0.24
+const CUSHION_HEIGHT = 0.27
+const CUSHION_NOSE = 0.2
+const RAIL_WIDTH = 0.62
+const RAIL_HEIGHT = 0.3
+const RAIL_DEPTH = 0.36
+const RAIL_BEVEL = 0.05
+const INNER_HALF_WIDTH = CLOTH_HALF_WIDTH + CUSHION_WIDTH
+const OUTER_HALF_WIDTH = INNER_HALF_WIDTH + RAIL_WIDTH
+const FOOT_Y = -CUSHION_WIDTH - RAIL_WIDTH
+const HEAD_Y = TOP + CUSHION_WIDTH + RAIL_WIDTH
+
+// Nine pockets cut through the cloth along the foot cushion.
+const BAY_HALF_WIDTH = 4.95
+const BAY_PITCH = (2 * BAY_HALF_WIDTH) / SLOTS
+const POCKET_R = 0.36
+const POCKET_Y = 0.54
+const POCKET_DEPTH = 0.6
+const RING_REST = 0.14
+const PLATE_REST = 0.5
+
+// The apron hangs upright under the foot rail and carries the pocket plates.
+const APRON_HEIGHT = 1.4
+const APRON_INSET = 0.12
+const PLATE_WIDTH = 1.04
+const PLATE_HEIGHT = 0.62
+
+const clamp01 = (value) => Math.min(1, Math.max(0, value))
+
+const slotX = (slot) => (slot - (SLOTS - 1) / 2) * BAY_PITCH
+
+// A small repeatable random stream, so the rack looks the same on every load.
+function seeded(seed) {
+  let s = seed >>> 0
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0
+    return s / 4294967296
+  }
+}
+
+// ── board/kit.js ──
+
+// Builders shared by every part of the table: canvas-drawn textures and additive glow
+// sprites.
+function createKit(T, scene) {
+  // Adds colour on top of what is behind without darkening it.
+  const additive = {
+    blending: T.CustomBlending,
+    blendEquation: T.AddEquation,
+    blendSrc: T.SrcAlphaFactor,
+    blendDst: T.OneFactor,
+    blendSrcAlpha: T.ZeroFactor,
+    blendDstAlpha: T.OneFactor,
+  }
+
+  function canvasTexture(draw, width, height = width, { colour = true, repeat = false } = {}) {
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    draw(canvas.getContext('2d'), width, height)
+    const texture = new T.CanvasTexture(canvas)
+    texture.colorSpace = colour ? T.SRGBColorSpace : T.NoColorSpace
+    texture.anisotropy = 8
+    if (repeat) texture.wrapS = texture.wrapT = T.RepeatWrapping
+    return texture
+  }
+
+  function radialTexture(stops, size = 128) {
+    return canvasTexture((g) => {
+      const gradient = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+      for (const [offset, color] of stops) gradient.addColorStop(offset, color)
+      g.fillStyle = gradient
+      g.fillRect(0, 0, size, size)
+    }, size)
+  }
+
+  const glowTexture = radialTexture([
+    [0, 'rgba(255,255,255,1)'],
+    [0.25, 'rgba(255,255,255,.55)'],
+    [0.6, 'rgba(255,255,255,.12)'],
+    [1, 'rgba(255,255,255,0)'],
+  ])
+
+  const shadowTexture = radialTexture([
+    [0, 'rgba(0,0,0,.9)'],
+    [0.45, 'rgba(0,0,0,.45)'],
+    [1, 'rgba(0,0,0,0)'],
+  ])
+
+  // A band of light just outside a pocket's collar.
+  const ringTexture = radialTexture(
+    [
+      [0, 'rgba(255,255,255,0)'],
+      [0.4, 'rgba(255,255,255,0)'],
+      [0.5, 'rgba(255,255,255,.95)'],
+      [0.64, 'rgba(255,255,255,.3)'],
+      [1, 'rgba(255,255,255,0)'],
+    ],
+    256,
+  )
+
+  // Per-pixel speckle over a base colour, the grain of cloth or leather.
+  function speckle(g, width, height, base, spread, random) {
+    g.fillStyle = base
+    g.fillRect(0, 0, width, height)
+    const image = g.getImageData(0, 0, width, height)
+    const data = image.data
+    for (let i = 0; i < data.length; i += 4) {
+      const jitter = 1 + (random() - 0.5) * spread
+      data[i] *= jitter
+      data[i + 1] *= jitter
+      data[i + 2] *= jitter
+    }
+    g.putImageData(image, 0, 0)
+  }
+
+  const random = seeded(7)
+
+  // The cloth: fine speckle with a faint woven mottle, tiling every two units.
+  function clothTextures() {
+    const draw = (base) => (g, w, h) => {
+      speckle(g, w, h, base, 0.22, random)
+      for (let i = 0; i < 260; i++) {
+        const x = random() * w
+        const y = random() * h
+        const r = 6 + random() * 26
+        g.fillStyle = random() < 0.5 ? 'rgba(0,0,0,.035)' : 'rgba(255,255,255,.03)'
+        for (const [dx, dy] of [[0, 0], [w, 0], [-w, 0], [0, h], [0, -h]]) {
+          g.beginPath()
+          g.arc(x + dx, y + dy, r, 0, Math.PI * 2)
+          g.fill()
+        }
+      }
+    }
+    const map = canvasTexture(draw('#0e6038'), 512, 512, { repeat: true })
+    const bump = canvasTexture(draw('#808080'), 512, 512, { colour: false, repeat: true })
+    for (const texture of [map, bump]) texture.repeat.set(0.5, 0.5)
+    return { map, bump }
+  }
+
+  // Mahogany: long grain lines that close on themselves across the width, so the
+  // texture tiles along a rail without a seam. One tile covers 4 × 1 units.
+  function woodTexture() {
+    return canvasTexture(
+      (g, w, h) => {
+        const gradient = g.createLinearGradient(0, 0, 0, h)
+        gradient.addColorStop(0, '#4b1d0c')
+        gradient.addColorStop(0.5, '#5a2410')
+        gradient.addColorStop(1, '#431a0a')
+        g.fillStyle = gradient
+        g.fillRect(0, 0, w, h)
+        for (let i = 0; i < 240; i++) {
+          const y0 = random() * h
+          const amp = 1 + random() * 7
+          const k = 1 + Math.floor(random() * 3)
+          const phase = random() * Math.PI * 2
+          const dark = random() < 0.72
+          g.strokeStyle = dark ? `rgba(18,5,1,${0.08 + random() * 0.24})` : `rgba(190,96,48,${0.05 + random() * 0.1})`
+          g.lineWidth = 0.6 + random() * 2.4
+          g.beginPath()
+          for (let x = 0; x <= w; x += 8) {
+            const a = (x / w) * Math.PI * 2 * k + phase
+            const y = y0 + Math.sin(a) * amp + Math.sin(a * 3 + phase) * amp * 0.25
+            if (x === 0) g.moveTo(x, y)
+            else g.lineTo(x, y)
+          }
+          g.stroke()
+        }
+      },
+      1024,
+      256,
+      { repeat: true },
+    )
+  }
+
+  function leatherBump() {
+    const texture = canvasTexture((g, w, h) => speckle(g, w, h, '#808080', 0.9, random), 128, 128, {
+      colour: false,
+      repeat: true,
+    })
+    texture.repeat.set(6, 1)
+    return texture
+  }
+
+  // A pool ball's surface as an equirectangular map: a solid colour, or white with a
+  // colour band for a stripe, and the number on a white disc front and back. The
+  // front disc sits where a sphere faces +z.
+  function ballTexture(number) {
+    return canvasTexture(
+      (g, w, h) => {
+        const colour = theme.ballColour(number)
+        const stripe = number > 8
+        g.fillStyle = stripe ? '#f3eee2' : colour
+        g.fillRect(0, 0, w, h)
+        if (stripe) {
+          g.fillStyle = colour
+          g.fillRect(0, h * 0.27, w, h * 0.46)
+        }
+        const r = h * 0.15
+        for (const u of [0.25, 0.75]) {
+          const cx = u * w
+          const cy = h / 2
+          g.fillStyle = '#f6f2e8'
+          g.beginPath()
+          g.arc(cx, cy, r, 0, Math.PI * 2)
+          g.fill()
+          g.fillStyle = '#15110d'
+          g.font = theme.labelFont(Math.round(r * (number > 9 ? 1.02 : 1.2)))
+          g.textAlign = 'center'
+          g.textBaseline = 'middle'
+          g.fillText(String(number), cx, cy + r * 0.06)
+          if (number === 6 || number === 9) g.fillRect(cx - r * 0.26, cy + r * 0.58, r * 0.52, r * 0.08)
+        }
+      },
+      1024,
+      512,
+    )
+  }
+
+  // The cue ball carries small red dots, so its roll can be seen.
+  function cueTexture() {
+    return canvasTexture(
+      (g, w, h) => {
+        g.fillStyle = '#f7f3ea'
+        g.fillRect(0, 0, w, h)
+        g.fillStyle = '#c8202c'
+        const r = h * 0.035
+        for (const u of [0, 0.25, 0.5, 0.75, 1]) {
+          g.beginPath()
+          g.ellipse(u * w, h / 2, r, r, 0, 0, Math.PI * 2)
+          g.fill()
+        }
+        for (const [u, v] of [[0.125, 0.25], [0.625, 0.25], [0.375, 0.75], [0.875, 0.75]]) {
+          g.beginPath()
+          g.ellipse(u * w, v * h, r / Math.sin(v * Math.PI), r, 0, 0, Math.PI * 2)
+          g.fill()
+        }
+        g.fillRect(0, 0, w, r * 0.9)
+        g.fillRect(0, h - r * 0.9, w, r * 0.9)
+      },
+      512,
+      256,
+    )
+  }
+
+  function glowSprite(color, opacity, width, height = width) {
+    const sprite = new T.Sprite(
+      new T.SpriteMaterial({
+        map: glowTexture,
+        color,
+        transparent: true,
+        opacity,
+        ...additive,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    )
+    sprite.scale.set(width, height, 1)
+    return sprite
+  }
+
+  // A soft dark patch laid on the cloth under a ball.
+  function contactShadow(size, opacity) {
+    const mesh = new T.Mesh(
+      new T.PlaneGeometry(size, size),
+      new T.MeshBasicMaterial({ map: shadowTexture, transparent: true, opacity, depthWrite: false }),
+    )
+    mesh.renderOrder = 5
+    return mesh
+  }
+
+  return {
+    T,
+    scene,
+    additive,
+    canvasTexture,
+    radialTexture,
+    shadowTexture,
+    ringTexture,
+    clothTextures,
+    woodTexture,
+    leatherBump,
+    ballTexture,
+    cueTexture,
+    glowSprite,
+    contactShadow,
+  }
+}
+
+// ── board/background.js ──
+
+// The pool hall behind the table, drawn in the scene with no photograph: dark
+// panelled walls, a warm cone from a lamp hanging above the table, a still haze in the
+// cone, and a vignette. Nothing in it moves.
+function createBackground(kit) {
+  const { T, scene } = kit
+  const uniforms = {
+    viewAspect: { value: 1 },
+    lamp: { value: new T.Vector2(0.5, 1) },
+  }
+
+  const material = new T.ShaderMaterial({
+    uniforms,
+    depthTest: false,
+    depthWrite: false,
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = position.xy * .5 + .5;
+        gl_Position = vec4(position.xy, .9999, 1.);
+      }`,
+    fragmentShader: `
+      uniform float viewAspect;
+      uniform vec2 lamp;
+      varying vec2 vUv;
+
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p) {
+        vec2 i = floor(p), f = fract(p);
+        f = f * f * (3. - 2. * f);
+        return mix(mix(hash(i), hash(i + vec2(1., 0.)), f.x), mix(hash(i + vec2(0., 1.)), hash(i + vec2(1., 1.)), f.x), f.y);
+      }
+      float fbm(vec2 p) {
+        float v = 0., a = .5;
+        for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= .5; }
+        return v;
+      }
+
+      void main() {
+        vec2 q = vUv;
+        vec2 p = vec2((q.x - lamp.x) * viewAspect, q.y);
+
+        float px = p.x * 2.4 + .5;
+        float seam = abs(fract(px) - .5);
+        float grain = fbm(vec2(px * 1.4, q.y * 16.));
+        vec3 wall = mix(vec3(.034, .018, .010), vec3(.062, .034, .018), grain);
+        wall *= .7 + .3 * smoothstep(.5, .46, seam);
+        wall *= mix(.8, 1., step(.32, q.y));
+
+        vec2 d = vec2(p.x, lamp.y - q.y);
+        float spread = .16 + max(d.y, 0.) * .55;
+        float cone = (1. - smoothstep(.5, 1., abs(d.x) / spread)) * smoothstep(-.02, .1, d.y);
+        float haze = fbm(vec2(p.x * 2.6, q.y * 3.2) + 3.7);
+        vec3 warm = vec3(1., .76, .48);
+
+        vec3 c = wall * (.5 + 1.6 * cone * exp(-d.y * 1.2));
+        c += warm * cone * exp(-d.y * 1.5) * (.035 + .06 * haze);
+        c += warm * .2 * exp(-length(d * vec2(1., 1.7)) * 5.5);
+
+        float v = length((q - vec2(lamp.x, .56)) * vec2(1., .9));
+        c *= 1. - smoothstep(.3, .95, v) * .75;
+        gl_FragColor = vec4(c, 1.);
+        #include <colorspace_fragment>
+      }`,
+  })
+  const quad = new T.Mesh(new T.PlaneGeometry(2, 2), material)
+  quad.frustumCulled = false
+  quad.renderOrder = -1000
+  scene.add(quad)
+
+  return {
+    uniforms,
+
+    // The lamp hangs over the middle of the stage, a little above its top edge.
+    resize(width, height, stage) {
+      uniforms.viewAspect.value = width / height
+      uniforms.lamp.value.set((stage.x + stage.width / 2) / width, 1 - (stage.y - stage.height * 0.06) / height)
+    },
+  }
+}
+
+// ── board/table.js ──
+
+// The billiard table. The cloth, cushions, rails, pockets, the rack of object balls,
+// and the cue ball waiting on the head spot all live in `upper`, the frame of the
+// leaning playing surface; the apron under the foot rail stands upright in the scene.
+function buildTable(kit) {
+  const { T, scene } = kit
+  const upper = new T.Group()
+  upper.rotation.x = -TILT
+  upper.position.set(0, BASE_Y, 0)
+  scene.add(upper)
+  upper.updateMatrixWorld(true)
+
+  const cloth = kit.clothTextures()
+  const woodMap = kit.woodTexture()
+  woodMap.repeat.set(0.25, 1)
+
+  const materials = {
+    cloth: new T.MeshPhysicalMaterial({
+      map: cloth.map,
+      bumpMap: cloth.bump,
+      bumpScale: 0.6,
+      roughness: 0.94,
+      sheen: 1,
+      sheenRoughness: 0.6,
+      sheenColor: new T.Color(0x3fb877),
+      envMapIntensity: 0.3,
+    }),
+    wood: woodMaterial(T, woodMap),
+    brass: new T.MeshStandardMaterial({ color: 0xd8ac55, metalness: 1, roughness: 0.26, envMapIntensity: 1.4 }),
+    leather: new T.MeshStandardMaterial({
+      color: 0x3b2215,
+      roughness: 0.62,
+      bumpMap: kit.leatherBump(),
+      bumpScale: 0.8,
+      envMapIntensity: 0.6,
+    }),
+  }
+
+  addCloth(kit, upper, materials.cloth)
+  addCushions(kit, upper, materials.cloth)
+  addRails(kit, upper, materials.wood)
+  addSights(kit, upper)
+  const apron = addApron(kit, upper, woodMap)
+  const pockets = addPockets(kit, upper, apron, materials)
+  const pegs = addRack(kit, upper)
+  const cue = addCueBall(kit, upper)
+
+  return { upper, apron, pockets, pegs, waitingBall: cue.spot, cueBall: cue.ball, cueMaterial: cue.material }
+}
+
+function woodMaterial(T, map) {
+  return new T.MeshPhysicalMaterial({
+    map,
+    roughness: 0.4,
+    clearcoat: 1,
+    clearcoatRoughness: 0.08,
+    envMapIntensity: 0.9,
+  })
+}
+
+// The cloth runs under the cushions to the rails, with a round hole for each pocket, a
+// faint head string, and the spot the cue ball waits on.
+function addCloth(kit, upper, material) {
+  const { T } = kit
+  const shape = new T.Shape()
+  shape.moveTo(-INNER_HALF_WIDTH, -CUSHION_WIDTH)
+  shape.lineTo(INNER_HALF_WIDTH, -CUSHION_WIDTH)
+  shape.lineTo(INNER_HALF_WIDTH, TOP + CUSHION_WIDTH)
+  shape.lineTo(-INNER_HALF_WIDTH, TOP + CUSHION_WIDTH)
+  shape.closePath()
+  for (let slot = 0; slot < SLOTS; slot++) {
+    const hole = new T.Path()
+    hole.absarc(slotX(slot), POCKET_Y, POCKET_R, 0, Math.PI * 2, true)
+    shape.holes.push(hole)
+  }
+  const mesh = new T.Mesh(new T.ShapeGeometry(shape, 40), material)
+  mesh.receiveShadow = true
+  upper.add(mesh)
+
+  const chalk = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 1, transparent: true, opacity: 0.16, depthWrite: false })
+  const string = new T.Mesh(new T.PlaneGeometry(2 * CLOTH_HALF_WIDTH, 0.014), chalk)
+  string.position.set(0, NOTCH_Y, 0.002)
+  upper.add(string)
+  const spot = new T.Mesh(new T.CircleGeometry(0.06, 24), chalk.clone())
+  spot.material.opacity = 0.5
+  spot.position.set(0, NOTCH_Y, 0.003)
+  upper.add(spot)
+}
+
+// Places an extruded cross-section along a straight edge of the table. The section is
+// drawn with x pointing out (along `normal`) and y up out of the cloth; it runs along
+// the edge from one end to the other.
+function alongEdge(T, geometry, normal, centre, length) {
+  const along = new T.Vector3(normal.y, -normal.x, 0)
+  const start = centre.clone().addScaledVector(along, -length / 2)
+  const matrix = new T.Matrix4().makeBasis(normal, new T.Vector3(0, 0, 1), along).setPosition(start)
+  geometry.applyMatrix4(matrix)
+  return geometry
+}
+
+const EDGES = [
+  { normal: [0, -1], centre: [0, 0], length: () => 2 * INNER_HALF_WIDTH },
+  { normal: [0, 1], centre: [0, TOP], length: () => 2 * INNER_HALF_WIDTH },
+  { normal: [-1, 0], centre: [-CLOTH_HALF_WIDTH, TOP / 2], length: () => TOP + 2 * CUSHION_WIDTH },
+  { normal: [1, 0], centre: [CLOTH_HALF_WIDTH, TOP / 2], length: () => TOP + 2 * CUSHION_WIDTH },
+]
+
+// Cloth-covered cushions with the classic undercut nose at two-thirds of a ball's
+// height.
+function addCushions(kit, upper, material) {
+  const { T } = kit
+  const section = new T.Shape()
+  section.moveTo(0, CUSHION_NOSE)
+  section.lineTo(0.06, CUSHION_HEIGHT)
+  section.lineTo(CUSHION_WIDTH + 0.03, CUSHION_HEIGHT)
+  section.lineTo(CUSHION_WIDTH + 0.03, 0)
+  section.lineTo(0.1, 0)
+  section.closePath()
+
+  for (const edge of EDGES) {
+    const length = edge.length()
+    const geometry = new T.ExtrudeGeometry(section, { depth: length, bevelEnabled: false })
+    const normal = new T.Vector3(edge.normal[0], edge.normal[1], 0)
+    const mesh = new T.Mesh(alongEdge(T, geometry, normal, new T.Vector3(edge.centre[0], edge.centre[1], 0), length), material)
+    mesh.receiveShadow = true
+    mesh.castShadow = true
+    upper.add(mesh)
+  }
+}
+
+// Four mitred mahogany boards around the cushions, bevelled and varnished, with the
+// grain running along each board.
+function addRails(kit, upper, material) {
+  const { T } = kit
+  for (const edge of EDGES) {
+    const normal = new T.Vector3(edge.normal[0], edge.normal[1], 0)
+    const inner = edge.length()
+    const outer = inner + 2 * RAIL_WIDTH
+    const board = new T.Shape()
+    board.moveTo(-inner / 2, 0)
+    board.lineTo(inner / 2, 0)
+    board.lineTo(outer / 2, RAIL_WIDTH)
+    board.lineTo(-outer / 2, RAIL_WIDTH)
+    board.closePath()
+    const geometry = new T.ExtrudeGeometry(board, {
+      depth: RAIL_HEIGHT + RAIL_DEPTH - 2 * RAIL_BEVEL,
+      bevelEnabled: true,
+      bevelThickness: RAIL_BEVEL,
+      bevelSize: 0.045,
+      bevelSegments: 4,
+    })
+
+    const along = new T.Vector3(normal.y, -normal.x, 0)
+    const edgeCentre = new T.Vector3(edge.centre[0], edge.centre[1], 0).addScaledVector(normal, CUSHION_WIDTH)
+    edgeCentre.z = -RAIL_DEPTH + RAIL_BEVEL
+    geometry.applyMatrix4(new T.Matrix4().makeBasis(along, normal, new T.Vector3(0, 0, 1)).setPosition(edgeCentre))
+
+    const mesh = new T.Mesh(geometry, material)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    upper.add(mesh)
+  }
+}
+
+// Mother-of-pearl diamonds inlaid along the head and side rails.
+function addSights(kit, upper) {
+  const { T } = kit
+  const geometry = new T.OctahedronGeometry(1, 0)
+  geometry.scale(0.085, 0.045, 0.012)
+  const pearl = new T.MeshPhysicalMaterial({
+    color: 0xf3eee4,
+    roughness: 0.18,
+    clearcoat: 1,
+    iridescence: 1,
+    iridescenceIOR: 1.35,
+    envMapIntensity: 1.4,
+  })
+  const z = RAIL_HEIGHT + 0.004
+  const across = CUSHION_WIDTH + RAIL_WIDTH / 2
+  const add = (x, y, turn) => {
+    const sight = new T.Mesh(geometry, pearl)
+    sight.position.set(x, y, z)
+    sight.rotation.z = turn ? Math.PI / 2 : 0
+    upper.add(sight)
+  }
+  for (let k = -3; k <= 3; k++) add((k * CLOTH_HALF_WIDTH) / 4, TOP + across, false)
+  for (let k = 1; k <= 7; k++) {
+    const y = (k * TOP) / 8
+    add(-CLOTH_HALF_WIDTH - across, y, true)
+    add(CLOTH_HALF_WIDTH + across, y, true)
+  }
+}
+
+// The apron: an upright mahogany skirt tucked under the foot rail's front edge, with a
+// rounded moulding along its top and foot.
+function addApron(kit, upper, woodMap) {
+  const { T, scene } = kit
+  const edge = upper.localToWorld(new T.Vector3(0, FOOT_Y - 0.045, -RAIL_DEPTH))
+  const halfWidth = OUTER_HALF_WIDTH - APRON_INSET
+  const top = edge.y + 0.06
+  const bottom = top - APRON_HEIGHT
+  const front = edge.z - 0.06
+  const depth = 0.5
+
+  const map = woodMap.clone()
+  map.repeat.set((2 * halfWidth) / 4, APRON_HEIGHT)
+  map.needsUpdate = true
+  const wood = woodMaterial(T, map)
+
+  const body = new T.Mesh(new T.BoxGeometry(2 * halfWidth, APRON_HEIGHT, depth), wood)
+  body.position.set(0, top - APRON_HEIGHT / 2, front - depth / 2)
+  body.receiveShadow = true
+  scene.add(body)
+
+  const trim = woodMaterial(T, woodMap)
+  for (const [y, radius] of [[top - 0.05, 0.06], [bottom + 0.09, 0.085]]) {
+    const bead = new T.Mesh(new T.CylinderGeometry(radius, radius, 2 * halfWidth + 0.04, 20), trim)
+    bead.rotation.z = Math.PI / 2
+    bead.position.set(0, y, front)
+    scene.add(bead)
+  }
+
+  return { halfWidth, top, bottom, front }
+}
+
+// Each pocket: a leather cup hanging through the cloth, a leather collar with a brass
+// lip, a ring of its band's light on the cloth, and an enamelled plate on the apron
+// that carries its payout.
+function addPockets(kit, upper, apron, materials) {
+  const { T, scene } = kit
+  const profile = [
+    [POCKET_R, 0.01],
+    [POCKET_R * 0.98, -0.2],
+    [POCKET_R * 0.86, -0.42],
+    [POCKET_R * 0.55, -POCKET_DEPTH + 0.03],
+    [0, -POCKET_DEPTH],
+  ].map(([r, z]) => new T.Vector2(r, z))
+  const cupGeometry = new T.LatheGeometry(profile, 40)
+  cupGeometry.rotateX(Math.PI / 2)
+  const collarGeometry = new T.TorusGeometry(POCKET_R + 0.025, 0.055, 14, 56)
+  const lipGeometry = new T.TorusGeometry(POCKET_R + 0.025, 0.02, 10, 56)
+  const ringGeometry = new T.PlaneGeometry(4 * (POCKET_R + 0.1), 4 * (POCKET_R + 0.1))
+  const plateGeometry = new T.PlaneGeometry(PLATE_WIDTH, PLATE_HEIGHT)
+  const plateY = apron.top - APRON_HEIGHT * 0.44
+
+  return Array.from({ length: SLOTS }, (_, slot) => {
+    const x = slotX(slot)
+    const band = theme.cupBand(slot, SLOTS)
+
+    const lining = new T.MeshStandardMaterial({
+      color: 0x1a0f09,
+      roughness: 0.85,
+      side: T.DoubleSide,
+      emissive: new T.Color(band.glow),
+      emissiveIntensity: 0,
+    })
+    const cup = new T.Mesh(cupGeometry, lining)
+    cup.position.set(x, POCKET_Y, 0)
+    upper.add(cup)
+
+    const collar = new T.Mesh(collarGeometry, materials.leather)
+    collar.position.set(x, POCKET_Y, 0.03)
+    collar.receiveShadow = true
+    upper.add(collar)
+
+    const lip = new T.Mesh(lipGeometry, materials.brass)
+    lip.position.set(x, POCKET_Y, 0.085)
+    upper.add(lip)
+
+    const ring = new T.Mesh(
+      ringGeometry,
+      new T.MeshBasicMaterial({
+        map: kit.ringTexture,
+        color: band.glow,
+        transparent: true,
+        opacity: RING_REST,
+        ...kit.additive,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    )
+    ring.position.set(x, POCKET_Y, 0.006)
+    ring.renderOrder = 6
+    upper.add(ring)
+
+    const glow = kit.glowSprite(band.glow, 0, 1.1)
+    glow.position.set(x, POCKET_Y, 0.12)
+    glow.renderOrder = 12
+    upper.add(glow)
+
+    const labelTexture = kit.canvasTexture(() => {}, 320, 190)
+    const label = labelTexture.image.getContext('2d')
+    const plate = new T.Mesh(
+      plateGeometry,
+      new T.MeshStandardMaterial({
+        map: labelTexture,
+        emissiveMap: labelTexture,
+        emissive: 0xffffff,
+        emissiveIntensity: PLATE_REST,
+        metalness: 0.35,
+        roughness: 0.32,
+        transparent: true,
+      }),
+    )
+    plate.position.set(x, plateY, apron.front + 0.012)
+    scene.add(plate)
+
+    return { band, label, labelTexture, plate, ring, glow, lining, level: 0 }
+  })
+}
+
+// The rack: fifty-two numbered balls on the peg positions, the 8-ball on top and the
+// rest cycling through 1–15. Each is turned a little so the numbers face the eye at
+// different angles, and each casts a real shadow over a soft contact patch.
+function addRack(kit, upper) {
+  const { T } = kit
+  const geometry = new T.SphereGeometry(PEG_RADIUS, 40, 28)
+  const materials = Array.from(
+    { length: 15 },
+    (_, i) =>
+      new T.MeshPhysicalMaterial({
+        map: kit.ballTexture(i + 1),
+        roughness: 0.2,
+        clearcoat: 1,
+        clearcoatRoughness: 0.04,
+        envMapIntensity: 1.1,
+      }),
+  )
+  const random = seeded(19)
+  const pegs = new Map()
+  let n = 0
+  for (let row = 0; row < ROWS; row++) {
+    const count = row + 3
+    for (let index = 0; index < count; index++) {
+      const x = (index - (count - 1) / 2) * PEG_SPACING
+      const y = ROW_TOP - row * ROW_HEIGHT
+      const number = ((n + 6) % 15) + 1
+      n++
+
+      const mesh = new T.Mesh(geometry, materials[number - 1])
+      mesh.position.set(x, y, PEG_RADIUS)
+      mesh.rotation.set(0.6 + (random() - 0.5) * 0.7, (random() - 0.5) * 0.9, (random() - 0.5) * 1.1)
+      mesh.castShadow = true
+      upper.add(mesh)
+
+      const shadow = kit.contactShadow(PEG_RADIUS * 3.2, 0.7)
+      shadow.position.set(x + 0.015, y - 0.03, 0.004)
+      upper.add(shadow)
+
+      const glow = kit.glowSprite(0xffdcaa, 0, PEG_RADIUS * 4.4)
+      glow.position.set(x, y, PEG_RADIUS + 0.05)
+      glow.renderOrder = 9
+      upper.add(glow)
+
+      pegs.set(`${row}-${index}`, { mesh, base: mesh.position.clone(), dir: new T.Vector3(), glow, level: 0 })
+    }
+  }
+  return pegs
+}
+
+function addCueBall(kit, upper) {
+  const { T } = kit
+  const material = new T.MeshPhysicalMaterial({
+    map: kit.cueTexture(),
+    roughness: 0.14,
+    clearcoat: 1,
+    clearcoatRoughness: 0.03,
+    envMapIntensity: 1.1,
+  })
+  // The ball and its shadow grow back together from the spot after each drop.
+  const spot = new T.Group()
+  spot.position.set(0, NOTCH_Y, 0)
+  upper.add(spot)
+
+  const ball = new T.Mesh(new T.SphereGeometry(BALL_RADIUS, 48, 32), material)
+  ball.position.z = BALL_RADIUS
+  ball.rotation.set(0.5, 0.3, 0)
+  ball.castShadow = true
+  spot.add(ball)
+
+  const shadow = kit.contactShadow(BALL_RADIUS * 3.2, 0.7)
+  shadow.position.set(0.015, -0.03, 0.004)
+  spot.add(shadow)
+  return { spot, ball, material }
+}
+
+// ── board/flight.js ──
+
+// Each row turns the ball half a peg spacing left (0) or right (1). A ball that turns
+// right `slot` times lands in that slot, so any order of those turns is a true path to
+// the result the server already settled; the order is shuffled so repeats look fresh.
+function planTurns(slot) {
+  const turns = Array.from({ length: ROWS }, (_, i) => (i < slot ? 1 : 0))
+  for (let i = turns.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[turns[i], turns[j]] = [turns[j], turns[i]]
+  }
+  return turns
+}
+
+// The flight as timed segments in the table frame: a roll from the head spot onto the
+// 8-ball, a glancing hop off one ball per row, a roll to the pocket, and a drop into
+// it. `peg` names the ball struck when a segment ends.
+function flightTo(slot) {
+  const turns = planTurns(slot)
+  const contact = PEG_RADIUS + BALL_RADIUS - 0.02
+  const z = BALL_RADIUS
+  const halfStep = (turn) => (turn ? PEG_SPACING / 2 : -PEG_SPACING / 2)
+
+  let x = 0
+  let y = ROW_TOP + contact
+  let peg = 1
+  const segments = [{ kind: 'fall', x0: 0, y0: NOTCH_Y, x1: 0, y1: y, z0: z, z1: z, duration: 340, peg: '0-1' }]
+  for (let row = 0; row < ROWS - 1; row++) {
+    peg += turns[row]
+    const nextX = x + halfStep(turns[row])
+    const nextY = ROW_TOP - (row + 1) * ROW_HEIGHT + contact
+    segments.push({
+      kind: 'bounce',
+      x0: x,
+      y0: y,
+      x1: nextX,
+      y1: nextY,
+      z0: z,
+      z1: z,
+      height: 0.3,
+      hop: 0.14,
+      duration: 170,
+      peg: `${row + 1}-${peg}`,
+    })
+    x = nextX
+    y = nextY
+  }
+
+  const exitX = x + halfStep(turns[ROWS - 1])
+  const exitY = y - 0.45
+  segments.push({ kind: 'bounce', x0: x, y0: y, x1: exitX, y1: exitY, z0: z, z1: z, height: 0.22, hop: 0.1, duration: 160 })
+
+  const lip = POCKET_Y + 0.1
+  segments.push({ kind: 'arc', x0: exitX, y0: exitY, z0: z, x1: slotX(slot), y1: lip, z1: z, height: 0.08, duration: 300 })
+  segments.push({
+    kind: 'sink',
+    x0: slotX(slot),
+    y0: lip,
+    z0: z,
+    x1: slotX(slot),
+    y1: POCKET_Y,
+    z1: -POCKET_DEPTH * 0.7,
+    duration: 320,
+  })
+  return segments
+}
+
+// The ball's [x, y, z] a fraction t of the way through a segment.
+function positionAt(segment, t) {
+  const { x0, y0, z0, x1, y1, z1 } = segment
+  switch (segment.kind) {
+    case 'fall':
+      return [x0, y0 + (y1 - y0) * t * t, z0]
+    case 'bounce': {
+      const h = segment.height
+      return [
+        x0 + (x1 - x0) * (t * (2 - t) * 0.72 + t * 0.28),
+        y0 + (y1 - y0 + 4 * h) * t * t - 4 * h * t,
+        z0 + segment.hop * 4 * t * (1 - t),
+      ]
+    }
+    case 'arc': {
+      const eased = 1 - (1 - t) * (1 - t)
+      return [x0 + (x1 - x0) * eased, y0 + (y1 - y0) * t + segment.height * 4 * t * (1 - t), z0 + (z1 - z0) * eased]
+    }
+    default: {
+      const eased = t * t
+      return [x0 + (x1 - x0) * eased, y0 + (y1 - y0) * eased, z0 + (z1 - z0) * eased]
+    }
+  }
+}
+
+// ── board.js ──
+
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+// The 3D table. It draws only what the host tells it: the payouts it is configured
+// with, and the slot each round has already settled in.
+const board = {
+  T: null,
+  host: null,
+  kit: null,
+  renderer: null,
+  scene: null,
+  camera: null,
+  composer: null,
+  background: null,
+  upper: null,
+  apron: null,
+  pegs: null,
+  waitingBall: null,
+  cueBall: null,
+  cueMaterial: null,
+  cups: [],
+  balls: [],
+  ballGeometry: null,
+  regrowAt: null,
+  frameRequest: 0,
+  lastFrame: 0,
+  audioCtx: null,
+  noise: null,
+  onLanded: null,
+
+  init(T, addons, host) {
+    this.T = T
+    this.host = host
+    this.renderer = createRenderer(T, host)
+    this.scene = new T.Scene()
+    this.scene.environment = hallLighting(T, this.renderer)
+    this.camera = new T.PerspectiveCamera(30, 1, 0.1, 200)
+    this.composer = addons ? createComposer(T, addons, this.renderer, this.scene, this.camera) : null
+
+    const kit = createKit(T, this.scene)
+    this.kit = kit
+    this.background = createBackground(kit)
+    const table = buildTable(kit)
+    this.upper = table.upper
+    this.apron = table.apron
+    this.pegs = table.pegs
+    this.waitingBall = table.waitingBall
+    this.cueBall = table.cueBall
+    this.cueMaterial = table.cueMaterial
+    this.cups = table.pockets
+    addLights(T, this.scene, this.upper)
+    this.ballGeometry = new T.SphereGeometry(BALL_RADIUS, 48, 32)
+
+    this.scene.updateMatrixWorld(true)
+    this.fit()
+    new ResizeObserver(() => this.fit()).observe(host)
+  },
+
+  // Frames the table inside the host's stage rect. The canvas covers the whole frame
+  // so the hall runs behind the host's controls; only the view offset follows the stage.
+  fit() {
+    const width = this.host?.clientWidth ?? 0
+    const height = this.host?.clientHeight ?? 0
+    if (!this.renderer || !width || !height) return
+    const stage = state.stage ?? defaultStage(width, height)
+
+    this.renderer.setSize(width, height, false)
+    if (this.composer) {
+      this.composer.setPixelRatio(this.renderer.getPixelRatio())
+      this.composer.setSize(width, height)
+    }
+    this.background.resize(width, height, stage)
+    const extremes = boardExtremes(this.T, this.upper, this.apron)
+    frameBoard(this.T, this.camera, extremes, stage)
+    this.camera.setViewOffset(stage.width, stage.height, -stage.x, -stage.y, width, height)
+    ui.placeTaglines(screenBounds(this.camera, boardExtremes(this.T, this.upper, this.apron), width, height), width, state.controls)
+    this.wake()
+  },
+
+  setLabels() {
+    const texts = state.multipliers.map((hundredths) => ui.formatMultiplier(hundredths))
+    const measure = this.cups[0].label
+    const { width, height } = measure.canvas
+    let size = Math.round(height * 0.5)
+    const widest = () => {
+      measure.font = theme.labelFont(size)
+      return Math.max(...texts.map((text) => measure.measureText(text).width))
+    }
+    while (widest() > width * 0.74 && size > 24) size -= 2
+    this.cups.forEach((cup, i) => paintPlate(cup, texts[i], size))
+    this.wake()
+  },
+
+  dropBall({ round_id, slot, label, multiplier }) {
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(() => {})
+    }
+
+    const ball = { round_id, slot, label, multiplier }
+    if (reducedMotion.matches) {
+      this.land(ball)
+      return
+    }
+
+    const T = this.T
+    ball.mesh = new T.Mesh(this.ballGeometry, this.cueMaterial)
+    ball.mesh.castShadow = true
+    ball.mesh.quaternion.copy(this.cueBall.quaternion)
+    ball.shadow = this.kit.contactShadow(BALL_RADIUS * 3.2, 0.7)
+    ball.segments = flightTo(slot)
+    ball.index = 0
+    ball.startedAt = performance.now()
+    this.upper.add(ball.mesh, ball.shadow)
+    this.waitingBall.scale.setScalar(0.001)
+    this.regrowAt = ball.startedAt + 250
+    this.balls.push(ball)
+    this.stepBall(ball, ball.startedAt)
+    this.wake()
+  },
+
+  land(ball) {
+    const cup = this.cups[ball.slot]
+    if (!reducedMotion.matches) cup.level = 1
+
+    const point = this.upper.localToWorld(new this.T.Vector3(slotX(ball.slot), POCKET_Y + 0.85, 0.3)).project(this.camera)
+    ui.toast(((point.x + 1) / 2) * this.host.clientWidth, ((1 - point.y) / 2) * this.host.clientHeight, ball.label, ball.multiplier >= 100)
+    this.playLanding(ball.multiplier)
+    if (this.onLanded) this.onLanded(ball.round_id, ball.slot)
+    this.wake()
+  },
+
+  // Advances one ball; returns false once it has dropped into its pocket.
+  stepBall(ball, now) {
+    let segment = ball.segments[ball.index]
+    let t = (now - ball.startedAt) / segment.duration
+    while (t >= 1) {
+      if (segment.peg) this.hitPeg(segment.peg, segment.x1, segment.y1)
+      ball.index++
+      ball.startedAt += segment.duration
+      if (ball.index >= ball.segments.length) {
+        this.upper.remove(ball.mesh, ball.shadow)
+        this.land(ball)
+        return false
+      }
+      segment = ball.segments[ball.index]
+      t = (now - ball.startedAt) / segment.duration
+    }
+
+    const [x, y, z] = positionAt(segment, Math.max(0, t))
+    const last = ball.mesh.position
+    const dx = x - last.x
+    const dy = y - last.y
+    const travel = Math.hypot(dx, dy)
+    if (travel > 1e-5 && ball.index + t > 0) {
+      const axis = new this.T.Vector3(-dy / travel, dx / travel, 0)
+      ball.mesh.quaternion.premultiply(new this.T.Quaternion().setFromAxisAngle(axis, travel / BALL_RADIUS))
+    }
+    ball.mesh.position.set(x, y, z)
+
+    const lift = z - BALL_RADIUS
+    ball.shadow.position.set(x + 0.015 + lift * 0.1, y - 0.03 - lift * 0.3, 0.004)
+    ball.shadow.material.opacity = segment.kind === 'sink' ? 0 : 0.7 * clamp01(1 - lift * 3)
+    ball.shadow.scale.setScalar(1 + lift * 2)
+    return true
+  },
+
+  // The struck ball gives a little along the line of the hit and settles back.
+  hitPeg(key, fromX, fromY) {
+    const peg = this.pegs.get(key)
+    if (peg) {
+      peg.level = 1
+      peg.dir.set(peg.base.x - fromX, peg.base.y - fromY, 0).normalize()
+    }
+    this.playTick()
+  },
+
+  // Renders on demand: the loop runs while anything is moving or fading and stops once
+  // the table is still, so an idle game costs nothing.
+  wake() {
+    if (this.frameRequest || !this.renderer) return
+    this.lastFrame = performance.now()
+    const loop = (now) => {
+      const dt = Math.min(0.05, (now - this.lastFrame) / 1000)
+      this.lastFrame = now
+      const busy = this.tick(now, dt)
+      this.render()
+      this.frameRequest = busy ? requestAnimationFrame(loop) : 0
+    }
+    this.frameRequest = requestAnimationFrame(loop)
+  },
+
+  tick(now, dt) {
+    for (const peg of this.pegs.values()) {
+      if (peg.level <= 0) continue
+      peg.level = Math.max(0, peg.level - dt * 4.5)
+      peg.glow.material.opacity = peg.level * 0.4
+      peg.mesh.position.copy(peg.base).addScaledVector(peg.dir, 0.06 * Math.sin(Math.PI * (1 - peg.level)))
+    }
+    this.cups.forEach((cup) => {
+      if (cup.level <= 0) return
+      cup.level = Math.max(0, cup.level - dt * 1.6)
+      applyPulse(cup)
+    })
+    if (this.regrowAt !== null) {
+      const t = clamp01((now - this.regrowAt) / 450)
+      this.waitingBall.scale.setScalar(Math.max(0.001, t * t * (3 - 2 * t)))
+      if (t >= 1) this.regrowAt = null
+    }
+    this.balls = this.balls.filter((ball) => this.stepBall(ball, now))
+
+    return (
+      this.balls.length > 0 ||
+      this.regrowAt !== null ||
+      this.cups.some((cup) => cup.level > 0) ||
+      [...this.pegs.values()].some((peg) => peg.level > 0)
+    )
+  },
+
+  render() {
+    if (this.composer) this.composer.render()
+    else this.renderer.render(this.scene, this.camera)
+  },
+
+  audio() {
+    if (!state.sound) return null
+    if (!this.audioCtx) this.audioCtx = new AudioContext()
+    return this.audioCtx.state === 'suspended' ? null : this.audioCtx
+  },
+
+  noiseBuffer(audio) {
+    if (!this.noise) {
+      const length = Math.floor(audio.sampleRate * 0.4)
+      this.noise = audio.createBuffer(1, length, audio.sampleRate)
+      const data = this.noise.getChannelData(0)
+      for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1
+    }
+    return this.noise
+  },
+
+  // A burst of filtered noise: the body of a click or a thud.
+  playNoise(audio, type, frequency, q, volume, duration) {
+    const source = audio.createBufferSource()
+    source.buffer = this.noiseBuffer(audio)
+    const filter = audio.createBiquadFilter()
+    filter.type = type
+    filter.frequency.value = frequency
+    filter.Q.value = q
+    const gain = audio.createGain()
+    gain.gain.setValueAtTime(volume, audio.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + duration)
+    source.connect(filter)
+    filter.connect(gain)
+    gain.connect(audio.destination)
+    source.start()
+    source.stop(audio.currentTime + duration + 0.02)
+  },
+
+  playTone(audio, frequency, duration, volume, type, glideTo) {
+    const osc = audio.createOscillator()
+    const gain = audio.createGain()
+    osc.type = type
+    osc.frequency.setValueAtTime(frequency, audio.currentTime)
+    if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, audio.currentTime + duration)
+    gain.gain.setValueAtTime(volume, audio.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + duration)
+    osc.connect(gain)
+    gain.connect(audio.destination)
+    osc.start()
+    osc.stop(audio.currentTime + duration + 0.02)
+  },
+
+  // Sound is a garnish; a browser without it still plays the round.
+  playTick() {
+    try {
+      const audio = this.audio()
+      if (!audio) return
+      this.playNoise(audio, 'bandpass', 2600 + Math.random() * 700, 1.4, 0.22, 0.045)
+      this.playTone(audio, 1900 + Math.random() * 500, 0.03, 0.035, 'triangle')
+    } catch {}
+  },
+
+  playLanding(multiplier) {
+    try {
+      const audio = this.audio()
+      if (!audio) return
+      this.playTone(audio, 150, 0.24, 0.14, 'sine', 70)
+      this.playNoise(audio, 'lowpass', 420, 0.7, 0.12, 0.18)
+      const times = multiplier / 100
+      if (times >= 1) setTimeout(() => this.playTone(audio, 660 + times * 40, 0.28, 0.05, 'sine'), 60)
+      if (times >= 3) setTimeout(() => this.playTone(audio, 1320, 0.3, 0.04, 'sine'), 150)
+    } catch {}
+  },
+}
+
+function applyPulse(cup) {
+  const level = cup.level
+  cup.ring.material.opacity = RING_REST + level * 0.75
+  cup.glow.material.opacity = level * 0.85
+  cup.lining.emissiveIntensity = level * 0.7
+  cup.plate.material.emissiveIntensity = PLATE_REST + level * 0.8
+}
+
+function createRenderer(T, host) {
+  const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75))
+  renderer.outputColorSpace = T.SRGBColorSpace
+  renderer.toneMapping = T.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.05
+  renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = T.PCFSoftShadowMap
+  renderer.setClearColor(theme.ground, 1)
+  host.appendChild(renderer.domElement)
+  return renderer
+}
+
+// A dark room with three warm lamp shades hung in a row over the table, for the balls,
+// brass, and varnish to reflect.
+function hallLighting(T, renderer) {
+  const room = new T.Scene()
+  room.add(new T.Mesh(new T.SphereGeometry(50, 32, 16), new T.MeshBasicMaterial({ color: 0x140e09, side: T.BackSide })))
+  const strip = (width, height, x, y, z, color, intensity) => {
+    const mesh = new T.Mesh(
+      new T.PlaneGeometry(width, height),
+      new T.MeshBasicMaterial({ color: new T.Color(color).multiplyScalar(intensity), side: T.DoubleSide }),
+    )
+    mesh.position.set(x, y, z)
+    mesh.lookAt(0, 0, 0)
+    room.add(mesh)
+  }
+  for (const x of [-9, 0, 9]) strip(7, 2.6, x, 30, 8, 0xfff0d8, 9)
+  strip(44, 6, 0, 4, -34, 0x5a3a22, 0.7)
+  strip(44, 6, 0, 4, 34, 0x3c2718, 0.9)
+  strip(3, 22, 32, 8, 0, 0x6b4a30, 0.6)
+  strip(3, 22, -32, 8, 0, 0x6b4a30, 0.6)
+  strip(40, 40, 0, -32, 0, 0x0e3a22, 0.5)
+  return new T.PMREMGenerator(renderer).fromScene(room, 0.02).texture
+}
+
+// One shadowed lamp over the middle of the table, two softer ones either side, a cool
+// rim from behind to lift the balls off the cloth.
+function addLights(T, scene, upper) {
+  const centre = upper.localToWorld(new T.Vector3(0, TOP * 0.42, 0))
+  scene.add(new T.HemisphereLight(0x5a4632, 0x080504, 0.6))
+
+  const lamp = new T.SpotLight(0xffe4bd, 3.6, 0, 0.56, 0.8, 0)
+  lamp.position.set(0, centre.y + 14, centre.z + 5)
+  lamp.target.position.copy(centre)
+  lamp.castShadow = true
+  lamp.shadow.mapSize.set(1024, 1024)
+  lamp.shadow.bias = -0.0004
+  lamp.shadow.normalBias = 0.02
+  lamp.shadow.camera.near = 6
+  lamp.shadow.camera.far = 40
+  scene.add(lamp, lamp.target)
+
+  for (const side of [-1, 1]) {
+    const shade = new T.SpotLight(0xffe4bd, 1.1, 0, 0.5, 0.85, 0)
+    shade.position.set(side * 7, centre.y + 13, centre.z + 4)
+    shade.target.position.set(side * 3, centre.y, centre.z)
+    scene.add(shade, shade.target)
+  }
+
+  const rim = new T.DirectionalLight(0xa9c1ff, 0.6)
+  rim.position.set(0, 14, -24)
+  scene.add(rim)
+}
+
+function createComposer(T, addons, renderer, scene, camera) {
+  const composer = new addons.EffectComposer(renderer, new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples: 4 }))
+  composer.addPass(new addons.RenderPass(scene, camera))
+  composer.addPass(new addons.UnrealBloomPass(new T.Vector2(256, 256), 0.32, 0.3, 0.88))
+  composer.addPass(new addons.OutputPass())
+  return composer
+}
+
+// Before the host sends a stage, the table sits in a centred column.
+function defaultStage(width, height) {
+  const stageWidth = Math.min(width, 600, height / 1.06)
+  return { x: (width - stageWidth) / 2, y: 0, width: stageWidth, height: stageWidth * 1.06 }
+}
+
+// The table's extreme points, left side then right: the head rail's outer corner, the
+// foot rail's outer corner, and the apron's bottom corner.
+function boardExtremes(T, upper, apron) {
+  return [-1, 1].flatMap((side) => [
+    upper.localToWorld(new T.Vector3(side * OUTER_HALF_WIDTH, HEAD_Y, RAIL_HEIGHT)),
+    upper.localToWorld(new T.Vector3(side * OUTER_HALF_WIDTH, FOOT_Y, RAIL_HEIGHT)),
+    new T.Vector3(side * apron.halfWidth, apron.bottom, apron.front),
+  ])
+}
+
+// The rectangle the framed table covers on screen, in frame pixels, and its half-width
+// at a given height: the rails widen toward the eye from the head corner to the foot
+// corner, and the apron holds that width below it.
+function screenBounds(camera, extremes, width, height) {
+  const points = extremes.map((point) => {
+    point.project(camera)
+    return { x: ((point.x + 1) / 2) * width, y: ((1 - point.y) / 2) * height }
+  })
+  const bounds = {
+    left: Math.min(...points.map((point) => point.x)),
+    right: Math.max(...points.map((point) => point.x)),
+    top: Math.min(...points.map((point) => point.y)),
+    bottom: Math.max(...points.map((point) => point.y)),
+  }
+  const centre = (bounds.left + bounds.right) / 2
+  const head = points[3]
+  const foot = points[4]
+  bounds.halfWidthAt = (y) => {
+    if (y >= foot.y) return bounds.right - centre
+    return head.x - centre + (foot.x - head.x) * clamp01((y - head.y) / (foot.y - head.y))
+  }
+  return bounds
+}
+
+// Moves the camera along its fixed pitch until the table's extreme points fill the stage.
+function frameBoard(T, camera, points, stage) {
+  camera.clearViewOffset()
+  camera.aspect = stage.width / stage.height
+  camera.updateProjectionMatrix()
+
+  const halfFov = Math.tan((camera.fov * Math.PI) / 360)
+  const target = new T.Vector3(0, 3, 0)
+  const projected = new T.Vector3()
+  let distance = 30
+  for (let i = 0; i < 30; i++) {
+    camera.position.set(0, target.y + distance * Math.sin(PITCH), distance * Math.cos(PITCH))
+    camera.lookAt(target)
+    camera.updateMatrixWorld()
+    let left = 9
+    let right = -9
+    let bottom = 9
+    let top = -9
+    for (const point of points) {
+      projected.copy(point).project(camera)
+      left = Math.min(left, projected.x)
+      right = Math.max(right, projected.x)
+      bottom = Math.min(bottom, projected.y)
+      top = Math.max(top, projected.y)
+    }
+    target.y += ((bottom + top) / 2) * distance * halfFov * 0.9
+    distance *= Math.max((right - left) / 1.96, (top - bottom) / 1.98)
+  }
+}
+
+// An enamelled plate in a brass bezel, in the pocket's band, with the payout in its ink.
+function paintPlate(cup, text, size) {
+  const g = cup.label
+  const { width, height } = g.canvas
+  const { band } = cup
+  g.clearRect(0, 0, width, height)
+
+  const rounded = (x, y, w, h, r) => {
+    g.beginPath()
+    g.roundRect(x, y, w, h, r)
+  }
+  const bezel = g.createLinearGradient(0, 0, 0, height)
+  bezel.addColorStop(0, '#f6dc94')
+  bezel.addColorStop(0.35, '#b98a36')
+  bezel.addColorStop(0.65, '#e9c878')
+  bezel.addColorStop(1, '#7d5a1f')
+  rounded(4, 4, width - 8, height - 8, 26)
+  g.fillStyle = bezel
+  g.fill()
+
+  const enamel = g.createLinearGradient(0, 16, 0, height - 16)
+  enamel.addColorStop(0, band.hi)
+  enamel.addColorStop(0.45, band.base)
+  enamel.addColorStop(1, band.deep)
+  rounded(16, 16, width - 32, height - 32, 16)
+  g.fillStyle = enamel
+  g.fill()
+  g.fillStyle = 'rgba(255,255,255,.22)'
+  rounded(24, 20, width - 48, (height - 40) * 0.36, 12)
+  g.fill()
+
+  g.font = theme.labelFont(size)
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  const capHeight = g.measureText('0').actualBoundingBoxAscent
+  g.shadowColor = `rgba(0,0,0,${band.shade})`
+  g.shadowBlur = 6
+  g.shadowOffsetY = 2
+  g.fillStyle = band.ink
+  g.fillText(text, width / 2, height / 2 + capHeight / 2)
+  g.shadowColor = 'transparent'
+  cup.labelTexture.needsUpdate = true
+}
+
+// ── Mock host ──────────────────────────────────────────────────────────────────
+// Stands in for GameHost, the game session, and the server. Everything here is local
+// to this mockup: the balance, the outcome, and the history are demo values.
+
+const PAYTABLE = {
+  low: [200, 150, 120, 100, 80, 100, 120, 150, 200],
+  normal: [600, 300, 170, 110, 50, 110, 170, 300, 600],
+  high: [1500, 600, 200, 70, 20, 70, 200, 600, 1500],
+}
+const RISKS = ['low', 'normal', 'high']
+const RISK_LABELS = { low: 'Low', normal: 'Normal', high: 'High' }
+const RTP_BASIS_POINTS = 9500
+const LIMITS = { min: 100, max: 1_000_000, step: 100 }
+const SETTLE_FALLBACK_MS = 8000
+const MINUS = '−'
+
+const $ = (id) => document.getElementById(id)
+const minutesAgo = (m) => Date.now() - m * 60_000
+
+const demo = {
+  balance: 1_000_000,
+  stake: 1000,
+  risk: 'normal',
+  sound: true,
+  favorite: false,
+  ready: false,
+  playing: false,
+  pending: null,
+  history: [
+    { id: 'seed-1', stake: 1000, multiplier: 110, profit: 100, at: minutesAgo(2) },
+    { id: 'seed-2', stake: 1000, multiplier: 50, profit: -500, at: minutesAgo(5) },
+    { id: 'seed-3', stake: 2000, multiplier: 300, profit: 4000, at: minutesAgo(11) },
+  ],
+}
+
+function group(digits) {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+function formatMoney(minor, { sign = 'auto', trim = false } = {}) {
+  const padded = Math.abs(minor).toString().padStart(3, '0')
+  const whole = group(padded.slice(0, -2))
+  const fraction = padded.slice(-2)
+  const body = `₱${whole}${trim && fraction === '00' ? '' : `.${fraction}`}`
+  if (minor < 0) return `${MINUS}${body}`
+  return sign === 'always' ? `+${body}` : body
+}
+
+function formatMultiplier(hundredths) {
+  return `${Math.trunc(hundredths / 100)}.${String(Math.abs(hundredths % 100)).padStart(2, '0')}×`
+}
+
+const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+function formatRelative(at) {
+  const elapsed = at - Date.now()
+  const magnitude = Math.abs(elapsed)
+  for (const [unit, ms] of [['day', 86_400_000], ['hour', 3_600_000], ['minute', 60_000]]) {
+    if (magnitude >= ms) return relative.format(Math.round(elapsed / ms), unit)
+  }
+  return relative.format(Math.round(elapsed / 1000), 'second')
+}
+
+function stakeLadder({ min, max, step }) {
+  const rungs = new Set([min, max])
+  for (let decade = 1; decade <= max; decade *= 10) {
+    for (const factor of [1, 2, 5]) {
+      const stake = factor * decade
+      if (stake > min && stake < max && (stake - min) % step === 0) rungs.add(stake)
+    }
+  }
+  return [...rungs].sort((a, b) => a - b)
+}
+
+function stepStake(ladder, stake, direction) {
+  if (direction === 1) return ladder.find((rung) => rung > stake) ?? ladder[ladder.length - 1]
+  const lower = ladder.filter((rung) => rung < stake)
+  return lower[lower.length - 1] ?? ladder[0]
+}
+
+const ladder = stakeLadder(LIMITS)
+
+// The supplied game's weighting, the demo's stand-in for the server's draw.
+function pickSlot() {
+  const weights = PAYTABLE[demo.risk].map((_, i) => Math.pow(0.24, Math.abs(i - 4)))
+  let roll = Math.random() * weights.reduce((a, b) => a + b, 0)
+  for (let i = 0; i < weights.length; i++) {
+    roll -= weights[i]
+    if (roll <= 0) return i
+  }
+  return 4
+}
+
+function roundId() {
+  return globalThis.crypto?.randomUUID?.() ?? `round-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+// ── Rendering ──
+
+function replay(element, className) {
+  element.classList.remove(className)
+  void element.offsetWidth
+  element.classList.add(className)
+}
+
+function renderBalance(animate) {
+  const pill = $('pill-balance')
+  pill.textContent = formatMoney(demo.balance, { trim: true })
+  $('pill-link').setAttribute('aria-label', `Wallet balance ${formatMoney(demo.balance)}`)
+  $('panel-balance').textContent = formatMoney(demo.balance)
+  if (animate) replay(pill, 'value-update')
+}
+
+function renderRiskMenu() {
+  const menu = $('risk-menu')
+  menu.querySelectorAll('.risk-item').forEach((item) => item.remove())
+  for (const risk of RISKS) {
+    const payouts = PAYTABLE[risk]
+    const item = document.createElement('button')
+    item.type = 'button'
+    item.className = 'risk-item'
+    item.setAttribute('role', 'menuitemradio')
+    item.setAttribute('aria-checked', String(risk === demo.risk))
+    item.innerHTML = `<span>${RISK_LABELS[risk]}</span><span class="risk-range tnum">${formatMultiplier(Math.min(...payouts))} – ${formatMultiplier(Math.max(...payouts))}</span>`
+    item.addEventListener('click', () => chooseRisk(risk))
+    menu.appendChild(item)
+  }
+}
+
+function renderHistory() {
+  const list = $('history')
+  list.replaceChildren(
+    ...demo.history.map((row) => {
+      const item = document.createElement('li')
+      item.className = 'record'
+      const credit = row.profit > 0
+      item.innerHTML = `
+        <div class="record-main">
+          <span class="record-title tnum">${formatMoney(row.stake)}</span>
+          <span class="record-meta">${formatMultiplier(row.multiplier)} · ${formatRelative(row.at)}</span>
+        </div>
+        <span class="record-value tnum${credit ? ' credit' : ''}">${formatMoney(row.profit, { sign: 'always' })}</span>`
+      return item
+    }),
+  )
+  $('history-empty').hidden = demo.history.length > 0
+}
+
+function render() {
+  $('stake').textContent = formatMoney(demo.stake)
+  $('risk-label').textContent = `8 rows · ${RISK_LABELS[demo.risk]}`
+  $('risk-btn').disabled = demo.playing
+  $('play').disabled = !demo.ready || demo.playing
+  $('stage-status').hidden = demo.ready
+
+  const sound = $('sound')
+  sound.setAttribute('aria-pressed', String(demo.sound))
+  sound.setAttribute('aria-label', demo.sound ? 'Mute game sound' : 'Unmute game sound')
+  sound.title = sound.getAttribute('aria-label')
+  $('sound-on').hidden = !demo.sound
+  $('sound-off').hidden = demo.sound
+
+  const favorite = $('favorite')
+  favorite.setAttribute('aria-pressed', String(demo.favorite))
+  favorite.setAttribute('aria-label', demo.favorite ? 'Remove from favorites' : 'Add to favorites')
+  favorite.title = favorite.getAttribute('aria-label')
+  favorite.querySelector('path').setAttribute('fill', demo.favorite ? 'currentColor' : 'none')
+
+  $('fair-rtp').textContent = `${(RTP_BASIS_POINTS / 100).toFixed(2)}%`
+  $('fair-board').textContent = `Payouts · 8 rows · ${RISK_LABELS[demo.risk]}`
+  $('fair-payouts').replaceChildren(
+    ...PAYTABLE[demo.risk].map((hundredths) => {
+      const chip = document.createElement('span')
+      chip.className = 'payout tnum'
+      chip.textContent = formatMultiplier(hundredths)
+      return chip
+    }),
+  )
+}
+
+// ── The host side of the bridge ──
+
+function configure() {
+  state.risk = demo.risk
+  state.multipliers = PAYTABLE[demo.risk]
+  state.sound = demo.sound
+  state.configured = true
+  if (board.renderer) board.setLabels()
+}
+
+// The stage rect and the rects the title row and bet panel cover, in zone pixels.
+function layout() {
+  const outer = $('zone').getBoundingClientRect()
+  const within = (element) => {
+    const inner = element.getBoundingClientRect()
+    return { x: inner.left - outer.left, y: inner.top - outer.top, width: inner.width, height: inner.height }
+  }
+  const stage = within($('stage'))
+  if (stage.width <= 0 || stage.height <= 0) return
+  state.stage = stage
+  state.controls = [within($('title-row')), within($('controls'))].filter((rect) => rect.width > 0 && rect.height > 0)
+  if (board.renderer) board.fit()
+}
+
+function place() {
+  if (!demo.ready || demo.playing) return
+  if (demo.stake > demo.balance) {
+    openDialog('shortfall-dialog')
+    return
+  }
+  demo.playing = true
+  closeRiskMenu()
+  render()
+
+  const slot = pickSlot()
+  const multiplier = PAYTABLE[demo.risk][slot]
+  const win = Math.floor((demo.stake * multiplier) / 100)
+  const id = roundId()
+  demo.pending = {
+    id,
+    stake: demo.stake,
+    multiplier,
+    win,
+    timer: setTimeout(() => settle(id), SETTLE_FALLBACK_MS),
+  }
+  board.dropBall({ round_id: id, slot, label: formatMoney(win, { sign: 'always' }), multiplier })
+}
+
+// The balance is revealed when the ball lands, never before.
+function settle(id) {
+  const round = demo.pending
+  if (!round || round.id !== id) return
+  clearTimeout(round.timer)
+  demo.pending = null
+  demo.balance += round.win - round.stake
+  demo.history = [
+    { id, stake: round.stake, multiplier: round.multiplier, profit: round.win - round.stake, at: Date.now() },
+    ...demo.history,
+  ].slice(0, 10)
+  demo.playing = false
+  renderBalance(true)
+  renderHistory()
+  render()
+}
+
+function chooseRisk(risk) {
+  closeRiskMenu()
+  if (demo.playing || risk === demo.risk) return
+  demo.risk = risk
+  configure()
+  renderRiskMenu()
+  render()
+}
+
+// ── Menus and dialogs ──
+
+function openRiskMenu() {
+  $('risk-menu').hidden = false
+  replay($('risk-menu'), 'pop-enter')
+  $('risk-btn').setAttribute('aria-expanded', 'true')
+}
+
+function closeRiskMenu() {
+  $('risk-menu').hidden = true
+  $('risk-btn').setAttribute('aria-expanded', 'false')
+}
+
+function openDialog(id) {
+  if (id === 'shortfall-dialog') {
+    $('shortfall-stake').textContent = formatMoney(demo.stake)
+    $('shortfall-balance').textContent = formatMoney(demo.balance)
+  }
+  const dialog = $(id)
+  dialog.hidden = false
+  replay(dialog.querySelector('.dialog'), 'pop-enter')
+  dialog.querySelector('[data-close]').focus()
+}
+
+function closeDialogs() {
+  document.querySelectorAll('.scrim').forEach((scrim) => (scrim.hidden = true))
+}
+
+function wire() {
+  $('stake-down').addEventListener('click', () => {
+    demo.stake = stepStake(ladder, demo.stake, -1)
+    render()
+  })
+  $('stake-up').addEventListener('click', () => {
+    demo.stake = stepStake(ladder, demo.stake, 1)
+    render()
+  })
+  $('play').addEventListener('click', place)
+  $('risk-btn').addEventListener('click', () => ($('risk-menu').hidden ? openRiskMenu() : closeRiskMenu()))
+  $('sound').addEventListener('click', () => {
+    demo.sound = !demo.sound
+    state.sound = demo.sound
+    render()
+  })
+  $('favorite').addEventListener('click', () => {
+    demo.favorite = !demo.favorite
+    render()
+  })
+  $('fair-open').addEventListener('click', () => openDialog('fair-dialog'))
+
+  document.querySelectorAll('.scrim').forEach((scrim) => {
+    scrim.addEventListener('click', (event) => {
+      if (event.target === scrim || event.target.closest('[data-close]')) closeDialogs()
+    })
+  })
+  document.querySelectorAll('a[href="#"]').forEach((link) => link.addEventListener('click', (event) => event.preventDefault()))
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!$('risk').contains(event.target)) closeRiskMenu()
+  })
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeRiskMenu()
+      closeDialogs()
+      return
+    }
+    // Space drops a ball unless focus is in a control or a dialog.
+    if (event.code !== 'Space' || event.repeat) return
+    if (event.target.closest?.('input, textarea, select, button, a, [contenteditable], [role="dialog"], [role="menu"]')) return
+    if ([...document.querySelectorAll('.scrim')].some((scrim) => !scrim.hidden)) return
+    event.preventDefault()
+    place()
+  })
+
+  const observer = new ResizeObserver(layout)
+  for (const id of ['zone', 'title-row', 'stage', 'controls']) observer.observe($(id))
+}
+
+// ── Boot (games/plinko/web/js/main.js) ──
+
+// The glow pass is optional: without it the board renders plain.
+async function loadBloom() {
+  try {
+    const modules = await Promise.all([
+      import('three/addons/postprocessing/EffectComposer.js'),
+      import('three/addons/postprocessing/RenderPass.js'),
+      import('three/addons/postprocessing/UnrealBloomPass.js'),
+      import('three/addons/postprocessing/OutputPass.js'),
+    ])
+    return Object.assign({}, ...modules)
+  } catch {
+    return null
+  }
+}
+
+async function loadFonts() {
+  const fonts = Promise.all([
+    document.fonts.load('700 80px Inter'),
+    document.fonts.load('700 80px "IBM Plex Sans"'),
+    document.fonts.load('500 16px "IBM Plex Sans Condensed"'),
+  ])
+  await Promise.race([fonts, new Promise((resolve) => setTimeout(resolve, 2500))]).catch(() => {})
+}
+
+async function boot() {
+  renderBalance(false)
+  renderRiskMenu()
+  renderHistory()
+  render()
+  wire()
+  layout()
+
+  const [THREE, bloom] = await Promise.all([import('three'), loadBloom(), loadFonts()])
+  ui.mount()
+  board.init(THREE, bloom, ui.scene)
+  board.onLanded = (id) => settle(id)
+  configure()
+  layout()
+  demo.ready = true
+  render()
+}
+
+boot().catch((error) => {
+  console.error(error)
+  $('stage-status').textContent = 'BOARD UNAVAILABLE'
+})
+</script>
+</body>
+</html>
