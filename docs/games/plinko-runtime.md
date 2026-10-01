@@ -133,14 +133,21 @@ the cups keep the board's general studio.
 
 ### Art
 
-The lobby banner (`frontend/src/assets/banners/plinko.jpg`, 2000×600) and the catalogue
-tile (`frontend/src/assets/games/plinko.jpg`, 720×960) are captures of this frame with the
-taglines hidden, the banner's board placed at the right so the phone crop keeps it and
-the tile's board full width over its lower scrim. To re-render, open the frame in a
-headless Chromium, send `configure` and a `layout` for the board's rect at that size with
-no `controls`, and screenshot the page. `frontend/src/lib/gameArt.ts` resolves both by slug, and the lobby
-banner features the first catalogue title with a module in
-`frontend/src/features/gameplay/registry.ts`.
+The lobby banner (`frontend/src/assets/banners/plinko.jpg`, 2640×472, the desktop
+banner's own shape at twice its size) is a capture of the game page itself: the frame
+with its taglines, the title row, and the bet panel, signed in, in the short-screen side
+layout with the stage pinned to 440px and the column pushed to the right edge with room
+for the right tagline. The zone is captured 839px tall and cropped to its top 472 rows
+so the whole skyline shows. The lobby shows the whole cluster from a 960px banner, the
+board alone from 640px. Phones use `frontend/src/assets/banners/phone/plinko.jpg`
+(1540×472): a frame capture with the taglines hidden and the board at 77% of the height
+on the right, so it stands beside the copy in the 200px phone panel. The catalogue
+tile (`frontend/src/assets/games/plinko.jpg`, 720×960) is a capture of the frame alone
+with the taglines hidden and the board full width over its lower scrim; to re-render it,
+open the frame in a headless Chromium, send `configure` and a `layout` for the board's
+rect at that size with no `controls`, and screenshot the page. `frontend/src/lib/gameArt.ts` resolves all three by slug, and the lobby
+banner rotates every 5 seconds between the catalogue titles with a module in
+`frontend/src/features/gameplay/registry.ts`, Plinko and Plinko Billiards today.
 
 ## Server engine — `backend/internal/engine/`
 

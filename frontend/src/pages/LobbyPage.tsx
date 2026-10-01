@@ -25,11 +25,10 @@ export function LobbyPage() {
   const categoriesQuery = useCategories()
   const featuredQuery = useGames({ category: 'all', search: '', sort: 'name' })
   const gamesQuery = useGames({ category, search: '', sort: 'name' })
-  // The banner promotes a title that actually plays here, the first with a registered
+  // The banner promotes the titles that actually play here, those with a registered
   // module, and falls back to the first title by name while none is listed.
-  const featured =
-    featuredQuery.data?.find((game) => gameModuleFor(game.slug) !== null) ??
-    featuredQuery.data?.[0]
+  const playable = (featuredQuery.data ?? []).filter((game) => gameModuleFor(game.slug) !== null)
+  const featured = playable.length > 0 ? playable : (featuredQuery.data ?? []).slice(0, 1)
 
   const tabs: TabItem<string>[] = [
     { id: 'all', label: 'All games' },

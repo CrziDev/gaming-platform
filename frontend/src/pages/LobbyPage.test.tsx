@@ -22,7 +22,9 @@ describe('the lobby for a guest', () => {
     expect(screen.getByText('₱1.00')).toBeInTheDocument()
 
     const hero = screen.getByRole('heading', { level: 1, name: 'Plinko' }).closest('section')!
-    expect(hero.querySelector('img')).toHaveAttribute('src', expect.stringContaining('banners/plinko'))
+    const art = hero.querySelector<HTMLElement>('[style*="--banner-art"]')!
+    expect(art.style.getPropertyValue('--banner-art')).toContain('banners/plinko')
+    expect(art.style.getPropertyValue('--banner-art-phone')).toContain('banners/phone/plinko')
     expect(within(hero).getByRole('button', { name: 'Join now' })).toBeInTheDocument()
     expect(within(hero).getByRole('link', { name: 'Browse all games' })).toBeInTheDocument()
   })

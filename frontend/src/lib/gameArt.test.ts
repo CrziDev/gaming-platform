@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { artBySlug, resolveBannerArt, resolveGameArt } from '@/lib/gameArt'
+import { artBySlug, resolveBannerArt, resolveGameArt, resolvePhoneBannerArt } from '@/lib/gameArt'
 
 const files = {
   '../assets/games/aurora-dice.png': '/assets/aurora-dice-a1b2c3.png',
@@ -60,5 +60,31 @@ describe('resolveBannerArt', () => {
 
   it('is null when nothing matches so the placeholder renders', () => {
     expect(resolveBannerArt(banners, thumbnails, { slug: 'coin-flip', thumbnail_url: null })).toBeNull()
+  })
+})
+
+describe('resolvePhoneBannerArt', () => {
+  const thumbnails = artBySlug({ ...files, '../assets/games/plinko.png': '/assets/plinko-a1b2c3.png' })
+  const banners = artBySlug({ '../assets/banners/plinko.png': '/assets/plinko-0f1e2d.png' })
+  const phoneBanners = artBySlug({ '../assets/banners/phone/plinko.jpg': '/assets/plinko-9a8b7c.jpg' })
+
+  it('uses the phone banner file that matches the slug', () => {
+    expect(resolvePhoneBannerArt(phoneBanners, banners, thumbnails, { slug: 'plinko', thumbnail_url: null })).toBe(
+      '/assets/plinko-9a8b7c.jpg',
+    )
+  })
+
+  it('falls back to the landscape banner, then the thumbnail', () => {
+    const noPhone = artBySlug({})
+    expect(resolvePhoneBannerArt(noPhone, banners, thumbnails, { slug: 'plinko', thumbnail_url: null })).toBe(
+      '/assets/plinko-0f1e2d.png',
+    )
+    expect(resolvePhoneBannerArt(noPhone, banners, thumbnails, { slug: 'aurora-dice', thumbnail_url: null })).toBe(
+      '/assets/aurora-dice-a1b2c3.png',
+    )
+  })
+
+  it('is null when nothing matches so the placeholder renders', () => {
+    expect(resolvePhoneBannerArt(phoneBanners, banners, thumbnails, { slug: 'coin-flip', thumbnail_url: null })).toBeNull()
   })
 })

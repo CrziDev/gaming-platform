@@ -220,9 +220,14 @@ or an emoji.
 ## Lobby composition (top to bottom)
 
 1. Banner on `banner` — the featured game's artwork is the panel's background, anchored
-   right and bottom under `banner-scrim`. At 760px and up the panel is 236px tall and the
-   text sits on the left half over a horizontal scrim; below that it is 300px tall and the
-   text sits above the art over a vertical one
+   right under a horizontal `banner-scrim` that is translucent, so the art shows through
+   behind the text on the left. At 760px and up the panel is 236px tall and the text sits
+   on the left half; below that it is 200px tall with the same arrangement, the game on
+   the right from the title's own phone art where it has one, no description, and the two
+   buttons on one line, which may run over the art. When more than one title is featured,
+   the banner rotates between them every 3 seconds with a `standard` crossfade, with an
+   indicator per title; it pauses on hover, focus, touch, and a hidden tab, and does not
+   rotate under reduced motion
 2. Big wins — horizontal snap row of 172px rows: avatar slot · username · ₱ disc · amount
 3. Category tabs — glass chips, active = `selected`; `See all` pushed right
 4. Game grid
@@ -268,7 +273,8 @@ added merely to decorate, increase urgency, or keep a player engaged.
   Width animation is limited to these small persistent regions; their contents animate
   with `transform` and `opacity`.
 - Directly interactive cards may translate by at most 2px. Media never zooms, bounces,
-  pulses, or animates automatically.
+  pulses, or animates automatically, except the lobby banner's rotation, as Lobby
+  composition describes.
 - A game frame animates its own play; a result is still only a display hint until the
   server confirms settlement.
 - Loading indicators do not loop unless progress cannot otherwise be understood. Static,

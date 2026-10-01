@@ -24,7 +24,7 @@ on every page was traced to its adapter in `features/*/api.ts`.
 
 ## Public and player pages
 
-- [x] **Lobby** — `/` (catalogue, categories, featured banner, and the signed-in player's recently-played row are real; the banner features the first playable game — Plinko — with a capture of its v24 glass board over the city as the panel's background, and the tile shows the same board; big wins is a placeholder strip marked Future Development and promotions is a Future Development section)
+- [x] **Lobby** — `/` (catalogue, categories, featured banner, and the signed-in player's recently-played row are real; the banner rotates every 3 seconds between the playable games — Plinko and Plinko Billiards — each shown by a capture of its game page (board, taglines, and bet panel) with a phone-sized capture of the board beside the copy on phones, pauses on hover, focus, touch, and a hidden tab, and does not rotate under reduced motion; the tile shows the same board; big wins is a placeholder strip marked Future Development and promotions is a Future Development section)
 - [x] **Game catalogue** — `/games` (real catalogue with category and search)
 - [x] **Hot games** — `/games/hot` (active games with a settled round in the trailing seven days, ranked by settled rounds, distinct players, and latest play)
 - [x] **New games** — `/games/new` (real thirty-day `new` flag from the catalogue)

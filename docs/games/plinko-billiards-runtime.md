@@ -16,7 +16,7 @@ unchanged.
 | `frontend/vite.config.ts` | The frame served at `/games/plinko-billiards/` |
 | `frontend/src/features/gameplay/registry.ts` | Its module: the Plinko board, risk menu, and stage, with its own frame URL and `skin: true` |
 | `frontend/src/styles/games/plinko-billiards.css` | The skin: `GameHost` marks the zone `data-game-skin="plinko-billiards"`, and the rules restyle only the `data-part` controls inside it |
-| `frontend/src/assets/games/plinko-billiards.jpg`, `frontend/src/assets/banners/plinko-billiards.jpg` | Tile and banner, captured from the frame the way Plinko's are |
+| `frontend/src/assets/games/plinko-billiards.jpg`, `frontend/src/assets/banners/plinko-billiards.jpg`, `frontend/src/assets/banners/phone/plinko-billiards.jpg` | Tile, banner, and phone banner, captured the way Plinko's are |
 
 `make bootstrap` inserts the row in every environment where it is absent and leaves an
 existing row's operator changes in place; an operator switches its return with
