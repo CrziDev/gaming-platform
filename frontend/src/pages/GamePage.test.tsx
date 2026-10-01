@@ -70,7 +70,7 @@ async function untilDropped(post: ReturnType<typeof vi.spyOn>) {
 }
 
 function riskButton() {
-  return screen.getByRole('button', { name: /8 rows ·/ })
+  return screen.getByRole('button', { name: /10 rows ·/ })
 }
 
 function lastDrop(post: ReturnType<typeof vi.spyOn>) {
@@ -95,7 +95,7 @@ describe('a title without an engine', () => {
 })
 
 describe('the Plinko game page', () => {
-  it('embeds the frame and configures the eight-row board once it is ready', async () => {
+  it('embeds the frame and configures the ten-row board once it is ready', async () => {
     const { post } = await readyBoard()
 
     const configure = post.mock.calls.find((entry) => (entry[0] as { type: string }).type === 'configure')?.[0] as {
@@ -104,12 +104,12 @@ describe('the Plinko game page', () => {
       multipliers_hundredths: number[]
       sound: boolean
     }
-    expect(configure.rows).toBe(8)
+    expect(configure.rows).toBe(10)
     expect(configure.risk).toBe('normal')
-    expect(configure.multipliers_hundredths).toEqual(plinkoManifest().multipliers_hundredths['8']?.normal)
+    expect(configure.multipliers_hundredths).toEqual(plinkoManifest().multipliers_hundredths['10']?.normal)
     expect(configure.sound).toBe(true)
     expect(screen.queryByRole('status', { name: 'Loading Plinko' })).not.toBeInTheDocument()
-    expect(riskButton()).toHaveTextContent('8 rows · Normal')
+    expect(riskButton()).toHaveTextContent('10 rows · Normal')
   })
 
   it('tells the frame where the board sits once it is ready', async () => {
@@ -163,14 +163,14 @@ describe('the Plinko game page', () => {
       expect(post).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'configure',
-          rows: 8,
+          rows: 10,
           risk: 'high',
-          multipliers_hundredths: plinkoManifest().multipliers_hundredths['8']?.high,
+          multipliers_hundredths: plinkoManifest().multipliers_hundredths['10']?.high,
         }),
         window.location.origin,
       ),
     )
-    expect(riskButton()).toHaveTextContent('8 rows · High')
+    expect(riskButton()).toHaveTextContent('10 rows · High')
     expect(window.localStorage.getItem('game.plinko.risk')).toBe('high')
   })
 
@@ -197,7 +197,7 @@ describe('the Plinko game page', () => {
     await waitFor(() => expect(lastDrop(post)).toBeDefined())
     const drop = lastDrop(post)!
     expect(drop.slot).toBeGreaterThanOrEqual(0)
-    expect(drop.slot).toBeLessThanOrEqual(8)
+    expect(drop.slot).toBeLessThanOrEqual(10)
     expect(drop.result_label).toMatch(/^\+₱/)
 
     // The risk is locked while the ball is falling.
@@ -309,8 +309,8 @@ describe('the Plinko game page', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Fair game' })
     expect(within(dialog).getByText('95.00%')).toBeInTheDocument()
-    expect(within(dialog).getByText('Payouts · 8 rows · Normal')).toBeInTheDocument()
-    expect(within(dialog).getAllByText(formatMultiplier(600))).toHaveLength(2)
+    expect(within(dialog).getByText('Payouts · 10 rows · Normal')).toBeInTheDocument()
+    expect(within(dialog).getAllByText(formatMultiplier(1000))).toHaveLength(2)
   })
 
   it('mutes the game and remembers it', async () => {

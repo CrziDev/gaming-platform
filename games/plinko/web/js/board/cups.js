@@ -33,7 +33,7 @@ import {
 const MOUTH_INNER_RX = MOUTH_RX - MOUTH_LIP
 const MOUTH_INNER_RZ = MOUTH_RZ - MOUTH_LIP
 
-// Nine free-standing glowing cups, each with a drop mouth cut into the chute above
+// Eleven free-standing glowing cups, each with a drop mouth cut into the chute above
 // it. Returns one entry per cup: its colour band, the canvas its label is painted on,
 // and the materials the landing pulse brightens.
 export function buildCups(kit) {
@@ -97,7 +97,7 @@ function buildCup(kit, parts, slot) {
   scene.add(rim)
 
   // White-hot bloom on the back of the lip.
-  const hot = kit.glowSprite(new T.Color(band.light).lerp(new T.Color(0xffffff), 0.5), HOT_OPACITY, 0.42, 0.14)
+  const hot = kit.glowSprite(new T.Color(band.light).lerp(new T.Color(0xffffff), 0.5), HOT_OPACITY, CUP_RX, 0.14)
   hot.position.set(x, CUP_TOP + 0.02, CUP_Z - CUP_RZ + 0.03)
   hot.renderOrder = 22
   scene.add(hot)

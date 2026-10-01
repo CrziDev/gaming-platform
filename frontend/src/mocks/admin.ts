@@ -333,8 +333,8 @@ export function plinkoRtpConfiguration(
   risk: PlinkoRisk,
 ): AdminRtpConfiguration {
   const multipliers = PLINKO_MULTIPLIERS_HUNDREDTHS[rows][risk]
-  const chances = rows === 8 && risk === 'normal'
-    ? [485, 1_567, 5_068, 16_387, 52_986, 16_387, 5_068, 1_567, 485]
+  const chances = rows === 10 && risk === 'normal'
+    ? [303, 831, 2_273, 6_224, 17_041, 46_657, 17_041, 6_224, 2_273, 830, 303]
     : binomialChances(rows)
   return {
     configuration_ref: `plinko/${basisPoints}`,

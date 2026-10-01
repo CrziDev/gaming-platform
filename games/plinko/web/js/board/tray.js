@@ -155,7 +155,7 @@ function fresnelMaterial(T) {
   })
 }
 
-// One flat sheet across all nine compartments. Under each mouth its top edge traces the
+// One flat sheet across all eleven compartments. Under each mouth its top edge traces the
 // collar's lower front edge as the camera sees it, then sweeps back up to the walls,
 // so the sheet reads as the chute's front wall running up into the rim.
 function frontSheetEdge() {

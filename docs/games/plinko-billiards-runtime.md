@@ -27,8 +27,8 @@ them; `game_id` says which title was played.
 ## Frame — `games/plinko-billiards/web/`
 
 A three.js billiard table: the green cloth leans back over an upright mahogany apron,
-the eight peg rows are a rack of numbered pool balls, and the cue ball waits on the head
-spot, rolls through the rack, and sinks into one of nine leather pockets along the foot
+the ten peg rows are a rack of numbered pool balls, and the cue ball waits on the head
+spot, rolls through the rack, and sinks into one of eleven leather pockets along the foot
 cushion. Each pocket's payout is an enamelled plate in a brass bezel on the apron. The
 hall behind it is drawn in the scene, with no photograph: panelled walls under a warm
 lamp cone.

@@ -1,17 +1,17 @@
 // Dimensions of the billiard table, in scene units. The playing surface lives in the
 // table frame: x across, y up the slope from the foot cushion's nose, z out of the
-// cloth. The platform plays one board, eight rows of balls over nine pockets.
+// cloth. The platform plays one board, ten rows of balls over eleven pockets.
 
-export const ROWS = 8
+export const ROWS = 10
 export const SLOTS = ROWS + 1
 
 // The rack of object balls on the cloth.
-export const PEG_SPACING = 0.9
-export const ROW_HEIGHT = 0.95
+export const PEG_SPACING = 0.74
+export const ROW_HEIGHT = 0.74
 export const ROW_BOTTOM = 1.5
 export const ROW_TOP = ROW_BOTTOM + (ROWS - 1) * ROW_HEIGHT
-export const PEG_RADIUS = 0.22
-export const BALL_RADIUS = 0.22
+export const PEG_RADIUS = 0.18
+export const BALL_RADIUS = 0.18
 export const NOTCH_Y = ROW_TOP + 1.05
 export const TOP = ROW_TOP + 1.8
 
@@ -35,10 +35,10 @@ export const OUTER_HALF_WIDTH = INNER_HALF_WIDTH + RAIL_WIDTH
 export const FOOT_Y = -CUSHION_WIDTH - RAIL_WIDTH
 export const HEAD_Y = TOP + CUSHION_WIDTH + RAIL_WIDTH
 
-// Nine pockets cut through the cloth along the foot cushion.
+// Eleven pockets cut through the cloth along the foot cushion.
 export const BAY_HALF_WIDTH = 4.95
 export const BAY_PITCH = (2 * BAY_HALF_WIDTH) / SLOTS
-export const POCKET_R = 0.36
+export const POCKET_R = 0.3
 export const POCKET_Y = 0.54
 export const POCKET_DEPTH = 0.6
 export const RING_REST = 0.14
@@ -47,8 +47,8 @@ export const PLATE_REST = 0.5
 // The apron hangs upright under the foot rail and carries the pocket plates.
 export const APRON_HEIGHT = 1.4
 export const APRON_INSET = 0.12
-export const PLATE_WIDTH = 1.04
-export const PLATE_HEIGHT = 0.62
+export const PLATE_WIDTH = 0.86
+export const PLATE_HEIGHT = 0.6
 
 export const clamp01 = (value) => Math.min(1, Math.max(0, value))
 

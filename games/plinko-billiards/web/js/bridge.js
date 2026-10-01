@@ -1,5 +1,5 @@
 const VERSION = 3
-const ROWS = 8
+const ROWS = 10
 
 const finite = (v) => typeof v === 'number' && Number.isFinite(v)
 const positive = (v) => finite(v) && v > 0

@@ -16,7 +16,7 @@ import {
   slotX,
 } from './board/geometry.js'
 import { createKit } from './board/kit.js'
-import { applyPulse, paintPlate } from './board/pockets.js'
+import { applyPulse, measurePlate, paintPlate } from './board/pockets.js'
 import { buildTable } from './board/table.js'
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -101,12 +101,9 @@ export const board = {
     const texts = state.multipliers.map((hundredths) => ui.formatMultiplier(hundredths))
     const measure = this.cups[0].label
     const { width, height } = measure.canvas
-    let size = Math.round(height * 0.5)
-    const widest = () => {
-      measure.font = theme.labelFont(size)
-      return Math.max(...texts.map((text) => measure.measureText(text).width))
-    }
-    while (widest() > width * 0.74 && size > 24) size -= 2
+    let size = Math.round(height * 0.7)
+    const widest = () => Math.max(...texts.map((text) => measurePlate(measure, text, size)))
+    while (widest() > width * 0.84 && size > 24) size -= 2
     this.cups.forEach((cup, i) => paintPlate(cup, texts[i], size))
     this.wake()
   },

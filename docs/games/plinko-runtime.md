@@ -45,7 +45,7 @@ Recommendation: port critical logic — wallet, wager, outcome, and payout to Go
 
 ## Integrated frame — `games/plinko/web/`
 
-The frame is a three.js glass board: eight rows of pegs on a bent acrylic pane over nine
+The frame is a three.js glass board: ten rows of pegs on a bent acrylic pane over eleven
 glowing cups, in front of a night-city backdrop. It replaced the port of the supplied
 Canvas 2D and Matter.js board on 2026-09-30. The supplied package is still the reference
 for what the platform took over from the vendor; nothing of its drawing code remains.
@@ -74,7 +74,7 @@ a three.js scene; the addons are the four postprocessing passes and three shader
 bloom pass imports, copied from the same release.
 
 The board's table is the one behind the return the game is set to, read from
-`GET /api/games/{slug}/manifest` in integer hundredths. The player plays only the 8-row
+`GET /api/games/{slug}/manifest` in integer hundredths. The player plays only the 10-row
 board; the server still settles every row count, and the admin RTP inspector still
 offers each one. `frontend/src/features/gameplay/multipliers.ts` holds the supplied
 paytable as the demo fixture and the inspector's fixture only; every shipped option
@@ -83,7 +83,7 @@ differs from it on some low-risk boards (`plinko-rtp.md` §9).
 ### Landing
 
 The frame never decides an outcome. A `drop` names the slot the server settled; the
-frame builds a path of eight half-peg turns with exactly `slot` of them to the right,
+frame builds a path of ten half-peg turns with exactly `slot` of them to the right,
 shuffles their order, and plays it as a fall onto the top peg, a bounce per row, an arc
 into the chute mouth, and a sink into the cup. It posts `landed` for that slot when the
 path ends. Under reduced motion the cup lights at once and `landed` is posted without
@@ -199,7 +199,7 @@ controls. `frontend/src/features/gameplay/` owns the protocol (`schemas.ts`,
 player's own recent rounds on the game, read through the wallet feature's
 `useRecentRounds` from `GET /api/rounds?game_id=`, with a one-line empty state until the
 first bet settles and a link to the full history. The manifest is validated before it
-configures anything: the 8-row board must be present for every risk with exactly nine
+configures anything: the 10-row board must be present for every risk with exactly eleven
 positive integers; the other boards the server serves are ignored. `GamePage` wires them;
 a slug with no module in `registry.ts` keeps the display-slot placeholder.
 
@@ -217,9 +217,9 @@ rejected, so a frame cached from an earlier version fails cleanly as
 | Direction | Type | Fields |
 | --- | --- | --- |
 | frame → host | `ready` | `game` |
-| frame → host | `landed` | `round_id`, `slot` (0–8) |
+| frame → host | `landed` | `round_id`, `slot` (0–10) |
 | frame → host | `error` | `code` (`bad_message`, `unsupported_version`, `runtime`), `message` |
-| host → frame | `configure` | `rows` (always 8), `risk`, `multipliers_hundredths` (nine), `sound` |
+| host → frame | `configure` | `rows` (always 10), `risk`, `multipliers_hundredths` (eleven), `sound` |
 | host → frame | `layout` | `x`, `y`, `width`, `height` — the stage rect in the frame, in CSS pixels; `controls` — up to four rects of the same shape that the host's controls cover |
 | host → frame | `drop` | `round_id`, `slot`, `multiplier_hundredths`, `result_label` |
 | host → frame | `set_sound` | `enabled` |
@@ -240,7 +240,7 @@ rejected, so a frame cached from an earlier version fails cleanly as
    everything outstanding and configures again. The host sends only a board the frame
    does not already have.
 3. Place bet calls `POST /api/games/{slug}/rounds` with an `Idempotency-Key` and
-   `params: { rows: 8, risk }`, served by `round.Handler.Play` through the engine
+   `params: { rows: 10, risk }`, served by `round.Handler.Play` through the engine
    registered for the slug, and a 404 is reported as the game not being available on
    this server. Component tests settle against the deterministic fixture in
    `src/mocks/plinko.ts`.

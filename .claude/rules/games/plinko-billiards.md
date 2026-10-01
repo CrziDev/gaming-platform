@@ -33,7 +33,7 @@ A card with the deep panel shadow, 12px padding and 10px internals (10px and 8px
 
 - **Balance row:** a 42px wallet tile (40px under 640, hidden under 380px), the `BALANCE`
   micro-label, and the balance in 18 · 500 `tnum` (16 under 640); the risk menu to its right.
-- **Risk menu:** a 42px secondary glass control (40 under 640) reading `8 rows · Normal`,
+- **Risk menu:** a 42px secondary glass control (40 under 640) reading `10 rows · Normal`,
   with a sliders icon from 430px; its menu lists the three risks with each one's payout
   range.
 - **Stake and play:** the stepper (`field`, ± cells, stake in 18 · 500 `tnum`, 15 under
@@ -65,7 +65,7 @@ platform's.
 A pool hall fills the whole game area behind the column and belongs to this page only:
 dark panelled walls under a warm lamp cone. In front of it a billiard table leans back
 over an upright mahogany apron: green cloth, cushions, varnished rails with pearl sights,
-a rack of numbered pool balls in eight rows, the cue ball on the head spot, and nine
+a rack of numbered pool balls in ten rows, the cue ball on the head spot, and eleven
 leather pockets with brass lips along the foot cushion. Each pocket's payout is an
 enamelled plate in a brass bezel on the apron.
 

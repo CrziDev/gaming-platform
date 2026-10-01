@@ -36,7 +36,7 @@ const page = {
 function servedManifest(basisPoints: number, centre: number): PlinkoManifest {
   const manifest = plinkoManifest()
   manifest.rtp_basis_points = basisPoints
-  manifest.multipliers_hundredths['8']!.normal![4] = centre
+  manifest.multipliers_hundredths['10']!.normal![5] = centre
   return manifest
 }
 
@@ -57,7 +57,7 @@ function settledRound(basisPoints: number): PlayRoundResponse {
       started_at: at,
       settled_at: at,
     },
-    result: { rows: 8, risk: 'normal', slot: 4 },
+    result: { rows: 10, risk: 'normal', slot: 5 },
     wallet: { currency: 'PHP', balance_minor: 99_950 },
   }
 }
@@ -109,13 +109,13 @@ describe('Plinko against a server without the play endpoint', () => {
     const { iframe, post } = await openFrame()
     act(() => frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' }))
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
-    expect(posted(post, 'configure')[0]?.multipliers_hundredths).toEqual([600, 300, 170, 110, 55, 110, 170, 300, 600])
+    expect(posted(post, 'configure')[0]?.multipliers_hundredths).toEqual([1000, 500, 250, 150, 80, 55, 80, 150, 250, 500, 1000])
 
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
 
     expect(await screen.findByText("This game isn't available right now.")).toBeInTheDocument()
     expect(posted(post, 'drop')).toHaveLength(0)
-    expect(screen.getByRole('button', { name: /8 rows ·/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /10 rows ·/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
 
     const play = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')
@@ -125,7 +125,7 @@ describe('Plinko against a server without the play endpoint', () => {
     expect(JSON.parse(String(play?.[1]?.body))).toEqual({
       stake_minor: 100,
       currency: 'PHP',
-      params: { rows: 8, risk: 'normal' },
+      params: { rows: 10, risk: 'normal' },
     })
   })
 
@@ -182,7 +182,7 @@ describe('Plinko bet admission', () => {
     expect(playRequests(fetchMock)).toHaveLength(1)
     expect(placeBet).toBeDisabled()
 
-    act(() => frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 4 }))
+    act(() => frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 5 }))
 
     await waitFor(() => expect(placeBet).toBeEnabled())
     expect(await screen.findByRole('link', { name: 'Wallet balance ₱999.50' })).toBeInTheDocument()
@@ -215,7 +215,7 @@ describe('Plinko without a manifest', () => {
     expect(remounted.iframe).not.toBe(iframe)
     frameSays(remounted.iframe, { v: 3, type: 'ready', game: 'plinko' })
     await waitFor(() => expect(posted(remounted.post, 'configure')).toHaveLength(1))
-    expect(posted(remounted.post, 'configure')[0]?.multipliers_hundredths?.[4]).toBe(55)
+    expect(posted(remounted.post, 'configure')[0]?.multipliers_hundredths?.[5]).toBe(55)
     await waitFor(() => expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled())
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -264,13 +264,13 @@ describe('Plinko when the RTP changes mid-session', () => {
     await waitFor(() =>
       expect(queryClient.getQueryData(['game-manifest', 'plinko'])).toMatchObject({ rtp_basis_points: 10500 }),
     )
-    expect(screen.getByRole('button', { name: /8 rows ·/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /10 rows ·/ })).toBeDisabled()
     expect(posted(post, 'configure')).toHaveLength(1)
 
-    frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 4 })
+    frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 5 })
 
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(2))
-    expect(posted(post, 'configure')[1]?.multipliers_hundredths?.[4]).toBe(60)
+    expect(posted(post, 'configure')[1]?.multipliers_hundredths?.[5]).toBe(60)
   })
 })
 
@@ -309,7 +309,7 @@ describe('the history under the Plinko board', () => {
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
     await waitFor(() => expect(posted(post, 'drop')).toHaveLength(1))
-    frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 4 })
+    frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 5 })
 
     await waitFor(() => expect(roundsRequests(fetchMock).length).toBeGreaterThan(before))
   })
