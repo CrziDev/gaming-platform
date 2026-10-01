@@ -59,13 +59,14 @@ for what the platform took over from the vendor; nothing of its drawing code rem
 | `js/bridge.js` | The frame side of the protocol: guards origin, source, version, type, and fields |
 | `js/board.js` | The board: renderer, lighting, bloom, camera framing inside the stage rect, cup labels, the drop, the render-on-demand loop, and peg and landing tones |
 | `js/theme.js` | The cup bands (silver, teal, purple, orange, red by distance from the centre) and the label font |
-| `js/ui.js` | Tagline placement in the gutters between each frame edge and the nearest glass or host control at the tagline's own height: 40px from the glass or control beside it where the gutter has room, and never nearer the frame's edge than 40px; centred in the gutter otherwise, and hidden when a gutter cannot hold them clear; the result toast; and `formatMultiplier` |
+| `js/ui.js` | Tagline placement in the gutters between each frame edge and the nearest glass or host control at the tagline's own height: 40px from the glass or control beside it where the gutter has room, and never nearer the frame's edge than 40px; centred in the gutter otherwise, and hidden when a gutter cannot hold them clear; the left one stands down while the backdrop paints it; the result toast; and `formatMultiplier` |
 | `js/board/geometry.js` | Every dimension of the board and the curves the pane, fins, and mouths follow |
 | `js/board/kit.js` | Shared builders: canvas textures, glow sprites, highlight tubes, glass, subdivision, ribbons |
-| `js/board/background.js` | The city backdrop shader, shared with the tinted back panel so the panel samples the same pixels |
+| `js/board/background.js` | The city backdrop shader, shared with the tinted back panel so the panel samples the same pixels, and the choice between the wide and tall photos |
 | `js/board/pane.js`, `tray.js`, `fins.js`, `cups.js` | The pane and pegs; the base slab, front sheet, back panel, and opening shadow; the raked fins and side plates; the cups and drop mouths |
 | `js/board/flight.js` | The drop path to a given slot and the ball's position along it |
-| `img/city.jpg` | The 1916×821 backdrop |
+| `img/city.jpg` | The 1916×821 wide backdrop |
+| `img/city-portrait.jpg` | The 940×1672 tall backdrop of the same scene, with `GOOD PLAYERS BET BETTER` painted on its pillar |
 | `js/vendor/` | three.js 0.169.0 (`three.module.min.js`, and the postprocessing addons the bloom pass needs) with its MIT licence |
 
 three.js is vendored under `packages.md`'s rule for a supplied game's libraries: it never
@@ -99,10 +100,19 @@ at or above 1× and in grey below it.
 
 ### Backdrop
 
-A plain cover fit showed about a fifth of the photo's width on a phone, which upscaled it
-past its resolution. `js/board/background.js` shows at least 40% of the width on a narrow
-screen and 15% beyond cover on every screen, centres the photo's band on the board, and
-fades its edges into the ground; mipmaps keep desktop downscaling clean.
+The scene comes in two photos, and `js/board/background.js` shows whichever is nearer the
+view's shape: the tall one below the geometric mean of the two aspects (about 1.15), the
+wide one above it. A view taller than its photo crops it to cover, so a phone sees the
+whole width of the tall photo; a wider one shows 15% beyond cover and fades the photo's
+edges into the ground. Each photo's anchor height sits on the board's band as far as
+cover allows. Until the tall photo arrives, a narrow view shows at least 40% of the wide
+one's width. The tall photo paints the left tagline on its pillar, so the frame's own left
+tagline stands down while it shows. Mipmaps keep desktop downscaling clean.
+
+The city stays bright: a light shade at the top behind the title row and at the bottom
+behind the bet panel, a soft vignette, and a slight saturation lift. On the pane, only the
+peg field is dimmed, half a peg spacing past the outer pegs and feathered over one more,
+so the rest of the glass shows the city clear.
 
 ### Art
 

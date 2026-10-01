@@ -66,7 +66,7 @@ export const board = {
     this.composer = addons ? createComposer(T, addons, this.renderer, this.scene, this.camera) : null
 
     const kit = createKit(T, this.scene)
-    this.background = createBackground(kit, 'img/city.jpg', () => this.wake())
+    this.background = createBackground(kit, () => this.fit())
     this.pulses = { value: new Array(SLOTS).fill(0) }
     const pane = buildPane(kit)
     this.upper = pane.upper
@@ -99,7 +99,12 @@ export const board = {
     this.background.resize(width, height, stage)
     frameBoard(this.T, this.camera, this.upper, stage)
     this.camera.setViewOffset(stage.width, stage.height, -stage.x, -stage.y, width, height)
-    ui.placeTaglines(screenBounds(this.T, this.camera, this.upper, width, height), width, state.controls)
+    ui.placeTaglines(
+      screenBounds(this.T, this.camera, this.upper, width, height),
+      width,
+      state.controls,
+      this.background.paintsTagline,
+    )
     this.wake()
   },
 

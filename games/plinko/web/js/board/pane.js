@@ -14,6 +14,7 @@ import {
   PEG_RADIUS,
   PEG_SPACING,
   ROWS,
+  ROW_BOTTOM,
   ROW_HEIGHT,
   ROW_TOP,
   TILT,
@@ -30,7 +31,7 @@ export function buildPane(kit) {
   const upper = leaningFrame(T)
   scene.add(upper)
 
-  scene.add(new T.Mesh(bentGlass(kit, shape), kit.glass({ color: 0xc4ccd8, roughness: 0.05, thickness: 0.35, envMapIntensity: 1.1 })))
+  scene.add(new T.Mesh(bentGlass(kit, shape), kit.glass({ color: 0xe8edf4, roughness: 0, thickness: 0.35, envMapIntensity: 1.1 })))
   addSheen(kit, shape)
   addRim(kit, shape)
 
@@ -129,8 +130,8 @@ function bentGlass(kit, shape) {
   return geometry
 }
 
-// A diagonal sheen across the face, over a faint dimming layer that keeps the city
-// behind the pane from competing with the pegs.
+// A diagonal sheen across the face, over a dimming layer behind the peg field alone that
+// keeps the city from competing with the pegs while the rest of the glass shows it clear.
 function addSheen(kit, shape) {
   const { T, scene } = kit
   const flat = new T.ShapeGeometry(shape, 24)
@@ -156,14 +157,44 @@ function addSheen(kit, shape) {
   ])
   const sheen = new T.Mesh(
     geometry,
-    new T.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.5, ...kit.additive, depthWrite: false, toneMapped: false }),
+    new T.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.35, ...kit.additive, depthWrite: false, toneMapped: false }),
   )
   sheen.renderOrder = 4
   scene.add(sheen)
 
-  const dim = new T.Mesh(geometry, new T.MeshBasicMaterial({ color: 0x03060c, transparent: true, opacity: 0.38, depthWrite: false }))
+  const dim = new T.Mesh(geometry, pegFieldDim(T))
   dim.renderOrder = 3
   scene.add(dim)
+}
+
+// Dark glass over the trapezoid the pegs span, half a spacing past the outer pegs and
+// feathered over one more. The sheen's UVs carry the flat pane position.
+function pegFieldDim(T) {
+  return new T.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+      }`,
+    fragmentShader: `
+      const float SPACING = ${PEG_SPACING.toFixed(4)}, ROW_HEIGHT = ${ROW_HEIGHT.toFixed(4)};
+      const float ROW_TOP = ${ROW_TOP.toFixed(4)}, ROW_BOTTOM = ${ROW_BOTTOM.toFixed(4)};
+      const float BAY = ${BAY_HALF_WIDTH.toFixed(4)}, PANE_TOP = ${TOP.toFixed(4)};
+      const float PAD = SPACING * .5, FEATHER = SPACING, DIM = .5;
+      varying vec2 vUv;
+      void main() {
+        float x = abs(vUv.x * 2. - 1.) * BAY;
+        float y = vUv.y * PANE_TOP;
+        float halfWidth = SPACING * (1. + .5 * (ROW_TOP - y) / ROW_HEIGHT);
+        float slope = .5 * SPACING / ROW_HEIGHT;
+        float side = (x - halfWidth - PAD) / sqrt(1. + slope * slope);
+        float d = max(side, max(y - ROW_TOP - PAD, ROW_BOTTOM - PAD - y));
+        gl_FragColor = vec4(vec3(.001, .002, .004), DIM * (1. - smoothstep(0., FEATHER, d)));
+      }`,
+  })
 }
 
 // Polished edges along the pane's outline above the tray join; below it the side

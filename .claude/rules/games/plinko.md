@@ -51,7 +51,9 @@ glowing cups.
 
 `GOOD PLAYERS BET BETTER` in the left gutter and `SAME GAME BIGGER VIEWS` in the right,
 placed by `js/ui.js`, with a 44px `stageGutter` kept for them on narrow screens, and hidden
-when a gutter cannot hold them clear of the glass and the host's controls. They and the
+when a gutter cannot hold them clear of the glass and the host's controls. Where the tall
+backdrop shows, `GOOD PLAYERS BET BETTER` is the line painted on its pillar, and the
+frame's own left tagline is not drawn. They and the
 subtitle are brand art, never extended into explanatory text.
 
 ## Typefaces
