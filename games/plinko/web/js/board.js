@@ -8,6 +8,7 @@ import { flightTo, positionAt } from './board/flight.js'
 import {
   BACK_WASH_OPACITY,
   BALL_RADIUS,
+  CUP_FILL,
   CUP_Z,
   FACE,
   FIN_FRONT_Z,
@@ -474,6 +475,6 @@ function paintLabel(cup, text, size) {
   g.shadowBlur = 8
   g.shadowOffsetY = 2
   g.fillStyle = cup.band.ink
-  g.fillText(text, width / 2, height * 0.47 + capHeight / 2)
+  g.fillText(text, width / 2, height * (1 - CUP_FILL / 2) + capHeight / 2)
   cup.labelTexture.needsUpdate = true
 }

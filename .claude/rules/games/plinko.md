@@ -45,7 +45,14 @@ A `glass-panel` card with the deep panel shadow, 12px padding and 10px internals
 
 The night-city backdrop fills the whole game area behind the column and belongs to the
 Plinko page only. In front of it: ten rows of pegs on a bent acrylic pane over eleven
-glowing cups.
+glowing cups. The pane is clear glass edged by a thin ice-blue line with a soft halo,
+with a light streak inside each side; dark navy glass sits only behind the pegs, from the
+first peg to the last on each row, and the rest of the pane shows the city at full
+brightness. The tray, fins, and cups below it are blue-tinted glass with ice-blue edges.
+Each cup holds glowing liquid to 70% of its height with the label in the liquid, and
+see-through navy glass above it. Each drop mouth is an ice-blue ring with a soft blue
+halo brightest at its back, a blue-white spark on the back lip, and a small light just
+above it.
 
 ## Brand lines
 
@@ -65,7 +72,8 @@ taglines, beside the platform's IBM Plex Sans.
 
 Declared once in `js/theme.js` and `css/plinko.css`, never copied from or into platform
 tokens. Cup bands run silver, teal, purple, orange, red by distance from the centre; each
-band shades its glass, inks its label, and spills its glow onto the wall, sheet, and tray.
+band colours its cup's liquid, inks its label, and spills its glow onto the wall, sheet,
+and tray.
 The landing cup pulses for about half a second. The frame's result toast is green at or
 above 1× and grey below.
 

@@ -31,7 +31,7 @@ export function buildPane(kit, chromeEnvironment) {
   const upper = leaningFrame(T)
   scene.add(upper)
 
-  scene.add(new T.Mesh(bentGlass(kit, shape), kit.glass({ color: 0xe8edf4, roughness: 0, thickness: 0.35, envMapIntensity: 1.1 })))
+  scene.add(new T.Mesh(bentGlass(kit, shape), kit.glass({ roughness: 0, thickness: 0, envMapIntensity: 1.1 })))
   addSheen(kit, shape)
   addRim(kit, shape)
 
@@ -130,7 +130,7 @@ function bentGlass(kit, shape) {
   return geometry
 }
 
-// A diagonal sheen across the face, over a dimming layer behind the peg field alone that
+// A faint diagonal sheen across the face, over a navy shade behind the peg field that
 // keeps the city from competing with the pegs while the rest of the glass shows it clear.
 function addSheen(kit, shape) {
   const { T, scene } = kit
@@ -149,15 +149,15 @@ function addSheen(kit, shape) {
   }
 
   const texture = kit.linearTexture(256, 256, [0, 0], [256, 256 * 0.7], [
-    [0, 'rgba(255,255,255,.34)'],
-    [0.2, 'rgba(255,255,255,.1)'],
-    [0.36, 'rgba(255,255,255,0)'],
-    [0.78, 'rgba(255,255,255,0)'],
-    [1, 'rgba(255,255,255,.1)'],
+    [0, 'rgba(190,220,255,.3)'],
+    [0.2, 'rgba(170,205,255,.08)'],
+    [0.36, 'rgba(170,205,255,0)'],
+    [0.78, 'rgba(170,205,255,0)'],
+    [1, 'rgba(170,205,255,.08)'],
   ])
   const sheen = new T.Mesh(
     geometry,
-    new T.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.35, ...kit.additive, depthWrite: false, toneMapped: false }),
+    new T.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.15, ...kit.additive, depthWrite: false, toneMapped: false }),
   )
   sheen.renderOrder = 4
   scene.add(sheen)
@@ -167,9 +167,9 @@ function addSheen(kit, shape) {
   scene.add(dim)
 }
 
-// Dark glass over the trapezoid the pegs span, half a spacing past the outer pegs and
-// feathered over one more, thinning toward its sides so the city still shows there. The
-// sheen's UVs carry the flat pane position.
+// Dark navy over the trapezoid the pegs span, each row from the outer edge of its first
+// peg to that of its last, with a narrow feather across that edge; the rest of the pane
+// stays clear. The sheen's UVs carry the flat pane position; shader colours are linear.
 function pegFieldDim(T) {
   return new T.ShaderMaterial({
     transparent: true,
@@ -184,17 +184,18 @@ function pegFieldDim(T) {
       const float SPACING = ${PEG_SPACING.toFixed(4)}, ROW_HEIGHT = ${ROW_HEIGHT.toFixed(4)};
       const float ROW_TOP = ${ROW_TOP.toFixed(4)}, ROW_BOTTOM = ${ROW_BOTTOM.toFixed(4)};
       const float BAY = ${BAY_HALF_WIDTH.toFixed(4)}, PANE_TOP = ${TOP.toFixed(4)};
-      const float PAD = SPACING * .5, FEATHER = SPACING, DIM = .42;
+      const float RADIUS = ${PEG_RADIUS.toFixed(4)}, FEATHER = SPACING * .07, DIM = .9;
       varying vec2 vUv;
       void main() {
         float x = abs(vUv.x * 2. - 1.) * BAY;
         float y = vUv.y * PANE_TOP;
         float halfWidth = SPACING * (1. + .5 * (ROW_TOP - y) / ROW_HEIGHT);
         float slope = .5 * SPACING / ROW_HEIGHT;
-        float side = (x - halfWidth - PAD) / sqrt(1. + slope * slope);
-        float d = max(side, max(y - ROW_TOP - PAD, ROW_BOTTOM - PAD - y));
-        float across = smoothstep(.35, 1., x / (halfWidth + PAD));
-        gl_FragColor = vec4(vec3(.001, .002, .004), DIM * (1. - .7 * across) * (1. - smoothstep(0., FEATHER, d)));
+        float side = (x - halfWidth - RADIUS) / sqrt(1. + slope * slope);
+        float d = max(side, max(y - ROW_TOP - RADIUS, ROW_BOTTOM - RADIUS - y));
+        float alpha = DIM * (1. - smoothstep(-FEATHER, FEATHER, d));
+        vec3 navy = vec3(.0025, .0075, .022);
+        gl_FragColor = vec4(navy, alpha);
       }`,
   })
 }
@@ -213,27 +214,32 @@ function addRim(kit, shape) {
     return new T.Vector3(x, by, bz)
   }
 
-  kit.highlight(rim.map((p) => onPane(p.x, p.y, FACE)), 0.016, 0.95)
-  kit.highlight(rim.filter((_, i) => i % 2 === 0).map((p) => onPane(p.x, p.y, 0)), 0.01, 0.3)
+  // A thin ice-blue edge with a soft halo just outside it.
+  kit.highlight(rim.map((p) => onPane(p.x, p.y, FACE)), 0.0075, 1, { color: 0xd2ebff })
+  kit.highlight(rim.filter((_, i) => i % 2 === 0).map((p) => onPane(p.x, p.y, 0)), 0.006, 0.35, { color: 0x8ec2ff })
 
   // A soft band running inward from the front edge, like light caught in the bevel.
   const width = 0.07
-  const rows = rim.map((p, i) => {
+  const inward = rim.map((_, i) => {
     const a = rim[Math.max(0, i - 3)]
     const b = rim[Math.min(rim.length - 1, i + 3)]
     const length = Math.hypot(b.x - a.x, b.y - a.y) || 1
-    const inX = -(b.y - a.y) / length
-    const inY = (b.x - a.x) / length
-    return [onPane(p.x, p.y, FACE + 0.008), onPane(p.x + inX * width, p.y + inY * width, FACE + 0.008)]
+    return [-(b.y - a.y) / length, (b.x - a.x) / length]
   })
+  const offset = (distance) =>
+    rim.map((p, i) => [
+      onPane(p.x, p.y, FACE + 0.008),
+      onPane(p.x + inward[i][0] * distance, p.y + inward[i][1] * distance, FACE + 0.008),
+    ])
+  const rows = offset(width)
   const texture = kit.linearTexture(256, 4, [0, 0], [256, 0], [
-    [0, 'rgba(255,255,255,1)'],
-    [0.07, 'rgba(235,244,255,.55)'],
-    [0.18, 'rgba(170,195,230,.22)'],
-    [0.5, 'rgba(160,185,220,.14)'],
-    [0.62, 'rgba(225,238,255,.32)'],
-    [0.7, 'rgba(160,185,220,.06)'],
-    [1, 'rgba(160,185,220,0)'],
+    [0, 'rgba(200,230,255,.9)'],
+    [0.08, 'rgba(140,195,255,.45)'],
+    [0.2, 'rgba(110,170,255,.2)'],
+    [0.5, 'rgba(100,160,250,.1)'],
+    [0.62, 'rgba(170,215,255,.24)'],
+    [0.7, 'rgba(110,170,255,.05)'],
+    [1, 'rgba(110,170,255,0)'],
   ])
   const band = new T.Mesh(
     kit.ribbon(rows, (i, side) => [side, i / rim.length]),
@@ -249,6 +255,68 @@ function addRim(kit, shape) {
   )
   band.renderOrder = 19
   scene.add(band)
+
+  const halo = new T.Mesh(
+    kit.ribbon(offset(-0.06), (i, side) => [side, i / rim.length]),
+    new T.MeshBasicMaterial({
+      map: kit.linearTexture(64, 4, [0, 0], [64, 0], [
+        [0, 'rgba(120,185,255,.7)'],
+        [0.3, 'rgba(90,160,255,.22)'],
+        [1, 'rgba(90,160,255,0)'],
+      ]),
+      transparent: true,
+      opacity: 0.55,
+      ...kit.additive,
+      depthWrite: false,
+      toneMapped: false,
+      side: T.DoubleSide,
+    }),
+  )
+  halo.renderOrder = 19
+  scene.add(halo)
+
+  addStreaks(kit, rim, inward, onPane)
+}
+
+// Soft vertical light caught inside each side of the bent glass, fading in below the top
+// corner and gone by the middle of the board; the left side catches more of it.
+function addStreaks(kit, rim, inward, onPane) {
+  const { T, scene } = kit
+  const width = 0.9
+  for (const [sign, strength] of [[-1, 0.13], [1, 0.04]]) {
+    const side = rim
+      .map((p, i) => [p, inward[i]])
+      .filter(([p]) => p.x * sign > PANE_TOP_HALF_WIDTH - 1 && p.y < TOP - CORNER_RADIUS && p.y > JOIN_Y)
+    const rows = side.map(([p, [inX, inY]]) => [
+      onPane(p.x, p.y, FACE + 0.006),
+      onPane(p.x + inX * width, p.y + inY * width, FACE + 0.006),
+    ])
+    const streak = new T.Mesh(
+      kit.ribbon(rows, (i, s) => [s, side[i][0].y / TOP]),
+      new T.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        side: T.DoubleSide,
+        ...kit.additive,
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+          }`,
+        fragmentShader: `
+          const float END = ${((TOP - CORNER_RADIUS) / TOP).toFixed(4)};
+          varying vec2 vUv;
+          void main() {
+            float across = smoothstep(.02, .16, vUv.x) * (1. - smoothstep(.16, .85, vUv.x));
+            float along = smoothstep(.36, .8, vUv.y) * (1. - smoothstep(END - .14, END, vUv.y));
+            gl_FragColor = vec4(vec3(.62, .8, 1.), ${strength.toFixed(3)} * across * along);
+          }`,
+      }),
+    )
+    streak.renderOrder = 4
+    scene.add(streak)
+  }
 }
 
 // Row r holds r + 3 pegs. Each peg keeps a hidden glow that lights when the ball hits it;

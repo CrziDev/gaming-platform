@@ -93,8 +93,11 @@ the flight. A `drop` before the board is configured is reported landed at once.
 ### Palette
 
 The board's colours are game art, declared once in `js/theme.js` and nowhere in the
-platform. Each cup band shades its glass from deep to light, paints its label in its ink,
-and spills its glow onto the back wall, the front sheet, and the tray. The landing cup
+platform. Each cup band colours its cup's liquid from deep to light, paints its label in
+its ink, and spills its glow onto the back wall, the front sheet, and the tray. Everything
+else in the tray — the base slab, front sheet, fins, cup glass above the liquid
+(`CUP_FILL`), and the drop-mouth rings with their halo, spark, and light — is ice-blue
+glass, set in `cups.js`, `tray.js`, and `fins.js` rather than in the bands. The landing cup
 pulses for about half a second. The frame's toast shows the host's result label in green
 at or above 1× and in grey below it.
 
@@ -111,9 +114,9 @@ tagline stands down while it shows. Mipmaps keep desktop downscaling clean.
 
 The city stays bright: a light shade at the top behind the title row and at the bottom
 behind the bet panel, a faint vignette at the far edges, and a slight saturation lift. On
-the pane, only the peg field is dimmed, half a peg spacing past the outer pegs and
-feathered over one more, and the dimming thins toward its left and right sides, so the
-rest of the glass shows the city clear.
+the pane, only the peg field is dimmed: each row from the outer edge of its first peg to
+that of its last, with a narrow feather across that edge. The pane itself is untinted
+glass that does not refract, so the rest of it shows the city at full brightness.
 
 The pegs and the ball are one polished chrome. It reflects a studio of its own, laid out
 around the camera's view: a broad soft cap overhead, a white window on each side, a warm

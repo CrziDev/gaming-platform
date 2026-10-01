@@ -283,7 +283,7 @@ const WALL_SHADERS = {
 function bladeMaterial(T, shaders, tint) {
   return new T.ShaderMaterial({
     uniforms: {
-      rim: { value: new T.Color(0xd8e6ff) },
+      rim: { value: new T.Color(0xa8d6ff) },
       tint: { value: new T.Color(tint) },
       y0: { value: FLOOR },
       y1: { value: CUP_TOP + 0.5 },
