@@ -312,9 +312,29 @@ function studioLighting(T, renderer) {
   return new T.PMREMGenerator(renderer).fromScene(studio, 0.02).texture
 }
 
+// Some drivers leave a stray infinite pixel in the half-float scene; the bloom's blur
+// would spread it into a glowing square, so the scene is capped before it blooms.
+const HIGHLIGHT_CEILING = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+    }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 texel = texture2D(tDiffuse, vUv);
+      gl_FragColor = vec4(min(texel.rgb, vec3(16.)), texel.a);
+    }`,
+}
+
 function createComposer(T, addons, renderer, scene, camera) {
   const composer = new addons.EffectComposer(renderer, new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples: 4 }))
   composer.addPass(new addons.RenderPass(scene, camera))
+  composer.addPass(new addons.ShaderPass(HIGHLIGHT_CEILING))
   composer.addPass(new addons.UnrealBloomPass(new T.Vector2(256, 256), 0.3, 0.24, 0.9))
   composer.addPass(new addons.OutputPass())
   return composer
