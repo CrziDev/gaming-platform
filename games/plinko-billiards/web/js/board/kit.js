@@ -204,6 +204,31 @@ export function createKit(T, scene) {
     )
   }
 
+  // A wisp of chalk dust: soft clumps around the middle with a few loose grains, in
+  // white so a sprite can tint it.
+  function chalkTexture() {
+    return canvasTexture((g, size) => {
+      const blob = (x, y, r, alpha) => {
+        const gradient = g.createRadialGradient(x, y, 0, x, y, r)
+        gradient.addColorStop(0, `rgba(255,255,255,${alpha})`)
+        gradient.addColorStop(1, 'rgba(255,255,255,0)')
+        g.fillStyle = gradient
+        g.fillRect(x - r, y - r, r * 2, r * 2)
+      }
+      for (let i = 0; i < 16; i++) {
+        const angle = random() * Math.PI * 2
+        const reach = random() ** 1.5 * size * 0.24
+        blob(size / 2 + Math.cos(angle) * reach, size / 2 + Math.sin(angle) * reach, size * (0.1 + random() * 0.16), 0.16 + random() * 0.16)
+      }
+      for (let i = 0; i < 70; i++) {
+        const angle = random() * Math.PI * 2
+        const reach = random() * size * 0.42
+        g.fillStyle = `rgba(255,255,255,${0.2 + random() * 0.4})`
+        g.fillRect(size / 2 + Math.cos(angle) * reach, size / 2 + Math.sin(angle) * reach, 1.5, 1.5)
+      }
+    }, 128)
+  }
+
   function glowSprite(color, opacity, width, height = width) {
     const sprite = new T.Sprite(
       new T.SpriteMaterial({
@@ -243,6 +268,7 @@ export function createKit(T, scene) {
     leatherBump,
     ballTexture,
     cueTexture,
+    chalkTexture,
     glowSprite,
     contactShadow,
   }

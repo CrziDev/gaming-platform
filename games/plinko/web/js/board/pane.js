@@ -359,7 +359,7 @@ function addPegs(kit, upper, chrome) {
       glow.renderOrder = 9
       upper.add(glow)
 
-      pegs.set(`${row}-${index}`, { glow, level: 0 })
+      pegs.set(`${row}-${index}`, { glow, level: 0, position: peg.position })
     }
   }
   return pegs

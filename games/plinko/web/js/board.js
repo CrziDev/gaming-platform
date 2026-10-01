@@ -28,6 +28,7 @@ import {
 import { createKit } from './board/kit.js'
 import { buildPane } from './board/pane.js'
 import { buildTray } from './board/tray.js'
+import { createSparks, createStreaks } from './board/trail.js'
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 
@@ -47,6 +48,8 @@ export const board = {
   cups: [],
   pulses: null,
   balls: [],
+  streaks: null,
+  sparks: null,
   ballGeometry: null,
   regrowAt: null,
   frameRequest: 0,
@@ -77,6 +80,8 @@ export const board = {
     buildTray(kit, this.background, this.pulses)
     buildFins(kit)
     this.cups = buildCups(kit)
+    this.streaks = createStreaks(kit, this.upper, this.camera)
+    this.sparks = createSparks(kit, this.upper)
     this.ballGeometry = new T.SphereGeometry(BALL_RADIUS, 48, 32)
 
     this.scene.updateMatrixWorld(true)
@@ -142,6 +147,7 @@ export const board = {
     this.waitingBall.scale.setScalar(0.001)
     this.regrowAt = ball.startedAt + 250
     this.balls.push(ball)
+    this.streaks.add(ball.segments, slot, ball.startedAt)
     this.stepBall(ball, ball.startedAt)
     this.wake()
   },
@@ -162,7 +168,7 @@ export const board = {
     let segment = ball.segments[ball.index]
     let t = (now - ball.startedAt) / segment.duration
     while (t >= 1) {
-      if (segment.peg) this.hitPeg(segment.peg)
+      if (segment.peg) this.hitPeg(segment.peg, segment.x1, segment.y1)
       ball.index++
       ball.startedAt += segment.duration
       if (ball.index >= ball.segments.length) {
@@ -183,9 +189,12 @@ export const board = {
     return true
   },
 
-  hitPeg(key) {
+  hitPeg(key, ballX, ballY) {
     const peg = this.pegs.get(key)
-    if (peg) peg.level = 1
+    if (peg) {
+      peg.level = 1
+      this.sparks.burst(peg.position, ballX, ballY)
+    }
     this.playTick()
   },
 
@@ -221,9 +230,13 @@ export const board = {
       if (t >= 1) this.regrowAt = null
     }
     this.balls = this.balls.filter((ball) => this.stepBall(ball, now))
+    this.streaks.update(now)
+    this.sparks.update(dt)
 
     return (
       this.balls.length > 0 ||
+      this.streaks.alive ||
+      this.sparks.alive ||
       this.regrowAt !== null ||
       this.cups.some((cup) => cup.level > 0) ||
       [...this.pegs.values()].some((peg) => peg.level > 0)

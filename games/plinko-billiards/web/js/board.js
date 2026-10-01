@@ -18,6 +18,7 @@ import {
 import { createKit } from './board/kit.js'
 import { applyPulse, measurePlate, paintPlate } from './board/pockets.js'
 import { buildTable } from './board/table.js'
+import { createChalk, createTrails } from './board/trail.js'
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 
@@ -40,6 +41,8 @@ export const board = {
   cueMaterial: null,
   cups: [],
   balls: [],
+  trails: null,
+  chalk: null,
   ballGeometry: null,
   regrowAt: null,
   frameRequest: 0,
@@ -69,6 +72,8 @@ export const board = {
     this.cueMaterial = table.cueMaterial
     this.cups = table.pockets
     addLights(T, this.scene, this.upper)
+    this.trails = createTrails(kit, this.upper, this.camera)
+    this.chalk = createChalk(kit, this.upper)
     this.ballGeometry = new T.SphereGeometry(BALL_RADIUS, 48, 32)
 
     this.scene.updateMatrixWorld(true)
@@ -131,6 +136,7 @@ export const board = {
     this.waitingBall.scale.setScalar(0.001)
     this.regrowAt = ball.startedAt + 250
     this.balls.push(ball)
+    this.trails.add(ball.segments, slot, ball.startedAt)
     this.stepBall(ball, ball.startedAt)
     this.wake()
   },
@@ -187,6 +193,7 @@ export const board = {
     if (peg) {
       peg.level = 1
       peg.dir.set(peg.base.x - fromX, peg.base.y - fromY, 0).normalize()
+      this.chalk.burst(peg.base, fromX, fromY)
     }
     this.playTick()
   },
@@ -224,9 +231,13 @@ export const board = {
       if (t >= 1) this.regrowAt = null
     }
     this.balls = this.balls.filter((ball) => this.stepBall(ball, now))
+    this.trails.update(now)
+    this.chalk.update(dt)
 
     return (
       this.balls.length > 0 ||
+      this.trails.alive ||
+      this.chalk.alive ||
       this.regrowAt !== null ||
       this.cups.some((cup) => cup.level > 0) ||
       [...this.pegs.values()].some((peg) => peg.level > 0)

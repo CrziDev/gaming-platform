@@ -41,16 +41,22 @@ lamp cone.
 | `js/theme.js` | The pocket bands (ivory, blue, purple, orange, red by distance from the centre) and the pool-ball colours |
 | `js/board.js` | Renderer, hall lighting, bloom, camera framing inside the stage rect, the drop, the render-on-demand loop, and the click and thud tones |
 | `js/board/geometry.js` | Every dimension of the table, the rack, the pockets, and the apron |
-| `js/board/kit.js` | Canvas textures (cloth, mahogany, leather, pool balls, cue ball), glow sprites, contact shadows |
+| `js/board/kit.js` | Canvas textures (cloth, mahogany, leather, pool balls, cue ball, chalk dust), glow sprites, contact shadows |
 | `js/board/background.js` | The hall shader |
 | `js/board/table.js`, `pockets.js`, `rack.js` | Cloth, cushions, rails, sights, and apron; pockets and their plates; the rack and the cue ball |
-| `js/board/flight.js` | The drop path to a given slot and the ball's position along it |
+| `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
+| `js/board/trail.js` | The marks the cue ball leaves, sampled backwards along the flight path: the ivory smear, the nap track, and the chalk puffed off each strike |
 | `js/vendor/` | three.js 0.169.0 and the bloom pass's addons with their MIT licence, vendored beside this game as `packages.md` requires |
 
 The frame never decides an outcome. As in Plinko, a `drop` names the settled slot, the
 path turns right exactly `slot` times in shuffled order, a struck ball gives a little
 and glows, and the landing pocket's ring, lining, and plate pulse for about half a
-second before `landed` is posted.
+second before `landed` is posted. Behind the rolling ball an ivory smear blurs over its
+last 100 ms and takes on the landing pocket's band only on the roll in; a brushed track
+in the nap, lighter down the middle with a darker line each side, fades in place over
+about 900 ms and breaks where the ball hops; and each strike puffs blue chalk that
+spreads, lifts, and thins out. None of it is light, so none of it blooms, and none of it
+is drawn under reduced motion.
 
 ## Checks
 

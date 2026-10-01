@@ -64,7 +64,8 @@ for what the platform took over from the vendor; nothing of its drawing code rem
 | `js/board/kit.js` | Shared builders: canvas textures, glow sprites, highlight tubes, glass, subdivision, ribbons |
 | `js/board/background.js` | The city backdrop shader, shared with the tinted back panel so the panel samples the same pixels, and the choice between the wide and tall photos |
 | `js/board/pane.js`, `tray.js`, `fins.js`, `cups.js` | The pane and pegs; the base slab, front sheet, back panel, and opening shadow; the raked fins and side plates; the cups and drop mouths |
-| `js/board/flight.js` | The drop path to a given slot and the ball's position along it |
+| `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
+| `js/board/trail.js` | The ball's light streak, sampled backwards along the flight path rather than from past frames, and the sparks a struck peg throws |
 | `img/city.jpg` | The 1916×821 wide backdrop |
 | `img/city-portrait.jpg` | The 940×1672 tall backdrop of the same scene, with `GOOD PLAYERS BET BETTER` painted on its pillar |
 | `js/vendor/` | three.js 0.169.0 (`three.module.min.js`, and the postprocessing addons the bloom pass needs) with its MIT licence |
@@ -90,6 +91,11 @@ into the chute mouth, and a sink into the cup. It posts `landed` for that slot w
 path ends. Under reduced motion the cup lights at once and `landed` is posted without
 the flight. A `drop` before the board is configured is reported landed at once.
 
+The streak behind the ball is the path itself, read back over its last 220 ms, so it is
+a smooth curve at any frame rate and stretches with the ball's speed. It outlives the
+ball by that long, draining into the cup, and the render loop runs until it and the peg
+sparks have faded. Under reduced motion there is neither.
+
 ### Palette
 
 The board's colours are game art, declared once in `js/theme.js` and nowhere in the
@@ -98,7 +104,9 @@ its ink, and spills its glow onto the back wall, the front sheet, and the tray. 
 else in the tray — the base slab, front sheet, fins, cup glass above the liquid
 (`CUP_FILL`), and the drop-mouth rings with their halo, spark, and light — is ice-blue
 glass, set in `cups.js`, `tray.js`, and `fins.js` rather than in the bands. The landing cup
-pulses for about half a second. The frame's toast shows the host's result label in green
+pulses for about half a second. The streak is a white-hot core in an ice-blue glow,
+the only part of it bright enough to bloom; on the arc into the mouth and the sink it
+takes on the landing cup's band, never earlier. The frame's toast shows the host's result label in green
 at or above 1× and in grey below it.
 
 ### Backdrop

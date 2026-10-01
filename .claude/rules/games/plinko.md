@@ -74,6 +74,9 @@ Declared once in `js/theme.js` and `css/plinko.css`, never copied from or into p
 tokens. Cup bands run silver, teal, purple, orange, red by distance from the centre; each
 band colours its cup's liquid, inks its label, and spills its glow onto the wall, sheet,
 and tray.
+A falling ball draws a light streak behind it: a white-hot core in a soft ice-blue glow,
+stretching with its speed, that takes on the landing cup's band only on the last arc in
+and drains into the cup after it. A struck peg throws a few ice-white sparks.
 The landing cup pulses for about half a second. The frame's result toast is green at or
 above 1× and grey below.
 

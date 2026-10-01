@@ -88,7 +88,11 @@ platform tokens. Pocket bands run ivory, blue, purple, orange, red by distance f
 centre; each band enamels its plate, inks its label, and lights a ring on the cloth
 around its pocket. The balls wear the standard solids and stripes. The landing pocket's
 ring, lining, and plate pulse for about half a second, and a struck ball gives a little
-and glows. The frame's result toast is green at or above 1× and grey below.
+and glows. The rolling cue ball leaves no light: a faint ivory smear blurs behind it,
+taking on the landing pocket's band only on the last roll in; it brushes a soft track in
+the nap that fades where it lies over about a second and breaks where the ball hops; and
+each strike knocks off a small puff of blue cue chalk. The frame's result toast is green
+at or above 1× and grey below.
 
 ## Art
 
