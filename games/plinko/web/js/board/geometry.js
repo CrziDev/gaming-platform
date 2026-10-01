@@ -71,10 +71,10 @@ export const BAY_PITCH = (2 * BAY_HALF_WIDTH) / SLOTS
 
 // Fins are wide at the base and taper on gently curved edges to a round tip; each pair
 // is the [base, tip] half-width of an inner fin or an outer wall.
-export const FIN_RISE = 0.45
+export const FIN_RISE = 0.36
 export const FIN_TOP = FIN_HEIGHT + FIN_RISE
-export const INNER_FIN = [0.05, 0.028]
-export const OUTER_FIN = [0.05, 0.028]
+export const INNER_FIN = [0.05, 0.036]
+export const OUTER_FIN = [0.05, 0.036]
 export const FIN_BACK_Z = TRAY_FRONT_Z - 0.03
 export const FILLET_RADIUS = 0.1
 
@@ -139,7 +139,7 @@ export function bend(y, z) {
 }
 
 const viewDepth = (y, z) => (EYE_Y - y) * Math.sin(PITCH) + (EYE_Z - z) * Math.cos(PITCH)
-const viewHeight = (y, z) =>
+export const viewHeight = (y, z) =>
   ((y - EYE_Y) * Math.cos(PITCH) + (EYE_Z - z) * Math.sin(PITCH)) / viewDepth(y, z)
 
 const [cornerY, cornerZ] = bend(TOP - CORNER_RADIUS, FACE)

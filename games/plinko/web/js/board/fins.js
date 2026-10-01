@@ -23,6 +23,7 @@ import {
   sideInset,
   sideX,
   taper,
+  viewHeight,
 } from './geometry.js'
 
 const smooth = (t) => t * t * (3 - 2 * t)
@@ -31,9 +32,23 @@ const FIN_REAR_Z = FACE + 0.02
 // The fin's front face follows this depth: forward at the top, back to the tray floor.
 const frontZ = (y) => FIN_BACK_Z + (FIN_FRONT_Z - FIN_BACK_Z) * smooth(clamp01((y - CUP_TOP + 0.2) / 0.8))
 
-// Full depth back to the pane between compartments; above the shelf the back edge
-// sweeps forward into a shallow blade.
-const rearZ = (y) => FIN_REAR_Z + (frontZ(y) - 0.16 - FIN_REAR_Z) * smooth(clamp01((y - SADDLE_Y + 0.3) / 0.45))
+// From the framed camera a step back reads as SIGHT of a step up, so a back edge
+// CLOSE × (crest − y) / SIGHT behind the face climbs steadily into the crest.
+const SIGHT =
+  (viewHeight(FIN_TOP, FIN_FRONT_Z - 0.01) - viewHeight(FIN_TOP, FIN_FRONT_Z)) /
+  (viewHeight(FIN_TOP + 0.01, FIN_FRONT_Z) - viewHeight(FIN_TOP, FIN_FRONT_Z))
+const CLOSE = 0.8
+
+// Polynomial smooth minimum: min(a, b) with the corner rounded over a width of k.
+const softMin = (a, b, k) => {
+  const h = Math.max(k - Math.abs(a - b), 0) / k
+  return Math.min(a, b) - (h * h * k) / 4
+}
+
+// Full depth back to the pane between compartments; above the chutes the back edge
+// leaves the pane and closes into the crest.
+const rearZ = (y, crestY) =>
+  frontZ(y) - softMin(frontZ(y) - FIN_REAR_Z, (CLOSE * Math.max(0, crestY - y)) / SIGHT, 0.3)
 
 // Raked glass blades between the compartments, and the side plates that carry the
 // outline from the tray up into the pane edge.
@@ -69,7 +84,6 @@ export function buildFins(kit) {
 
     const shift = (points) => points.map((p) => new T.Vector3(p.x + x, p.y, p.z))
     kit.highlight(shift(blade.edge), 0.01, 0.9)
-    kit.highlight(shift(blade.ridge), 0.006, 0.25)
     kit.highlight(shift(blade.back), 0.006, 0.3)
 
     const tip = kit.glowSprite(0xe6f2ff, 0.12, 0.2)
@@ -151,6 +165,8 @@ function bladeGeometry(kit, left, right, top, lean) {
   }
   face.setAttribute('bladeEdge', new T.Float32BufferAttribute(edgeData, 3))
 
+  const crestY = tipY + radius
+  const backZ = (y) => rearZ(Math.min(y, crestY - 1e-4), crestY)
   const spaced = outline.getSpacedPoints(220)
   const tangentAt = (i) => {
     const a = spaced[Math.max(0, i - 1)]
@@ -165,7 +181,7 @@ function bladeGeometry(kit, left, right, top, lean) {
   const wallIndex = []
   spaced.forEach((p, i) => {
     const [tx, ty] = tangentAt(i)
-    for (const z of [rearZ(p.y), frontZ(p.y)]) {
+    for (const z of [backZ(p.y), frontZ(p.y)]) {
       const leanY = (lean(p.y + 0.005, z) - lean(p.y - 0.005, z)) / 0.01
       const leanZ = (lean(p.y, z + 0.005) - lean(p.y, z - 0.005)) / 0.01
       const nx = ty
@@ -186,27 +202,22 @@ function bladeGeometry(kit, left, right, top, lean) {
   walls.setIndex(wallIndex)
 
   // Polished edges: the front outline pushed just outside the face, skipping the foot
-  // and any straight outer wall; the ridge along the top; and the back edge where the
-  // blade sweeps forward out of the compartment wall.
+  // and any straight outer wall, and the back edge from where it leaves the pane up
+  // into the rounded crest.
   const edge = []
   spaced.forEach((p, i) => {
     if (p.y < FLOOR + 0.1 || (Math.abs(p.x) < 1e-3 && p.y < tipY - 1e-3)) return
     const [tx, ty] = tangentAt(i)
     edge.push(new T.Vector3(p.x + ty * 0.01 + lean(p.y, frontZ(p.y)), p.y - tx * 0.01, frontZ(p.y) + 0.01))
   })
-  const crestY = tipY + radius + 0.004
-  const ridge = [
-    new T.Vector3(centreX + lean(crestY, rearZ(crestY)), crestY, rearZ(crestY) + 0.01),
-    new T.Vector3(centreX + lean(crestY, frontZ(crestY)), crestY, frontZ(crestY)),
-  ]
   const back = []
-  for (let i = 0; i <= 24; i++) {
-    const y = SADDLE_Y - 0.3 + ((tipY - SADDLE_Y + 0.3) * i) / 24
-    back.push(new T.Vector3(centreX + lean(y, rearZ(y)), y, rearZ(y) + 0.004))
+  for (let i = 0; i <= 32; i++) {
+    const y = SADDLE_Y - 0.3 + ((crestY - SADDLE_Y + 0.3) * i) / 32
+    back.push(new T.Vector3(centreX + lean(y, backZ(y)), y + 0.004, backZ(y) + 0.004))
   }
   const tip = new T.Vector3(centreX + lean(crestY, frontZ(crestY)), crestY, frontZ(crestY))
 
-  return { face, walls, edge, ridge, back, tip }
+  return { face, walls, edge, back, tip }
 }
 
 // The front face reads as a thick glass blade: light banked against both edges, a thin
