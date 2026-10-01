@@ -49,7 +49,7 @@ export function RecordTable<T>({
                   scope="col"
                   style={column.width ? { width: column.width } : undefined}
                   className={cn(
-                    'label-mono px-3 pt-1 pb-2 font-medium text-ink-mute',
+                    'label-mono px-3 pt-1 pb-2 font-medium text-ink-cool',
                     column.align === 'right' && 'text-right',
                     column.columnClass,
                   )}
@@ -130,7 +130,7 @@ export function RecordCard({
     </>
   )
 
-  const className = 'flex w-full flex-col gap-3 rounded-tile bg-surface-1 p-3 text-left'
+  const className = 'flex w-full flex-col gap-3 rounded-tile border border-hairline bg-surface-1 p-3 text-left'
 
   if (!onClick) {
     return <div className={className}>{content}</div>

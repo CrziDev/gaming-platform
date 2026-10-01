@@ -28,10 +28,10 @@ export function AdminLoginPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-base p-6">
-      <div className="w-full max-w-100 rounded-card bg-surface-1 p-6">
+      <div className="w-full max-w-100 rounded-card glass-panel p-6">
         <header className="mb-6 flex flex-col gap-1">
-          <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Operations console</h1>
-          <span className="label-mono text-ink-mute">Staff access only</span>
+          <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Operations console</h1>
+          <span className="label-mono text-ink-cool">Staff access only</span>
         </header>
 
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">

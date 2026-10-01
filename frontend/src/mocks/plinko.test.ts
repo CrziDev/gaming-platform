@@ -92,7 +92,7 @@ describe('settlePlinkoRound', () => {
 
   it('replays the same round for the same idempotency key without debiting twice', async () => {
     const { settlePlinkoRound, wallets } = await freshFixtures()
-    const input = { stake_minor: 500, currency: 'PHP' as const, params: { rows: 10 as const, risk: 'high' as const }, idempotencyKey: 'k3' }
+    const input = { stake_minor: 500, currency: 'PHP' as const, params: { rows: 8 as const, risk: 'high' as const }, idempotencyKey: 'k3' }
 
     const first = settlePlinkoRound(input, seeded(1))
     const after = wallets.find((w) => w.currency === 'PHP')?.balance_minor

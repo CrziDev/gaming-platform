@@ -79,7 +79,7 @@ export function AdminGamesPage() {
               header: 'Rounds 30d',
               align: 'right',
               cell: (row) => (
-                <span className="font-mono text-sm tnum text-ink-mute">{formatCount(row.rounds_30d)}</span>
+                <span className="text-sm tnum text-ink-mute">{formatCount(row.rounds_30d)}</span>
               ),
             },
             {

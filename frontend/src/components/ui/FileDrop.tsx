@@ -26,7 +26,7 @@ export function FileDrop({
 
   if (value) {
     return (
-      <div className="flex items-center gap-3 rounded-input bg-surface-1 p-3">
+      <div className="flex items-center gap-3 rounded-input border border-hairline bg-field p-3">
         <img
           src={URL.createObjectURL(value)}
           alt=""
@@ -65,9 +65,9 @@ export function FileDrop({
           onChange(event.dataTransfer.files[0] ?? null)
         }}
         className={cn(
-          'flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-input',
+          'flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-input border border-dashed',
           'px-4 py-4 text-center transition-colors duration-fast',
-          dragging ? 'bg-accent/12' : 'bg-inset hover:bg-wash',
+          dragging ? 'border-accent-ink bg-selected' : 'border-hairline-strong bg-inset hover:bg-wash',
         )}
       >
         <UploadCloud aria-hidden size={22} strokeWidth={1.5} className="text-ink-mute" />

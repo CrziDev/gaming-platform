@@ -66,15 +66,14 @@ describe('the top bar for a player', () => {
     expect(screen.queryByText('Nothing yet')).not.toBeInTheDocument()
   })
 
-  it('names the account menu by surname and offers Account and Sign out', async () => {
+  it('opens the account menu from the profile button and offers Account and Sign out', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({ 'GET /me': player, 'GET /wallets/PHP': wallet })
 
     renderApp('/')
 
     const trigger = await screen.findByRole('button', { name: 'Account menu' })
-    expect(trigger).toHaveTextContent('RM')
-    expect(trigger).toHaveTextContent('Mercado')
+    expect(trigger).toHaveAttribute('title', 'Rico Mercado')
 
     await user.click(trigger)
 
@@ -327,7 +326,7 @@ describe('searching from the rail', () => {
 
     await user.click(within(results).getByRole('link', { name: /Plinko/ }))
 
-    expect(await screen.findByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Plinko')
+    expect(await screen.findByRole('heading', { name: 'Plinko' })).toBeInTheDocument()
     expect(box).toHaveValue('plink')
     expect(within(rail).getByRole('list', { name: 'Search results' })).toBeInTheDocument()
   })

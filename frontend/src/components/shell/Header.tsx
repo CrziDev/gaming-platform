@@ -1,18 +1,17 @@
-import { MessageCircle, Wallet } from 'lucide-react'
-import { Link } from 'react-router'
+import { MessageCircle } from 'lucide-react'
 
-import { Button, IconButton, buttonStyles } from '@/components/ui/Button'
+import { Button, IconButton } from '@/components/ui/Button'
 import { useAuthIntent, useSession } from '@/features/auth'
 import { useActiveWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { money } from '@/lib/money'
-import { paths } from '@/routes/paths'
 
 import { AccountMenu } from './AccountMenu'
 import { MenuGlyph } from './MenuGlyph'
 import { NotificationsPanel } from './NotificationsPanel'
 import { railVisible, useShell } from './ShellContext'
 import { WalletIndicator } from './WalletIndicator'
+import { Wordmark } from './Wordmark'
 
 export function Header() {
   const { data: user } = useSession()
@@ -21,12 +20,11 @@ export function Header() {
   const { open } = useAuthIntent()
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-1 bg-panel px-2.5 sm:gap-3 sm:px-3.5">
+    <header className="glass-chrome relative z-30 flex h-15 shrink-0 items-center gap-1.5 chrome-edge px-2.5 sm:gap-3 sm:px-3.5">
       <IconButton
         label="Toggle navigation"
         data-navigation-toggle
-        size="compact"
-        className="bg-inset"
+        className="text-ink-soft"
         onClick={() => {
           if (railVisible()) {
             toggleRail()
@@ -38,27 +36,16 @@ export function Header() {
         <MenuGlyph />
       </IconButton>
 
-      <Link
-        to={paths.lobby}
-        className="text-[16px] font-semibold tracking-[-0.02em] text-ink sm:mr-1 sm:text-[18px]"
-      >
-        HeziBet
-      </Link>
+      <span aria-hidden className="hidden h-8 w-px bg-hairline sm:block" />
+
+      <Wordmark />
 
       <div className="flex-1" />
 
       {user ? (
-        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-          {wallet ? <WalletIndicator balance={money(wallet.balance_minor, wallet.currency)} /> : null}
-          <Link
-            to={paths.deposit}
-            aria-label="Deposit"
-            className={cn(buttonStyles('primary', 'md'), 'gap-1.5')}
-          >
-            <Wallet aria-hidden size={15} strokeWidth={1.8} />
-            <span className="hidden sm:inline">Deposit</span>
-          </Link>
-        </div>
+        wallet ? (
+          <WalletIndicator balance={money(wallet.balance_minor, wallet.currency)} />
+        ) : null
       ) : (
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           <Button variant="ghost" size="sm" onClick={() => open({ tab: 'signin' })}>
@@ -70,15 +57,16 @@ export function Header() {
         </div>
       )}
 
-      <div className="flex shrink-0 items-center gap-0.5 sm:ml-1">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         <span className="hidden chat:contents">
           <IconButton
             label="Toggle chat"
+            size="round"
             aria-pressed={chatOpen}
             onClick={() => setChatOpen(!chatOpen)}
-            className={cn(chatOpen && 'bg-wash text-ink-soft')}
+            className={cn(chatOpen && 'bg-selected text-ink')}
           >
-            <MessageCircle aria-hidden size={17} strokeWidth={1.6} />
+            <MessageCircle aria-hidden size={18} strokeWidth={1.7} />
           </IconButton>
         </span>
         {user ? (

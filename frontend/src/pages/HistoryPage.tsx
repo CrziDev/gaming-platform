@@ -54,7 +54,7 @@ export function HistoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">History</h1>
+        <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">History</h1>
 
         <Select
           aria-label="Date range"
@@ -102,7 +102,7 @@ export function HistoryPage() {
             <div className="lg:hidden">
               {groupedRounds.map(([day, rows]) => (
                 <section key={day} className="flex flex-col gap-2.5 pb-5">
-                  <h2 className="label-mono pt-1 text-ink-mute">{day}</h2>
+                  <h2 className="label-mono pt-1 text-ink-cool">{day}</h2>
                   {rows.map((round) => (
                     <RecordCard
                       key={round.id}
@@ -138,7 +138,7 @@ export function HistoryPage() {
                     header: 'Stake',
                     align: 'right',
                     cell: (round) => (
-                      <span className="font-mono text-sm tnum">
+                      <span className="text-sm tnum">
                         {formatMoney(money(round.stake_minor, round.currency))}
                       </span>
                     ),
@@ -148,7 +148,7 @@ export function HistoryPage() {
                     header: 'Multiplier',
                     align: 'right',
                     cell: (round) => (
-                      <span className="font-mono text-sm text-ink-mute tnum">
+                      <span className="text-sm text-ink-mute tnum">
                         {round.multiplier_hundredths === null
                           ? '—'
                           : formatMultiplier(round.multiplier_hundredths)}
@@ -194,7 +194,7 @@ export function HistoryPage() {
           <div className="lg:hidden">
             {grouped.map(([day, rows]) => (
               <section key={day} className="flex flex-col gap-2.5 pb-5">
-                <h2 className="label-mono pt-1 text-ink-mute">{day}</h2>
+                <h2 className="label-mono pt-1 text-ink-cool">{day}</h2>
                 {rows.map((row) => (
                   <RecordCard
                     key={row.id}

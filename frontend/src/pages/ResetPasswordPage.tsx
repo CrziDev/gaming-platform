@@ -38,14 +38,14 @@ export function ResetPasswordPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-card bg-surface-1 p-6">
+      <div className="w-full max-w-md rounded-card glass-panel p-6">
         <Link to={paths.lobby} className="mb-6 inline-block text-[18px] font-semibold tracking-[-0.02em] text-ink">
           HeziBet
         </Link>
 
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Choose a new password</h1>
+            <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Choose a new password</h1>
             <p className="text-[13.5px] leading-relaxed text-ink-mute">
               You&rsquo;ll be signed out on any other devices.
             </p>

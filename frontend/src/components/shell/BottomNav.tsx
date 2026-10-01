@@ -12,7 +12,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="grid shrink-0 grid-cols-5 bg-panel pb-[env(safe-area-inset-bottom)] rail:hidden"
+      className="glass-chrome grid shrink-0 grid-cols-5 border-t border-hairline pb-[env(safe-area-inset-bottom)] rail:hidden"
     >
       {playerNav.map((item) => {
         const Icon = item.icon
@@ -46,7 +46,7 @@ export function BottomNav() {
               cn(
                 shape,
                 isActive
-                  ? 'bg-wash font-medium text-accent-ink before:absolute before:top-0 before:h-0.5 before:w-8 before:rounded-b-sm before:bg-accent-ink'
+                  ? 'font-medium text-accent-ink before:absolute before:top-0 before:h-0.5 before:w-8 before:rounded-b-sm before:bg-accent-ink'
                   : 'text-ink-mute',
               )
             }

@@ -9,7 +9,7 @@ Source of truth: `frontend/src/routes/AppRoutes.tsx` and
 
 ## Current backend coverage
 
-As of 2026-09-20, authentication, password recovery and change, wallets, the wallet summary, manual deposits, the
+As of 2026-09-30, authentication, password recovery and change, wallets, the wallet summary, manual deposits, the
 public catalogue, favorites, Plinko rounds and the manifest, live chat, notifications,
 paginated admin users, admin user details and status operations, wallet adjustments,
 admin transactions, deposit review, the audit log, the dashboard summary, game
@@ -24,7 +24,7 @@ on every page was traced to its adapter in `features/*/api.ts`.
 
 ## Public and player pages
 
-- [x] **Lobby** — `/` (catalogue, categories, featured banner, and the signed-in player's recently-played row are real; the banner features the first playable game — Plinko — with its art as the panel's background, and the tile shows Plinko's thumbnail; big wins is a placeholder strip marked Future Development and promotions is a Future Development section)
+- [x] **Lobby** — `/` (catalogue, categories, featured banner, and the signed-in player's recently-played row are real; the banner features the first playable game — Plinko — with a capture of its v24 glass board over the city as the panel's background, and the tile shows the same board; big wins is a placeholder strip marked Future Development and promotions is a Future Development section)
 - [x] **Game catalogue** — `/games` (real catalogue with category and search)
 - [x] **Hot games** — `/games/hot` (active games with a settled round in the trailing seven days, ranked by settled rounds, distinct players, and latest play)
 - [x] **New games** — `/games/new` (real thirty-day `new` flag from the catalogue)
@@ -34,7 +34,7 @@ on every page was traced to its adapter in `features/*/api.ts`.
 - [x] **Register** — `/register` (opens the real registration flow)
 - [x] **Forgot password** — `/forgot` (real indistinguishable reset request, including the explicitly unavailable delivery state)
 - [x] **Reset password** — `/reset` (real token confirmation, validation and invalid-link recovery; success installs the returned session and enters the application)
-- [x] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and under every title's board a history of the player's own recent rounds on that game; the favorite toggle writes `PUT`/`DELETE /api/games/{slug}/favorite` and re-reads the list. Plinko launches in the generic game host through the versioned bridge: Place bet calls `POST /api/games/{slug}/rounds`, which the server settles through the Plinko engine at the return the operator set before the ball is dropped; component tests use a deterministic fixture. A server without an engine for the slug answers 404 and the page reports the game as not available. The board is configured from `GET /api/games/{slug}/manifest`, the table of the return in force: until it loads the frame shows the loading state, a 404 or 409 is the frame's error state with a retry, and Place bet is disabled in both; a round settled at a different return than the manifest's refetches it and the board is reconfigured once no ball is in flight. Every other title has no engine on the server, so it keeps the display-slot placeholder and a round would answer `404`)
+- [x] **Game** — `/game/:slug` (authentication required; real game metadata, the game's own wallet, and under every title's board a history of the player's own recent rounds on that game; the favorite toggle writes `PUT`/`DELETE /api/games/{slug}/favorite` and re-reads the list. Plinko is the v24 design: a three.js glass board over a night-city backdrop fills the game zone, with the title row, the board's stage, and the bet panel laid over it in one centred column that fits the screen at every width and is only as tall as it needs, so round history follows straight after the bet panel; on a short screen such as a laptop the board takes the full height and the title row and bet panel stand in a side panel beside it; on phones the top bar stays while the bottom nav gives way, the title row and bet panel are compact, and the board narrows so the taglines stand beside it. It launches in the generic game host through the versioned bridge (protocol 3, whose stage `layout` also carries the rects the host's controls cover). The player plays the 8-row board with a Low / Normal / High risk menu and a stake stepper that walks a 1-2-5 ladder of stakes the server accepts; Space places a bet and FAIR GAME shows the return and payouts from the manifest. Place bet calls `POST /api/games/{slug}/rounds`, which the server settles through the Plinko engine at the return the operator set before the ball is dropped; component tests use a deterministic fixture. A server without an engine for the slug answers 404 and the page reports the game as not available. The board is configured from `GET /api/games/{slug}/manifest`, the table of the return in force: until it loads the frame shows the loading state, a 404 or 409 is the frame's error state with a retry, and Place bet is disabled in both; a round settled at a different return than the manifest's refetches it and the board is reconfigured once no ball is in flight. Plinko Billiards is the same game in its own frame: the identical host, bet panel, engine, and board, drawn as a billiard table with a rack of pool balls for pegs and enamelled payout plates under nine pockets; its controls wear the table's materials through a declared skin (a mahogany-railed felt panel, a brass balance plate, an ivory risk chip, cue-ball steppers, and leather title-row buttons) while the play button stays the platform's; it keeps its own catalogue entry, rounds, history, and return. Every other title has no engine on the server, so it keeps the display-slot placeholder and a round would answer `404`)
 - [x] **Wallet** — `/wallet` (authentication required; real balance, currency switch sheet, open request list, and recent ledger)
 - [x] **Deposit** — `/wallet/deposit` (real methods, limits, proof upload, and submission)
 - [x] **Deposit status** — `/wallet/deposit/:id` (real player-owned request; no cancellation)
@@ -48,11 +48,11 @@ on every page was traced to its adapter in `features/*/api.ts`.
 Features that live in the chrome rather than on one route. The same rule applies: checked
 means the server is behind it.
 
-- [x] **Header balance chip** — the active wallet's real balance on every authenticated route; switching happens on the wallet page
+- [x] **Header wallet pill** — the top bar's pill: the active wallet's real balance on every authenticated route, linking to the wallet, with a round + that opens a deposit; switching happens on the wallet page
 - [x] **Search games** — inline box at the top of the rail and drawer; real catalogue results list beneath it, above the navigation, until the box is cleared; `⌘K` focuses it; Enter and "See all results" hand off to `/games?q=`
 - [x] **Auth modal and deep links** — `/login` and `/register` open the modal over the lobby, a guest picking a game or a locked nav item is sent back to where they were after signing in
 - [x] **Session expired dialog** — raised when a live session stops being recognised, never on a deliberate sign-out; tested
-- [x] **Account menu** — Wallet, History, Account, Sign out against the real session
+- [x] **Account menu** — the round profile button opens Wallet, History, Account, Sign out against the real session
 - [x] **Console deposit badge** — the pending total from the real queue
 - [x] **Live chat rail** — the real room from `GET /api/chat/messages`, posts through `POST /api/chat/messages` with the server's `429` shown inline, and a WebSocket at `/api/chat/socket` whose `message` event re-reads the room and whose `presence` event drives the online count; reconnects with backoff
 - [x] **Notifications bell** — every signed-in player's real notifications from `GET /api/notifications`, re-read every minute and when a round lands; deposit approved, deposit rejected with its reason, and big wins; "Mark all read" posts to `/api/notifications/read`

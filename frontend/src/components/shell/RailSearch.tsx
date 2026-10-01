@@ -55,7 +55,7 @@ export function RailSearch({ mode, onNavigate, active = true }: RailSearchProps)
           onFocus={focusSearch}
           onClick={focusSearch}
           className={cn(
-            'absolute inset-0 flex w-full items-center gap-2.5 rounded-input bg-inset px-2.5 text-[13px] text-ink-mute',
+            'absolute inset-0 flex w-full items-center gap-2.5 rounded-input border border-hairline bg-field px-2.5 text-[13px] text-ink-mute',
             'transition-[color,background-color,opacity,transform] duration-standard ease-standard hover:bg-wash hover:text-ink-soft',
             railRow[mode],
             railNarrow[mode],
@@ -147,7 +147,7 @@ function SearchResults({ games, error, loading, term, onNavigate }: SearchResult
     return (
       <div aria-hidden className="flex flex-col gap-px">
         {Array.from({ length: 3 }, (_, index) => (
-          <div key={index} className="min-h-11 rounded-input bg-surface-1 lg:min-h-9" />
+          <div key={index} className="min-h-11 rounded-input bg-surface-2 lg:min-h-9" />
         ))}
       </div>
     )
@@ -166,7 +166,7 @@ function SearchResults({ games, error, loading, term, onNavigate }: SearchResult
               <GameArt src={gameArtUrl(game)} caption="" className="size-7 shrink-0 rounded-chip" />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-[13px] font-medium">{game.name}</span>
-                <span className="label-mono truncate text-ink-mute">{game.category_name}</span>
+                <span className="label-mono truncate text-ink-cool">{game.category_name}</span>
               </span>
             </>
           )

@@ -9,7 +9,7 @@ export function ActiveRtp({ basisPoints, size = 'sm' }: { basisPoints: number | 
   return (
     <span
       className={[
-        'font-mono font-medium tnum',
+        'font-medium tnum',
         size === 'lg' ? 'text-lg' : 'text-sm',
         basisPoints >= 10_000 ? 'text-danger' : '',
       ].join(' ')}

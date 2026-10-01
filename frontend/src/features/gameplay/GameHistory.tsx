@@ -37,13 +37,13 @@ const columns: Column<HistoryRow>[] = [
   {
     key: 'bet',
     header: 'Bet',
-    cell: (row) => <span className="font-mono tnum">{formatMoney(row.stake)}</span>,
+    cell: (row) => <span className="tnum">{formatMoney(row.stake)}</span>,
   },
   {
     key: 'multiplier',
     header: 'Multiplier',
     align: 'right',
-    cell: (row) => <span className="font-mono tnum">{formatMultiplier(row.multiplier_hundredths)}</span>,
+    cell: (row) => <span className="tnum">{formatMultiplier(row.multiplier_hundredths)}</span>,
   },
   {
     key: 'profit',
@@ -67,7 +67,7 @@ type GameHistoryProps = {
 
 function HistorySection({ children }: { children: ReactNode }) {
   return (
-    <section aria-label="History" className="flex flex-col gap-3 rounded-card bg-surface-1 p-3.5">
+    <section aria-label="History" className="flex flex-col gap-3 rounded-card glass-panel p-3.5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">History</h2>
         <SeeAll to={paths.history} subject="history" />

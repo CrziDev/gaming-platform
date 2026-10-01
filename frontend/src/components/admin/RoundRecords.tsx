@@ -46,7 +46,7 @@ export function RoundRecords({ rows, showPlayer = false }: RoundRecordsProps) {
       header: 'Stake',
       align: 'right',
       cell: (row) => (
-        <span className="font-mono text-sm tnum">
+        <span className="text-sm tnum">
           {formatMoney(money(row.stake_minor, row.currency))}
         </span>
       ),
@@ -56,7 +56,7 @@ export function RoundRecords({ rows, showPlayer = false }: RoundRecordsProps) {
       header: 'Multiplier',
       align: 'right',
       cell: (row) => (
-        <span className="font-mono text-sm text-ink-mute tnum">
+        <span className="text-sm text-ink-mute tnum">
           {row.multiplier_hundredths === null
             ? '—'
             : formatMultiplier(row.multiplier_hundredths)}

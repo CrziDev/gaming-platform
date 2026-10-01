@@ -1,32 +1,47 @@
 import type { ComponentType } from 'react'
 
-import { DEFAULT_PLINKO_PARAMS, type PlinkoParams, type PlinkoTable } from './multipliers'
-import { PlinkoControls, type GameControlsProps } from './PlinkoControls'
+import { DEFAULT_PLINKO_PARAMS, summarizePlinko, type PlinkoBoard, type PlinkoParams } from './multipliers'
+import { RiskMenu, type GameControlsProps } from './RiskMenu'
 
 // Everything the host needs to run one integrated title. Typed to Plinko's
-// parameters while it is the only game; a second engine widens this to a union.
+// parameters while its engine is the only one; a second engine widens this to a union.
 export type GameModule = {
-  slug: 'plinko'
+  slug: string
   frameUrl: string
-  aspect: 'portrait' | 'landscape'
+  subtitle: string
+  // Width over height of the board the frame draws inside the host's stage.
+  stageAspect: number
+  // Pixels kept clear beside the board on a narrow screen, where the frame's taglines stand.
+  stageGutter: number
   defaultParams: PlinkoParams
   Controls: ComponentType<GameControlsProps<PlinkoParams>>
   summarizeParams: (params: PlinkoParams) => string
-  // Reads one board out of the manifest's table; the table itself is the server's.
-  multipliers: (table: PlinkoTable, params: PlinkoParams) => readonly number[]
+  // Reads one risk's payouts out of the manifest's board; the board itself is the server's.
+  multipliers: (board: PlinkoBoard, params: PlinkoParams) => readonly number[]
+  // Dresses the host's controls in the scene's materials, from styles/games/<slug>.css.
+  skin: boolean
 }
 
-const plinko: GameModule = {
-  slug: 'plinko',
-  frameUrl: '/games/plinko/index.html',
-  aspect: 'portrait',
-  defaultParams: DEFAULT_PLINKO_PARAMS,
-  Controls: PlinkoControls,
-  summarizeParams: (params) => `${params.rows} rows · ${params.risk.charAt(0).toUpperCase()}${params.risk.slice(1)}`,
-  multipliers: (table, params) => table[params.rows][params.risk],
+// Every Plinko title plays the same engine and board; only its frame and skin differ.
+function plinkoTitle(slug: string, { skin = false } = {}): GameModule {
+  return {
+    slug,
+    frameUrl: `/games/${slug}/index.html`,
+    subtitle: 'RISK · PLAY · WIN',
+    stageAspect: 10 / 11.2,
+    stageGutter: 44,
+    defaultParams: DEFAULT_PLINKO_PARAMS,
+    Controls: RiskMenu,
+    summarizeParams: summarizePlinko,
+    multipliers: (board, params) => board[params.risk],
+    skin,
+  }
 }
 
-const gameModules: Readonly<Record<string, GameModule>> = { plinko }
+const gameModules: Readonly<Record<string, GameModule>> = {
+  plinko: plinkoTitle('plinko'),
+  'plinko-billiards': plinkoTitle('plinko-billiards', { skin: true }),
+}
 
 export function gameModuleFor(slug: string): GameModule | null {
   return gameModules[slug] ?? null

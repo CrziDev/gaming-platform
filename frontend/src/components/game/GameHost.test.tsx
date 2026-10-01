@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { GameHost, type GameFrame } from './GameHost'
 import { SoundToggle } from './SoundToggle'
@@ -11,26 +11,30 @@ function frame(overrides: Partial<GameFrame> = {}): GameFrame {
     key: 0,
     status: 'loading',
     onRetry: vi.fn(),
-    aspect: 'portrait',
     ...overrides,
   }
 }
 
 describe('GameHost', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('shows the named placeholder when there is no frame', () => {
     render(<GameHost name="Aurora Dice" />)
-    expect(screen.getByRole('region', { name: 'Aurora Dice game canvas' })).toHaveTextContent('Aurora Dice')
+    expect(screen.getByRole('region', { name: 'Aurora Dice game' })).toHaveTextContent('Aurora Dice')
     expect(screen.queryByTitle('Aurora Dice game')).not.toBeInTheDocument()
   })
 
-  it('embeds the game page and covers it while it loads', () => {
+  it('embeds the game page behind its controls and says it is loading', () => {
     render(<GameHost name="Plinko" frame={frame()} />)
     const iframe = screen.getByTitle('Plinko game')
     expect(iframe).toHaveAttribute('src', '/games/plinko/index.html')
-    expect(screen.getByRole('status', { name: 'Loading Plinko' })).toBeInTheDocument()
+    expect(iframe).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('status', { name: 'Loading Plinko' })).toHaveTextContent('LOADING BOARD')
   })
 
-  it('uncovers the frame once it is ready', () => {
+  it('uncovers the board once it is ready', () => {
     render(<GameHost name="Plinko" frame={frame({ status: 'ready' })} />)
     expect(screen.getByTitle('Plinko game')).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
@@ -45,9 +49,49 @@ describe('GameHost', () => {
     expect(onRetry).toHaveBeenCalledTimes(1)
   })
 
-  it('renders platform chrome over the frame', () => {
-    render(<GameHost name="Plinko" frame={frame({ status: 'ready' })} chrome={<SoundToggle on onChange={() => {}} />} />)
+  it('titles the game and lays the platform controls over the frame', () => {
+    render(
+      <GameHost
+        name="Plinko"
+        subtitle="RISK · PLAY · WIN"
+        frame={frame({ status: 'ready' })}
+        actions={<SoundToggle on onChange={() => {}} />}
+        controls={<button type="button">PLACE BET</button>}
+      />,
+    )
+    expect(screen.getByRole('heading', { name: 'Plinko' })).toBeInTheDocument()
+    expect(screen.getByText('RISK · PLAY · WIN')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Mute game sound' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeInTheDocument()
+  })
+
+  it('reports the stage and the rects its controls cover, relative to the zone', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('aria-label') === 'Plinko game') return new DOMRect(56, 72, 1180, 489)
+      if (this.tagName === 'HEADER') return new DOMRect(688, 88, 340, 98)
+      if (this.querySelector(':scope > button')) return new DOMRect(688, 250, 340, 295)
+      return new DOMRect(256, 88, 408, 457)
+    })
+    const onStage = vi.fn()
+    render(
+      <GameHost
+        name="Plinko"
+        frame={frame({ status: 'ready' })}
+        onStage={onStage}
+        actions={<SoundToggle on onChange={() => {}} />}
+        controls={<button type="button">PLACE BET</button>}
+      />,
+    )
+    expect(onStage).toHaveBeenLastCalledWith({
+      x: 200,
+      y: 16,
+      width: 408,
+      height: 457,
+      controls: [
+        { x: 632, y: 16, width: 340, height: 98 },
+        { x: 632, y: 178, width: 340, height: 295 },
+      ],
+    })
   })
 })
 

@@ -59,7 +59,7 @@ export function AccountPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Account</h1>
+      <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Account</h1>
 
       <Panel title="Profile" bodyClassName="flex flex-col gap-3 p-5">
         <Row label="Username">{user.display_name}</Row>
@@ -130,7 +130,7 @@ export function AccountPage() {
       <Panel title="Wallets" bodyClassName="flex flex-col gap-3 p-5">
         {walletsQuery.data?.map((wallet) => (
           <Row key={wallet.currency} label={wallet.currency}>
-            <span className="font-mono font-medium tnum">
+            <span className="font-medium tnum">
               {formatMoney(money(wallet.balance_minor, wallet.currency))}
             </span>
           </Row>

@@ -1,8 +1,6 @@
-matter-js 0.19.0 — https://github.com/liabru/matter-js
+The MIT License
 
-The MIT License (MIT)
-
-Copyright (c) Liam Brummitt and contributors.
+Copyright © 2010-2024 three.js authors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

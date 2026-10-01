@@ -40,15 +40,15 @@ export function NotificationsPanel() {
 
   return (
     <div ref={containerRef} className="relative">
-      <IconButton label="Notifications" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+      <IconButton label="Notifications" size="round" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <Bell aria-hidden size={17} strokeWidth={1.6} />
         {unread ? (
-          <span className="absolute top-2.5 right-2.5 size-[5px] rounded-full bg-danger lg:top-1.5 lg:right-[7px]" />
+          <span className="absolute top-2.5 right-2.5 size-[7px] rounded-full bg-danger" />
         ) : null}
       </IconButton>
 
       {open ? (
-        <div className="pop-enter overlay-shadow absolute right-0 z-40 mt-1.5 w-[min(22rem,calc(100vw-2rem))] rounded-card bg-surface-2 p-1">
+        <div className="pop-enter glass-menu absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-card p-1.5">
           <header className="flex items-center justify-between px-3 pt-2 pb-1.5">
             <span className="text-[13px] font-semibold text-ink-soft">Notifications</span>
             <button
@@ -120,7 +120,7 @@ function Label({ notification }: { notification: Notification }) {
         <>
           {' — '}
           {notification.kind === 'deposit_rejected' ? (
-            <span className="font-mono tnum">{formatMoney(amount)}</span>
+            <span className="tnum">{formatMoney(amount)}</span>
           ) : (
             <MoneyDisplay value={amount} tone="auto" sign="always" className="text-[13px]" />
           )}

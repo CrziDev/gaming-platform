@@ -6,20 +6,23 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const base =
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-chip font-semibold ' +
-  'transition-[color,background-color,opacity,transform] duration-fast ease-standard ' +
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-input font-semibold ' +
+  'transition-[color,background-color,opacity,transform,filter] duration-fast ease-standard ' +
   'active:translate-y-px disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-55 ' +
   'motion-reduce:transform-none'
 
+const cta =
+  'cta-gradient cta-glow font-bold hover:brightness-110 ' +
+  'disabled:bg-none disabled:bg-surface-2 disabled:text-ink-mute disabled:shadow-none'
+
 const variants: Record<ButtonVariant, string> = {
-  primary:
-    'bg-accent text-on-accent hover:bg-accent-hi disabled:bg-surface-2 disabled:text-ink-mute',
+  primary: cta,
   secondary:
-    'bg-inset font-medium text-ink-soft hover:bg-wash disabled:bg-inset disabled:text-ink-mute',
+    'border border-hairline bg-inset font-medium text-ink-control hover:bg-wash disabled:bg-inset disabled:text-ink-mute',
   ghost: 'font-medium text-ink-mute hover:bg-wash hover:text-ink-soft disabled:text-ink-mute',
   destructive:
     'bg-danger/12 text-danger hover:bg-danger/20 disabled:bg-surface-2 disabled:text-ink-mute',
-  play: 'rounded-tile bg-accent text-on-accent hover:bg-accent-hi disabled:bg-surface-2 disabled:text-ink-mute',
+  play: cn(cta, 'tracking-[0.02em]'),
 }
 
 const sizes: Record<ButtonSize, string> = {
@@ -28,7 +31,7 @@ const sizes: Record<ButtonSize, string> = {
   lg: 'tap-target min-h-10 px-4 text-[13.5px] lg:min-h-[38px] lg:px-5',
 }
 
-const playSize = 'min-h-13 px-5 text-[13.5px]'
+const playSize = 'tap-target min-h-10 px-3 text-[15px] sm:min-h-12 sm:px-5 sm:text-[16px]'
 
 export function buttonStyles(
   variant: ButtonVariant = 'primary',
@@ -59,12 +62,14 @@ export function Button({
 
 type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string
-  size?: 'compact' | 'md'
+  size?: 'compact' | 'md' | 'round' | 'float'
 }
 
 const iconSizes: Record<NonNullable<IconButtonProps['size']>, string> = {
-  compact: 'tap-target size-9 lg:size-8',
-  md: 'size-11 lg:size-8',
+  compact: 'tap-target size-9 rounded-chip text-ink-mute hover:bg-wash hover:text-ink-soft lg:size-8',
+  md: 'size-11 rounded-chip text-ink-mute hover:bg-wash hover:text-ink-soft lg:size-8',
+  round: 'tap-target glass-pill size-10 rounded-full text-ink-soft hover:bg-wash',
+  float: 'tap-target glass-float size-9 rounded-input text-ink-control hover:bg-float-hover sm:size-9.5',
 }
 
 export function IconButton({ label, size = 'md', className, type = 'button', ...props }: IconButtonProps) {
@@ -74,9 +79,9 @@ export function IconButton({ label, size = 'md', className, type = 'button', ...
       aria-label={label}
       title={label}
       className={cn(
-        'relative inline-flex shrink-0 items-center justify-center rounded-input text-ink-mute',
+        'relative inline-flex shrink-0 items-center justify-center',
         iconSizes[size],
-        'transition-[color,background-color,opacity,transform] duration-fast ease-standard hover:bg-wash hover:text-ink-soft active:translate-y-px disabled:pointer-events-none disabled:opacity-55 motion-reduce:transform-none',
+        'transition-[color,background-color,opacity,transform] duration-fast ease-standard active:translate-y-px disabled:pointer-events-none disabled:opacity-55 motion-reduce:transform-none',
         className,
       )}
       {...props}

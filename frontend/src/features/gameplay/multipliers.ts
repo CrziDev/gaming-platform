@@ -1,14 +1,28 @@
+// Every row count the engine settles; the admin RTP inspector offers each one.
 export const PLINKO_ROWS = [8, 9, 10, 11, 12, 13, 14, 15, 16] as const
 export type PlinkoRows = (typeof PLINKO_ROWS)[number]
 
 export const PLINKO_RISKS = ['low', 'normal', 'high'] as const
 export type PlinkoRisk = (typeof PLINKO_RISKS)[number]
 
-export type PlinkoParams = { rows: PlinkoRows; risk: PlinkoRisk }
+// Players play one board: eight rows of pegs over nine cups.
+export const PLINKO_BOARD_ROWS = 8
+export const PLINKO_BOARD_SLOTS = PLINKO_BOARD_ROWS + 1
 
-export const DEFAULT_PLINKO_PARAMS: PlinkoParams = { rows: 8, risk: 'normal' }
+export type PlinkoParams = { rows: typeof PLINKO_BOARD_ROWS; risk: PlinkoRisk }
+
+export const DEFAULT_PLINKO_PARAMS: PlinkoParams = { rows: PLINKO_BOARD_ROWS, risk: 'normal' }
 
 export type PlinkoTable = Record<PlinkoRows, Record<PlinkoRisk, readonly number[]>>
+
+// The played board's payouts by risk, as the server's manifest serves them.
+export type PlinkoBoard = Record<PlinkoRisk, readonly number[]>
+
+export const riskLabels: Record<PlinkoRisk, string> = { low: 'Low', normal: 'Normal', high: 'High' }
+
+export function summarizePlinko(params: PlinkoParams): string {
+  return `${params.rows} rows · ${riskLabels[params.risk]}`
+}
 
 // The supplied paytable, in integer hundredths (1.7× is 170). It is the demo fixture's
 // table only: the live board is configured from `GET /api/games/{slug}/manifest`, and

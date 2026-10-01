@@ -120,7 +120,7 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
 
         <dl className="flex flex-col gap-2.5 text-[13.5px]">
           <Row label="Amount claimed">
-            <span className="font-mono font-medium tnum">
+            <span className="font-medium tnum">
               {formatMoney(money(deposit.amount_minor, deposit.currency))}
             </span>
           </Row>
@@ -143,7 +143,7 @@ function ReviewForm({ deposit, onClose }: { deposit: AdminDeposit; onClose: () =
               inputMode="decimal"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              className="min-w-0 flex-1 bg-transparent font-mono text-[17px] font-medium tnum focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-[17px] font-medium tnum focus:outline-none"
             />
           </div>
         </Field>

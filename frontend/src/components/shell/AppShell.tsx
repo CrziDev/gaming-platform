@@ -15,10 +15,12 @@ import { ShellProvider } from './ShellContext'
 import { Sidebar } from './Sidebar'
 
 export function AppShell() {
-  const gameRoute = useMatch('/game/:slug')
+  const gameRoute = Boolean(useMatch('/game/:slug'))
   const location = useLocation()
   const narrowViewport = useMediaQuery(MOBILE_GAME_QUERY)
-  const mobileGame = Boolean(gameRoute) && narrowViewport
+  // A game fills the content area edge to edge; on a phone it also takes the bottom
+  // nav's place, with navigation still a tap away in the drawer.
+  const mobileGame = gameRoute && narrowViewport
   const mainRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -31,31 +33,31 @@ export function AppShell() {
     <ShellProvider>
       <SearchShortcut />
       <div className="flex h-full flex-col overflow-hidden bg-base">
-        {mobileGame ? null : <Header />}
+        <Header />
 
         <div className="@container flex min-h-0 flex-1">
-          {mobileGame ? null : <Sidebar />}
+          <Sidebar />
           <div className="shell-content-column relative flex min-h-0 min-w-0 flex-1 flex-col">
             {location.pathname === '/' ? <AnnouncementTicker /> : null}
             <main
               ref={mainRef}
               className={cn(
                 'shell-main @container min-h-0 min-w-0 flex-1 overflow-y-auto',
-                mobileGame ? 'p-0' : 'px-3.5 pt-3.5 pb-8',
+                gameRoute ? 'p-0' : 'px-3.5 pt-3.5 pb-8',
               )}
             >
-              <div className={cn('mx-auto w-full', mobileGame ? 'h-full max-w-none' : 'max-w-[1320px]')}>
+              <div className={cn('mx-auto w-full', gameRoute ? 'max-w-none' : 'max-w-[1320px]')}>
                 <Outlet />
               </div>
             </main>
           </div>
-          {mobileGame ? null : <ChatRail />}
+          <ChatRail />
         </div>
 
         {mobileGame ? null : <BottomNav />}
       </div>
 
-      {mobileGame ? null : <MobileDrawer />}
+      <MobileDrawer />
       <AuthModal />
     </ShellProvider>
   )

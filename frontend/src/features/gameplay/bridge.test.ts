@@ -1,24 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createGameBridge, frameOriginOf, parseFrameMessage } from './bridge'
+import type { HostMessage } from './schemas'
 
-const ready = { v: 1, type: 'ready', game: 'plinko' }
-const landed = { v: 1, type: 'landed', round_id: 'r1', slot: 4 }
+const ready = { v: 3, type: 'ready', game: 'plinko' }
+const landed = { v: 3, type: 'landed', round_id: 'r1', slot: 4 }
 
 describe('parseFrameMessage', () => {
   it('accepts the protocol messages', () => {
     expect(parseFrameMessage(ready)).toEqual(ready)
     expect(parseFrameMessage(landed)).toEqual(landed)
-    expect(parseFrameMessage({ v: 1, type: 'error', code: 'runtime', message: 'boom' })).not.toBeNull()
+    expect(parseFrameMessage({ v: 3, type: 'error', code: 'runtime', message: 'boom' })).not.toBeNull()
   })
 
   it.each([
-    ['another version', { ...ready, v: 2 }],
-    ['an unknown type', { v: 1, type: 'settle', round_id: 'r1' }],
+    ['an older version', { ...ready, v: 2 }],
+    ['an unknown type', { v: 3, type: 'settle', round_id: 'r1' }],
     ['an extra field', { ...landed, win_minor: 5000 }],
     ['a fractional slot', { ...landed, slot: 4.5 }],
     ['a negative slot', { ...landed, slot: -1 }],
-    ['a slot past the widest board', { ...landed, slot: 17 }],
+    ['a slot past the board', { ...landed, slot: 9 }],
     ['a string', 'ready'],
     ['null', null],
   ])('rejects %s', (_label, data) => {
@@ -88,24 +89,78 @@ describe('createGameBridge', () => {
   it('posts to the frame with the exact origin, never a wildcard', () => {
     const { bridge } = mount()
     const post = vi.spyOn(iframe.contentWindow as Window, 'postMessage')
-    const sent = bridge.send({ v: 1, type: 'set_sound', enabled: false })
+    const sent = bridge.send({ v: 3, type: 'set_sound', enabled: false })
     expect(sent).toBe(true)
-    expect(post).toHaveBeenCalledWith({ v: 1, type: 'set_sound', enabled: false }, window.location.origin)
+    expect(post).toHaveBeenCalledWith({ v: 3, type: 'set_sound', enabled: false }, window.location.origin)
     bridge.dispose()
   })
 
   it('refuses to send a message outside the protocol', () => {
     const { bridge } = mount()
     expect(() =>
-      bridge.send({ v: 1, type: 'drop', round_id: 'r1', slot: 3, multiplier_hundredths: 1.5, result_label: '' }),
+      bridge.send({ v: 3, type: 'drop', round_id: 'r1', slot: 3, multiplier_hundredths: 1.5, result_label: '' }),
     ).toThrow()
+    bridge.dispose()
+  })
+
+  it('sends the stage rect and refuses one with no size', () => {
+    const { bridge } = mount()
+    const post = vi.spyOn(iframe.contentWindow as Window, 'postMessage')
+    const stage: Extract<HostMessage, { type: 'layout' }> = {
+      v: 3,
+      type: 'layout',
+      x: 0,
+      y: 96,
+      width: 390,
+      height: 413.4,
+      controls: [],
+    }
+    expect(bridge.send(stage)).toBe(true)
+    expect(post).toHaveBeenCalledWith(stage, window.location.origin)
+    expect(() => bridge.send({ ...stage, width: 0 })).toThrow()
+    expect(() => bridge.send({ ...stage, x: Number.NaN })).toThrow()
+    bridge.dispose()
+  })
+
+  it('sends the rects the controls cover and refuses malformed ones', () => {
+    const { bridge } = mount()
+    const panel = { x: 632, y: 16, width: 340, height: 457 }
+    const stage: Extract<HostMessage, { type: 'layout' }> = {
+      v: 3,
+      type: 'layout',
+      x: 200,
+      y: 16,
+      width: 408,
+      height: 457,
+      controls: [panel],
+    }
+    expect(bridge.send(stage)).toBe(true)
+    expect(() => bridge.send({ ...stage, controls: undefined } as never)).toThrow()
+    expect(() => bridge.send({ ...stage, controls: [panel, panel, panel, panel, panel] })).toThrow()
+    expect(() => bridge.send({ ...stage, controls: [{ ...panel, height: 0 }] })).toThrow()
+    expect(() => bridge.send({ ...stage, controls: [{ ...panel, right: 972 }] as never })).toThrow()
+    bridge.dispose()
+  })
+
+  it('configures only the eight-row board', () => {
+    const { bridge } = mount()
+    const configure: Extract<HostMessage, { type: 'configure' }> = {
+      v: 3,
+      type: 'configure',
+      rows: 8,
+      risk: 'normal',
+      multipliers_hundredths: [600, 300, 170, 110, 50, 110, 170, 300, 600],
+      sound: true,
+    }
+    expect(bridge.send(configure)).toBe(true)
+    expect(() => bridge.send({ ...configure, multipliers_hundredths: [...configure.multipliers_hundredths, 600] })).toThrow()
     bridge.dispose()
   })
 
   it('reports a detached frame and stops listening after dispose', () => {
     const { bridge, onMessage } = mount()
     iframe.remove()
-    expect(bridge.send({ v: 1, type: 'set_sound', enabled: true })).toBe(false)
+    expect(bridge.send({ v: 3, type: 'set_sound', enabled: true })).toBe(false)
     bridge.dispose()
     window.dispatchEvent(new MessageEvent('message', { data: ready, origin: window.location.origin, source: window }))
     expect(onMessage).not.toHaveBeenCalled()

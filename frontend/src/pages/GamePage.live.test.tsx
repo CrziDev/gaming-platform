@@ -107,15 +107,15 @@ describe('Plinko against a server without the play endpoint', () => {
     renderApp('/game/plinko')
 
     const { iframe, post } = await openFrame()
-    act(() => frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' }))
+    act(() => frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' }))
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
     expect(posted(post, 'configure')[0]?.multipliers_hundredths).toEqual([600, 300, 170, 110, 55, 110, 170, 300, 600])
 
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
 
-    expect(await screen.findByText("Plinko isn't available right now.")).toBeInTheDocument()
+    expect(await screen.findByText("This game isn't available right now.")).toBeInTheDocument()
     expect(posted(post, 'drop')).toHaveLength(0)
-    expect(screen.getByRole('radio', { name: '8' })).not.toHaveAttribute('aria-disabled')
+    expect(screen.getByRole('button', { name: /8 rows ·/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
 
     const play = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')
@@ -141,11 +141,11 @@ describe('Plinko against a server without the play endpoint', () => {
     renderApp('/game/plinko')
 
     const { iframe, post } = await openFrame()
-    act(() => frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' }))
+    act(() => frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' }))
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
 
-    await screen.findByText("Plinko isn't available right now.")
+    await screen.findByText("This game isn't available right now.")
     const play = playRequests(fetchMock)[0]
     expect(JSON.parse(String(play?.[1]?.body))).toMatchObject({ stake_minor: 100, currency: 'USD' })
     const roundsUrl = new URL(String(roundsRequests(fetchMock)[0]?.[0]), window.location.href)
@@ -167,7 +167,7 @@ describe('Plinko bet admission', () => {
     renderApp('/game/plinko')
 
     const { iframe, post } = await openFrame()
-    act(() => frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' }))
+    act(() => frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' }))
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
     const placeBet = screen.getByRole('button', { name: 'PLACE BET' })
 
@@ -182,7 +182,7 @@ describe('Plinko bet admission', () => {
     expect(playRequests(fetchMock)).toHaveLength(1)
     expect(placeBet).toBeDisabled()
 
-    act(() => frameSays(iframe, { v: 1, type: 'landed', round_id: 'round-live-1', slot: 4 }))
+    act(() => frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 4 }))
 
     await waitFor(() => expect(placeBet).toBeEnabled())
     expect(await screen.findByRole('link', { name: 'Wallet balance ₱999.50' })).toBeInTheDocument()
@@ -202,9 +202,9 @@ describe('Plinko without a manifest', () => {
     renderApp('/game/plinko')
 
     const { iframe, post } = await openFrame()
-    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' })
 
-    expect(await screen.findByRole('alert')).toHaveTextContent("Plinko isn't available right now.")
+    expect(await screen.findByRole('alert')).toHaveTextContent("This game isn't available right now.")
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeDisabled()
     expect(posted(post, 'configure')).toHaveLength(0)
 
@@ -213,7 +213,7 @@ describe('Plinko without a manifest', () => {
     await waitFor(() => expect(manifestRequests(fetchMock)).toHaveLength(2))
     const remounted = await openFrame()
     expect(remounted.iframe).not.toBe(iframe)
-    frameSays(remounted.iframe, { v: 1, type: 'ready', game: 'plinko' })
+    frameSays(remounted.iframe, { v: 3, type: 'ready', game: 'plinko' })
     await waitFor(() => expect(posted(remounted.post, 'configure')).toHaveLength(1))
     expect(posted(remounted.post, 'configure')[0]?.multipliers_hundredths?.[4]).toBe(55)
     await waitFor(() => expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled())
@@ -231,7 +231,7 @@ describe('Plinko without a manifest', () => {
     renderApp('/game/plinko')
 
     const { iframe, post } = await openFrame()
-    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('That game is not available right now')
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeDisabled()
@@ -253,7 +253,7 @@ describe('Plinko when the RTP changes mid-session', () => {
     const { queryClient } = renderApp('/game/plinko')
 
     const { iframe, post } = await openFrame()
-    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' })
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
 
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
@@ -264,10 +264,10 @@ describe('Plinko when the RTP changes mid-session', () => {
     await waitFor(() =>
       expect(queryClient.getQueryData(['game-manifest', 'plinko'])).toMatchObject({ rtp_basis_points: 10500 }),
     )
-    expect(screen.getByRole('radio', { name: '8' })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('button', { name: /8 rows ·/ })).toBeDisabled()
     expect(posted(post, 'configure')).toHaveLength(1)
 
-    frameSays(iframe, { v: 1, type: 'landed', round_id: 'round-live-1', slot: 4 })
+    frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 4 })
 
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(2))
     expect(posted(post, 'configure')[1]?.multipliers_hundredths?.[4]).toBe(60)
@@ -305,11 +305,11 @@ describe('the history under the Plinko board', () => {
     const before = roundsRequests(fetchMock).length
 
     const { iframe, post } = await openFrame()
-    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' })
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
     await waitFor(() => expect(posted(post, 'drop')).toHaveLength(1))
-    frameSays(iframe, { v: 1, type: 'landed', round_id: 'round-live-1', slot: 4 })
+    frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 4 })
 
     await waitFor(() => expect(roundsRequests(fetchMock).length).toBeGreaterThan(before))
   })
@@ -323,7 +323,7 @@ describe('the history under the Plinko board', () => {
     renderApp('/game/plinko')
 
     const { iframe, post } = await openFrame()
-    frameSays(iframe, { v: 1, type: 'ready', game: 'plinko' })
+    frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' })
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
 
     expect(await screen.findByText('History unavailable')).toBeInTheDocument()

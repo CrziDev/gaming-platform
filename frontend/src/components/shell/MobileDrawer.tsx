@@ -1,15 +1,14 @@
 import { Globe, LifeBuoy, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
-import { Link } from 'react-router'
 
 import { cn } from '@/lib/cn'
-import { paths } from '@/routes/paths'
 
 import { FutureDevelopmentRow } from './FutureDevelopmentRow'
 import { NavList } from './NavList'
 import { playerNav } from './nav'
 import { RailSearch } from './RailSearch'
 import { useShell } from './ShellContext'
+import { Wordmark } from './Wordmark'
 
 export function MobileDrawer() {
   const { drawerOpen, setDrawerOpen } = useShell()
@@ -75,19 +74,17 @@ export function MobileDrawer() {
         aria-modal="true"
         aria-label="Navigation"
         className={cn(
-          'overlay-shadow relative flex w-72 max-w-[85vw] flex-col bg-panel transition-[transform,opacity] duration-layout ease-standard motion-reduce:transition-none',
+          'overlay-shadow glass-chrome relative flex w-72 max-w-[85vw] flex-col border-r border-hairline transition-[transform,opacity] duration-layout ease-standard motion-reduce:transition-none',
           drawerOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0',
         )}
       >
-        <div className="flex items-center gap-3 px-4 pt-2 pb-1">
-          <Link to={paths.lobby} onClick={close} className="text-[17px] font-semibold tracking-[-0.02em] text-ink">
-            HeziBet
-          </Link>
+        <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+          <Wordmark onClick={close} />
           <button
             type="button"
             aria-label="Close navigation"
             onClick={close}
-            className="ml-auto flex size-11 items-center justify-center rounded-input text-ink-mute hover:bg-wash hover:text-ink-soft"
+            className="ml-auto flex size-11 items-center justify-center rounded-chip text-ink-mute hover:bg-wash hover:text-ink-soft"
           >
             <X aria-hidden size={18} strokeWidth={1.5} />
           </button>

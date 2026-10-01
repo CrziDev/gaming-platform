@@ -19,7 +19,7 @@ export function PageNav({ page, pages, size, total, onChange, unit }: PageNavPro
 
   return (
     <nav className="flex items-center justify-between gap-3" aria-label="Pagination">
-      <span className="font-mono text-[12px] text-ink-mute tnum">
+      <span className="text-[12px] text-ink-mute tnum">
         {first}–{last} of {total}
         {unit ? ` ${unit}` : ''}
       </span>

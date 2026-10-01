@@ -125,7 +125,7 @@ export function AdminDashboardPage() {
                   title={row.username}
                   meta={`${row.reference} · ${row.method_name}`}
                   value={
-                    <span className="font-mono text-[15px] font-medium tnum">
+                    <span className="text-[15px] font-medium tnum">
                       {formatMoney(money(row.amount_minor, row.currency), { decimals: 'trim' })}
                     </span>
                   }
@@ -168,7 +168,7 @@ export function AdminDashboardPage() {
                     title={row.game_name}
                     meta={`${formatCount(row.rounds)} rounds · RTP ${formatPercent(row.effective_rtp_basis_points)} · expected ${formatPercent(row.expected_rtp_basis_points)}`}
                     value={
-                      <span className="font-mono text-[15px] font-medium tnum">
+                      <span className="text-[15px] font-medium tnum">
                         {formatMoney(money(row.hold_minor, summary.currency), { decimals: 'trim' })}
                       </span>
                     }
@@ -204,7 +204,7 @@ export function AdminDashboardPage() {
             ) : audit.length === 0 ? (
               <EmptyState title="No activity yet" />
             ) : (
-              <ul className="flex flex-col gap-3 rounded-card bg-surface-1 p-4">
+              <ul className="flex flex-col gap-3 rounded-card glass-panel p-4">
                 {audit.map((entry) => (
                   <li key={entry.id} className="flex gap-3">
                     <span className="w-11 shrink-0 font-mono text-[11.5px] text-ink-mute">
@@ -249,7 +249,7 @@ function queueColumns(onReview: (deposit: AdminDeposit) => void): Column<AdminDe
       align: 'right',
       width: '120px',
       cell: (row) => (
-        <span className="font-mono text-sm font-medium tnum">
+        <span className="text-sm font-medium tnum">
           {formatMoney(money(row.amount_minor, row.currency), { decimals: 'trim' })}
         </span>
       ),
@@ -293,7 +293,7 @@ function queueColumns(onReview: (deposit: AdminDeposit) => void): Column<AdminDe
 
 function gameColumns(currency: Currency): Column<DashboardGameActivity>[] {
   const amount = (minor: number) => (
-    <span className="font-mono text-sm font-medium tnum">
+    <span className="text-sm font-medium tnum">
       {formatMoney(money(minor, currency), { decimals: 'trim' })}
     </span>
   )
@@ -318,7 +318,7 @@ function gameColumns(currency: Currency): Column<DashboardGameActivity>[] {
       header: 'Rounds',
       align: 'right',
       width: '90px',
-      cell: (row) => <span className="font-mono text-sm tnum">{formatCount(row.rounds)}</span>,
+      cell: (row) => <span className="text-sm tnum">{formatCount(row.rounds)}</span>,
     },
     {
       key: 'staked',
@@ -348,8 +348,8 @@ function gameColumns(currency: Currency): Column<DashboardGameActivity>[] {
       width: '130px',
       cell: (row) => (
         <span className="flex flex-col items-end">
-          <span className="font-mono text-sm tnum">{formatPercent(row.effective_rtp_basis_points)}</span>
-          <span className="font-mono text-[11px] text-ink-mute tnum">
+          <span className="text-sm tnum">{formatPercent(row.effective_rtp_basis_points)}</span>
+          <span className="text-[11px] text-ink-mute tnum">
             expected {formatPercent(row.expected_rtp_basis_points)}
           </span>
         </span>

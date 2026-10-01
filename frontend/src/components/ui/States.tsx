@@ -11,8 +11,8 @@ type EmptyStateProps = {
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-card bg-surface-1 px-6 py-10 text-center">
-      <span aria-hidden className="flex size-10 items-center justify-center rounded-input bg-surface-2 text-ink-mute">
+    <div className="flex flex-col items-center gap-3 rounded-card glass-panel px-6 py-10 text-center">
+      <span aria-hidden className="flex size-12.5 items-center justify-center rounded-input border border-hairline bg-inset text-ink-mute">
         <Inbox size={18} strokeWidth={1.5} />
       </span>
       <p className="text-[15px] font-semibold tracking-[-0.01em] text-ink">{title}</p>

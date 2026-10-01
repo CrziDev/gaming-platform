@@ -83,7 +83,7 @@ export function AdminConsoleSearch() {
           'lg:relative lg:top-auto lg:right-auto lg:left-auto lg:block lg:w-80',
         )}
       >
-        <label className="overlay-shadow flex min-w-0 items-center gap-2.5 rounded-input bg-inset px-2.5 lg:shadow-none">
+        <label className="overlay-shadow flex min-w-0 items-center gap-2.5 rounded-input border border-hairline bg-field px-2.5 lg:shadow-none">
           <Search aria-hidden size={15} strokeWidth={1.5} className="shrink-0 text-ink-mute" />
           <input
             ref={inputRef}
@@ -130,7 +130,7 @@ export function AdminConsoleSearch() {
         </label>
 
         {expanded ? (
-          <div id={listId} role="listbox" className="pop-enter overlay-shadow absolute top-[calc(100%+0.35rem)] right-0 left-0 max-h-[min(30rem,70dvh)] overflow-y-auto rounded-card bg-surface-2 p-2">
+          <div id={listId} role="listbox" className="pop-enter glass-menu absolute top-[calc(100%+0.35rem)] right-0 left-0 max-h-[min(30rem,70dvh)] overflow-y-auto rounded-card p-2">
             {debounced.length < 2 || results.isPending ? (
               <p className="px-3 py-4 text-[13px] text-ink-mute">Searching…</p>
             ) : results.isError ? (
@@ -164,7 +164,7 @@ function SearchOptions({
     previous = option.group
     return (
       <div key={option.key}>
-        {heading ? <p className="label-mono px-3 pt-2 pb-1 text-ink-mute">{option.group}</p> : null}
+        {heading ? <p className="label-mono px-3 pt-2 pb-1 text-ink-cool">{option.group}</p> : null}
         <button
           id={`${listId}-${index}`}
           type="button"

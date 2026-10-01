@@ -156,7 +156,7 @@ export function DepositPage() {
 
   if (methods.length === 0) {
     return (
-      <p className="rounded-card bg-surface-1 p-6 text-sm text-ink-mute">
+      <p className="rounded-card glass-panel p-6 text-sm text-ink-mute">
         Deposits are temporarily unavailable. Please try again later.
       </p>
     )
@@ -175,7 +175,7 @@ export function DepositPage() {
           <ChevronLeft aria-hidden size={18} strokeWidth={1.5} />
         </Link>
         <div className="flex flex-col gap-0.5 pt-0.5">
-          <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Deposit</h1>
+          <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Deposit</h1>
           <p className="text-[13px] text-ink-mute">
             Send your payment, then submit the details for approval.
           </p>
@@ -187,8 +187,8 @@ export function DepositPage() {
         noValidate
         className="grid min-w-0 items-start gap-5 @rail-wide:grid-cols-[minmax(0,1fr)_18rem]"
       >
-        <div className="flex min-w-0 flex-col gap-6 rounded-card bg-surface-1 p-4 sm:p-5">
-          <fieldset className="min-w-0 border-b border-white/5 pb-6">
+        <div className="flex min-w-0 flex-col gap-6 rounded-card glass-panel p-4 sm:p-5">
+          <fieldset className="min-w-0 border-b border-hairline-soft pb-6">
             <legend className="text-[14px] font-semibold text-ink-soft">Payment method</legend>
             <p className="mt-0.5 text-[12.5px] text-ink-mute">
               Choose the account you used to send your payment.
@@ -205,7 +205,7 @@ export function DepositPage() {
                       'transition-colors duration-fast focus-within:ring-2 focus-within:ring-accent-ink',
                       selected
                         ? 'border-accent/60 bg-accent/10'
-                        : 'border-transparent bg-inset hover:border-white/10 hover:bg-wash',
+                        : 'border-transparent bg-inset hover:border-hairline hover:bg-wash',
                     )}
                   >
                     <input type="radio" value={method.id} className="sr-only" {...register('method_id')} />
@@ -251,7 +251,7 @@ export function DepositPage() {
             </div>
           </fieldset>
 
-          <section className="flex flex-col gap-3 border-b border-white/5 pb-6">
+          <section className="flex flex-col gap-3 border-b border-hairline-soft pb-6">
             <div className="flex items-baseline justify-between gap-3">
               <label htmlFor="amount" className="text-[14px] font-semibold text-ink-soft">
                 Amount
@@ -267,7 +267,7 @@ export function DepositPage() {
                 id="amount"
                 inputMode="decimal"
                 autoComplete="off"
-                className="min-w-0 flex-1 bg-transparent font-mono text-[22px] font-medium text-ink tnum focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent text-[22px] font-medium text-ink tnum focus:outline-none"
                 {...register('amount')}
               />
               <span className="font-mono text-[11px] text-ink-mute">{currency}</span>
@@ -303,7 +303,7 @@ export function DepositPage() {
             </div>
           </section>
 
-          <section className="flex flex-col gap-3 border-b border-white/5 pb-6">
+          <section className="flex flex-col gap-3 border-b border-hairline-soft pb-6">
             <div className="flex flex-col gap-0.5">
               <h2 className="text-[14px] font-semibold text-ink-soft">
                 Reference number{selectedMethodDetails?.reference_required ? '' : ' (optional)'}
@@ -345,7 +345,7 @@ export function DepositPage() {
 
         <aside
           aria-labelledby="deposit-summary-heading"
-          className="flex min-w-0 flex-col gap-4 rounded-card bg-surface-1 p-4 @rail-wide:sticky @rail-wide:top-3.5"
+          className="flex min-w-0 flex-col gap-4 rounded-card glass-panel p-4 @rail-wide:sticky @rail-wide:top-3.5"
         >
           <h2 id="deposit-summary-heading" className="text-[14px] font-semibold text-ink-soft">
             Deposit summary
@@ -395,7 +395,7 @@ function DepositPageSkeleton() {
         </div>
       </div>
       <div className="grid items-start gap-5 @rail-wide:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="flex flex-col gap-6 rounded-card bg-surface-1 p-4 sm:p-5">
+        <div className="flex flex-col gap-6 rounded-card glass-panel p-4 sm:p-5">
           {Array.from({ length: 3 }, (_, index) => (
             <div key={index} className="flex flex-col gap-3">
               <Skeleton className="h-4 w-32 bg-surface-2" />
@@ -404,7 +404,7 @@ function DepositPageSkeleton() {
             </div>
           ))}
         </div>
-        <div className="flex flex-col gap-4 rounded-card bg-surface-1 p-4">
+        <div className="flex flex-col gap-4 rounded-card glass-panel p-4">
           <Skeleton className="h-4 w-28 bg-surface-2" />
           <Skeleton className="h-24 bg-surface-2" />
           <Skeleton className="h-11 bg-surface-2" />
@@ -426,12 +426,12 @@ function SummaryRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-3 last:border-0 last:pb-0">
+    <div className="flex items-start justify-between gap-4 border-b border-hairline-soft pb-3 last:border-0 last:pb-0">
       <dt className="text-ink-mute">{label}</dt>
       <dd
         className={cn(
           'max-w-[11rem] text-right text-ink-soft',
-          emphasis && 'font-mono text-[16px] font-semibold text-ink tnum',
+          emphasis && 'text-[16px] font-semibold text-ink tnum',
           mono && 'font-mono text-[11.5px]',
         )}
       >

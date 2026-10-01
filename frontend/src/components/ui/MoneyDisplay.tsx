@@ -25,7 +25,7 @@ export function MoneyDisplay({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 font-mono font-medium tnum',
+        'inline-flex items-center gap-1 font-medium tnum',
         toneClass(tone, direction),
         className,
       )}

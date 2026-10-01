@@ -256,7 +256,7 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
             </Select>
           </Field>
 
-          <fieldset className="grid gap-4 rounded-input border border-white/5 p-3 sm:grid-cols-3">
+          <fieldset className="grid gap-4 rounded-input border border-hairline-soft p-3 sm:grid-cols-3">
             <legend className="px-1 font-mono text-[12px] text-ink-mute">PHP wager limits</legend>
             <Field label="Minimum bet (₱)" htmlFor="game-php-min" error={errors.php_min_wager?.message}>
               <Input
@@ -292,7 +292,7 @@ function GameForm({ game, onClose, onSaved }: Omit<GameFormDialogProps, 'open'>)
             </Field>
           </fieldset>
 
-          <fieldset className="grid gap-4 rounded-input border border-white/5 p-3 sm:grid-cols-3">
+          <fieldset className="grid gap-4 rounded-input border border-hairline-soft p-3 sm:grid-cols-3">
             <legend className="px-1 font-mono text-[12px] text-ink-mute">USD wager limits</legend>
             <Field label="Minimum bet ($)" htmlFor="game-usd-min" error={errors.usd_min_wager?.message}>
               <Input

@@ -1,15 +1,36 @@
-const VERSION = 1
+const VERSION = 3
+const ROWS = 8
+
+const finite = (v) => typeof v === 'number' && Number.isFinite(v)
+const positive = (v) => finite(v) && v > 0
+
+const rect = (v) =>
+  typeof v === 'object' &&
+  v !== null &&
+  Object.keys(v).length === 4 &&
+  finite(v.x) &&
+  finite(v.y) &&
+  positive(v.width) &&
+  positive(v.height)
 
 const shapes = {
   configure: {
-    rows: (v) => Number.isInteger(v) && v >= 8 && v <= 16,
+    rows: (v) => v === ROWS,
     risk: (v) => v === 'low' || v === 'normal' || v === 'high',
-    multipliers_hundredths: (v) => Array.isArray(v) && v.every((m) => Number.isInteger(m) && m > 0),
+    multipliers_hundredths: (v) =>
+      Array.isArray(v) && v.length === ROWS + 1 && v.every((m) => Number.isInteger(m) && m > 0),
     sound: (v) => typeof v === 'boolean',
+  },
+  layout: {
+    x: finite,
+    y: finite,
+    width: positive,
+    height: positive,
+    controls: (v) => Array.isArray(v) && v.length <= 4 && v.every(rect),
   },
   drop: {
     round_id: (v) => typeof v === 'string' && v.length > 0 && v.length <= 64,
-    slot: (v) => Number.isInteger(v) && v >= 0 && v <= 16,
+    slot: (v) => Number.isInteger(v) && v >= 0 && v <= ROWS,
     multiplier_hundredths: (v) => Number.isInteger(v) && v > 0,
     result_label: (v) => typeof v === 'string' && v.length <= 40,
   },
@@ -28,9 +49,6 @@ function classify(data) {
   if (keys.length !== expected.length) return { error: 'bad_message' }
   for (const key of expected) {
     if (!(key in data) || !shape[key](data[key])) return { error: 'bad_message' }
-  }
-  if (data.type === 'configure' && data.multipliers_hundredths.length !== data.rows + 1) {
-    return { error: 'bad_message' }
   }
   return { message: data }
 }

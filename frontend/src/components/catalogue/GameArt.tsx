@@ -15,7 +15,7 @@ export function GameArt({ src, caption = 'game art', className }: GameArtProps) 
       {src ? (
         <img src={src} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
       ) : (
-        <span className="label-mono text-[9.5px] text-ink-mute">{caption}</span>
+        <span className="label-mono text-[9.5px] text-ink-cool">{caption}</span>
       )}
     </div>
   )

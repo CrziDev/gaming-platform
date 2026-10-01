@@ -1,0 +1,123 @@
+/* The frame is the game's scene: a full-bleed canvas the host lays its controls over.
+   The values below are Plinko Billiards' own art, not platform tokens. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #080605;
+  color: #e6ebf2;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.scene {
+  position: fixed;
+  inset: 0;
+}
+
+.scene canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tagline {
+  position: fixed;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  pointer-events: none;
+  font-family: 'IBM Plex Sans Condensed', sans-serif;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.tagline-left {
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: #ffe2b4;
+  text-shadow:
+    0 0 6px rgb(255 190 110 / 0.85),
+    0 0 18px rgb(230 150 60 / 0.5);
+}
+
+.tagline-right {
+  align-items: flex-end;
+  font-size: 12.5px;
+  letter-spacing: 0.12em;
+  color: #f4ecdc;
+  text-shadow: 0 0 6px rgb(255 225 180 / 0.6);
+}
+
+.tagline-rule {
+  width: 18px;
+  height: 1.5px;
+  margin-top: 6px;
+  background: currentColor;
+}
+
+.tagline-left .tagline-rule {
+  box-shadow: 0 0 8px rgb(255 180 90 / 0.9);
+}
+
+.tagline-right .tagline-rule {
+  width: 16px;
+}
+
+/* A phone's board leaves only narrow gutters, so the taglines shrink to stand in them. */
+@media (width < 768px) {
+  .tagline {
+    gap: 5px;
+  }
+
+  .tagline-left {
+    font-size: 11px;
+  }
+
+  .tagline-right {
+    font-size: 9px;
+  }
+
+  .tagline-rule {
+    width: 13px;
+    margin-top: 4px;
+  }
+
+  .tagline-right .tagline-rule {
+    width: 11px;
+  }
+}
+
+.toasts {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.toast {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 5px 9px;
+  border: 1px solid rgb(255 230 190 / 0.18);
+  border-radius: 9px;
+  background: rgb(14 10 7 / 0.86);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+  color: #b3bfcf;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.toast-win {
+  color: #4af2a4;
+}

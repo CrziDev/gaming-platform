@@ -40,7 +40,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 		PasswordResetSender: resetSender,
 	})
 	currencyHandler := currency.NewHandler(db, logger)
-	engines := round.Engines{"plinko": plinko.New()}
+	engines := round.Engines{"plinko": plinko.New(), "plinko-billiards": plinko.New()}
 	gameHandler := game.NewHandler(db, logger, engines)
 	walletHandler := wallet.NewHandler(db, logger)
 	depositHandler := deposit.NewHandler(db, logger, cfg.ProofDir)
