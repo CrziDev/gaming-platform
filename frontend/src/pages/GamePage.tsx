@@ -114,6 +114,7 @@ export function GamePage() {
         stageAspect={module?.stageAspect}
         stageGutter={module?.stageGutter}
         onStage={module ? session.setStage : undefined}
+        skin={module?.skin ? module.slug : undefined}
         actions={
           <>
             <button
@@ -131,6 +132,7 @@ export function GamePage() {
             <IconButton
               label={favorite ? 'Remove from favorites' : 'Add to favorites'}
               size="float"
+              data-part="favorite"
               aria-pressed={favorite}
               disabled={setFavorite.isPending}
               onClick={() => setFavorite.mutate({ slug: game.slug, favorite: !favorite })}
@@ -280,19 +282,23 @@ function BetPanel({
   return (
     <section
       aria-label="Bet controls"
+      data-part="bet-panel"
       className="glass-panel flex flex-col gap-2 rounded-card p-2.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.06),var(--shadow-panel)] sm:gap-2.5 sm:p-3"
     >
       <div className="flex items-center gap-2.5 game-side:flex-col game-side:items-stretch">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        <div data-part="balance" className="flex min-w-0 flex-1 items-center gap-2.5">
           <span
             aria-hidden
+            data-part="wallet-tile"
             className="flex size-10 shrink-0 items-center justify-center rounded-input border border-hairline bg-inset text-ink-control max-[379px]:hidden sm:size-10.5"
           >
             <Wallet size={19} strokeWidth={1.7} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="label-mono text-[10px] text-ink-cool">Balance</div>
-            <div className="truncate text-[16px] leading-tight font-medium text-ink tnum sm:text-[18px]">
+            <div data-part="balance-label" className="label-mono text-[10px] text-ink-cool">
+              Balance
+            </div>
+            <div data-part="balance-value" className="truncate text-[16px] leading-tight font-medium text-ink tnum sm:text-[18px]">
               {balance ? formatMoney(balance) : '—'}
             </div>
           </div>
@@ -301,21 +307,27 @@ function BetPanel({
       </div>
 
       <div className="flex gap-2 sm:gap-2.5 game-side:flex-col">
-        <div className="flex h-10 min-w-0 flex-1 items-stretch overflow-hidden rounded-input border border-hairline bg-field sm:h-12 sm:min-w-[168px] game-side:flex-none">
+        <div
+          data-part="stepper"
+          className="flex h-10 min-w-0 flex-1 items-stretch overflow-hidden rounded-input border border-hairline bg-field sm:h-12 sm:min-w-[168px] game-side:flex-none">
           <button
             type="button"
             aria-label="Decrease bet"
+            data-part="step-button"
             onClick={() => setStakeMinor((value) => stepStake(ladder, value, -1))}
             className="flex w-10 shrink-0 items-center justify-center bg-inset text-ink-control transition-colors duration-fast hover:bg-wash sm:w-12"
           >
             <Minus aria-hidden size={16} strokeWidth={2.4} />
           </button>
-          <div className="flex min-w-0 flex-1 items-center justify-center border-x border-hairline px-0.5 text-[15px] font-medium text-ink tnum sm:text-[18px]">
+          <div
+            data-part="stake-value"
+            className="flex min-w-0 flex-1 items-center justify-center border-x border-hairline px-0.5 text-[15px] font-medium text-ink tnum sm:text-[18px]">
             <span className="truncate">{formatMoney(money(stakeMinor, currency))}</span>
           </div>
           <button
             type="button"
             aria-label="Increase bet"
+            data-part="step-button"
             onClick={() => setStakeMinor((value) => stepStake(ladder, value, 1))}
             className="flex w-10 shrink-0 items-center justify-center bg-inset text-ink-control transition-colors duration-fast hover:bg-wash sm:w-12"
           >

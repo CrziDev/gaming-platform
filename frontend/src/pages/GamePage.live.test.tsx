@@ -113,7 +113,7 @@ describe('Plinko against a server without the play endpoint', () => {
 
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
 
-    expect(await screen.findByText("Plinko isn't available right now.")).toBeInTheDocument()
+    expect(await screen.findByText("This game isn't available right now.")).toBeInTheDocument()
     expect(posted(post, 'drop')).toHaveLength(0)
     expect(screen.getByRole('button', { name: /8 rows ·/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
@@ -145,7 +145,7 @@ describe('Plinko against a server without the play endpoint', () => {
     await waitFor(() => expect(posted(post, 'configure')).toHaveLength(1))
     await user.click(screen.getByRole('button', { name: 'PLACE BET' }))
 
-    await screen.findByText("Plinko isn't available right now.")
+    await screen.findByText("This game isn't available right now.")
     const play = playRequests(fetchMock)[0]
     expect(JSON.parse(String(play?.[1]?.body))).toMatchObject({ stake_minor: 100, currency: 'USD' })
     const roundsUrl = new URL(String(roundsRequests(fetchMock)[0]?.[0]), window.location.href)
@@ -204,7 +204,7 @@ describe('Plinko without a manifest', () => {
     const { iframe, post } = await openFrame()
     frameSays(iframe, { v: 3, type: 'ready', game: 'plinko' })
 
-    expect(await screen.findByRole('alert')).toHaveTextContent("Plinko isn't available right now.")
+    expect(await screen.findByRole('alert')).toHaveTextContent("This game isn't available right now.")
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeDisabled()
     expect(posted(post, 'configure')).toHaveLength(0)
 

@@ -16,35 +16,43 @@ import (
 // is keyed by this slug.
 func createPlinko(t *testing.T, db *sql.DB) {
 	t.Helper()
+	createPlinkoGame(t, db, "plinko", "Plinko", 9500)
+}
+
+// A catalogue row played by the Plinko engine, which app.New registers under more
+// than one slug. The test database may carry a seeded catalogue; the test owns the
+// row it plays.
+func createPlinkoGame(t *testing.T, db *sql.DB, slug, name string, rtpBasisPoints int) string {
+	t.Helper()
 	if _, err := db.Exec(`INSERT INTO game_categories (slug, name, sort_order) VALUES ('originals', 'Originals', 10) ON CONFLICT (slug) DO NOTHING`); err != nil {
 		t.Fatalf("create category: %v", err)
 	}
-	// The test database may carry a seeded catalogue; this test owns the row it plays.
 	for _, statement := range []string{
-		`DELETE FROM game_favorites WHERE game_id IN (SELECT id FROM games WHERE slug = 'plinko')`,
-		`DELETE FROM game_rounds WHERE game_id IN (SELECT id FROM games WHERE slug = 'plinko')`,
-		`DELETE FROM games WHERE slug = 'plinko'`,
+		`DELETE FROM game_favorites WHERE game_id IN (SELECT id FROM games WHERE slug = $1)`,
+		`DELETE FROM game_rounds WHERE game_id IN (SELECT id FROM games WHERE slug = $1)`,
+		`DELETE FROM games WHERE slug = $1`,
 	} {
-		if _, err := db.Exec(statement); err != nil {
-			t.Fatalf("clear plinko: %v", err)
+		if _, err := db.Exec(statement, slug); err != nil {
+			t.Fatalf("clear %s: %v", slug, err)
 		}
 	}
 	var gameID string
 	if err := db.QueryRow(`
 		INSERT INTO games (slug, name, category_slug, provider, status, integration, rtp_basis_points)
-		VALUES ('plinko', 'Plinko', 'originals', 'In-house', 'active', 'integrated', 9500)
-		RETURNING id::text`).Scan(&gameID); err != nil {
-		t.Fatalf("create plinko: %v", err)
+		VALUES ($1, $2, 'originals', 'In-house', 'active', 'integrated', $3)
+		RETURNING id::text`, slug, name, rtpBasisPoints).Scan(&gameID); err != nil {
+		t.Fatalf("create %s: %v", slug, err)
 	}
 	if _, err := db.Exec(`INSERT INTO game_wager_limits (game_id, currency, min_wager_minor, max_wager_minor, wager_step_minor)
 		SELECT ($1::text)::uuid, currency, 100, 500000, 100 FROM (VALUES ('PHP'), ('USD')) currencies(currency)`, gameID); err != nil {
-		t.Fatalf("create plinko limits: %v", err)
+		t.Fatalf("create %s limits: %v", slug, err)
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM game_favorites WHERE game_id = ($1::text)::uuid`, gameID)
 		_, _ = db.Exec(`DELETE FROM game_rounds WHERE game_id = ($1::text)::uuid`, gameID)
 		_, _ = db.Exec(`DELETE FROM games WHERE id = ($1::text)::uuid`, gameID)
 	})
+	return gameID
 }
 
 func sendPlay(t *testing.T, client *http.Client, base, slug, key string, body string) (int, map[string]any) {
@@ -166,5 +174,58 @@ func TestPlinkoRoundHTTPFlow(t *testing.T) {
 	}
 	if err := json.Unmarshal(raw, &recent); err != nil || recent.Total != 1 || len(recent.Rows) != 1 || recent.Rows[0].Slug != "plinko" {
 		t.Fatalf("recent games: %s (%v)", raw, err)
+	}
+}
+
+func TestPlinkoVariantsShareTheEngineButKeepTheirOwnRoundsAndReturn(t *testing.T) {
+	db := requireDB(t)
+	plinkoID := createPlinkoGame(t, db, "plinko", "Plinko", 9500)
+	billiardsID := createPlinkoGame(t, db, "plinko-billiards", "Plinko Billiards", 10500)
+	base, client := newServer(t, db)
+
+	if code, _ := register(t, client, base); code != http.StatusCreated {
+		t.Fatalf("register: %d", code)
+	}
+	var me struct {
+		ID string `json:"id"`
+	}
+	if _, raw := send(t, client, http.MethodGet, base+"/api/me", nil); json.Unmarshal(raw, &me) != nil || me.ID == "" {
+		t.Fatalf("me: %s", raw)
+	}
+	if code, _ := send(t, client, http.MethodGet, base+"/api/wallets/PHP", nil); code != http.StatusOK {
+		t.Fatalf("provision wallet: %d", code)
+	}
+	if _, err := wallet.Move(context.Background(), db, me.ID, "PHP", "adjustment", 10_000, "variant-test-credit", "test credit"); err != nil {
+		t.Fatalf("fund wallet: %v", err)
+	}
+
+	body := `{"stake_minor": 300, "currency": "PHP", "params": {"rows": 8, "risk": "normal"}}`
+	code, out := sendPlay(t, client, base, "plinko-billiards", "variant", body)
+	if code != http.StatusOK {
+		t.Fatalf("play: %d %v", code, out)
+	}
+	round := out["round"].(map[string]any)
+	if round["game_slug"] != "plinko-billiards" || round["game_id"] != billiardsID || round["rtp_basis_points"] != float64(10500) {
+		t.Fatalf("round %v", round)
+	}
+
+	for slug, want := range map[string]int{"plinko": 9500, "plinko-billiards": 10500} {
+		_, raw := send(t, client, http.MethodGet, base+"/api/games/"+slug+"/manifest", nil)
+		var manifest struct {
+			RTPBasisPoints int `json:"rtp_basis_points"`
+		}
+		if err := json.Unmarshal(raw, &manifest); err != nil || manifest.RTPBasisPoints != want {
+			t.Fatalf("%s manifest: %s (%v)", slug, raw, err)
+		}
+	}
+
+	for gameID, want := range map[string]int{plinkoID: 0, billiardsID: 1} {
+		_, raw := send(t, client, http.MethodGet, base+"/api/rounds?game_id="+gameID, nil)
+		var page struct {
+			Total int `json:"total"`
+		}
+		if err := json.Unmarshal(raw, &page); err != nil || page.Total != want {
+			t.Fatalf("rounds for %s: want %d, got %s", gameID, want, raw)
+		}
 	}
 }

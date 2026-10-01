@@ -33,6 +33,8 @@ type GameHostProps = {
   // Where the stage and the controls sit over the frame, so the game can draw its board
   // there and its art around them.
   onStage?: ((layout: GameLayout) => void) | undefined
+  // The game whose skin dresses the controls; the platform's own look otherwise.
+  skin?: string | undefined
   actions?: ReactNode
   controls?: ReactNode
   className?: string
@@ -53,6 +55,7 @@ export function GameHost({
   stageAspect = 10 / 10.6,
   stageGutter = 0,
   onStage,
+  skin,
   actions,
   controls,
   className,
@@ -100,6 +103,7 @@ export function GameHost({
     <section
       ref={zoneRef}
       aria-label={`${name} game`}
+      data-game-skin={skin}
       className={cn('@container/game relative isolate flex min-h-0 flex-col overflow-hidden bg-base', className)}
     >
       {frame ? (
@@ -130,7 +134,11 @@ export function GameHost({
               </p>
             ) : null}
           </div>
-          {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
+          {actions ? (
+            <div data-part="title-actions" className="flex shrink-0 gap-2">
+              {actions}
+            </div>
+          ) : null}
         </header>
 
         {/* As tall as the board at full width, less its gutters; shrinks when the zone runs out of height.

@@ -25,8 +25,8 @@ through.
   but the top bar shows exactly one — the active wallet. Switching is a deliberate act on
   the wallet page, never a second figure in the chrome.
 - **Every game is designed on its own.** A game's page — its layout, controls, and scene —
-  is defined by that game's file, built from these tokens and primitives. Nothing about
-  one game's page is a rule for another.
+  is defined by that game's file, built from these tokens and primitives and, where it
+  declares one, its skin. Nothing about one game's page is a rule for another.
 - **Mobile is the source layout.** Each screen is authored at 390px and expanded. Desktop
   adds room; it never adds features. Every page works down to 360px without a horizontal
   scrollbar, and the touch shell keeps its 44px hit areas.
@@ -62,6 +62,8 @@ through.
    Everything else is 400–600.
 9. **Round only where named.** Avatars, status dots, round utility buttons (profile, bell,
    chat, + deposit), and the wallet pill. Every other control uses the radius scale.
+
+Rules 1, 3, 4, and 5 do not govern a game's skin (see Games); rules 2, 6, 7, 8, and 9 do.
 
 ## Brand lines
 
@@ -179,10 +181,26 @@ colour, opacity, or at most 1px of translation; controls never bounce or scale.
 Each integrated game has one file, `.claude/rules/games/<slug>.md`, that designs its page:
 layout, stage, controls and their sizes, type on the page, and the art inside its frame. A
 game page sits inside the shell above and follows this file's hard rules, tokens, glass
-recipes, and primitives for everything it draws outside its frame. What a game draws
-inside its frame — scene, palette, glow, typefaces, brand lines, sound, and motion — is
-its own and never becomes a platform token or component. A game file never changes the
-shell or redefines a token, and one game's file never binds another.
+recipes, and primitives for everything it draws outside its frame, except where its game
+file declares a **skin**. What a game draws inside its frame — scene, palette, glow,
+typefaces, brand lines, sound, and motion — is its own and never becomes a platform token
+or component. A game file never changes the shell or redefines a token, and one game's
+file never binds another.
+
+A skin dresses the game's own controls in the materials of its scene. It may change only
+the fill, border, shadow, and ink of the bet panel, the balance tile, the risk control and
+its menu, the stepper, and the title-row buttons. It never changes:
+
+- control heights, hit areas, spacing, or layout;
+- type, weights, or money figures;
+- the focus ring;
+- the play button, which remains the one filled, glowing call to action;
+- status colours, dialogs, toasts, round history, or anything in the shell.
+
+A skin adds no glow and no motion beyond this file's. Its ink meets 4.5:1 contrast on its
+own surface. It is declared once in `frontend/src/styles/games/<slug>.css`, scoped to that
+game's zone, and named in the game's file. It never becomes a token and is never applied
+to another game.
 
 ## Game tile
 

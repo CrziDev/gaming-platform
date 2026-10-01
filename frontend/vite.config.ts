@@ -6,7 +6,14 @@ import tailwindcss from '@tailwindcss/vite'
 import { gameFrames } from './vite/gameFrames.ts'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), gameFrames([{ slug: 'plinko', dir: '../games/plinko/web' }])],
+  plugins: [
+    react(),
+    tailwindcss(),
+    gameFrames([
+      { slug: 'plinko', dir: '../games/plinko/web' },
+      { slug: 'plinko-billiards', dir: '../games/plinko-billiards/web' },
+    ]),
+  ],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

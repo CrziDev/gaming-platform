@@ -142,7 +142,9 @@ Deterministic sources exist only in `_test.go` files; nothing at runtime can sel
 `Options() []engine.Option`, `Play(engine.Input) (engine.Outcome, error)`, and
 `Manifest(configRef string) (json.RawMessage, error)` — plus the optional
 `AdminConfiguration` capability, and `Engines`, the slug-to-engine map the route table
-builds and the game console reads through.
+builds and the game console reads through. `internal/app` maps `plinko` and
+`plinko-billiards` to the same engine: each title keeps its own game row, return,
+and rounds, and both settle through these rules (`plinko-billiards-runtime.md`).
 `play.go` is the orchestration. Plinko has no decision between the stake and the
 result, so a round is **one transaction**: `openTx` locks the wallet, locks the game row,
 resolves its `rtp_basis_points` to the option that plays it, binds the round to that

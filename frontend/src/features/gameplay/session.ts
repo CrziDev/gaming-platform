@@ -18,7 +18,7 @@ import { PROTOCOL_VERSION, type FrameMessage, type PlinkoBoards } from './schema
 
 const READY_TIMEOUT_MS = 10_000
 const SETTLE_FALLBACK_MS = 8_000
-const NOT_ON_THIS_SERVER = "Plinko isn't available right now."
+const NOT_ON_THIS_SERVER = "This game isn't available right now."
 
 // The board's rect inside the game frame, and the rects the platform's controls cover,
 // in CSS pixels.
