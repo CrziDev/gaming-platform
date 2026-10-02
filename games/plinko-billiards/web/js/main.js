@@ -7,7 +7,7 @@ window.addEventListener('error', (event) => {
   bridge.send({ type: 'error', code: 'runtime', message: String(event.message).slice(0, 200) })
 })
 
-// The glow pass is optional: without it the board renders plain.
+// The glow and sharpen passes are optional: without them the board renders plain.
 async function loadBloom() {
   try {
     const modules = await Promise.all([
@@ -15,6 +15,7 @@ async function loadBloom() {
       import('three/addons/postprocessing/RenderPass.js'),
       import('three/addons/postprocessing/UnrealBloomPass.js'),
       import('three/addons/postprocessing/OutputPass.js'),
+      import('three/addons/postprocessing/ShaderPass.js'),
     ])
     return Object.assign({}, ...modules)
   } catch {

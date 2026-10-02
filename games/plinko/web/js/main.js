@@ -13,6 +13,7 @@ async function loadBloom() {
     const modules = await Promise.all([
       import('three/addons/postprocessing/EffectComposer.js'),
       import('three/addons/postprocessing/RenderPass.js'),
+      import('three/addons/postprocessing/ShaderPass.js'),
       import('three/addons/postprocessing/UnrealBloomPass.js'),
       import('three/addons/postprocessing/OutputPass.js'),
     ])

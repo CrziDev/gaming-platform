@@ -19,8 +19,10 @@ export const ui = {
   // mid-depth. That is the glass, measured down to the tagline's foot, or a host control
   // beside the board. Where the gutter has room they stand a short reach from what they
   // are beside, and no nearer the frame's edge than its inset; otherwise they centre in
-  // the gutter. When either gutter cannot hold its tagline clear, both step aside.
-  placeTaglines(board, width, controls) {
+  // the gutter. When either gutter cannot hold its tagline clear, both step aside. When
+  // the backdrop paints the left tagline itself, the left one stands down and the right
+  // one answers only to its own gutter.
+  placeTaglines(board, width, controls, leftPainted) {
     const { left, right } = this.taglines
     const centre = (board.left + board.right) / 2
     const depth = board.bottom - board.top
@@ -40,9 +42,10 @@ export const ui = {
       )
     const leftOffset = fitTagline(left, leftGutter)
     const rightOffset = fitTagline(right, rightGutter)
-    const visibility = leftOffset !== null && rightOffset !== null ? 'visible' : 'hidden'
-    Object.assign(left.style, { top: `${leftTop}px`, left: `${leftOffset ?? 0}px`, visibility })
-    Object.assign(right.style, { top: `${rightTop}px`, right: `${rightOffset ?? 0}px`, visibility })
+    const fits = rightOffset !== null && (leftPainted || leftOffset !== null)
+    const visibility = (shown) => (shown ? 'visible' : 'hidden')
+    Object.assign(left.style, { top: `${leftTop}px`, left: `${leftOffset ?? 0}px`, visibility: visibility(fits && !leftPainted) })
+    Object.assign(right.style, { top: `${rightTop}px`, right: `${rightOffset ?? 0}px`, visibility: visibility(fits) })
   },
 
   // The host formats the amount; the frame only places it. Wins read green, returns

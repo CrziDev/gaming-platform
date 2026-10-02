@@ -65,6 +65,28 @@ describe('GameHost', () => {
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeInTheDocument()
   })
 
+  it('sets a game\'s own title mark in place of the platform\'s title', () => {
+    render(
+      <GameHost
+        name="Plinko Tropical"
+        subtitle="RISK · PLAY · WIN"
+        frame={frame({ status: 'ready' })}
+        titleMark={<h1 aria-label="Plinko Tropical">PLINKO</h1>}
+      />,
+    )
+    expect(screen.getAllByRole('heading')).toHaveLength(1)
+    expect(screen.getByRole('heading', { name: 'Plinko Tropical' })).toHaveTextContent('PLINKO')
+    expect(screen.queryByText('RISK · PLAY · WIN')).not.toBeInTheDocument()
+  })
+
+  it('tucks the stage under the title row by the title\'s overlap', () => {
+    const { rerender } = render(<GameHost name="Plinko" frame={frame({ status: 'ready' })} />)
+    const stageBox = () => screen.getByTitle('Plinko game').parentElement?.querySelector<HTMLElement>('[style*="--stage-top"]')
+    expect(stageBox()?.style.getPropertyValue('--stage-top')).toBe('0.375rem')
+    rerender(<GameHost name="Plinko" frame={frame({ status: 'ready' })} titleOverlap={30} />)
+    expect(stageBox()?.style.getPropertyValue('--stage-top')).toBe('-30px')
+  })
+
   it('reports the stage and the rects its controls cover, relative to the zone', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
       if (this.getAttribute('aria-label') === 'Plinko game') return new DOMRect(56, 72, 1180, 489)

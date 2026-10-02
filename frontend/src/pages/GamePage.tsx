@@ -113,8 +113,10 @@ export function GamePage() {
         frameRef={module ? session.attachFrame : undefined}
         stageAspect={module?.stageAspect}
         stageGutter={module?.stageGutter}
+        titleOverlap={module?.titleOverlap}
         onStage={module ? session.setStage : undefined}
         skin={module?.skin ? module.slug : undefined}
+        titleMark={module?.TitleMark ? <module.TitleMark name={game.name} subtitle={module.subtitle} /> : undefined}
         actions={
           <>
             <button

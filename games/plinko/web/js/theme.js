@@ -12,6 +12,9 @@ const bands = [
 export const theme = {
   ground: 0x05070b,
 
+  // The ball's light streak and the sparks a struck peg throws.
+  trail: { streak: '#cfe6ff', spark: '#e8f3ff' },
+
   labelFont(size) {
     return `700 ${size}px Inter, "IBM Plex Sans", sans-serif`
   },

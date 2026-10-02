@@ -35,9 +35,10 @@ import {
   wallFace,
 } from './geometry.js'
 
-// The payout tray is one moulded acrylic body: a thick base slab, a front sheet across
-// the compartments, a tinted back panel, and a dark fade above the openings. `pulses`
-// is the shared per-cup glow uniform the landing animation raises.
+// The payout tray is one moulded blue-tinted acrylic body: a thick base slab with
+// ice-blue edges, a navy front sheet across the compartments, a tinted back panel, and
+// a dark fade above the openings. `pulses` is the shared per-cup glow uniform the
+// landing animation raises.
 export function buildTray(kit, background, pulses) {
   addBase(kit)
   addFrontSheet(kit, pulses)
@@ -71,12 +72,12 @@ function addBase(kit) {
   const slab = new T.Mesh(
     geometry,
     kit.glass({
-      color: 0xd2dcea,
+      color: 0x86b4ec,
       thickness: 0.9,
       roughness: 0.05,
       envMapIntensity: 1.5,
-      attenuationColor: 0xb8cce6,
-      attenuationDistance: 3,
+      attenuationColor: 0x1c4a94,
+      attenuationDistance: 1.2,
     }),
   )
   slab.position.z = bevel
@@ -89,12 +90,12 @@ function addBase(kit) {
 
   // Front face: a polished top edge, a faint body, and a softer bottom edge.
   const faceTexture = kit.linearTexture(8, 128, [0, 0], [0, 128], [
-    [0, 'rgba(255,255,255,.75)'],
-    [0.08, 'rgba(225,236,255,.22)'],
-    [0.3, 'rgba(200,215,240,.06)'],
-    [0.75, 'rgba(200,215,240,.04)'],
-    [0.94, 'rgba(225,236,255,.16)'],
-    [1, 'rgba(255,255,255,.3)'],
+    [0, 'rgba(225,242,255,.85)'],
+    [0.08, 'rgba(140,200,255,.3)'],
+    [0.3, 'rgba(40,90,180,.06)'],
+    [0.75, 'rgba(40,90,180,.05)'],
+    [0.94, 'rgba(140,200,255,.25)'],
+    [1, 'rgba(225,242,255,.45)'],
   ])
   const face = new T.Mesh(
     new T.PlaneGeometry(2 * FOOT_HALF_WIDTH - 0.2, FLOOR - 0.06),
@@ -106,9 +107,9 @@ function addBase(kit) {
 
   // Top of the base in front of the compartments: clear, brightening toward the edge.
   const topTexture = kit.linearTexture(8, 64, [0, 64], [0, 0], [
-    [0, 'rgba(255,255,255,.05)'],
-    [0.7, 'rgba(255,255,255,.12)'],
-    [1, 'rgba(255,255,255,.4)'],
+    [0, 'rgba(110,170,255,.06)'],
+    [0.7, 'rgba(140,195,255,.16)'],
+    [1, 'rgba(210,235,255,.5)'],
   ])
   const topGeometry = new T.PlaneGeometry(2 * FOOT_HALF_WIDTH - 0.16, TRAY_FRONT_Z - FRONT_SHEET_Z - 0.04)
   topGeometry.rotateX(-Math.PI / 2)
@@ -121,15 +122,16 @@ function addBase(kit) {
   scene.add(top)
 
   const line = (x, y, z) => [new T.Vector3(-x, y, z), new T.Vector3(x, y, z)]
-  kit.highlight(line(FOOT_HALF_WIDTH - 0.12, FLOOR - 0.018, TRAY_FRONT_Z + 0.004), 0.009, 0.8)
-  kit.highlight(line(FOOT_HALF_WIDTH - corner, 0.035, TRAY_FRONT_Z + 0.004), 0.007, 0.45)
-  kit.highlight(line(FOOT_HALF_WIDTH - 0.1, FLOOR + 0.004, FRONT_SHEET_Z + 0.05), 0.004, 0.22)
+  const ice = 0xbfe2ff
+  kit.highlight(line(FOOT_HALF_WIDTH - 0.12, FLOOR - 0.018, TRAY_FRONT_Z + 0.004), 0.01, 0.95, { color: ice })
+  kit.highlight(line(FOOT_HALF_WIDTH - corner, 0.035, TRAY_FRONT_Z + 0.004), 0.008, 0.7, { color: ice })
+  kit.highlight(line(FOOT_HALF_WIDTH - 0.1, FLOOR + 0.004, FRONT_SHEET_Z + 0.05), 0.004, 0.35, { color: ice })
 }
 
 // Glass that only catches light at grazing angles, added on top so it never occludes.
 function fresnelMaterial(T) {
   return new T.ShaderMaterial({
-    uniforms: { rim: { value: new T.Color(0xd8e6ff) } },
+    uniforms: { rim: { value: new T.Color(0x8ccaff) } },
     vertexShader: `
       varying vec3 vNormal;
       varying vec3 vView;
@@ -145,7 +147,7 @@ function fresnelMaterial(T) {
       varying vec3 vView;
       void main() {
         float f = clamp(1. - abs(dot(normalize(vNormal), normalize(vView))), 0., 1.);
-        gl_FragColor = vec4(rim * (pow(f, 2.4) * .5 + .03), 1.);
+        gl_FragColor = vec4(rim * (pow(f, 2.4) * .75 + .04), 1.);
         #include <colorspace_fragment>
       }`,
     transparent: true,
@@ -242,7 +244,7 @@ function addFrontSheet(kit, pulses) {
   sheet.renderOrder = 18
   scene.add(sheet)
 
-  const tint = new T.Mesh(geometry, new T.MeshBasicMaterial({ color: 0x0a0f18, transparent: true, opacity: 0.08, depthWrite: false }))
+  const tint = new T.Mesh(geometry, new T.MeshBasicMaterial({ color: 0x0a1a33, transparent: true, opacity: 0.3, depthWrite: false }))
   tint.position.z = FRONT_SHEET_Z - 0.004
   tint.renderOrder = 17
   scene.add(tint)
@@ -294,9 +296,9 @@ function sheetTexture(kit) {
       for (let i = 0; i < SLOTS; i++) {
         const x = i * column
         const walls = g.createLinearGradient(x, 0, x + column, 0)
-        walls.addColorStop(0, 'rgba(255,255,255,0)')
-        walls.addColorStop(0.07, 'rgba(255,255,255,.4)')
-        walls.addColorStop(0.15, 'rgba(255,255,255,.08)')
+        walls.addColorStop(0, 'rgba(170,215,255,0)')
+        walls.addColorStop(0.07, 'rgba(170,215,255,.45)')
+        walls.addColorStop(0.15, 'rgba(120,180,255,.1)')
         walls.addColorStop(0.8, 'rgba(255,255,255,0)')
         walls.addColorStop(0.92, 'rgba(255,255,255,.1)')
         walls.addColorStop(1, 'rgba(255,255,255,0)')
@@ -327,8 +329,8 @@ function sheetTexture(kit) {
   )
 }
 
-// Behind the upright part of the pane: the city seen through a panel that darkens and
-// takes on each compartment's colour toward the floor.
+// Behind the upright part of the pane: the city seen through a panel that darkens to
+// navy and takes on a little of each compartment's colour toward the floor.
 function addBackPanel(kit, background, pulses) {
   const { T, scene } = kit
   const height = BEND_Y - FLOOR
@@ -370,7 +372,7 @@ function addBackPanel(kit, background, pulses) {
         int i = int(clamp(floor(vUv.x * ${SLOTS}.), 0., ${SLOTS - 1}.));
         float v = clamp(vUv.y, 0., 1.);
         float a = 1. - smoothstep(.6, 1., v);
-        vec3 tint = colours[i] * (.015 + .09 * pow(1. - v, 2.2)) * (1. + pulse[i] * 1.6);
+        vec3 tint = colours[i] * (.01 + .05 * pow(1. - v, 2.2)) * (1. + pulse[i] * 1.6) + vec3(.008, .02, .045);
         gl_FragColor = vec4(mix(behind, behind * .1 + tint, a), 1.);
         #include <colorspace_fragment>
       }`,

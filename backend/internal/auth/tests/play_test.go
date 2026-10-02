@@ -179,8 +179,19 @@ func TestPlinkoRoundHTTPFlow(t *testing.T) {
 
 func TestPlinkoVariantsShareTheEngineButKeepTheirOwnRoundsAndReturn(t *testing.T) {
 	db := requireDB(t)
-	plinkoID := createPlinkoGame(t, db, "plinko", "Plinko", 9500)
-	billiardsID := createPlinkoGame(t, db, "plinko-billiards", "Plinko Billiards", 10500)
+	variants := []struct {
+		slug, name string
+		rtp        int
+		plays      bool
+		id         string
+	}{
+		{slug: "plinko", name: "Plinko", rtp: 9500},
+		{slug: "plinko-billiards", name: "Plinko Billiards", rtp: 10500, plays: true},
+		{slug: "plinko-tropical", name: "Plinko Tropical", rtp: 9000, plays: true},
+	}
+	for i := range variants {
+		variants[i].id = createPlinkoGame(t, db, variants[i].slug, variants[i].name, variants[i].rtp)
+	}
 	base, client := newServer(t, db)
 
 	if code, _ := register(t, client, base); code != http.StatusCreated {
@@ -200,32 +211,39 @@ func TestPlinkoVariantsShareTheEngineButKeepTheirOwnRoundsAndReturn(t *testing.T
 	}
 
 	body := `{"stake_minor": 300, "currency": "PHP", "params": {"rows": 8, "risk": "normal"}}`
-	code, out := sendPlay(t, client, base, "plinko-billiards", "variant", body)
-	if code != http.StatusOK {
-		t.Fatalf("play: %d %v", code, out)
-	}
-	round := out["round"].(map[string]any)
-	if round["game_slug"] != "plinko-billiards" || round["game_id"] != billiardsID || round["rtp_basis_points"] != float64(10500) {
-		t.Fatalf("round %v", round)
+	for _, variant := range variants {
+		if !variant.plays {
+			continue
+		}
+		code, out := sendPlay(t, client, base, variant.slug, "variant-"+variant.slug, body)
+		if code != http.StatusOK {
+			t.Fatalf("play %s: %d %v", variant.slug, code, out)
+		}
+		round := out["round"].(map[string]any)
+		if round["game_slug"] != variant.slug || round["game_id"] != variant.id || round["rtp_basis_points"] != float64(variant.rtp) {
+			t.Fatalf("%s round %v", variant.slug, round)
+		}
 	}
 
-	for slug, want := range map[string]int{"plinko": 9500, "plinko-billiards": 10500} {
-		_, raw := send(t, client, http.MethodGet, base+"/api/games/"+slug+"/manifest", nil)
+	for _, variant := range variants {
+		_, raw := send(t, client, http.MethodGet, base+"/api/games/"+variant.slug+"/manifest", nil)
 		var manifest struct {
 			RTPBasisPoints int `json:"rtp_basis_points"`
 		}
-		if err := json.Unmarshal(raw, &manifest); err != nil || manifest.RTPBasisPoints != want {
-			t.Fatalf("%s manifest: %s (%v)", slug, raw, err)
+		if err := json.Unmarshal(raw, &manifest); err != nil || manifest.RTPBasisPoints != variant.rtp {
+			t.Fatalf("%s manifest: %s (%v)", variant.slug, raw, err)
 		}
-	}
 
-	for gameID, want := range map[string]int{plinkoID: 0, billiardsID: 1} {
-		_, raw := send(t, client, http.MethodGet, base+"/api/rounds?game_id="+gameID, nil)
+		_, raw = send(t, client, http.MethodGet, base+"/api/rounds?game_id="+variant.id, nil)
 		var page struct {
 			Total int `json:"total"`
 		}
+		want := 0
+		if variant.plays {
+			want = 1
+		}
 		if err := json.Unmarshal(raw, &page); err != nil || page.Total != want {
-			t.Fatalf("rounds for %s: want %d, got %s", gameID, want, raw)
+			t.Fatalf("rounds for %s: want %d, got %s", variant.slug, want, raw)
 		}
 	}
 }

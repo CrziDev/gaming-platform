@@ -17,9 +17,15 @@ import {
 } from './board/geometry.js'
 import { createKit } from './board/kit.js'
 import { applyPulse, measurePlate, paintPlate } from './board/pockets.js'
+import { sharpenShader } from './board/sharpen.js'
 import { buildTable } from './board/table.js'
+import { createChalk, createTrails } from './board/trail.js'
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+// The most device pixels the frame draws: a phone gets its full density, a large
+// desktop zone steps down to what still reads sharp.
+const PIXEL_BUDGET = 4_500_000
 
 // The 3D table. It draws only what the host tells it: the payouts it is configured
 // with, and the slot each round has already settled in.
@@ -31,6 +37,7 @@ export const board = {
   scene: null,
   camera: null,
   composer: null,
+  sharpen: null,
   background: null,
   upper: null,
   apron: null,
@@ -40,6 +47,8 @@ export const board = {
   cueMaterial: null,
   cups: [],
   balls: [],
+  trails: null,
+  chalk: null,
   ballGeometry: null,
   regrowAt: null,
   frameRequest: 0,
@@ -55,7 +64,10 @@ export const board = {
     this.scene = new T.Scene()
     this.scene.environment = hallLighting(T, this.renderer)
     this.camera = new T.PerspectiveCamera(30, 1, 0.1, 200)
-    this.composer = addons ? createComposer(T, addons, this.renderer, this.scene, this.camera) : null
+    if (addons) {
+      this.sharpen = new addons.ShaderPass(sharpenShader(T))
+      this.composer = createComposer(T, addons, this.renderer, this.scene, this.camera, this.sharpen)
+    }
 
     const kit = createKit(T, this.scene)
     this.kit = kit
@@ -69,6 +81,8 @@ export const board = {
     this.cueMaterial = table.cueMaterial
     this.cups = table.pockets
     addLights(T, this.scene, this.upper)
+    this.trails = createTrails(kit, this.upper, this.camera)
+    this.chalk = createChalk(kit, this.upper)
     this.ballGeometry = new T.SphereGeometry(BALL_RADIUS, 48, 32)
 
     this.scene.updateMatrixWorld(true)
@@ -84,10 +98,13 @@ export const board = {
     if (!this.renderer || !width || !height) return
     const stage = state.stage ?? defaultStage(width, height)
 
+    const ratio = Math.min(window.devicePixelRatio || 1, 3, Math.sqrt(PIXEL_BUDGET / (width * height)))
+    this.renderer.setPixelRatio(Math.max(1, ratio))
     this.renderer.setSize(width, height, false)
     if (this.composer) {
       this.composer.setPixelRatio(this.renderer.getPixelRatio())
       this.composer.setSize(width, height)
+      this.sharpen.uniforms.texel.value.set(1 / (width * this.renderer.getPixelRatio()), 1 / (height * this.renderer.getPixelRatio()))
     }
     this.background.resize(width, height, stage)
     const extremes = boardExtremes(this.T, this.upper, this.apron)
@@ -131,6 +148,7 @@ export const board = {
     this.waitingBall.scale.setScalar(0.001)
     this.regrowAt = ball.startedAt + 250
     this.balls.push(ball)
+    this.trails.add(ball.segments, slot, ball.startedAt)
     this.stepBall(ball, ball.startedAt)
     this.wake()
   },
@@ -187,6 +205,7 @@ export const board = {
     if (peg) {
       peg.level = 1
       peg.dir.set(peg.base.x - fromX, peg.base.y - fromY, 0).normalize()
+      this.chalk.burst(peg.base, fromX, fromY)
     }
     this.playTick()
   },
@@ -224,9 +243,13 @@ export const board = {
       if (t >= 1) this.regrowAt = null
     }
     this.balls = this.balls.filter((ball) => this.stepBall(ball, now))
+    this.trails.update(now)
+    this.chalk.update(dt)
 
     return (
       this.balls.length > 0 ||
+      this.trails.alive ||
+      this.chalk.alive ||
       this.regrowAt !== null ||
       this.cups.some((cup) => cup.level > 0) ||
       [...this.pegs.values()].some((peg) => peg.level > 0)
@@ -311,7 +334,6 @@ export const board = {
 
 function createRenderer(T, host) {
   const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75))
   renderer.outputColorSpace = T.SRGBColorSpace
   renderer.toneMapping = T.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.05
@@ -355,7 +377,7 @@ function addLights(T, scene, upper) {
   lamp.position.set(0, centre.y + 14, centre.z + 5)
   lamp.target.position.copy(centre)
   lamp.castShadow = true
-  lamp.shadow.mapSize.set(1024, 1024)
+  lamp.shadow.mapSize.set(2048, 2048)
   lamp.shadow.bias = -0.0004
   lamp.shadow.normalBias = 0.02
   lamp.shadow.camera.near = 6
@@ -374,11 +396,14 @@ function addLights(T, scene, upper) {
   scene.add(rim)
 }
 
-function createComposer(T, addons, renderer, scene, camera) {
+// A tight bloom for the pocket pulse and the brightest brass, then the sharpen over the
+// tone-mapped frame.
+function createComposer(T, addons, renderer, scene, camera, sharpen) {
   const composer = new addons.EffectComposer(renderer, new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples: 4 }))
   composer.addPass(new addons.RenderPass(scene, camera))
-  composer.addPass(new addons.UnrealBloomPass(new T.Vector2(256, 256), 0.32, 0.3, 0.88))
+  composer.addPass(new addons.UnrealBloomPass(new T.Vector2(256, 256), 0.22, 0.18, 0.92))
   composer.addPass(new addons.OutputPass())
+  composer.addPass(sharpen)
   return composer
 }
 

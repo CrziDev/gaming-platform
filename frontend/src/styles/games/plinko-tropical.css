@@ -1,0 +1,91 @@
+/* Plinko Tropical's title mark: the name as the game's brush-script logo, tilted over a
+   teal swash, with the subtitle arched beneath it in the platform's mono. Kaushan Script
+   is named in the game's file and loads with the mark, on this game's page only. No glow
+   and no motion; the shadows only lift the white lettering off the bright terrace. Rules
+   in system-design.md, Games; design in .claude/rules/games/plinko-tropical.md. */
+[data-title-mark='plinko-tropical'] {
+  /* Headroom for the logo's tilt and the swash's reach, so the mark stays inside the
+     title row's box. */
+  --mark-headroom: 14px;
+
+  position: relative;
+  min-width: 0;
+  padding: var(--mark-headroom) 0 0 12px;
+
+  [data-part='title-logo'] {
+    position: relative;
+    display: inline-block;
+    margin: 0;
+    font-family: 'Kaushan Script', cursive;
+    font-size: 34px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    color: #fff;
+    transform: rotate(-6deg);
+    transform-origin: left bottom;
+    text-shadow:
+      0 2px 0 rgb(0 30 60 / 0.25),
+      0 4px 16px rgb(0 20 40 / 0.45);
+  }
+
+  [data-part='title-swash'] {
+    position: absolute;
+    z-index: -1;
+    left: -6%;
+    bottom: -9px;
+    width: 116%;
+    height: auto;
+    color: #2fe0cf;
+    filter: drop-shadow(0 2px 6px rgb(0 40 60 / 0.35));
+  }
+
+  [data-part='title-subtitle'] {
+    display: block;
+    width: 122px;
+    height: 22px;
+    margin: 4px 0 0 4px;
+    overflow: visible;
+  }
+
+  [data-part='title-subtitle'] text {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    fill: #f4f8ff;
+    stroke: rgb(0 20 40 / 0.45);
+    stroke-width: 2.5px;
+    paint-order: stroke;
+  }
+
+  @media (width >= 640px) {
+    --mark-headroom: 20px;
+
+    [data-part='title-logo'] {
+      font-size: 46px;
+    }
+
+    [data-part='title-subtitle'] {
+      width: 176px;
+      height: 28px;
+    }
+
+    [data-part='title-subtitle'] text {
+      font-size: 11px;
+    }
+  }
+
+  /* In the side panel the logo steps down and the actions stand a little further below. */
+  @media (height < 900px) {
+    @container game (width >= 640px) {
+      --mark-headroom: 18px;
+      margin-bottom: 14px;
+
+      [data-part='title-logo'] {
+        font-size: 40px;
+      }
+    }
+  }
+}

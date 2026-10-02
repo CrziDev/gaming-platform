@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './games/plinko-billiards.css';
+@import './games/plinko-tropical.css';
 
 @theme {
   --color-base: #04070d;
@@ -456,9 +457,9 @@ body {
 
 @utility banner-scrim {
   background-image: linear-gradient(
-    var(--banner-scrim-angle, 180deg),
-    var(--color-banner) 0%,
-    var(--color-banner) 55%,
+    90deg,
+    rgb(11 20 32 / 0.8) 0%,
+    rgb(11 20 32 / 0.55) 55%,
     rgb(13 19 27 / 0) 100%
   );
 }

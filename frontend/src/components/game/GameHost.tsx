@@ -30,11 +30,15 @@ type GameHostProps = {
   // Pixels the stage keeps clear between the board and each side of the screen, for
   // art the frame draws beside it.
   stageGutter?: number | undefined
+  // Pixels the title row stands over the stage's empty top corners.
+  titleOverlap?: number | undefined
   // Where the stage and the controls sit over the frame, so the game can draw its board
   // there and its art around them.
   onStage?: ((layout: GameLayout) => void) | undefined
   // The game whose skin dresses the controls; the platform's own look otherwise.
   skin?: string | undefined
+  // The game's own lettering for its name, in place of the platform's title and subtitle.
+  titleMark?: ReactNode
   actions?: ReactNode
   controls?: ReactNode
   className?: string
@@ -54,8 +58,10 @@ export function GameHost({
   frameRef,
   stageAspect = 10 / 10.6,
   stageGutter = 0,
+  titleOverlap = 0,
   onStage,
   skin,
+  titleMark,
   actions,
   controls,
   className,
@@ -122,18 +128,20 @@ export function GameHost({
       <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-col px-4.5 pt-3 pb-3.5 [container-type:inline-size] sm:pt-4 sm:pb-4 game-side:grid game-side:max-w-[1000px] game-side:grid-cols-[auto_340px] game-side:grid-rows-[auto_1fr] game-side:justify-center game-side:gap-x-6 game-side:gap-y-4">
         <header
           ref={headerRef}
-          className="flex items-start justify-between gap-3 game-side:col-start-2 game-side:row-start-1 game-side:flex-col game-side:justify-start"
+          className="relative z-1 flex items-start justify-between gap-3 game-side:col-start-2 game-side:row-start-1 game-side:flex-col game-side:justify-start"
         >
-          <div className="min-w-0">
-            <h1 className="text-[24px] leading-none font-bold tracking-[-0.03em] text-white [text-shadow:0_2px_18px_rgb(0_0_0/0.5)] sm:text-[28px] game-side:text-[24px]">
-              {name}
-            </h1>
-            {subtitle ? (
-              <p className="mt-1.5 font-mono text-[10px] leading-none tracking-[0.24em] whitespace-nowrap text-ink-cool [text-shadow:0_1px_2px_rgb(0_0_0/0.9),0_0_10px_rgb(0_0_0/0.85)] min-[480px]:tracking-[0.32em] sm:mt-2.5">
-                {subtitle}
-              </p>
-            ) : null}
-          </div>
+          {titleMark ?? (
+            <div className="min-w-0">
+              <h1 className="text-[24px] leading-none font-bold tracking-[-0.03em] text-white [text-shadow:0_2px_18px_rgb(0_0_0/0.5)] sm:text-[28px] game-side:text-[24px]">
+                {name}
+              </h1>
+              {subtitle ? (
+                <p className="mt-1.5 font-mono text-[10px] leading-none tracking-[0.24em] whitespace-nowrap text-ink-cool [text-shadow:0_1px_2px_rgb(0_0_0/0.9),0_0_10px_rgb(0_0_0/0.85)] min-[480px]:tracking-[0.32em] sm:mt-2.5">
+                  {subtitle}
+                </p>
+              ) : null}
+            </div>
+          )}
           {actions ? (
             <div data-part="title-actions" className="flex shrink-0 gap-2">
               {actions}
@@ -142,15 +150,17 @@ export function GameHost({
         </header>
 
         {/* As tall as the board at full width, less its gutters; shrinks when the zone runs out of height.
-            Beside the controls it is as tall as the screen allows, up to the board at full width. */}
+            It may tuck under the title row by the title's overlap. Beside the controls it is as tall as
+            the screen allows, up to the board at full width. */}
         <div
           style={
             {
               flexBasis: `calc(min(100cqw + 2.25rem, ${clearOfGutters}) / ${stageAspect})`,
               '--stage-aspect': stageAspect,
+              '--stage-top': titleOverlap > 0 ? `${-titleOverlap}px` : '0.375rem',
             } as CSSProperties
           }
-          className="-mx-4.5 mt-1.5 min-h-0 [container-type:size] game-side:col-start-1 game-side:row-span-2 game-side:row-start-1 game-side:mx-0 game-side:mt-0 game-side:h-(--stage-side-height) game-side:w-[min(calc(var(--stage-side-height)_*_var(--stage-aspect)),calc(100cqw_-_340px_-_1.5rem))] game-side:[--stage-side-height:min(calc(100dvh_-_5.75rem),calc(600px_/_var(--stage-aspect)))]"
+          className="-mx-4.5 mt-(--stage-top) min-h-0 [container-type:size] game-side:col-start-1 game-side:row-span-2 game-side:row-start-1 game-side:mx-0 game-side:mt-0 game-side:h-(--stage-side-height) game-side:w-[min(calc(var(--stage-side-height)_*_var(--stage-aspect)),calc(100cqw_-_340px_-_1.5rem))] game-side:[--stage-side-height:min(calc(100dvh_-_5.75rem),calc(600px_/_var(--stage-aspect)))]"
         >
           <div
             ref={stageRef}

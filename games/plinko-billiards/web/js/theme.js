@@ -15,6 +15,10 @@ const ballColours = ['#f2b705', '#1846b8', '#cf1f2b', '#57287f', '#ee6a10', '#12
 export const theme = {
   ground: 0x080605,
 
+  // The cue ball's ivory smear, the light and dark of the nap it brushes on the cloth,
+  // and the blue of the chalk a strike knocks off.
+  trail: { smear: '#f3eee2', napLight: '#a9e0bf', napDark: '#03140b', chalk: '#5d8fd8' },
+
   labelFont(size) {
     return `700 ${size}px Inter, "IBM Plex Sans", sans-serif`
   },

@@ -75,12 +75,12 @@ export function createKit(T, scene) {
   }
 
   // A thin bright tube along a polished edge.
-  function highlight(points, radius, opacity, { closed = false, parent = scene } = {}) {
+  function highlight(points, radius, opacity, { closed = false, parent = scene, color = 0xf2f8ff } = {}) {
     const curve = new T.CatmullRomCurve3(points, closed, 'centripetal')
     const segments = Math.min(1800, Math.max(8, points.length * 2))
     const mesh = new T.Mesh(
       new T.TubeGeometry(curve, segments, radius, 5, closed),
-      new T.MeshBasicMaterial({ color: 0xf2f8ff, transparent: true, opacity, depthWrite: false, toneMapped: false }),
+      new T.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false }),
     )
     mesh.renderOrder = 20
     parent.add(mesh)

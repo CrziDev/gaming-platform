@@ -3,6 +3,7 @@ import { theme } from '../theme.js'
 import {
   BACK_WASH_OPACITY,
   BAY_PITCH,
+  CUP_FILL,
   CUP_HEIGHT,
   CUP_INNER_RX,
   CUP_INNER_RZ,
@@ -32,9 +33,10 @@ import {
 
 const MOUTH_INNER_RX = MOUTH_RX - MOUTH_LIP
 const MOUTH_INNER_RZ = MOUTH_RZ - MOUTH_LIP
+const ICE = 0xcfe8ff
 
-// Eleven free-standing glowing cups, each with a drop mouth cut into the chute above
-// it. Returns one entry per cup: its colour band, the canvas its label is painted on,
+// Eleven free-standing glass cups of glowing liquid, each with a drop mouth cut into
+// the chute above it. Returns one entry per cup: its colour band, the canvas its label is painted on,
 // and the materials the landing pulse brightens.
 export function buildCups(kit) {
   const { T } = kit
@@ -44,6 +46,7 @@ export function buildCups(kit) {
     opening: ellipseDisc(T, 64, CUP_INNER_RX * 1.01, CUP_INNER_RZ * 1.01),
     lip: mouthLip(T),
     collar: mouthCollar(T),
+    halo: mouthHalo(T),
     throat: ellipseDisc(T, 128, MOUTH_INNER_RX * 1.005, MOUTH_INNER_RZ * 1.005),
     star: starTexture(kit),
     wash: washTexture(kit),
@@ -81,10 +84,11 @@ function buildCup(kit, parts, slot) {
     y0: { value: FLOOR },
     y1: { value: CUP_TOP },
     halfWidth: { value: CUP_RX },
+    fill: { value: CUP_FILL },
     label: { value: labelTexture },
   }
 
-  const body = new T.Mesh(parts.body, new T.ShaderMaterial({ uniforms, vertexShader: BODY.vertex, fragmentShader: BODY.fragment }))
+  const body = new T.Mesh(parts.body, new T.ShaderMaterial({ uniforms, vertexShader: BODY.vertex, fragmentShader: BODY.fragment, transparent: true }))
   body.position.set(x, 0, CUP_Z)
   scene.add(body)
 
@@ -157,9 +161,9 @@ function buildCup(kit, parts, slot) {
   }
 }
 
-// The drop mouth, centred in its chute and rolled with it: a thin lip, the collar's
-// front wall carrying a touch of the bay colour, a dark throat, crisp edges, and a
-// small white glint at the back.
+// The drop mouth, centred in its chute and rolled with it: a thin lip, an ice-blue
+// collar, a dark throat, crisp ice edges, a blue halo around the ring brightest at the
+// back, a blue-white spark on the back lip, and a small light hanging above it.
 function addMouth(kit, parts, slot, glow, pulse) {
   const { T, scene } = kit
   const chute = new T.Group()
@@ -199,22 +203,32 @@ function addMouth(kit, parts, slot, glow, pulse) {
       const a = from + ((to - from) * q) / steps
       return new T.Vector3(rx * Math.cos(a), 0.003, rz * Math.sin(a))
     })
-  kit.highlight(arc(MOUTH_RX + 0.004, MOUTH_RZ + 0.004, 0.06, Math.PI - 0.06, 64), 0.008, 0.85, { parent: chute })
-  kit.highlight(arc(MOUTH_RX, MOUTH_RZ, Math.PI + 0.12, 2 * Math.PI - 0.12, 64), 0.0035, 0.35, { parent: chute })
-  kit.highlight(arc(MOUTH_INNER_RX, MOUTH_INNER_RZ, 0, 2 * Math.PI, 128).slice(0, -1), 0.004, 0.55, { closed: true, parent: chute })
+  kit.highlight(arc(MOUTH_RX + 0.004, MOUTH_RZ + 0.004, 0.06, Math.PI - 0.06, 64), 0.009, 0.95, { parent: chute, color: ICE })
+  kit.highlight(arc(MOUTH_RX, MOUTH_RZ, Math.PI + 0.12, 2 * Math.PI - 0.12, 64), 0.006, 0.8, { parent: chute, color: ICE })
+  kit.highlight(arc(MOUTH_INNER_RX, MOUTH_INNER_RZ, 0, 2 * Math.PI, 128).slice(0, -1), 0.004, 0.7, { closed: true, parent: chute, color: ICE })
+
+  const halo = new T.Mesh(parts.halo, additiveShader(LIP.vertex, HALO_FRAGMENT))
+  halo.position.y = 0.004
+  halo.renderOrder = 21
+  chute.add(halo)
 
   const spark = new T.Sprite(
-    new T.SpriteMaterial({ map: parts.star, color: 0xf4f8ff, transparent: true, opacity: 0.7, ...kit.additive, depthWrite: false, toneMapped: false }),
+    new T.SpriteMaterial({ map: parts.star, color: 0xd6eeff, transparent: true, opacity: 0.95, ...kit.additive, depthWrite: false, toneMapped: false }),
   )
-  spark.scale.set(0.22, 0.22, 1)
+  spark.scale.set(0.3, 0.3, 1)
   spark.position.set(0, 0.012, -MOUTH_RZ + MOUTH_LIP * 0.5)
   spark.renderOrder = 23
   chute.add(spark)
 
-  const glint = kit.glowSprite(0xe9f1ff, 0.1, 0.4, 0.14)
+  const glint = kit.glowSprite(0x4fb4ff, 0.45, 0.5, 0.2)
   glint.position.set(0, 0.02, -MOUTH_RZ)
   glint.renderOrder = 22
   chute.add(glint)
+
+  const light = kit.glowSprite(0x7cc8ff, 0.7, 0.07)
+  light.position.set(0, 0.2, -MOUTH_RZ + 0.02)
+  light.renderOrder = 23
+  chute.add(light)
 
   return spark
 }
@@ -286,6 +300,14 @@ function mouthLip(T) {
   outline.holes.push(hole)
   const geometry = new T.ShapeGeometry(outline, 128)
   geometry.rotateX(-Math.PI / 2)
+  return geometry
+}
+
+// A flat band from the mouth's outer edge to half its radius again, for the halo.
+function mouthHalo(T) {
+  const geometry = new T.RingGeometry(1, 1.5, 96)
+  geometry.rotateX(-Math.PI / 2)
+  geometry.scale(MOUTH_RX, 1, MOUTH_RZ)
   return geometry
 }
 
@@ -372,8 +394,9 @@ function washTexture(kit) {
   )
 }
 
-// Cup body: flat saturated colour, a touch lighter just under the rim, rounded edges
-// falling off, and the multiplier label printed on the front.
+// Cup body: saturated liquid up to the fill line, lighter just under its lit surface,
+// with the multiplier label printed on the front; above it, see-through navy glass that
+// catches ice-blue light on its edges and the liquid's colour just over the surface.
 const BODY = {
   vertex: `
     varying vec3 vLocal;
@@ -385,21 +408,27 @@ const BODY = {
     }`,
   fragment: `
     uniform vec3 deep, base, hi, light;
-    uniform float pulse, y0, y1, halfWidth;
+    uniform float pulse, y0, y1, halfWidth, fill;
     uniform sampler2D label;
     varying vec3 vLocal;
     varying vec3 vNormal;
     void main() {
       float h = clamp((vLocal.y - y0) / (y1 - y0), 0., 1.);
       vec3 n = normalize(vNormal);
+      float side = smoothstep(.55, .98, abs(n.x));
       vec3 col = base;
-      col = mix(col, hi, smoothstep(.86, 1., h) * .55);
-      col = mix(col, deep, smoothstep(.55, .98, abs(n.x)) * .28);
+      col = mix(col, hi, smoothstep(fill - .2, fill, h) * .5);
+      col = mix(col, deep, side * .28);
       col = mix(col, light, smoothstep(0., .9, -n.y) * .12);
+      col += mix(light, vec3(1.), .4) * exp(-pow((h - fill) / .018, 2.)) * .6;
+      float liquid = 1. - smoothstep(fill, fill + .012, h);
+      float edge = side * side * .6 + exp(-(1. - h) / .025) * .5;
+      vec3 glass = vec3(.03, .07, .14) + base * .3 * exp(-(h - fill) / .08) + vec3(.6, .82, 1.) * edge;
+      col = mix(glass, col, liquid);
       col *= 1. + pulse * .6;
       vec4 printed = texture2D(label, vec2(vLocal.x / (2. * halfWidth) + .5, h));
       col = mix(col, printed.rgb, printed.a * smoothstep(.3, .7, n.z));
-      gl_FragColor = vec4(col, 1.);
+      gl_FragColor = vec4(col, mix(.35 + edge * .6, 1., max(liquid, printed.a)));
       #include <colorspace_fragment>
     }`,
 }
@@ -414,30 +443,31 @@ const DISC_VERTEX = `
     gl_Position = projectionMatrix * viewMatrix * world;
   }`
 
-// The lip: pale and white-hot along the back, body colour across the front, with only
-// a thin bright line on the inner edge.
+// The lip: ice-blue glass, brighter along the back with a white glint at its centre,
+// a thin bright line on the inner edge, and a trace of the liquid's colour.
 const RIM_FRAGMENT = `
-  uniform vec3 base, hi, light;
+  uniform vec3 base;
   uniform float pulse;
   uniform vec2 radii;
   varying vec3 vWorld;
   varying vec2 vFlat;
   void main() {
     float front = clamp(vFlat.y / radii.y * .5 + .5, 0., 1.), e = length(vFlat / radii);
-    vec3 back = mix(light, vec3(1.), .5) + vec3(.6) * exp(-pow(vFlat.x / .12, 2.)) * (1. - smoothstep(.1, .45, front));
-    vec3 col = mix(back, base * 1.08, smoothstep(.3, .62, front));
-    col = mix(col, mix(light, vec3(1.), .6), (1. - smoothstep(1., 1.07, e)) * smoothstep(.35, .8, front));
-    col *= 1. + pulse * .45;
+    vec3 ice = vec3(.55, .78, 1.);
+    vec3 col = ice * (.18 + .4 * (1. - smoothstep(.1, .5, front))) + vec3(.5) * exp(-pow(vFlat.x / .12, 2.)) * (1. - smoothstep(.1, .45, front));
+    col = mix(col, vec3(.9, .96, 1.), (1. - smoothstep(1., 1.06, e)) * .75);
+    col += base * .12 * (1. + pulse * 2.);
     gl_FragColor = vec4(col, 1.);
     #include <colorspace_fragment>
   }`
 
-// The opening traces the view ray down an oval shaft to the far inner wall so the cup
-// reads hollow: a short white-hot band under the back lip, then a deep shade.
+// The opening traces the view ray down an oval shaft so the cup reads hollow: dark
+// glass wall, an ice band under the lip, the liquid's colour rising toward its level,
+// and the lit liquid surface wherever the ray reaches the level before the wall.
 const OPENING_FRAGMENT = `
   uniform vec2 radii;
-  uniform vec3 deep, base, hi, light;
-  uniform float pulse, depth;
+  uniform vec3 base, hi, light;
+  uniform float pulse, depth, fill;
   varying vec3 vWorld;
   varying vec2 vFlat;
   void main() {
@@ -445,12 +475,13 @@ const OPENING_FRAGMENT = `
     vec2 o = vFlat / radii, dd = d.xz / radii;
     float a = max(dot(dd, dd), 1e-5), b = dot(o, dd), c = dot(o, o) - 1.;
     float t = (-b + sqrt(max(b * b - a * c, 0.))) / a;
-    float down = -d.y * t, hx = o.x + t * dd.x;
-    vec3 col = mix(light, vec3(1.), .6) + vec3(.35) * exp(-pow(hx / .3, 2.)) * (1. - smoothstep(0., .08, down));
-    col = mix(col, hi, smoothstep(.03, .08, down));
-    col = mix(col, base, smoothstep(.08, .13, down));
-    col = mix(col, deep * .8, smoothstep(.13, .22, down));
-    if (down > depth) col = deep * .35;
+    float down = -d.y * t;
+    float level = depth * (1. - fill);
+    vec3 col = vec3(.02, .045, .09) + vec3(.6, .8, 1.) * .35 * (1. - smoothstep(0., .03, down)) + base * .4 * pow(smoothstep(0., level, down), 3.);
+    if (down > level) {
+      vec2 s = o + (level / max(-d.y, 1e-4)) * dd;
+      col = mix(mix(hi, light, .5), base, smoothstep(.2, 1., length(s)));
+    }
     col *= 1. + pulse * .6;
     gl_FragColor = vec4(col, 1.);
     #include <colorspace_fragment>
@@ -480,8 +511,8 @@ const LIP = {
     }`,
 }
 
-// The collar's front wall: a polished top edge, the bay colour through the glass, and
-// a softer lower edge.
+// The collar's front wall: ice-blue glass with a polished top edge, a softer lower
+// edge, and only a trace of the bay colour until a landing lights it.
 const COLLAR = {
   vertex: `
     varying vec2 vUv;
@@ -502,12 +533,26 @@ const COLLAR = {
     varying vec3 vView;
     void main() {
       float v = vUv.y, f = clamp(1. - abs(dot(normalize(vNormal), normalize(vView))), 0., 1.);
-      vec3 c = vec3(.82, .88, 1.) * (exp(-v / .14) * .55 + exp(-(1. - v) / .16) * .22 + .025 + f * f * .25);
-      c += tint * (.3 + pulse * .4) * (.55 + .45 * sin(3.1416 * v));
+      vec3 c = vec3(.62, .82, 1.) * (exp(-v / .14) * .7 + exp(-(1. - v) / .16) * .25 + .04 + f * f * .3);
+      c += tint * (.06 + pulse * .4) * (.55 + .45 * sin(3.1416 * v));
       gl_FragColor = vec4(c, 1.);
       #include <colorspace_fragment>
     }`,
 }
+
+// A soft blue halo just outside the ring, brightest at the back.
+const HALO_FRAGMENT = `
+  uniform vec2 radii;
+  uniform float pulse;
+  varying vec2 vFlat;
+  void main() {
+    float e = length(vFlat / radii);
+    float back = 1. - smoothstep(-.9, .4, vFlat.y / radii.y);
+    float fall = exp(-(e - 1.) / .08);
+    vec3 c = vec3(.35, .65, 1.) * fall * (.18 + .5 * back) * (1. + pulse);
+    gl_FragColor = vec4(c, 1.);
+    #include <colorspace_fragment>
+  }`
 
 // The throat traces the view ray in the mouth's own frame, so the roll is honoured: a
 // silver sliver on the far wall just below the lip, then black.

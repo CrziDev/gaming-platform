@@ -113,3 +113,20 @@ export function positionAt(segment, t) {
     }
   }
 }
+
+export const flightDuration = (segments) => segments.reduce((total, segment) => total + segment.duration, 0)
+
+// The ball's [x, y, z], its segment, and the fraction through it, `elapsed` ms after
+// the drop; held at either end of the flight.
+export function pathAt(segments, elapsed) {
+  let start = 0
+  for (const segment of segments) {
+    if (elapsed < start + segment.duration) {
+      const t = Math.max(0, (elapsed - start) / segment.duration)
+      return [...positionAt(segment, t), segment, t]
+    }
+    start += segment.duration
+  }
+  const last = segments[segments.length - 1]
+  return [...positionAt(last, 1), last, 1]
+}

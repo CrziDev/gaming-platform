@@ -8,6 +8,7 @@ import { flightTo, positionAt } from './board/flight.js'
 import {
   BACK_WASH_OPACITY,
   BALL_RADIUS,
+  CUP_FILL,
   CUP_Z,
   FACE,
   FIN_FRONT_Z,
@@ -27,6 +28,7 @@ import {
 import { createKit } from './board/kit.js'
 import { buildPane } from './board/pane.js'
 import { buildTray } from './board/tray.js'
+import { createSparks, createStreaks } from './board/trail.js'
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 
@@ -46,6 +48,8 @@ export const board = {
   cups: [],
   pulses: null,
   balls: [],
+  streaks: null,
+  sparks: null,
   ballGeometry: null,
   regrowAt: null,
   frameRequest: 0,
@@ -66,9 +70,9 @@ export const board = {
     this.composer = addons ? createComposer(T, addons, this.renderer, this.scene, this.camera) : null
 
     const kit = createKit(T, this.scene)
-    this.background = createBackground(kit, 'img/city.jpg', () => this.wake())
+    this.background = createBackground(kit, () => this.fit())
     this.pulses = { value: new Array(SLOTS).fill(0) }
-    const pane = buildPane(kit)
+    const pane = buildPane(kit, chromeStudio(T, this.renderer, PITCH))
     this.upper = pane.upper
     this.pegs = pane.pegs
     this.waitingBall = pane.waitingBall
@@ -76,6 +80,8 @@ export const board = {
     buildTray(kit, this.background, this.pulses)
     buildFins(kit)
     this.cups = buildCups(kit)
+    this.streaks = createStreaks(kit, this.upper, this.camera)
+    this.sparks = createSparks(kit, this.upper)
     this.ballGeometry = new T.SphereGeometry(BALL_RADIUS, 48, 32)
 
     this.scene.updateMatrixWorld(true)
@@ -99,7 +105,12 @@ export const board = {
     this.background.resize(width, height, stage)
     frameBoard(this.T, this.camera, this.upper, stage)
     this.camera.setViewOffset(stage.width, stage.height, -stage.x, -stage.y, width, height)
-    ui.placeTaglines(screenBounds(this.T, this.camera, this.upper, width, height), width, state.controls)
+    ui.placeTaglines(
+      screenBounds(this.T, this.camera, this.upper, width, height),
+      width,
+      state.controls,
+      this.background.paintsTagline,
+    )
     this.wake()
   },
 
@@ -136,6 +147,7 @@ export const board = {
     this.waitingBall.scale.setScalar(0.001)
     this.regrowAt = ball.startedAt + 250
     this.balls.push(ball)
+    this.streaks.add(ball.segments, slot, ball.startedAt)
     this.stepBall(ball, ball.startedAt)
     this.wake()
   },
@@ -156,7 +168,7 @@ export const board = {
     let segment = ball.segments[ball.index]
     let t = (now - ball.startedAt) / segment.duration
     while (t >= 1) {
-      if (segment.peg) this.hitPeg(segment.peg)
+      if (segment.peg) this.hitPeg(segment.peg, segment.x1, segment.y1)
       ball.index++
       ball.startedAt += segment.duration
       if (ball.index >= ball.segments.length) {
@@ -177,9 +189,12 @@ export const board = {
     return true
   },
 
-  hitPeg(key) {
+  hitPeg(key, ballX, ballY) {
     const peg = this.pegs.get(key)
-    if (peg) peg.level = 1
+    if (peg) {
+      peg.level = 1
+      this.sparks.burst(peg.position, ballX, ballY)
+    }
     this.playTick()
   },
 
@@ -215,9 +230,13 @@ export const board = {
       if (t >= 1) this.regrowAt = null
     }
     this.balls = this.balls.filter((ball) => this.stepBall(ball, now))
+    this.streaks.update(now)
+    this.sparks.update(dt)
 
     return (
       this.balls.length > 0 ||
+      this.streaks.alive ||
+      this.sparks.alive ||
       this.regrowAt !== null ||
       this.cups.some((cup) => cup.level > 0) ||
       [...this.pegs.values()].some((peg) => peg.level > 0)
@@ -307,9 +326,76 @@ function studioLighting(T, renderer) {
   return new T.PMREMGenerator(renderer).fromScene(studio, 0.02).texture
 }
 
+// The studio the polished steel reflects, laid out in the camera's frame (x right, y up,
+// z toward the camera) and turned by its pitch: a soft cap overhead, a window on each
+// side, a warm lamp low on each side, a cool bounce below, and a shaded waist.
+function chromeStudio(T, renderer, pitch) {
+  const studio = new T.Scene()
+  studio.add(
+    new T.Mesh(
+      new T.SphereGeometry(50, 64, 32),
+      new T.ShaderMaterial({
+        side: T.BackSide,
+        uniforms: { pitch: { value: pitch } },
+        vertexShader: `
+          varying vec3 vDir;
+          void main() {
+            vDir = normalize(position);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+          }`,
+        fragmentShader: `
+          uniform float pitch;
+          varying vec3 vDir;
+          void main() {
+            float c = cos(pitch), s = sin(pitch);
+            vec3 d = vec3(vDir.x, vDir.y * c + vDir.z * s, -vDir.y * s + vDir.z * c);
+            vec3 cool = vec3(.48, .57, .8);
+            float level = .07 + .42 * smoothstep(.05, .85, d.y) + .22 * smoothstep(-.25, -.9, d.y) + .45 * smoothstep(-.25, -.95, d.z);
+            level *= 1. - .7 * smoothstep(.4, .95, d.z) * (1. - smoothstep(.1, .5, d.y));
+            gl_FragColor = vec4(cool * level, 1.);
+          }`,
+      }),
+    ),
+  )
+  const turn = new T.Euler(-pitch, 0, 0)
+  const add = (geometry, x, y, z, color, intensity) => {
+    const mesh = new T.Mesh(geometry, new T.MeshBasicMaterial({ color: new T.Color(color).multiplyScalar(intensity), side: T.DoubleSide }))
+    mesh.position.set(x, y, z).applyEuler(turn)
+    mesh.lookAt(0, 0, 0)
+    studio.add(mesh)
+  }
+  add(new T.CircleGeometry(22, 48), 0, 34, 24, 0xffffff, 4.5)
+  add(new T.PlaneGeometry(10, 20), -42, 12, 4, 0xf2f6ff, 5)
+  add(new T.PlaneGeometry(10, 20), 42, 12, 4, 0xf2f6ff, 5)
+  add(new T.CircleGeometry(4.6, 32), -38, -14, 12, 0xff9636, 8)
+  add(new T.CircleGeometry(4.6, 32), 38, -14, 12, 0xff9636, 8)
+  add(new T.CircleGeometry(11, 32), 0, -36, 22, 0xe2ecff, 4)
+  return new T.PMREMGenerator(renderer).fromScene(studio, 0.02).texture
+}
+
+// Some drivers leave a stray infinite pixel in the half-float scene; the bloom's blur
+// would spread it into a glowing square, so the scene is capped before it blooms.
+const HIGHLIGHT_CEILING = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+    }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 texel = texture2D(tDiffuse, vUv);
+      gl_FragColor = vec4(min(texel.rgb, vec3(16.)), texel.a);
+    }`,
+}
+
 function createComposer(T, addons, renderer, scene, camera) {
   const composer = new addons.EffectComposer(renderer, new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples: 4 }))
   composer.addPass(new addons.RenderPass(scene, camera))
+  composer.addPass(new addons.ShaderPass(HIGHLIGHT_CEILING))
   composer.addPass(new addons.UnrealBloomPass(new T.Vector2(256, 256), 0.3, 0.24, 0.9))
   composer.addPass(new addons.OutputPass())
   return composer
@@ -402,6 +488,6 @@ function paintLabel(cup, text, size) {
   g.shadowBlur = 8
   g.shadowOffsetY = 2
   g.fillStyle = cup.band.ink
-  g.fillText(text, width / 2, height * 0.47 + capHeight / 2)
+  g.fillText(text, width / 2, height * (1 - CUP_FILL / 2) + capHeight / 2)
   cup.labelTexture.needsUpdate = true
 }

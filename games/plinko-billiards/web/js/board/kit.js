@@ -77,15 +77,15 @@ export function createKit(T, scene) {
 
   const random = seeded(7)
 
-  // The cloth: fine speckle with a faint woven mottle, tiling every two units.
+  // The cloth: a tight per-pixel nap with a faint small mottle, tiling every two units.
   function clothTextures() {
     const draw = (base) => (g, w, h) => {
-      speckle(g, w, h, base, 0.22, random)
-      for (let i = 0; i < 260; i++) {
+      speckle(g, w, h, base, 0.2, random)
+      for (let i = 0; i < 1400; i++) {
         const x = random() * w
         const y = random() * h
-        const r = 6 + random() * 26
-        g.fillStyle = random() < 0.5 ? 'rgba(0,0,0,.035)' : 'rgba(255,255,255,.03)'
+        const r = 3 + random() * 9
+        g.fillStyle = random() < 0.5 ? 'rgba(0,0,0,.045)' : 'rgba(255,255,255,.035)'
         for (const [dx, dy] of [[0, 0], [w, 0], [-w, 0], [0, h], [0, -h]]) {
           g.beginPath()
           g.arc(x + dx, y + dy, r, 0, Math.PI * 2)
@@ -93,8 +93,8 @@ export function createKit(T, scene) {
         }
       }
     }
-    const map = canvasTexture(draw('#0e6038'), 512, 512, { repeat: true })
-    const bump = canvasTexture(draw('#808080'), 512, 512, { colour: false, repeat: true })
+    const map = canvasTexture(draw('#0e6038'), 1024, 1024, { repeat: true })
+    const bump = canvasTexture(draw('#808080'), 1024, 1024, { colour: false, repeat: true })
     for (const texture of [map, bump]) texture.repeat.set(0.5, 0.5)
     return { map, bump }
   }
@@ -135,7 +135,7 @@ export function createKit(T, scene) {
   }
 
   function leatherBump() {
-    const texture = canvasTexture((g, w, h) => speckle(g, w, h, '#808080', 0.9, random), 128, 128, {
+    const texture = canvasTexture((g, w, h) => speckle(g, w, h, '#808080', 0.9, random), 256, 256, {
       colour: false,
       repeat: true,
     })
@@ -204,6 +204,31 @@ export function createKit(T, scene) {
     )
   }
 
+  // A wisp of chalk dust: soft clumps around the middle with a few loose grains, in
+  // white so a sprite can tint it.
+  function chalkTexture() {
+    return canvasTexture((g, size) => {
+      const blob = (x, y, r, alpha) => {
+        const gradient = g.createRadialGradient(x, y, 0, x, y, r)
+        gradient.addColorStop(0, `rgba(255,255,255,${alpha})`)
+        gradient.addColorStop(1, 'rgba(255,255,255,0)')
+        g.fillStyle = gradient
+        g.fillRect(x - r, y - r, r * 2, r * 2)
+      }
+      for (let i = 0; i < 16; i++) {
+        const angle = random() * Math.PI * 2
+        const reach = random() ** 1.5 * size * 0.24
+        blob(size / 2 + Math.cos(angle) * reach, size / 2 + Math.sin(angle) * reach, size * (0.1 + random() * 0.16), 0.16 + random() * 0.16)
+      }
+      for (let i = 0; i < 70; i++) {
+        const angle = random() * Math.PI * 2
+        const reach = random() * size * 0.42
+        g.fillStyle = `rgba(255,255,255,${0.2 + random() * 0.4})`
+        g.fillRect(size / 2 + Math.cos(angle) * reach, size / 2 + Math.sin(angle) * reach, 1.5, 1.5)
+      }
+    }, 128)
+  }
+
   function glowSprite(color, opacity, width, height = width) {
     const sprite = new T.Sprite(
       new T.SpriteMaterial({
@@ -243,6 +268,7 @@ export function createKit(T, scene) {
     leatherBump,
     ballTexture,
     cueTexture,
+    chalkTexture,
     glowSprite,
     contactShadow,
   }

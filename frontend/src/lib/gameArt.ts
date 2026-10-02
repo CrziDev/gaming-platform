@@ -12,6 +12,11 @@ const localBanners = import.meta.glob<string>('../assets/banners/*.{png,jpg,jpeg
   import: 'default',
 })
 
+const localPhoneBanners = import.meta.glob<string>('../assets/banners/phone/*.{png,jpg,jpeg,webp}', {
+  eager: true,
+  import: 'default',
+})
+
 export function artBySlug(files: Record<string, string>): Map<string, string> {
   const bySlug = new Map<string, string>()
   for (const [path, url] of Object.entries(files)) {
@@ -36,8 +41,20 @@ export function resolveBannerArt(
   return banners.get(game.slug) ?? resolveGameArt(thumbnails, game)
 }
 
+// A phone banner sets the game beside the copy in a narrower panel; a title without one
+// shows its landscape banner there too.
+export function resolvePhoneBannerArt(
+  phoneBanners: Map<string, string>,
+  banners: Map<string, string>,
+  thumbnails: Map<string, string>,
+  game: GameArtSource,
+): string | null {
+  return phoneBanners.get(game.slug) ?? resolveBannerArt(banners, thumbnails, game)
+}
+
 const local = artBySlug(localArt)
 const localBanner = artBySlug(localBanners)
+const localPhoneBanner = artBySlug(localPhoneBanners)
 
 export function gameArtUrl(game: GameArtSource): string | null {
   return resolveGameArt(local, game)
@@ -45,4 +62,8 @@ export function gameArtUrl(game: GameArtSource): string | null {
 
 export function bannerArtUrl(game: GameArtSource): string | null {
   return resolveBannerArt(localBanner, local, game)
+}
+
+export function phoneBannerArtUrl(game: GameArtSource): string | null {
+  return resolvePhoneBannerArt(localPhoneBanner, localBanner, local, game)
 }
