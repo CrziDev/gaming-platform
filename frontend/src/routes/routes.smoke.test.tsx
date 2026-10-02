@@ -23,6 +23,7 @@ const playerRoutes: [string, string][] = [
   ['/wallet/deposit', 'Deposit'],
   ['/wallet/deposit/dep-8841', 'Request 8841'],
   ['/wallet/cash-out', 'Cash out'],
+  ['/wallet/cash-out/wd-5120', 'Withdrawal'],
   ['/history', 'History'],
   ['/account', 'Account'],
 ]
@@ -30,6 +31,7 @@ const playerRoutes: [string, string][] = [
 const consoleRoutes: [string, string][] = [
   ['/admin', 'Today'],
   ['/admin/deposits', 'Deposits'],
+  ['/admin/withdrawals', 'Withdrawals'],
   ['/admin/users', 'Users'],
   ['/admin/users/us-0001', 'PHP wallet'],
   ['/admin/transactions', 'Transactions'],

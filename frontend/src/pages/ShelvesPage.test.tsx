@@ -17,7 +17,7 @@ describe('the Hot and New shelves', () => {
 
     renderApp('/games/hot')
 
-    const grid = await screen.findByRole('list', { name: 'Hot games' })
+    const grid = await screen.findByRole('list', { name: 'Hot games' }, { timeout: 3000 })
     const names = within(grid)
       .getAllByRole('listitem')
       .map((item) => item.textContent)

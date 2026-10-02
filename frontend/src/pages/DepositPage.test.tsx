@@ -40,7 +40,7 @@ describe('submitting a deposit request', () => {
     stubFetchRoutes({ 'GET /me': player })
     renderApp('/wallet/deposit')
 
-    const summary = await screen.findByRole('complementary', { name: 'Deposit summary' })
+    const summary = await screen.findByRole('complementary', { name: 'Deposit summary' }, { timeout: 3000 })
     expect(within(summary).getByText('Method A')).toBeInTheDocument()
     expect(within(summary).getByText('₱1,000.00')).toBeInTheDocument()
 

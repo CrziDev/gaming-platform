@@ -2,6 +2,7 @@
 .github
 .claude
 docs
+theme
 node_modules
 frontend/node_modules
 frontend/dist

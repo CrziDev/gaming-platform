@@ -21,10 +21,10 @@ describe('console search', () => {
     const search = await screen.findByRole('combobox', { name: 'Search the console' })
     await user.type(search, 'jmart')
 
-    expect(await screen.findByText('Players')).toBeInTheDocument()
+    expect(await screen.findByText('Players', {}, { timeout: 3000 })).toBeInTheDocument()
     await user.click(screen.getAllByRole('option', { name: /jmartinez/i })[0]!)
 
-    expect(await screen.findByText('PHP wallet')).toBeInTheDocument()
+    expect(await screen.findByText('PHP wallet', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 

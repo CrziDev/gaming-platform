@@ -29,6 +29,8 @@ export type CurrencyMetadata = {
   minor_units: number
   deposit_min_minor: number
   deposit_max_minor: number
+  withdrawal_min_minor: number
+  withdrawal_max_minor: number
 }
 
 export type Category = {
@@ -169,6 +171,24 @@ export type DepositRequest = {
   reason: string | null
 }
 
+export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
+
+export type WithdrawalRequest = {
+  id: string
+  method_id: string
+  method_name: string
+  amount_minor: number
+  currency: Currency
+  account_name: string
+  account_number: string
+  status: WithdrawalStatus
+  payout_reference: string | null
+  reason: string | null
+  created_at: string
+  reviewed_at: string | null
+  cancelled_at: string | null
+}
+
 export type PaymentMethod = {
   id: string
   name: string
@@ -184,7 +204,12 @@ export type AdminPaymentMethod = PaymentMethod & {
   updated_at: string
 }
 
-export type NotificationKind = 'deposit_approved' | 'deposit_rejected' | 'round_win'
+export type NotificationKind =
+  | 'deposit_approved'
+  | 'deposit_rejected'
+  | 'withdrawal_approved'
+  | 'withdrawal_rejected'
+  | 'round_win'
 
 export type Notification = {
   id: string
@@ -234,6 +259,12 @@ export type AdminDeposit = DepositRequest & {
   user_balance_minor?: number
   approved_count?: number
   rejected_count?: number
+}
+
+export type AdminWithdrawal = WithdrawalRequest & {
+  user_id: string
+  user_email: string
+  display_name: string
 }
 
 export type GameIntegration = 'unreviewed' | 'under_review' | 'supported' | 'integrated' | 'unsupported'

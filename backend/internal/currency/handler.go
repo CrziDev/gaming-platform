@@ -14,12 +14,14 @@ type Handler struct {
 }
 
 type response struct {
-	Code            string `json:"code"`
-	Name            string `json:"name"`
-	Symbol          string `json:"symbol"`
-	MinorUnits      int    `json:"minor_units"`
-	DepositMinMinor int64  `json:"deposit_min_minor"`
-	DepositMaxMinor int64  `json:"deposit_max_minor"`
+	Code               string `json:"code"`
+	Name               string `json:"name"`
+	Symbol             string `json:"symbol"`
+	MinorUnits         int    `json:"minor_units"`
+	DepositMinMinor    int64  `json:"deposit_min_minor"`
+	DepositMaxMinor    int64  `json:"deposit_max_minor"`
+	WithdrawalMinMinor int64  `json:"withdrawal_min_minor"`
+	WithdrawalMaxMinor int64  `json:"withdrawal_max_minor"`
 }
 
 func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
@@ -40,12 +42,14 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	result := make([]response, 0, len(currencies))
 	for _, currency := range currencies {
 		result = append(result, response{
-			Code:            currency.Code,
-			Name:            currency.Name,
-			Symbol:          currency.Symbol,
-			MinorUnits:      currency.MinorUnits,
-			DepositMinMinor: currency.DepositMinMinor,
-			DepositMaxMinor: currency.DepositMaxMinor,
+			Code:               currency.Code,
+			Name:               currency.Name,
+			Symbol:             currency.Symbol,
+			MinorUnits:         currency.MinorUnits,
+			DepositMinMinor:    currency.DepositMinMinor,
+			DepositMaxMinor:    currency.DepositMaxMinor,
+			WithdrawalMinMinor: currency.WithdrawalMinMinor,
+			WithdrawalMaxMinor: currency.WithdrawalMaxMinor,
 		})
 	}
 	httpx.WriteJSON(w, http.StatusOK, result)

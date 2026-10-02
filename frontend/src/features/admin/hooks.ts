@@ -12,6 +12,7 @@ import {
   fetchAdminGames,
   fetchAdminPaymentMethods,
   fetchAdminTransactions,
+  fetchAdminWithdrawals,
   fetchAdminRounds,
   fetchAdminRtpConfiguration,
   fetchAllCategories,
@@ -27,11 +28,13 @@ import {
   fetchUserWallets,
   fetchUsers,
   reviewDeposit,
+  reviewWithdrawal,
   setGameRtp,
   setUserStatus,
   updateGame,
   updatePaymentMethod,
   type AdminDepositFilter,
+  type AdminWithdrawalFilter,
   type GameInput,
   type GamePatch,
   type PaymentMethodInput,
@@ -73,6 +76,22 @@ export function useReviewDeposit() {
   // still means the queue on screen is stale.
   return useMutation({
     mutationFn: reviewDeposit,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  })
+}
+
+export function useAdminWithdrawals(filter: AdminWithdrawalFilter) {
+  return useQuery({
+    queryKey: ['admin', 'withdrawals', filter],
+    queryFn: () => fetchAdminWithdrawals(filter),
+  })
+}
+
+export function useReviewWithdrawal() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: reviewWithdrawal,
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
   })
 }

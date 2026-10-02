@@ -9,7 +9,8 @@ import (
 )
 
 const listEnabledSQL = `
-	SELECT code, name, symbol, minor_units, deposit_min_minor, deposit_max_minor
+	SELECT code, name, symbol, minor_units, deposit_min_minor, deposit_max_minor,
+		withdrawal_min_minor, withdrawal_max_minor
 	FROM currencies
 	WHERE enabled = true
 	ORDER BY code ASC`
@@ -31,11 +32,16 @@ func ListEnabled(ctx context.Context, db *sql.DB) ([]Currency, error) {
 			&currency.MinorUnits,
 			&currency.DepositMinMinor,
 			&currency.DepositMaxMinor,
+			&currency.WithdrawalMinMinor,
+			&currency.WithdrawalMaxMinor,
 		); err != nil {
 			return nil, fmt.Errorf("currency: list enabled row: %w", err)
 		}
 		if !money.IsSafeMinor(currency.DepositMinMinor) || !money.IsSafeMinor(currency.DepositMaxMinor) {
 			return nil, fmt.Errorf("currency: deposit limits for %s exceed the exact JSON integer range", currency.Code)
+		}
+		if !money.IsSafeMinor(currency.WithdrawalMinMinor) || !money.IsSafeMinor(currency.WithdrawalMaxMinor) {
+			return nil, fmt.Errorf("currency: withdrawal limits for %s exceed the exact JSON integer range", currency.Code)
 		}
 		currencies = append(currencies, currency)
 	}

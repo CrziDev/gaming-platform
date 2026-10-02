@@ -7,13 +7,14 @@ import type {
   Transaction,
   Wallet,
   WalletSummary,
+  WithdrawalRequest,
 } from '@/api/types'
 
 import { daysAgo, hoursAgo, minutesAgo, seeded } from './clock'
 
 export const currencies: CurrencyMetadata[] = [
-  { code: 'PHP', name: 'Philippine Peso', symbol: '₱', minor_units: 2, deposit_min_minor: 10_000, deposit_max_minor: 5_000_000 },
-  { code: 'USD', name: 'US Dollar', symbol: '$', minor_units: 2, deposit_min_minor: 10_000, deposit_max_minor: 5_000_000 },
+  { code: 'PHP', name: 'Philippine Peso', symbol: '₱', minor_units: 2, deposit_min_minor: 10_000, deposit_max_minor: 5_000_000, withdrawal_min_minor: 10_000, withdrawal_max_minor: 5_000_000 },
+  { code: 'USD', name: 'US Dollar', symbol: '$', minor_units: 2, deposit_min_minor: 10_000, deposit_max_minor: 5_000_000, withdrawal_min_minor: 10_000, withdrawal_max_minor: 5_000_000 },
 ]
 
 export const wallets: Wallet[] = [
@@ -51,6 +52,39 @@ export const depositLimits = {
   max_minor: 5_000_000,
   quick_amounts_minor: [50_000, 100_000, 250_000, 500_000],
 }
+
+export const withdrawalRequests: WithdrawalRequest[] = [
+  {
+    id: 'wd-5120',
+    method_id: 'method-a',
+    method_name: 'Method A',
+    amount_minor: 5_000,
+    currency: 'USD',
+    account_name: 'Juan Dela Cruz',
+    account_number: '0917 123 4567',
+    status: 'pending',
+    payout_reference: null,
+    reason: null,
+    created_at: minutesAgo(20),
+    reviewed_at: null,
+    cancelled_at: null,
+  },
+  {
+    id: 'wd-5004',
+    method_id: 'method-a',
+    method_name: 'Method A',
+    amount_minor: 200_000,
+    currency: 'PHP',
+    account_name: 'Juan Dela Cruz',
+    account_number: '0917 123 4567',
+    status: 'approved',
+    payout_reference: 'PAYOUT-5004',
+    reason: null,
+    created_at: daysAgo(3),
+    reviewed_at: daysAgo(3),
+    cancelled_at: null,
+  },
+]
 
 export const depositRequests: DepositRequest[] = [
   {

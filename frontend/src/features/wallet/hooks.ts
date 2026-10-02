@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import type { WithdrawalStatus } from '@/api/types'
 import type { Currency } from '@/lib/money'
 
 import { useActiveCurrency } from './activeCurrency'
@@ -17,8 +18,13 @@ import {
   fetchWallet,
   fetchWalletSummary,
   fetchWallets,
+  fetchWithdrawal,
+  fetchWithdrawalLimits,
+  fetchWithdrawals,
   markNotificationsRead,
+  cancelWithdrawal,
   submitDeposit,
+  submitWithdrawal,
   type HistoryFilter,
   type SummaryFilter,
 } from './api'
@@ -75,6 +81,45 @@ export function useSubmitDeposit() {
       void queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
+}
+
+export function useWithdrawalLimits() {
+  const currency = useActiveCurrency()
+  return useQuery({
+    queryKey: ['withdrawal-limits', currency],
+    queryFn: () => fetchWithdrawalLimits(currency),
+  })
+}
+
+export function useWithdrawals(status?: WithdrawalStatus) {
+  return useQuery({ queryKey: ['withdrawals', status ?? 'all'], queryFn: () => fetchWithdrawals(status) })
+}
+
+export function useWithdrawal(id: string) {
+  return useQuery({ queryKey: ['withdrawals', 'one', id], queryFn: () => fetchWithdrawal(id) })
+}
+
+// A request debits the wallet and a cancel credits it back, so both refresh
+// the balance and the ledger along with the requests themselves.
+function useWithdrawalMutation<TInput>(mutationFn: (input: TInput) => ReturnType<typeof submitWithdrawal>) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn,
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['withdrawals'] })
+      void queryClient.invalidateQueries({ queryKey: walletQueryKey })
+      void queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+}
+
+export function useSubmitWithdrawal() {
+  return useWithdrawalMutation(submitWithdrawal)
+}
+
+export function useCancelWithdrawal() {
+  return useWithdrawalMutation(cancelWithdrawal)
 }
 
 export function useTransactions(filter: HistoryFilter, enabled = true) {

@@ -14,6 +14,8 @@ import { paths } from '@/routes/paths'
 const labels: Record<Notification['kind'], string> = {
   deposit_approved: 'Deposit approved',
   deposit_rejected: 'Deposit rejected',
+  withdrawal_approved: 'Withdrawal paid out',
+  withdrawal_rejected: 'Withdrawal rejected',
   round_win: 'Big win',
 }
 
@@ -105,8 +107,9 @@ export function NotificationsPanel() {
   )
 }
 
-// A credit reads with its sign and colour; a refused deposit's amount is the
-// sum that did not move, so it reads plain beside the reason.
+// A credit to the wallet reads with its sign and colour. A refused deposit's
+// amount never moved and a paid-out withdrawal's left the wallet when it was
+// requested, so both read plain.
 function Label({ notification }: { notification: Notification }) {
   const amount =
     notification.amount_minor !== null && notification.currency
@@ -119,7 +122,7 @@ function Label({ notification }: { notification: Notification }) {
       {amount ? (
         <>
           {' — '}
-          {notification.kind === 'deposit_rejected' ? (
+          {notification.kind === 'deposit_rejected' || notification.kind === 'withdrawal_approved' ? (
             <span className="tnum">{formatMoney(amount)}</span>
           ) : (
             <MoneyDisplay value={amount} tone="auto" sign="always" className="text-[13px]" />

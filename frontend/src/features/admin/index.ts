@@ -3,12 +3,14 @@ export type {
   AdminTransactionFilter,
   AdminDepositFilter,
   AdminRoundFilter,
+  AdminWithdrawalFilter,
   DepositReview,
   GameInput,
   GamePatch,
   PaymentMethodInput,
   UserFilter,
   WalletAdjustment,
+  WithdrawalReview,
 } from './api'
 export { createGameSchema, gameStatuses, paymentMethodSchema } from './schemas'
 export type { GameFormInput, PaymentMethodFormInput } from './schemas'
@@ -24,6 +26,7 @@ export {
   useAdminUser,
   useAdminUserWallets,
   useAdminUsers,
+  useAdminWithdrawals,
   useAllCategories,
   useAuditEntries,
   useConsoleSearch,
@@ -32,6 +35,7 @@ export {
   useDashboard,
   useDepositQueue,
   useReviewDeposit,
+  useReviewWithdrawal,
   useSetGameRtp,
   useSetUserStatus,
   useUpdatePaymentMethod,

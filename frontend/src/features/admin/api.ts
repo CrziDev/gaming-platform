@@ -9,6 +9,7 @@ import type {
   AdminRtpConfiguration,
   AdminRound,
   AdminUser,
+  AdminWithdrawal,
   Adjustment,
   AuditEntry,
   Category,
@@ -223,6 +224,82 @@ function toAdminDeposit(row: BackendAdminDeposit): AdminDeposit {
   }
 }
 
+export type AdminWithdrawalFilter = {
+  page: number
+  size?: number
+  status?: 'all' | AdminWithdrawal['status']
+  search?: string
+  user_id?: string
+}
+
+export async function fetchAdminWithdrawals(filter: AdminWithdrawalFilter): Promise<Page<AdminWithdrawal>> {
+  if (usingTestFixtures) {
+    const { adminWithdrawals } = await import('@/mocks/admin')
+    return mockRequest(() => {
+      const status = filter.status ?? 'pending'
+      const search = filter.search?.trim().toLowerCase() ?? ''
+      const rows = adminWithdrawals.filter((withdrawal) => {
+        const matchesStatus = status === 'all' || withdrawal.status === status
+        const matchesUser = !filter.user_id || withdrawal.user_id === filter.user_id
+        const matchesSearch =
+          search === '' ||
+          withdrawal.account_name.toLowerCase().includes(search) ||
+          withdrawal.account_number.toLowerCase().includes(search) ||
+          withdrawal.user_email.toLowerCase().includes(search) ||
+          withdrawal.id.toLowerCase().includes(search)
+        return matchesStatus && matchesUser && matchesSearch
+      })
+      return paginate(rows, filter.page, filter.size ?? ADMIN_PAGE_SIZE)
+    })
+  }
+  const params = new URLSearchParams({
+    page: String(filter.page),
+    size: String(filter.size ?? ADMIN_PAGE_SIZE),
+    status: filter.status ?? 'pending',
+  })
+  if (filter.search?.trim()) params.set('search', filter.search.trim())
+  if (filter.user_id) params.set('user_id', filter.user_id)
+  return api.get<Page<AdminWithdrawal>>(`/admin/withdrawals?${params.toString()}`)
+}
+
+export type WithdrawalReview =
+  | { id: string; action: 'approve'; payout_reference: string }
+  | { id: string; action: 'reject'; reason: string }
+
+export async function reviewWithdrawal(review: WithdrawalReview): Promise<void> {
+  if (usingTestFixtures) {
+    const { adminWithdrawals, auditEntries } = await import('@/mocks/admin')
+    return mockRequest(() => {
+      const withdrawal = adminWithdrawals.find((candidate) => candidate.id === review.id)
+      if (!withdrawal) {
+        throw new Error(`withdrawal ${review.id} not found`)
+      }
+      if (withdrawal.status !== 'pending') {
+        throw new ApiError(409, 'This withdrawal request is no longer pending', 'WITHDRAWAL_ALREADY_REVIEWED')
+      }
+      withdrawal.reviewed_at = new Date().toISOString()
+      if (review.action === 'approve') {
+        withdrawal.status = 'approved'
+        withdrawal.payout_reference = review.payout_reference
+      } else {
+        withdrawal.status = 'rejected'
+        withdrawal.reason = review.reason
+      }
+      auditEntries.unshift({
+        id: `au-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        operator: 'R. Cruz',
+        action: `withdrawal.${review.action}`,
+        entity: withdrawal.id,
+        detail: review.action === 'approve' ? review.payout_reference : review.reason,
+      })
+    }, 500)
+  }
+
+  const { id, ...body } = review
+  await api.post(`/admin/withdrawals/${id}/review`, body)
+}
+
 export async function fetchUsers(filter: UserFilter): Promise<Page<AdminUser>> {
   if (usingTestFixtures) {
     const { adminUsers } = await import('@/mocks/admin')
@@ -432,7 +509,7 @@ export type AdminTransaction = Transaction & {
 }
 
 export type AdminTransactionFilter = {
-  kind: 'all' | 'deposit' | 'rounds' | 'adjustment'
+  kind: 'all' | 'deposit' | 'withdrawal' | 'rounds' | 'adjustment'
   days: 7 | 30 | 90
   page: number
 }

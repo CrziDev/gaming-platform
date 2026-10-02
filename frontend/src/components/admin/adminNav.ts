@@ -3,6 +3,7 @@ import {
   Banknote,
   Gamepad2,
   Gift,
+  HandCoins,
   LayoutDashboard,
   Megaphone,
   Percent,
@@ -19,12 +20,13 @@ export type AdminNavItem = {
   label: string
   icon: LucideIcon
   end?: boolean | undefined
-  badge?: 'deposits' | undefined
+  badge?: 'deposits' | 'withdrawals' | undefined
 }
 
 export const adminNav: AdminNavItem[] = [
   { to: adminPaths.dashboard, label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: adminPaths.deposits, label: 'Deposits', icon: Banknote, badge: 'deposits' },
+  { to: adminPaths.withdrawals, label: 'Withdrawals', icon: HandCoins, badge: 'withdrawals' },
   { to: adminPaths.users, label: 'Users', icon: Users },
   { to: adminPaths.transactions, label: 'Transactions', icon: Receipt },
   { to: adminPaths.rounds, label: 'Game rounds', icon: Activity },
