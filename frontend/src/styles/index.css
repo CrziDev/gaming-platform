@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './games/plinko-billiards.css';
+@import './games/plinko-tropical.css';
 
 @theme {
   --color-base: #04070d;

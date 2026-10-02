@@ -146,8 +146,9 @@ tile (`frontend/src/assets/games/plinko.jpg`, 720×960) is a capture of the fram
 with the taglines hidden and the board full width over its lower scrim; to re-render it,
 open the frame in a headless Chromium, send `configure` and a `layout` for the board's
 rect at that size with no `controls`, and screenshot the page. `frontend/src/lib/gameArt.ts` resolves all three by slug, and the lobby
-banner rotates every 5 seconds between the catalogue titles with a module in
-`frontend/src/features/gameplay/registry.ts`, Plinko and Plinko Billiards today.
+banner rotates every 3 seconds between the catalogue titles with a module in
+`frontend/src/features/gameplay/registry.ts`, Plinko, Plinko Billiards, and Plinko
+Tropical today.
 
 ## Server engine — `backend/internal/engine/`
 
@@ -176,9 +177,10 @@ Deterministic sources exist only in `_test.go` files; nothing at runtime can sel
 `Options() []engine.Option`, `Play(engine.Input) (engine.Outcome, error)`, and
 `Manifest(configRef string) (json.RawMessage, error)` — plus the optional
 `AdminConfiguration` capability, and `Engines`, the slug-to-engine map the route table
-builds and the game console reads through. `internal/app` maps `plinko` and
-`plinko-billiards` to the same engine: each title keeps its own game row, return,
-and rounds, and both settle through these rules (`plinko-billiards-runtime.md`).
+builds and the game console reads through. `internal/app` maps `plinko`,
+`plinko-billiards`, and `plinko-tropical` to the same engine: each title keeps its own
+game row, return, and rounds, and all three settle through these rules
+(`plinko-billiards-runtime.md`, `plinko-tropical-runtime.md`).
 `play.go` is the orchestration. Plinko has no decision between the stake and the
 result, so a round is **one transaction**: `openTx` locks the wallet, locks the game row,
 resolves its `rtp_basis_points` to the option that plays it, binds the round to that

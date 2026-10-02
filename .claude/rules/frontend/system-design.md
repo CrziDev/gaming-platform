@@ -56,8 +56,9 @@ through.
    and dragging is not obvious or accessible. Hide a track only on deliberate touch-first
    carousels that remain keyboard-scrollable and expose another overflow cue.
 7. **Two platform typefaces.** IBM Plex Sans for everything read, including money; IBM
-   Plex Mono for micro-labels, IDs, and timestamps. A game frame may use its own
-   typefaces, named in its game file; nothing outside a frame uses them.
+   Plex Mono for micro-labels, IDs, and timestamps. A game frame, and a game's declared
+   title mark, may use their own typefaces, named in the game file; nothing else uses
+   them.
 8. **Weight 700 for display only.** Page and game titles, the wordmark, and CTA labels.
    Everything else is 400–600.
 9. **Round only where named.** Avatars, status dots, round utility buttons (profile, bell,
@@ -201,6 +202,13 @@ A skin adds no glow and no motion beyond this file's. Its ink meets 4.5:1 contra
 own surface. It is declared once in `frontend/src/styles/games/<slug>.css`, scoped to that
 game's zone, and named in the game's file. It never becomes a token and is never applied
 to another game.
+
+A game file may declare a **title mark**: the game's name in its title row set as the
+game's logo, in a typeface its file names, with its own lettering art (a swash, an arched
+subtitle) in fixed colours. The mark adds no glow and no motion, keeps the h1 as the
+game's name for assistive technology, and stays inside the title row's box. It is
+declared once in `frontend/src/styles/games/<slug>.css`, scoped to that game's zone, and
+its font loads only there.
 
 ## Game tile
 

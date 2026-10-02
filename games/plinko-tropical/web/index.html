@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plinko Tropical</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./js/vendor/three.module.min.js",
+          "three/addons/": "./js/vendor/addons/"
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/tropical.css" />
+  </head>
+  <body>
+    <main id="scene" class="scene" aria-label="Plinko Tropical board"></main>
+
+    <div id="tagline-left" class="tagline tagline-left" aria-hidden="true">
+      <span>Good</span><span>Games</span><span>Brighter</span><span>Days</span><span class="tagline-rule"></span>
+    </div>
+
+    <div id="toasts" class="toasts" aria-hidden="true"></div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

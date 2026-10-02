@@ -12,6 +12,17 @@ describe('gameModuleFor', () => {
     expect(billiards?.defaultParams).toEqual(plinko?.defaultParams)
   })
 
+  it('gives Plinko Tropical its own frame, stage, and title mark on the shared board', () => {
+    const plinko = gameModuleFor('plinko')
+    const tropical = gameModuleFor('plinko-tropical')
+    expect(tropical?.frameUrl).toBe('/games/plinko-tropical/index.html')
+    expect(tropical?.Controls).toBe(plinko?.Controls)
+    expect(tropical?.defaultParams).toEqual(plinko?.defaultParams)
+    expect(tropical).toMatchObject({ stageAspect: 0.98, stageGutter: 12, titleOverlap: 30, skin: false })
+    expect(tropical?.TitleMark).not.toBeNull()
+    expect(plinko).toMatchObject({ titleOverlap: 0, TitleMark: null })
+  })
+
   it('has no module for a title without an engine', () => {
     expect(gameModuleFor('aurora-dice')).toBeNull()
   })

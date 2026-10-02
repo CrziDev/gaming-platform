@@ -12,6 +12,7 @@ export default defineConfig({
     gameFrames([
       { slug: 'plinko', dir: '../games/plinko/web' },
       { slug: 'plinko-billiards', dir: '../games/plinko-billiards/web' },
+      { slug: 'plinko-tropical', dir: '../games/plinko-tropical/web' },
     ]),
   ],
   resolve: {

@@ -45,7 +45,7 @@ func beginSeed(t *testing.T, db *sql.DB) (context.Context, *sql.Tx) {
 // set to a return no engine ships would fail every round.
 func offersRTP(gameSlug string, basisPoints int) bool {
 	switch gameSlug {
-	case "plinko", "plinko-billiards":
+	case "plinko", "plinko-billiards", "plinko-tropical":
 		_, ok := plinko.ProfileByBasisPoints(basisPoints)
 		return ok
 	default:
