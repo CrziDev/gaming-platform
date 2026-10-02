@@ -21,6 +21,7 @@ import (
 	"github.com/gaming-platform/backend/internal/round"
 	"github.com/gaming-platform/backend/internal/user"
 	"github.com/gaming-platform/backend/internal/wallet"
+	"github.com/gaming-platform/backend/internal/withdrawal"
 )
 
 func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSenders ...auth.PasswordResetSender) http.Handler {
@@ -44,6 +45,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 	gameHandler := game.NewHandler(db, logger, engines)
 	walletHandler := wallet.NewHandler(db, logger)
 	depositHandler := deposit.NewHandler(db, logger, cfg.ProofDir)
+	withdrawalHandler := withdrawal.NewHandler(db, logger)
 	dashboardHandler := dashboard.NewHandler(db, logger)
 	auditHandler := audit.NewHandler(db, logger)
 	roundHandler := round.NewHandler(db, logger, engines, cfg.BigWinMultiplierHundredths)
@@ -76,6 +78,10 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 	mux.HandleFunc("GET /api/deposits", player(depositHandler.List))
 	mux.HandleFunc("GET /api/deposits/{id}", player(depositHandler.Get))
 	mux.HandleFunc("POST /api/deposits", player(depositHandler.Create))
+	mux.HandleFunc("GET /api/withdrawals", player(withdrawalHandler.List))
+	mux.HandleFunc("GET /api/withdrawals/{id}", player(withdrawalHandler.Get))
+	mux.HandleFunc("POST /api/withdrawals", player(withdrawalHandler.Create))
+	mux.HandleFunc("POST /api/withdrawals/{id}/cancel", player(withdrawalHandler.Cancel))
 	mux.HandleFunc("GET /api/wallets", player(walletHandler.List))
 	mux.HandleFunc("GET /api/wallets/{currency}", player(walletHandler.Get))
 	mux.HandleFunc("GET /api/wallets/{currency}/transactions", player(walletHandler.Transactions))
@@ -101,6 +107,8 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSender
 	mux.HandleFunc("PATCH /api/admin/payment-methods/{id}", admin(depositHandler.AdminUpdateMethod))
 	mux.HandleFunc("GET /api/admin/deposits/{id}/proof", admin(depositHandler.AdminProof))
 	mux.HandleFunc("POST /api/admin/deposits/{id}/review", admin(depositHandler.AdminReview))
+	mux.HandleFunc("GET /api/admin/withdrawals", admin(withdrawalHandler.AdminList))
+	mux.HandleFunc("POST /api/admin/withdrawals/{id}/review", admin(withdrawalHandler.AdminReview))
 	mux.HandleFunc("GET /api/admin/games", admin(gameHandler.AdminList))
 	mux.HandleFunc("POST /api/admin/games", admin(gameHandler.AdminCreate))
 	mux.HandleFunc("GET /api/admin/games/{id}", admin(gameHandler.AdminGet))

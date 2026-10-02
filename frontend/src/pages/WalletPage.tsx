@@ -17,6 +17,7 @@ import {
   usePendingDeposits,
   useTransactions,
   useWallets,
+  useWithdrawals,
 } from '@/features/wallet'
 import { cn } from '@/lib/cn'
 import { formatRelative } from '@/lib/format'
@@ -28,11 +29,14 @@ export function WalletPage() {
   const walletQuery = useActiveWallet()
   const walletsQuery = useWallets()
   const pendingQuery = usePendingDeposits()
+  const pendingWithdrawalsQuery = useWithdrawals('pending')
   const historyQuery = useTransactions({ kind: 'all', days: 30, page: 1, currency })
   const navigate = useNavigate()
   const [switching, setSwitching] = useState(false)
 
   const pending = pendingQuery.data ?? []
+  const pendingWithdrawals = pendingWithdrawalsQuery.data ?? []
+  const openCount = pending.length + pendingWithdrawals.length
   const recent = historyQuery.data?.rows.slice(0, 5) ?? []
   const canSwitch = (walletsQuery.data?.length ?? 0) > 1
 
@@ -79,13 +83,13 @@ export function WalletPage() {
       <div
         className={cn(
           'grid gap-6',
-          pending.length > 0 && 'lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start',
+          openCount > 0 && 'lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start',
         )}
       >
-        {pending.length > 0 ? (
+        {openCount > 0 ? (
           <section className="flex flex-col gap-3 lg:order-2">
             <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
-              Open requests · {pending.length}
+              Open requests · {openCount}
             </h2>
             <div className="flex flex-col gap-0.5">
               {pending.map((request) => (
@@ -97,10 +101,21 @@ export function WalletPage() {
                   onClick={() => void navigate(paths.depositStatus(request.id))}
                 />
               ))}
+              {pendingWithdrawals.map((request) => (
+                <RecordCard
+                  key={request.id}
+                  title={`Withdrawal · ${formatMoney(money(request.amount_minor, request.currency))} · ${request.method_name}`}
+                  meta={formatRelative(request.created_at)}
+                  aside={<StatusBadge status="pending" />}
+                  onClick={() => void navigate(paths.withdrawalStatus(request.id))}
+                />
+              ))}
             </div>
-            <p className="text-[12.5px] leading-relaxed text-ink-mute">
-              Funds are added once a request is approved.
-            </p>
+            {pending.length > 0 ? (
+              <p className="text-[12.5px] leading-relaxed text-ink-mute">
+                Funds are added once a request is approved.
+              </p>
+            ) : null}
           </section>
         ) : null}
 

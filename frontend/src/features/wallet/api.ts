@@ -10,12 +10,14 @@ import type {
   Transaction,
   Wallet,
   WalletSummary,
+  WithdrawalRequest,
+  WithdrawalStatus,
 } from '@/api/types'
 import type { Currency } from '@/lib/money'
 
 const usingTestFixtures = import.meta.env.MODE === 'test' && testFixturesEnabled
 
-export type HistoryKind = 'all' | 'deposit' | 'rounds' | 'adjustment'
+export type HistoryKind = 'all' | 'deposit' | 'withdrawal' | 'rounds' | 'adjustment'
 
 export type HistoryFilter = {
   kind: HistoryKind
@@ -180,6 +182,108 @@ export async function submitDeposit(input: NewDeposit): Promise<DepositRequest> 
   return api.post<DepositRequest>('/deposits', form, {
     headers: { 'Idempotency-Key': input.idempotency_key },
   })
+}
+
+export type WithdrawalLimits = {
+  currency: Currency
+  min_minor: number
+  max_minor: number
+}
+
+export async function fetchWithdrawalLimits(currency: Currency): Promise<WithdrawalLimits> {
+  const metadata = (await fetchCurrencies()).find((candidate) => candidate.code === currency)
+  if (!metadata) {
+    throw new Error(`Currency ${currency} is not enabled for withdrawals`)
+  }
+  return {
+    currency: metadata.code,
+    min_minor: metadata.withdrawal_min_minor,
+    max_minor: metadata.withdrawal_max_minor,
+  }
+}
+
+export async function fetchWithdrawals(status?: WithdrawalStatus): Promise<WithdrawalRequest[]> {
+  if (usingTestFixtures) {
+    const { withdrawalRequests } = await import('@/mocks/wallet')
+    return mockRequest(() =>
+      withdrawalRequests
+        .filter((request) => !status || request.status === status)
+        .map((request) => ({ ...request })),
+    )
+  }
+  const params = new URLSearchParams({ page: '1', size: '20' })
+  if (status) params.set('status', status)
+  const page = await api.get<Page<WithdrawalRequest>>(`/withdrawals?${params.toString()}`)
+  return page.rows
+}
+
+export async function fetchWithdrawal(id: string): Promise<WithdrawalRequest | null> {
+  if (usingTestFixtures) {
+    const { withdrawalRequests } = await import('@/mocks/wallet')
+    return mockRequest(() => {
+      const found = withdrawalRequests.find((request) => request.id === id)
+      return found ? { ...found } : null
+    })
+  }
+  try {
+    return await api.get<WithdrawalRequest>(`/withdrawals/${id}`)
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
+}
+
+export type NewWithdrawal = {
+  method_id: string
+  currency: Currency
+  amount_minor: number
+  account_name: string
+  account_number: string
+  idempotency_key: string
+}
+
+export async function submitWithdrawal(input: NewWithdrawal): Promise<WithdrawalRequest> {
+  if (usingTestFixtures) {
+    const { paymentMethods, withdrawalRequests } = await import('@/mocks/wallet')
+    return mockRequest(() => {
+      const method = paymentMethods.find((candidate) => candidate.id === input.method_id)
+      const created: WithdrawalRequest = {
+        id: `wd-${input.idempotency_key}`,
+        method_id: input.method_id,
+        method_name: method?.name ?? 'Method A',
+        amount_minor: input.amount_minor,
+        currency: input.currency,
+        account_name: input.account_name,
+        account_number: input.account_number,
+        status: 'pending',
+        payout_reference: null,
+        reason: null,
+        created_at: new Date().toISOString(),
+        reviewed_at: null,
+        cancelled_at: null,
+      }
+      withdrawalRequests.unshift(created)
+      return { ...created }
+    }, 600)
+  }
+  const { idempotency_key: idempotencyKey, ...body } = input
+  return api.post<WithdrawalRequest>('/withdrawals', body, {
+    headers: { 'Idempotency-Key': idempotencyKey },
+  })
+}
+
+export async function cancelWithdrawal(id: string): Promise<WithdrawalRequest> {
+  if (usingTestFixtures) {
+    const { withdrawalRequests } = await import('@/mocks/wallet')
+    return mockRequest(() => {
+      const found = withdrawalRequests.find((request) => request.id === id)
+      if (!found) throw new ApiError(404, 'Withdrawal request not found')
+      found.status = 'cancelled'
+      found.cancelled_at = new Date().toISOString()
+      return { ...found }
+    })
+  }
+  return api.post<WithdrawalRequest>(`/withdrawals/${id}/cancel`)
 }
 
 export async function fetchTransactions(filter: HistoryFilter): Promise<Page<Transaction>> {

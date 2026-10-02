@@ -3,9 +3,11 @@ package notification
 import "time"
 
 const (
-	KindDepositApproved = "deposit_approved"
-	KindDepositRejected = "deposit_rejected"
-	KindRoundWin        = "round_win"
+	KindDepositApproved    = "deposit_approved"
+	KindDepositRejected    = "deposit_rejected"
+	KindRoundWin           = "round_win"
+	KindWithdrawalApproved = "withdrawal_approved"
+	KindWithdrawalRejected = "withdrawal_rejected"
 )
 
 type Notification struct {

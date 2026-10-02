@@ -1,5 +1,6 @@
 import type {
   AdminDeposit,
+  AdminWithdrawal,
   AdminGame,
   AdminRtpConfiguration,
   AdminUser,
@@ -119,6 +120,45 @@ function buildUsers(): { users: AdminUser[]; wallets: Record<string, Wallet[]> }
 const userFixtures = buildUsers()
 export const adminUsers = userFixtures.users
 export const adminUserWallets = userFixtures.wallets
+
+export const adminWithdrawals: AdminWithdrawal[] = [
+  {
+    id: 'wd-7731',
+    user_id: 'us-0001',
+    user_email: 'jmartinez@example.com',
+    display_name: 'jmartinez',
+    method_id: 'method-a',
+    method_name: 'Method A',
+    amount_minor: 150_000,
+    currency: 'PHP',
+    account_name: 'Jose Martinez',
+    account_number: '0917 555 0142',
+    status: 'pending',
+    payout_reference: null,
+    reason: null,
+    created_at: minutesAgo(25),
+    reviewed_at: null,
+    cancelled_at: null,
+  },
+  {
+    id: 'wd-7702',
+    user_id: 'us-0001',
+    user_email: 'jmartinez@example.com',
+    display_name: 'jmartinez',
+    method_id: 'method-a',
+    method_name: 'Method A',
+    amount_minor: 80_000,
+    currency: 'PHP',
+    account_name: 'Jose Martinez',
+    account_number: '0917 555 0142',
+    status: 'approved',
+    payout_reference: 'PAYOUT-7702',
+    reason: null,
+    created_at: daysAgo(2),
+    reviewed_at: daysAgo(2),
+    cancelled_at: null,
+  },
+]
 
 export const adminDeposits: AdminDeposit[] = [
   {

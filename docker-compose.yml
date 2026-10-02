@@ -1,13 +1,15 @@
-# Production-style stack: Caddy serves the web bundle and proxies /api to the Go
-# API, which is reachable only on the compose network. Configuration comes from
-# .env.prod (copy .env.prod.example); nothing here reads the local .env.
+# The platform's stack, locally and in production: Caddy serves the web bundle and
+# proxies /api to the Go API, which is reachable only on the compose network.
+# The env file passed with --env-file (.env locally, .env.prod on the server)
+# supplies DB_PASSWORD and SITE_ADDRESS, and APP_ENV_FILE names the file the api
+# reads, .env.prod unless set.
 services:
   db:
     image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_USER: gaming
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env.prod}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in the env file}
       POSTGRES_DB: gaming_platform
       TZ: UTC
       PGTZ: UTC
@@ -38,7 +40,7 @@ services:
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
     environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env.prod}
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in the env file}
     ports:
       - "8080:80"
       - "443:443"

@@ -4,8 +4,8 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-# Local development reads .env. Real deployments inject the environment directly
-# and never ship this file. This block is also how DATABASE_URL reaches psql.
+# The host targets read .env. Real deployments inject the environment directly
+# and never ship this file.
 ifneq (,$(wildcard .env))
 include .env
 export
@@ -23,11 +23,9 @@ MIGRATE_VERSION := v4.19.1
 
 DATABASE_URL ?= postgres://gaming:gaming@localhost:5432/gaming_platform?sslmode=disable
 
-# ON_ERROR_STOP is not optional: without it psql reports failures and still
-# exits 0, so a broken statement looks like a green build.
-PSQL := psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1
-
-.PHONY: help setup dev backend frontend install build build-backend build-frontend \
+.PHONY: help docker-up docker-down docker-logs docker-ps docker-migrate-up docker-migrate-down \
+        docker-migrate-version docker-bootstrap docker-seed-demo docker-seed docker-test-backend docker-db-shell \
+        setup dev backend frontend install build build-backend build-frontend \
         test test-backend test-frontend lint lint-backend lint-frontend \
         fmt fmt-backend fmt-frontend tools bootstrap seed-demo seed simulate-plinko clean \
         migrate-up migrate-test-up migrate-down migrate-down-all migrate-create migrate-version migrate-force \
@@ -35,9 +33,66 @@ PSQL := psql "$(DATABASE_URL)" -v ON_ERROR_STOP=1
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
 
-## --- Development -----------------------------------------------------------
+## --- Docker ----------------------------------------------------------------
+
+# The Compose stack is how the platform runs locally and in production. ENV_FILE
+# selects the configuration: .env here, ENV_FILE=.env.prod on the server.
+ENV_FILE ?= .env
+COMPOSE := docker compose --env-file $(ENV_FILE)
+COMPOSE_PROJECT := $(notdir $(CURDIR))
+
+# Read lazily from ENV_FILE so the host targets below keep their own DATABASE_URL.
+env_value = $(shell sed -n 's/^$(1)=//p' $(ENV_FILE))
+DOCKER_DATABASE_URL = $(call env_value,DATABASE_URL)
+DOCKER_TEST_DATABASE_URL = postgres://gaming:$(call env_value,DB_PASSWORD)@db:5432/gaming_platform_test?sslmode=disable
+
+# Migrations come from the working tree, so a new one applies without rebuilding the image.
+DOCKER_MIGRATE = $(COMPOSE) run --rm -v $(CURDIR)/$(MIGRATIONS_DIR):/migrations:ro --entrypoint /migrate api -path /migrations
+
+docker-up: ## Build and start the stack (web on :8080)
+	$(COMPOSE) up --build
+
+docker-down: ## Stop the stack, keeping its data
+	$(COMPOSE) down
+
+docker-logs: ## Follow the stack's logs
+	$(COMPOSE) logs -f
+
+docker-ps: ## Show the stack's services
+	$(COMPOSE) ps
+
+docker-migrate-up: ## Apply pending migrations to the Compose database
+	$(DOCKER_MIGRATE) -database "$(DOCKER_DATABASE_URL)" up
+
+docker-migrate-down: ## Roll back the most recent migration on the Compose database
+	$(DOCKER_MIGRATE) -database "$(DOCKER_DATABASE_URL)" down 1
+
+docker-migrate-version: ## Print the Compose database's migration version
+	$(DOCKER_MIGRATE) -database "$(DOCKER_DATABASE_URL)" version
+
+docker-bootstrap: ## Ensure the initial admin and game catalogue exist in the Compose database
+	$(COMPOSE) run --rm --entrypoint /seed api bootstrap
+
+docker-seed-demo: ## Load guarded synthetic players, balances, and payment methods into the Compose database
+	$(COMPOSE) run --rm --entrypoint /seed api demo
+
+docker-seed: docker-bootstrap docker-seed-demo ## Bootstrap and load demo data in the Compose database
+
+docker-test-backend: ## Run the Go tests in a container against gaming_platform_test in the Compose database
+	@$(COMPOSE) exec -T db createdb -U gaming gaming_platform_test 2>/dev/null || true
+	$(DOCKER_MIGRATE) -database "$(DOCKER_TEST_DATABASE_URL)" up
+	docker run --rm --network $(COMPOSE_PROJECT)_default \
+		-v $(CURDIR)/$(BACKEND_DIR):/src -w /src \
+		-v $(COMPOSE_PROJECT)-gomod:/go/pkg/mod -v $(COMPOSE_PROJECT)-gobuild:/root/.cache/go-build \
+		-e TEST_DATABASE_URL="$(DOCKER_TEST_DATABASE_URL)" -e REQUIRE_TEST_DATABASE=1 \
+		golang:1.26 go test -race -count=1 -p 1 ./...
+
+docker-db-shell: ## Open psql in the Compose database
+	$(COMPOSE) exec db psql -U gaming gaming_platform
+
+## --- Host development ------------------------------------------------------
 
 setup: ## Create .env from the example and install frontend dependencies
 	@test -f .env || cp .env.example .env
@@ -178,61 +233,3 @@ $(MIGRATE):
 
 clean: ## Remove build output and installed tools
 	rm -rf $(BIN_DIR) $(BACKEND_DIR)/tmp $(FRONTEND_DIR)/dist $(FRONTEND_DIR)/coverage
-
-
-## --- Docker ----------------------------------------------------------------
-
-ENV_FILE ?= .env
-
-COMPOSE := docker compose --env-file $(ENV_FILE)
-
-# Read DATABASE_URL from whichever ENV_FILE was selected.
-DATABASE_URL := $(shell sed -n 's/^DATABASE_URL=//p' $(ENV_FILE))
-
-
-docker-up: ## Build and start all Docker services
-	$(COMPOSE) up --build
-
-docker-down: ## Stop Docker services but preserve data
-	$(COMPOSE) down
-
-docker-logs: ## Follow Docker logs
-	$(COMPOSE) logs -f
-
-docker-ps: ## Show Docker service status
-	$(COMPOSE) ps
-
-
-docker-migrate-up: ## Apply pending database migrations inside Docker
-	$(COMPOSE) run --rm \
-		--entrypoint /migrate \
-		api \
-		-path /migrations \
-		-database "$(DATABASE_URL)" up
-
-docker-migrate-down: ## Roll back the latest migration inside Docker
-	$(COMPOSE) run --rm \
-		--entrypoint /migrate \
-		api \
-		-path /migrations \
-		-database "$(DATABASE_URL)" down 1
-
-docker-migrate-version: ## Show current migration version
-	$(COMPOSE) run --rm \
-		--entrypoint /migrate \
-		api \
-		-path /migrations \
-		-database "$(DATABASE_URL)" version
-
-
-docker-bootstrap: ## Create required initial application data
-	$(COMPOSE) run --rm \
-		--entrypoint /seed \
-		api bootstrap
-
-docker-seed-demo: ## Add development/demo data
-	$(COMPOSE) run --rm \
-		--entrypoint /seed \
-		api demo
-
-docker-seed: docker-bootstrap docker-seed-demo ## Bootstrap and add demo data

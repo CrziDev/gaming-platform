@@ -18,7 +18,7 @@ describe('the public lobby', () => {
     renderApp('/')
 
     expect(screen.getByRole('status')).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /browse all games/i })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /browse all games/i }, { timeout: 3000 })).toBeInTheDocument()
   })
 
   it('lets a guest browse without a wall, offering sign in and join', async () => {

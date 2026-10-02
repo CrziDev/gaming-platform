@@ -125,8 +125,10 @@ CREATE TABLE currencies (
 
 `000004` seeds `PHP · Philippine Peso · ₱ · 2` and `USD · US Dollar · $ · 2` with the
 table, because a wallet cannot exist without a currency row to reference. Deposit limits
-are currency configuration and default to `10000`–`5000000` minor units. There is no
-exchange rate column, because there is no conversion anywhere in the platform.
+are currency configuration and default to `10000`–`5000000` minor units. `000022` adds
+`withdrawal_min_minor` and `withdrawal_max_minor` with the same defaults and the same
+valid and JSON-safe checks. There is no exchange rate column, because there is no
+conversion anywhere in the platform.
 
 ### 4.3 `wallets` and the ledger
 
@@ -503,7 +505,64 @@ caller's `*sql.Tx` the way `audit.Record` does and is called from inside the dep
 review and the round settlement, never after them. The unique index makes a retried
 transaction write nothing, and `read_at` records when it was read rather than a flag
 that could be flipped back. The row carries no text: the kind and the amount are the
-facts, and the web app chooses the words.
+facts, and the web app chooses the words. `000024` widens `notifications_kind_valid` to
+`withdrawal_approved` and `withdrawal_rejected`, written from inside the withdrawal
+review.
+
+### 4.12 `withdrawal_requests`
+
+```sql
+CREATE TABLE withdrawal_requests (
+    id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                UUID NOT NULL REFERENCES users (id),
+    wallet_id              UUID NOT NULL REFERENCES wallets (id),
+    currency               TEXT NOT NULL REFERENCES currencies (code),
+    method_id              UUID NOT NULL REFERENCES payment_methods (id),
+    amount_minor           BIGINT NOT NULL,
+    account_name           TEXT NOT NULL,
+    account_number         TEXT NOT NULL,
+    status                 TEXT NOT NULL DEFAULT 'pending',
+    idempotency_key        TEXT NOT NULL,
+    hold_transaction_id    UUID NOT NULL REFERENCES wallet_transactions (id),
+    release_transaction_id UUID REFERENCES wallet_transactions (id),
+    payout_reference       TEXT,
+    reason                 TEXT,
+    reviewed_by            UUID REFERENCES users (id),
+    reviewed_at            TIMESTAMPTZ,
+    cancelled_at           TIMESTAMPTZ,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT withdrawal_requests_status_valid CHECK (
+        status IN ('pending', 'approved', 'rejected', 'cancelled')),
+    CONSTRAINT withdrawal_requests_amount_positive CHECK (amount_minor > 0),
+    CONSTRAINT withdrawal_requests_amount_json_safe CHECK (amount_minor <= 9007199254740991),
+    CONSTRAINT withdrawal_requests_account_present CHECK (
+        length(btrim(account_name)) > 0 AND length(btrim(account_number)) > 0),
+    CONSTRAINT withdrawal_requests_reviewed_pair CHECK (
+        (status IN ('approved', 'rejected')) = (reviewed_at IS NOT NULL AND reviewed_by IS NOT NULL)),
+    CONSTRAINT withdrawal_requests_cancelled_at CHECK (
+        (status = 'cancelled') = (cancelled_at IS NOT NULL)),
+    CONSTRAINT withdrawal_requests_approval_has_payout_reference CHECK (
+        status <> 'approved' OR length(btrim(coalesce(payout_reference, ''))) > 0),
+    CONSTRAINT withdrawal_requests_rejection_has_reason CHECK (
+        status <> 'rejected' OR length(btrim(coalesce(reason, ''))) > 0),
+    CONSTRAINT withdrawal_requests_release_movement CHECK (
+        (status IN ('rejected', 'cancelled')) = (release_transaction_id IS NOT NULL))
+);
+
+CREATE UNIQUE INDEX withdrawal_requests_idempotency_key ON withdrawal_requests (user_id, idempotency_key);
+CREATE UNIQUE INDEX withdrawal_requests_one_pending_per_wallet
+    ON withdrawal_requests (wallet_id) WHERE status = 'pending';
+
+CREATE INDEX withdrawal_requests_status_created ON withdrawal_requests (status, created_at DESC);
+CREATE INDEX withdrawal_requests_user_created ON withdrawal_requests (user_id, created_at DESC);
+```
+
+Every request points at the `withdrawal` debit that held its amount, and a rejected or
+cancelled one also at the `refund` that returned it; an approved one has no second
+movement, because the money already left the balance. The partial unique index backs the
+one-pending-per-wallet rule that §12.1 checks under the wallet lock.
 
 ## 5. Accounts and sessions
 
@@ -764,6 +823,38 @@ with the existing searchable account list filtered to `role=player` and the roun
 search concurrently after a 250 ms debounce; this fan-out keeps ownership and
 authorization in the three existing services instead of introducing a duplicate
 cross-domain search index.
+
+### 12.1 Withdrawals
+
+A player picks an enabled payment method, enters the account name and number to pay, and
+an amount within the currency's withdrawal bounds and the wallet's balance. The request
+is held by debiting it at once, in one transaction, in this order:
+
+```text
+BEGIN
+  SELECT … FROM wallets … FOR UPDATE              -- before the request's foreign-key lock
+  same idempotency key already used?             -> return it, or 400 if the body differs
+  amount within the bounds, method enabled?      -> else 400
+  a pending request on this wallet?              -> else 409 WITHDRAWAL_PENDING
+  debit the 'withdrawal' movement                 (§7; 409 INSUFFICIENT_BALANCE, …)
+  INSERT INTO withdrawal_requests (…, hold_transaction_id)
+  INSERT INTO audit_logs (withdrawal.request)
+COMMIT
+```
+
+The wallet lock serializes requests on one wallet, so the idempotency and pending checks
+read committed state. A concurrent request with the same key on another wallet of the
+same player loses on `withdrawal_requests_idempotency_key`, rolls back its debit with
+everything else, and returns the winner.
+
+Review and cancel each lock the request row first, then the wallet through §7. An
+approval records the operator's `payout_reference` and moves no money. A rejection
+requires a reason; it and a player's cancel credit the amount back as a `refund`
+movement keyed `withdrawal:<id>:release`, so neither can return it twice. Whichever of a
+review and a cancel takes the row lock first settles the request; the other sees a
+status that is no longer `pending` and answers `409 WITHDRAWAL_ALREADY_REVIEWED`. Each
+review writes the player's notification in its transaction, and each step its audit row.
+A frozen or closed wallet refuses the debit and the refund alike, with its own code.
 
 ## 13. Audit trail
 

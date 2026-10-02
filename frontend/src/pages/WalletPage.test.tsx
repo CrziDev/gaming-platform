@@ -43,16 +43,29 @@ describe('the wallet page', () => {
 
     renderApp('/wallet')
 
-    expect(await screen.findByRole('heading', { name: 'Open requests · 2' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Open requests · 3' })).toBeInTheDocument()
     expect(screen.getByText('₱2,500.00 · Method A')).toBeInTheDocument()
     expect(screen.getByText('₱1,000.00 · Method A')).toBeInTheDocument()
+    expect(screen.getByText('Withdrawal · $50.00 · Method A')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /₱2,500\.00 · Method A/ }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Request 8850' })).toBeInTheDocument()
   })
 
-  it('offers deposit and cash out side by side, and cash out has no form', async () => {
+  it('opens a pending withdrawal from the open requests', async () => {
+    const user = userEvent.setup()
+    stubFetchRoutes({ 'GET /me': player })
+
+    renderApp('/wallet')
+
+    await user.click(await screen.findByRole('button', { name: /Withdrawal · \$50\.00/ }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Withdrawal' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Awaiting review' })).toBeInTheDocument()
+  })
+
+  it('offers deposit and cash out side by side', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({ 'GET /me': player })
 
@@ -63,10 +76,8 @@ describe('the wallet page', () => {
     await user.click(main.getByRole('link', { name: 'Cash out' }))
 
     expect(await main.findByRole('heading', { level: 1, name: 'Cash out' })).toBeInTheDocument()
-    expect(main.getByText('Future development')).toBeInTheDocument()
-    expect(main.queryByRole('textbox')).not.toBeInTheDocument()
-    expect(main.queryByRole('spinbutton')).not.toBeInTheDocument()
-    expect(main.getAllByRole('link', { name: 'Back to wallet' })).toHaveLength(2)
+    expect(await main.findByLabelText('Account number')).toBeInTheDocument()
+    expect(main.getByRole('button', { name: 'Request withdrawal' })).toBeInTheDocument()
   })
 
   it('lists every wallet on the account page and exposes only the built security control', async () => {

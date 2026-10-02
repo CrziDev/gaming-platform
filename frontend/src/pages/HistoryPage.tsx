@@ -25,6 +25,7 @@ import { formatMoney, money } from '@/lib/money'
 const kindTabs = [
   { id: 'all' as const, label: 'All' },
   { id: 'deposit' as const, label: 'Deposits' },
+  { id: 'withdrawal' as const, label: 'Withdrawals' },
   { id: 'rounds' as const, label: 'Rounds' },
   { id: 'adjustment' as const, label: 'Adjustments' },
 ]

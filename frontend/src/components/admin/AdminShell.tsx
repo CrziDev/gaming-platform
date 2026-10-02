@@ -5,7 +5,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router'
 import { MenuGlyph } from '@/components/shell/MenuGlyph'
 import { IconButton } from '@/components/ui/Button'
 import { useLogout, useSession } from '@/features/auth'
-import { useDepositQueue } from '@/features/admin'
+import { useAdminWithdrawals, useDepositQueue } from '@/features/admin'
 import { cn } from '@/lib/cn'
 import { adminPaths } from '@/routes/paths'
 
@@ -151,6 +151,7 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 function AdminNavPanel({ onNavigate }: { onNavigate?: () => void }) {
   // The badge wants the count, not the rows; the smallest page still carries `total`.
   const { data: queue } = useDepositQueue(1, 1)
+  const { data: withdrawalQueue } = useAdminWithdrawals({ page: 1, size: 1, status: 'pending' })
   const logoutMutation = useLogout()
   const navigate = useNavigate()
 
@@ -167,7 +168,12 @@ function AdminNavPanel({ onNavigate }: { onNavigate?: () => void }) {
       <ul className="flex flex-col gap-px">
         {adminNav.map((item) => {
           const Icon = item.icon
-          const count = item.badge === 'deposits' ? queue?.total : undefined
+          const count =
+            item.badge === 'deposits'
+              ? queue?.total
+              : item.badge === 'withdrawals'
+                ? withdrawalQueue?.total
+                : undefined
 
           return (
             <li key={item.to}>

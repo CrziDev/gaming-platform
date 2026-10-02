@@ -149,8 +149,10 @@ decision must update the API contract, frontend types, and implementation togeth
 - [x] Notifications are Phase 1: a deposit review and a big win (at or above
   `BIG_WIN_MULTIPLIER_HUNDREDTHS`) write one in the same transaction, read through
   `GET /api/notifications` and cleared with `POST /api/notifications/read`.
-- [ ] Define the cash-out / withdrawal contract (request, admin review, audit); the wallet
-  page links to an honest placeholder at `/wallet/cash-out` until it exists.
+- [x] Define the cash-out / withdrawal contract (request, admin review, audit). A request
+  debits the amount at once so it cannot be spent while pending; one pending request per
+  wallet; the player may cancel it, an administrator approves with a payout reference or
+  rejects with a reason, and a rejection or cancel returns the amount exactly once.
 - [x] Define the wallet-summary response. `GET /api/transactions/summary` reports
   deposited, staked, and returned per wallet for the requested window, and the history
   page renders one row of cards per currency from it; the client sums nothing.

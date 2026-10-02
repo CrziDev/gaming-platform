@@ -16,6 +16,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PromotionsPage } from '@/pages/PromotionsPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { WalletPage } from '@/pages/WalletPage'
+import { WithdrawalStatusPage } from '@/pages/WithdrawalStatusPage'
 import { AdminAuditPage } from '@/pages/admin/AdminAuditPage'
 import { AdminAnnouncementsPage } from '@/pages/admin/AdminAnnouncementsPage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
@@ -31,6 +32,7 @@ import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage'
 import { AdminTransactionsPage } from '@/pages/admin/AdminTransactionsPage'
 import { AdminUserDetailPage } from '@/pages/admin/AdminUserDetailPage'
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
+import { AdminWithdrawalsPage } from '@/pages/admin/AdminWithdrawalsPage'
 import { AuthDeepLink } from '@/routes/AuthDeepLink'
 import { RequireAdmin } from '@/routes/RequireAdmin'
 import { RequireNoConsoleSession } from '@/routes/RequireNoConsoleSession'
@@ -48,6 +50,7 @@ export function AppRoutes() {
         <Route element={<AdminShell />}>
           <Route path={adminPaths.dashboard} element={<AdminDashboardPage />} />
           <Route path={adminPaths.deposits} element={<AdminDepositsPage />} />
+          <Route path={adminPaths.withdrawals} element={<AdminWithdrawalsPage />} />
           <Route path={adminPaths.users} element={<AdminUsersPage />} />
           <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
           <Route path={adminPaths.transactions} element={<AdminTransactionsPage />} />
@@ -82,6 +85,7 @@ export function AppRoutes() {
           <Route path={paths.deposit} element={<DepositPage />} />
           <Route path="/wallet/deposit/:id" element={<DepositStatusPage />} />
           <Route path={paths.cashOut} element={<CashOutPage />} />
+          <Route path="/wallet/cash-out/:id" element={<WithdrawalStatusPage />} />
           <Route path={paths.history} element={<HistoryPage />} />
           <Route path={paths.account} element={<AccountPage />} />
         </Route>

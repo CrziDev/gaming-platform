@@ -12,70 +12,51 @@ Work in progress.
 
 ## Requirements
 
-Go 1.26+, Node 22+, PostgreSQL 18, and Make.
-
-## One-time database setup
-
-PostgreSQL runs as a system service. On Arch the data directory is
-`/var/lib/postgres/data` (no "ql"), and `initdb` must run as the `postgres` user or the
-unit will refuse to start.
-
-```bash
-sudo pacman -S --needed postgresql
-sudo -iu postgres initdb --locale=C.UTF-8 --encoding=UTF8 -D /var/lib/postgres/data
-sudo systemctl enable --now postgresql
-
-# --owner matters: since PostgreSQL 15 a non-owner cannot CREATE in schema public.
-sudo -iu postgres createuser --pwprompt gaming            # password: gaming
-sudo -iu postgres createdb --owner=gaming gaming_platform
-sudo -iu postgres createdb --owner=gaming gaming_platform_test
-sudo -iu postgres psql -c "ALTER DATABASE gaming_platform SET timezone TO 'UTC'"
-sudo -iu postgres psql -c "ALTER DATABASE gaming_platform_test SET timezone TO 'UTC'"
-```
-
-Verify over TCP, exactly as the application connects:
-
-```bash
-psql "postgres://gaming:gaming@localhost:5432/gaming_platform?sslmode=disable" \
-  -c "select current_database(), current_user, current_setting('TimeZone')"
-```
+Docker with Compose v2, and Make. Node 22+ for the frontend tests and lint; Go 1.26+
+only to run the host targets that CI uses.
 
 ## Run
 
-```bash
-make setup        # .env from .env.example, then npm ci
-make tools        # pin golang-migrate into backend/bin
-make migrate-up
-make dev          # API on :8080, web on :5173
+The platform runs as a Docker Compose stack: PostgreSQL, the Go API, and Caddy serving
+the web bundle and proxying `/api`. Only Caddy publishes a port.
 
-make bootstrap    # create the initial admin/catalogue when absent; preserve later operator changes
-make seed-demo    # add the 18 synthetic players, balances, and placeholder payment methods
-make seed         # run both commands for a complete local fixture
-make test         # migrates and uses only TEST_DATABASE_URL (a *_test database)
+```bash
+cp .env.example .env
+make docker-up               # build and start; the site is http://localhost:8080
+make docker-migrate-up       # apply pending migrations from database/migrations
+make docker-seed             # bootstrap the admin and catalogue, then the demo players
+
+make docker-test-backend     # Go tests against gaming_platform_test in the Compose database
+make test-frontend lint-frontend
+make docker-db-shell         # psql in the Compose database
+make docker-down             # stop, keeping the data
 ```
 
-`make help` lists every target. Ports: web 5173, API 8080, PostgreSQL 5432.
+`make docker-bootstrap` never resets an existing administrator or overwrites operator
+changes; `make docker-seed-demo` adds the 18 synthetic players, balances, and placeholder
+payment methods and is refused in production. The api image is rebuilt by
+`make docker-up`; migrations are read from the working tree, so a new one applies
+without a rebuild.
 
-## Manual staging setup
+`make help` lists every target. The ones without the `docker-` prefix run on the host
+against `DATABASE_URL` and `TEST_DATABASE_URL`; CI uses them with its own PostgreSQL
+service.
 
-Build the frontend with `VITE_API_BASE_URL=/api` when the web server proxies `/api`
-to the Go service. Inject environment variables directly rather than copying the local
-`.env`. At minimum, staging uses:
+## Staging and production
+
+Both run the same Compose stack from `.env.prod`; see `deploy/README.md`. Staging differs
+in these values:
 
 ```dotenv
 APP_ENV=staging
-SESSION_SECURE=true
 CORS_ALLOWED_ORIGINS=https://stage.example.com
 PUBLIC_WEB_URL=https://stage.example.com
-TRUST_PROXY_HEADERS=true
 ALLOW_DEMO_SEED=true
 ```
 
 Set unique `SEED_USER_PASSWORD` and `SEED_PLAYER_PASSWORD` secrets, apply migrations,
-then run `make bootstrap seed-demo`. `bootstrap` never resets an existing administrator
-or overwrites game settings. `seed-demo` is refused in production. Keep the API private
-behind the trusted proxy when proxy-header trust is enabled. The deployment health check
-is `GET /api/health`.
+then run `make docker-bootstrap docker-seed-demo ENV_FILE=.env.prod`. The deployment
+health check is `GET /api/health`.
 
 ## Password-reset email
 

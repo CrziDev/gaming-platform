@@ -1115,12 +1115,14 @@ func TestCurrenciesListsEnabledMetadata(t *testing.T) {
 	}
 
 	var currencies []struct {
-		Code            string `json:"code"`
-		Name            string `json:"name"`
-		Symbol          string `json:"symbol"`
-		MinorUnits      int    `json:"minor_units"`
-		DepositMinMinor int64  `json:"deposit_min_minor"`
-		DepositMaxMinor int64  `json:"deposit_max_minor"`
+		Code               string `json:"code"`
+		Name               string `json:"name"`
+		Symbol             string `json:"symbol"`
+		MinorUnits         int    `json:"minor_units"`
+		DepositMinMinor    int64  `json:"deposit_min_minor"`
+		DepositMaxMinor    int64  `json:"deposit_max_minor"`
+		WithdrawalMinMinor int64  `json:"withdrawal_min_minor"`
+		WithdrawalMaxMinor int64  `json:"withdrawal_max_minor"`
 	}
 	if err := json.Unmarshal(body, &currencies); err != nil {
 		t.Fatalf("decode: %v (%s)", err, body)
@@ -1131,13 +1133,17 @@ func TestCurrenciesListsEnabledMetadata(t *testing.T) {
 	if currencies[0].Code != "PHP" || currencies[0].Name != "Philippine Peso" ||
 		currencies[0].Symbol != "₱" || currencies[0].MinorUnits != 2 ||
 		currencies[0].DepositMinMinor <= 0 ||
-		currencies[0].DepositMaxMinor < currencies[0].DepositMinMinor {
+		currencies[0].DepositMaxMinor < currencies[0].DepositMinMinor ||
+		currencies[0].WithdrawalMinMinor <= 0 ||
+		currencies[0].WithdrawalMaxMinor < currencies[0].WithdrawalMinMinor {
 		t.Fatalf("unexpected PHP metadata: %+v", currencies[0])
 	}
 	if currencies[1].Code != "USD" || currencies[1].Name != "US Dollar" ||
 		currencies[1].Symbol != "$" || currencies[1].MinorUnits != 2 ||
 		currencies[1].DepositMinMinor <= 0 ||
-		currencies[1].DepositMaxMinor < currencies[1].DepositMinMinor {
+		currencies[1].DepositMaxMinor < currencies[1].DepositMinMinor ||
+		currencies[1].WithdrawalMinMinor <= 0 ||
+		currencies[1].WithdrawalMaxMinor < currencies[1].WithdrawalMinMinor {
 		t.Fatalf("unexpected USD metadata: %+v", currencies[1])
 	}
 }

@@ -44,6 +44,8 @@ in the handler at the same time. A client never matches on `error` text.
 | `GAME_UNAVAILABLE` | 409 | Return to the catalogue |
 | `DEPOSIT_ALREADY_REVIEWED` | 409 | Refresh the queue; another review already won |
 | `DEPOSIT_APPROVAL_FAILED` | 409 | Keep the request pending and report that its wallet cannot be credited |
+| `WITHDRAWAL_PENDING` | 409 | Show the wallet's pending withdrawal instead of a second request |
+| `WITHDRAWAL_ALREADY_REVIEWED` | 409 | Refresh the request; a review or cancel already settled it |
 | `SELF_STATUS_CHANGE` | 409 | Refuse an administrator changing their own status |
 | `ACCOUNT_CLOSED` | 409 | Keep a closed account terminal |
 
@@ -127,6 +129,10 @@ tokens change neither the password nor any session.
 | `POST` | `/api/deposits` | `201` + a new request · `200` + the original retry result | `400` · `401` · `413` |
 | `GET` | `/api/deposits` | `200` + a page of own requests, optionally filtered by `status=pending|approved|rejected` | `400` invalid filter · `401` |
 | `GET` | `/api/deposits/{id}` | `200` + the request | `401` · `404` |
+| `POST` | `/api/withdrawals` | `201` + a new request, its amount already debited · `200` + the original retry result | `400` · `401` · `409` `WITHDRAWAL_PENDING` / `INSUFFICIENT_BALANCE` / `WALLET_FROZEN` / `WALLET_CLOSED` / `AMOUNT_OVERFLOW` |
+| `GET` | `/api/withdrawals` | `200` + a page of own requests, optionally filtered by `status=pending\|approved\|rejected\|cancelled` | `400` invalid filter · `401` |
+| `GET` | `/api/withdrawals/{id}` | `200` + the request | `401` · `404` |
+| `POST` | `/api/withdrawals/{id}/cancel` | `200` + the request, its amount returned | `401` · `404` · `409` `WITHDRAWAL_ALREADY_REVIEWED` / `WALLET_FROZEN` / `WALLET_CLOSED` / `AMOUNT_OVERFLOW` |
 | `GET` | `/api/chat/messages` | `200` + the room: who is online and the latest fifty messages, oldest first | — |
 | `POST` | `/api/chat/messages` | `201` + the message | `400` empty, multi-line, or over 280 characters · `401` · `429` over the per-account limit |
 | `GET` | `/api/chat/socket` | `101` and a WebSocket the server pushes events on | `403` origin not allowed |
@@ -155,10 +161,12 @@ open sockets changes. The handshake `Origin` is checked against the same allowli
 every write. Presence and fan-out are per server process.
 
 A notification is `{ "id", "kind", "amount_minor", "currency", "detail", "reference_id",
-"read", "created_at" }` with `kind` one of `deposit_approved`, `deposit_rejected`, or
-`round_win`; the client composes the text from `kind`, and `detail` carries a rejection
-reason. `amount_minor` and `currency` are the credited amount for an approval or a win
-and the requested amount for a rejection, or both null. A notification is written in
+"read", "created_at" }` with `kind` one of `deposit_approved`, `deposit_rejected`,
+`withdrawal_approved`, `withdrawal_rejected`, or `round_win`; the client composes the
+text from `kind`, and `detail` carries a rejection reason. `amount_minor` and `currency`
+are the credited amount for a deposit approval or a win, the requested amount for a
+deposit rejection, the paid-out amount for a withdrawal approval, and the returned amount
+for a withdrawal rejection, or both null. A notification is written in
 the same transaction as the review or the settlement it reports, once per
 `(kind, reference_id)`, and a win notifies only at or above
 `BIG_WIN_MULTIPLIER_HUNDREDTHS` (`1000`, ten times the stake, by default; `0` turns it
@@ -182,9 +190,10 @@ exists to define it; a client asking for `flag=hot` gets `400`. A game body carr
 `thumbnail_url`, null until reviewed art is attached; the client renders the placeholder
 slot either way.
 
-Enabled currency resources include `deposit_min_minor` and `deposit_max_minor`. A
-submitted deposit request cannot be cancelled by the player; it remains pending until an
-administrator approves or rejects it.
+Enabled currency resources include `deposit_min_minor`, `deposit_max_minor`,
+`withdrawal_min_minor`, and `withdrawal_max_minor`. A submitted deposit request cannot be
+cancelled by the player; it remains pending until an administrator approves or rejects
+it.
 
 `POST /api/deposits` is `multipart/form-data` with `method_id`, `currency`,
 `amount_minor`, `reference`, and a required `proof` file. It also requires an
@@ -211,6 +220,28 @@ game is set to, plus `rtp_basis_points`, the return it describes: a settled roun
 rounds settle on. A round records the return it was opened at, so a switch never
 changes a round already open.
 
+`POST /api/withdrawals` is JSON: `method_id` (an enabled payment method), `currency`,
+`amount_minor`, `account_name` (1–120 characters), and `account_number` (1–64), single
+line each, with an `Idempotency-Key` header of at most 200 characters. The amount must sit
+within the currency's withdrawal limits and the wallet's balance. The request debits it
+from the wallet as a `withdrawal` movement in the same transaction that records the
+request, so held money cannot be wagered or withdrawn twice. A wallet holds at most one
+pending withdrawal. A retry with the same key returns the original request; the same key
+with a different body is `400` with `fields.idempotency_key`.
+
+A withdrawal is `{ "id", "method_id", "method_name", "amount_minor", "currency",
+"account_name", "account_number", "status", "payout_reference", "reason", "created_at",
+"reviewed_at", "cancelled_at" }`, with `status` one of `pending`, `approved`, `rejected`, or
+`cancelled`. An administrator approves with `{ "action": "approve", "payout_reference" }`
+once the transfer is sent, which moves no money, or rejects with `{ "action": "reject",
+"reason" }`; the player may cancel while it is pending. A rejection or cancel credits the
+amount back as a `refund` movement referencing the withdrawal, exactly once. Review and
+cancel serialize on the request, so only the first settles it and the other is `409`
+`WITHDRAWAL_ALREADY_REVIEWED`. Each step is audited as `withdrawal.request`,
+`withdrawal.approve`, `withdrawal.reject`, or `withdrawal.cancel`; a review notifies the
+player and a cancel does not. An admin withdrawal adds `user_id`, `user_email`, and
+`display_name`.
+
 The migration creates GCash and Maya disabled with placeholder destinations. Operators
 manage payment methods through the admin endpoints. `make seed-demo` enables the two
 synthetic methods in development or staging with destinations that are visibly not real
@@ -236,6 +267,8 @@ session. Those two are omitted from the failure column.
 | `PATCH` | `/api/admin/payment-methods/{id}` | `200` + the method | `400` invalid input · `404` · `409` name taken |
 | `GET` | `/api/admin/deposits/{id}/proof` | `200` + private image content | `404` |
 | `POST` | `/api/admin/deposits/{id}/review` | `200` + the request | `400` invalid action, amount, or reason · `404` · `409` `DEPOSIT_ALREADY_REVIEWED` / `DEPOSIT_APPROVAL_FAILED` / `AMOUNT_OVERFLOW` |
+| `GET` | `/api/admin/withdrawals` | `200` + a page of requests, oldest first; defaults to pending and accepts `user_id`, `search`, plus `status=all\|pending\|approved\|rejected\|cancelled` | `400` invalid filter |
+| `POST` | `/api/admin/withdrawals/{id}/review` | `200` + the request | `400` invalid action, payout reference, or reason · `404` · `409` `WITHDRAWAL_ALREADY_REVIEWED` / `WALLET_FROZEN` / `WALLET_CLOSED` / `AMOUNT_OVERFLOW` |
 | `GET` | `/api/admin/games` | `200` + a page of games in every status; accepts `status`, `category`, `search` | `400` invalid filter |
 | `GET` | `/api/admin/games/{id}` | `200` + the game | `404` |
 | `POST` | `/api/admin/games` | `201` + the game | `400` · `409` slug taken |
