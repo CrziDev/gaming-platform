@@ -35,6 +35,7 @@ body {
   flex-direction: column;
   gap: 7px;
   pointer-events: none;
+  visibility: hidden;
   font-family: 'IBM Plex Sans Condensed', sans-serif;
   font-weight: 500;
   line-height: 1.1;

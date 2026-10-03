@@ -17,6 +17,13 @@ export function AdminShell() {
   const drawerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    document.documentElement.dataset.console = 'admin'
+    return () => {
+      delete document.documentElement.dataset.console
+    }
+  }, [])
+
+  useEffect(() => {
     if (!drawerOpen) return
     const previous = document.activeElement as HTMLElement | null
     const overflow = document.body.style.overflow

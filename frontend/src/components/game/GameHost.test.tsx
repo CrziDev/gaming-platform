@@ -34,9 +34,14 @@ describe('GameHost', () => {
     expect(screen.getByRole('status', { name: 'Loading Plinko' })).toHaveTextContent('LOADING BOARD')
   })
 
+  it('keeps the frame hidden while it loads', () => {
+    render(<GameHost name="Plinko" frame={frame()} />)
+    expect(screen.getByTitle('Plinko game')).toHaveClass('opacity-0')
+  })
+
   it('uncovers the board once it is ready', () => {
     render(<GameHost name="Plinko" frame={frame({ status: 'ready' })} />)
-    expect(screen.getByTitle('Plinko game')).toBeInTheDocument()
+    expect(screen.getByTitle('Plinko game')).not.toHaveClass('opacity-0')
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 

@@ -252,6 +252,37 @@ body {
   animation: value-update var(--duration-standard) var(--ease-standard) both;
 }
 
+/* A ball dropping through the loader's peg triangle, one peg a row. The drift steers it
+   sideways off each peg and the fall carries it down, so each hop arcs. Pegs sit 14px
+   apart; the ball rests 6.5px above the peg it strikes. */
+@keyframes game-loader-drift {
+  0%, 10% { translate: 0 0; animation-timing-function: ease-out; }
+  24% { translate: -7px 0; animation-timing-function: ease-out; }
+  38% { translate: -14px 0; animation-timing-function: ease-out; }
+  52% { translate: -7px 0; animation-timing-function: ease-out; }
+  66% { translate: 0 0; animation-timing-function: ease-out; }
+  82%, 100% { translate: 7px 0; }
+}
+
+@keyframes game-loader-fall {
+  0% { translate: 0 -26px; opacity: 0; animation-timing-function: ease-in; }
+  10% { translate: 0 -6.5px; opacity: 1; animation-timing-function: ease-in; }
+  24% { translate: 0 7.5px; animation-timing-function: ease-in; }
+  38% { translate: 0 21.5px; animation-timing-function: ease-in; }
+  52% { translate: 0 35.5px; animation-timing-function: ease-in; }
+  66% { translate: 0 49.5px; opacity: 1; animation-timing-function: ease-in; }
+  82%, 100% { translate: 0 72px; opacity: 0; }
+}
+
+.game-loader-ball {
+  animation: game-loader-drift 1.6s infinite;
+}
+
+.game-loader-ball > span {
+  opacity: 0;
+  animation: game-loader-fall 1.6s infinite;
+}
+
 .overlay-shadow {
   box-shadow: var(--shadow-overlay);
 }
@@ -433,6 +464,13 @@ body {
     0 0 26px rgb(40 230 130 / 0.42),
     inset 0 1px 0 rgb(255 255 255 / 0.55),
     inset 0 -2px 0 rgb(0 0 0 / 0.15);
+
+  :where(:root[data-console='admin']) & {
+    box-shadow:
+      0 0 14px rgb(40 230 130 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      inset 0 -2px 0 rgb(0 0 0 / 0.15);
+  }
 }
 
 @utility tap-target {
