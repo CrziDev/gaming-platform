@@ -18,7 +18,7 @@ export function BigWins() {
       <ul
         aria-label="Big wins"
         tabIndex={0}
-        className="scrollbar-hidden -mx-3.5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-3.5"
+        className="scrollbar-hidden -mx-3.5 flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-px-3.5 px-3.5"
       >
         {Array.from({ length: placeholderCount }, (_, index) => (
           <li key={index} className="w-[172px] shrink-0 snap-start">
