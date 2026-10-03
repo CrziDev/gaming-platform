@@ -30,8 +30,8 @@ everything. Ports: web 8080 (Caddy); the API and PostgreSQL are reachable only i
 Compose.
 
 Configuration reaches the server through its environment. Compose hands the api
-container `.env` locally and `.env.prod` in production, and the Makefile loads `.env` for
-the host targets; no application code reads a `.env` file.
+container `.env` locally, `.env.vps` on staging, and `.env.prod` in production, and the
+Makefile loads `.env` for the host targets; no application code reads a `.env` file.
 
 ## Rules
 

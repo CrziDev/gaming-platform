@@ -44,10 +44,11 @@ service.
 
 ## Staging and production
 
-Both run the same Compose stack from `.env.prod`; see `deploy/README.md`. Staging differs
-in these values:
+Both run the same Compose stack; see `deploy/README.md`. Production reads `.env.prod`
+and staging reads `.env.vps`. Staging differs in these values:
 
 ```dotenv
+APP_ENV_FILE=.env.vps
 APP_ENV=staging
 CORS_ALLOWED_ORIGINS=https://stage.example.com
 PUBLIC_WEB_URL=https://stage.example.com
@@ -56,7 +57,7 @@ ALLOW_DEMO_SEED=true
 
 List the administrators in `SEED_ADMIN_EMAILS`, set unique `SEED_USER_PASSWORD` and
 `SEED_PLAYER_PASSWORD` secrets, apply migrations,
-then run `make docker-bootstrap docker-seed-demo ENV_FILE=.env.prod`. The deployment
+then run `make docker-bootstrap docker-seed-demo ENV_FILE=.env.vps`. The deployment
 health check is `GET /api/health`.
 
 ## Email

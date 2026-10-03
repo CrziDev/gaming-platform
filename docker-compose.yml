@@ -1,8 +1,8 @@
 # The platform's stack, locally and in production: Caddy serves the web bundle and
 # proxies /api to the Go API, which is reachable only on the compose network.
-# The env file passed with --env-file (.env locally, .env.prod on the server)
-# supplies DB_PASSWORD and SITE_ADDRESS, and APP_ENV_FILE names the file the api
-# reads, .env.prod unless set.
+# The env file passed with --env-file (.env locally, .env.vps on staging, .env.prod
+# in production) supplies DB_PASSWORD and SITE_ADDRESS, and APP_ENV_FILE names the
+# file the api reads, .env.prod unless set; any other env file sets it to its own name.
 services:
   db:
     image: postgres:18

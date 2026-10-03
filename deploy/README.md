@@ -8,8 +8,10 @@ internet ─▶ web (Caddy :443) ─┬─ /api/* ─▶ api :8080 ─▶ db :54
                               └─ /*     ─▶ static bundle
 ```
 
-Every command reads `.env.prod`: Compose through `--env-file`, the make targets through
-`ENV_FILE`.
+Every command reads the host's env file: Compose through `--env-file`, the make targets
+through `ENV_FILE`. Production uses `.env.prod`, as written below. Staging uses `.env.vps`
+in its place, and that file sets `APP_ENV_FILE=.env.vps`; without it the api container
+falls back to reading `.env.prod`.
 
 ## First deploy
 
