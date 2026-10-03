@@ -135,6 +135,28 @@ func TestHotCatalogueRanksSettledRoundsFromTheLastSevenDays(t *testing.T) {
 	}
 }
 
+func TestCatalogueByNameListsIntegratedGamesFirst(t *testing.T) {
+	db := gameTestDB(t)
+	fixture := createFavoriteFixture(t, db, map[string]string{"a-listed": "active", "b-playable": "active", "c-listed": "active"})
+	if _, err := db.Exec(`UPDATE games SET integration = 'integrated' WHERE id = ($1::text)::uuid`, fixture.GameIDs["b-playable"]); err != nil {
+		t.Fatalf("mark game integrated: %v", err)
+	}
+
+	games, _, err := ListCatalogue(context.Background(), db, CatalogueFilter{Page: 1, Size: 20, Category: fixture.Category, Sort: SortName})
+	if err != nil {
+		t.Fatalf("list catalogue: %v", err)
+	}
+	want := []string{"b-playable", "a-listed", "c-listed"}
+	if len(games) != len(want) {
+		t.Fatalf("listed %d games, want %d", len(games), len(want))
+	}
+	for i, slug := range want {
+		if games[i].ID != fixture.GameIDs[slug] {
+			t.Fatalf("position %d is %s, want %s", i, games[i].Slug, slug)
+		}
+	}
+}
+
 func insertSettledRound(t *testing.T, db *sql.DB, fixture favoriteFixture, game string, startedAt time.Time, keySuffix string) {
 	t.Helper()
 	if _, err := db.Exec(`

@@ -184,7 +184,7 @@ A round body carries `id`, `game_id`, `game_slug`, `game_name`, `rtp_basis_point
 
 The catalogue is public and shows only `active` games; a `draft`, `maintenance`, or
 `retired` game is `404` by slug and absent from every list. `search` matches the game
-name, category name, and provider. `sort` defaults to `name`. A game carries
+name, category name, and provider. `sort` defaults to `name`, which lists integrated games first and then everything by name. A game carries
 `flags`: `new` for thirty days after it was added. `hot` is not served until round data
 exists to define it; a client asking for `flag=hot` gets `400`. A game body carries
 `thumbnail_url`, null until reviewed art is attached; the client renders the placeholder

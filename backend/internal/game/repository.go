@@ -66,7 +66,7 @@ const (
 	countCatalogueSQL = `SELECT count(*)` + catalogueWhere
 
 	listCatalogueByNameSQL = `SELECT` + gameColumns + catalogueWhere + `
-	ORDER BY g.name ASC, g.slug ASC
+	ORDER BY g.integration = 'integrated' DESC, g.name ASC, g.slug ASC
 	LIMIT $4 OFFSET $5`
 
 	listCatalogueByNewestSQL = `SELECT` + gameColumns + catalogueWhere + `
