@@ -4,6 +4,7 @@ import { testFixturesEnabled } from '@/api/mode'
 import type {
   CurrencyMetadata,
   DepositRequest,
+  DepositStatus,
   Notification,
   PaymentMethod,
   Round,
@@ -99,17 +100,19 @@ export async function fetchDepositLimits(currency: Currency): Promise<DepositLim
   }
 }
 
-export async function fetchPendingDeposits(): Promise<DepositRequest[]> {
+export async function fetchDeposits(status?: DepositStatus): Promise<DepositRequest[]> {
   if (usingTestFixtures) {
     const { depositRequests } = await import('@/mocks/wallet')
     return mockRequest(() =>
       depositRequests
-        .filter((request) => request.status === 'pending')
+        .filter((request) => !status || request.status === status)
         .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
         .map((request) => ({ ...request })),
     )
   }
-  const page = await api.get<Page<DepositRequest>>('/deposits?status=pending&page=1&size=20')
+  const params = new URLSearchParams({ page: '1', size: '20' })
+  if (status) params.set('status', status)
+  const page = await api.get<Page<DepositRequest>>(`/deposits?${params.toString()}`)
   return page.rows
 }
 

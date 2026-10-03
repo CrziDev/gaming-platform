@@ -11,6 +11,7 @@ export type {
 } from './api'
 export { setActiveCurrency, useActiveCurrency } from './activeCurrency'
 export { ledgerColumns } from './ledger'
+export { depositColumns, withdrawalColumns } from './requests'
 export { SwitchCurrencyDialog } from './SwitchCurrencyDialog'
 export { createDepositSchema, createWithdrawalSchema, fallbackDepositLimits } from './schemas'
 export type { DepositInput, WithdrawalInput } from './schemas'
@@ -20,10 +21,10 @@ export {
   useCurrencies,
   useDeposit,
   useDepositLimits,
+  useDeposits,
   useMarkNotificationsRead,
   useNotifications,
   usePaymentMethods,
-  usePendingDeposits,
   useRecentRounds,
   useRounds,
   useSubmitDeposit,

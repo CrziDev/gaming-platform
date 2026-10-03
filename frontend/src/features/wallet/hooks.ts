@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import type { WithdrawalStatus } from '@/api/types'
+import type { DepositStatus, WithdrawalStatus } from '@/api/types'
 import type { Currency } from '@/lib/money'
 
 import { useActiveCurrency } from './activeCurrency'
@@ -8,10 +8,10 @@ import { useActiveCurrency } from './activeCurrency'
 import {
   fetchCurrencies,
   fetchDeposit,
+  fetchDeposits,
   fetchDepositLimits,
   fetchNotifications,
   fetchPaymentMethods,
-  fetchPendingDeposits,
   fetchRecentRounds,
   fetchRounds,
   fetchTransactions,
@@ -63,8 +63,8 @@ export function useDepositLimits() {
   })
 }
 
-export function usePendingDeposits() {
-  return useQuery({ queryKey: ['deposits', 'pending'], queryFn: fetchPendingDeposits })
+export function useDeposits(status?: DepositStatus) {
+  return useQuery({ queryKey: ['deposits', status ?? 'all'], queryFn: () => fetchDeposits(status) })
 }
 
 export function useDeposit(id: string) {

@@ -36,7 +36,7 @@ export function flightTo(slot) {
   let y = ROW_TOP + contact
   let peg = 1
   const segments = [
-    { kind: 'fall', x0: 0, y0: WAIT_Y, z0: CHUTE_Z, x1: 0, y1: y, z1: BALL_Z, duration: 320, peg: '0-1' },
+    { kind: 'fall', x0: 0, y0: WAIT_Y, z0: CHUTE_Z, x1: 0, y1: y, z1: BALL_Z, duration: 480, peg: '0-1' },
   ]
   for (let row = 0; row < ROWS - 1; row++) {
     peg += turns[row]
@@ -51,7 +51,7 @@ export function flightTo(slot) {
       z0: BALL_Z,
       z1: BALL_Z,
       height: 0.34,
-      duration: 165,
+      duration: 250,
       peg: `${row + 1}-${peg}`,
     })
     x = nextX
@@ -60,8 +60,8 @@ export function flightTo(slot) {
 
   const exitX = x + halfStep(turns[ROWS - 1])
   const exitY = y - 0.45
-  segments.push({ kind: 'exit', x0: x, y0: y, x1: exitX, y1: exitY, z0: BALL_Z, z1: BALL_Z, height: 0.26, duration: 160 })
-  segments.push({ kind: 'sink', x0: exitX, y0: exitY, z0: BALL_Z, x1: slotX(slot), y1: TILE_TOP - 0.3, z1: BALL_Z, duration: 260 })
+  segments.push({ kind: 'exit', x0: x, y0: y, x1: exitX, y1: exitY, z0: BALL_Z, z1: BALL_Z, height: 0.26, duration: 240 })
+  segments.push({ kind: 'sink', x0: exitX, y0: exitY, z0: BALL_Z, x1: slotX(slot), y1: TILE_TOP - 0.3, z1: BALL_Z, duration: 390 })
   return segments
 }
 

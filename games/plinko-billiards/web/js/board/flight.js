@@ -35,7 +35,7 @@ export function flightTo(slot) {
   let x = 0
   let y = ROW_TOP + contact
   let peg = 1
-  const segments = [{ kind: 'fall', x0: 0, y0: NOTCH_Y, x1: 0, y1: y, z0: z, z1: z, duration: 340, peg: '0-1' }]
+  const segments = [{ kind: 'fall', x0: 0, y0: NOTCH_Y, x1: 0, y1: y, z0: z, z1: z, duration: 510, peg: '0-1' }]
   for (let row = 0; row < ROWS - 1; row++) {
     peg += turns[row]
     const nextX = x + halfStep(turns[row])
@@ -50,7 +50,7 @@ export function flightTo(slot) {
       z1: z,
       height: 0.3,
       hop: 0.14,
-      duration: 170,
+      duration: 255,
       peg: `${row + 1}-${peg}`,
     })
     x = nextX
@@ -59,10 +59,10 @@ export function flightTo(slot) {
 
   const exitX = x + halfStep(turns[ROWS - 1])
   const exitY = y - 0.45
-  segments.push({ kind: 'bounce', x0: x, y0: y, x1: exitX, y1: exitY, z0: z, z1: z, height: 0.22, hop: 0.1, duration: 160 })
+  segments.push({ kind: 'bounce', x0: x, y0: y, x1: exitX, y1: exitY, z0: z, z1: z, height: 0.22, hop: 0.1, duration: 240 })
 
   const lip = POCKET_Y + 0.1
-  segments.push({ kind: 'arc', x0: exitX, y0: exitY, z0: z, x1: slotX(slot), y1: lip, z1: z, height: 0.08, duration: 300 })
+  segments.push({ kind: 'arc', x0: exitX, y0: exitY, z0: z, x1: slotX(slot), y1: lip, z1: z, height: 0.08, duration: 450 })
   segments.push({
     kind: 'sink',
     x0: slotX(slot),
@@ -71,7 +71,7 @@ export function flightTo(slot) {
     x1: slotX(slot),
     y1: POCKET_Y,
     z1: -POCKET_DEPTH * 0.7,
-    duration: 320,
+    duration: 480,
   })
   return segments
 }
