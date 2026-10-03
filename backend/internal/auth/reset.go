@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
@@ -25,16 +24,6 @@ const (
 	invalidResetLink     = "This reset link is invalid or has expired"
 )
 
-type PasswordResetMessage struct {
-	ID        string
-	Recipient string
-	Token     string
-}
-
-type PasswordResetSender interface {
-	SendPasswordReset(context.Context, PasswordResetMessage) error
-}
-
 func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	h.throttle(h.requestPasswordReset)(w, r)
 }
@@ -52,7 +41,7 @@ func (h *Handler) requestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"email": message})
 		return
 	}
-	if h.cfg.PasswordResetSender == nil {
+	if h.cfg.Mailer == nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "Password reset is unavailable right now")
 		return
 	}
@@ -103,9 +92,7 @@ func (h *Handler) requestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.cfg.PasswordResetSender.SendPasswordReset(r.Context(), PasswordResetMessage{
-		ID: resetID, Recipient: account.Email, Token: token,
-	}); err != nil {
+	if err := h.cfg.Mailer.Send(r.Context(), passwordResetEmail(h.cfg.PublicWebURL, resetID, account.Email, token)); err != nil {
 		h.logger.Error("password reset delivery failed",
 			slog.String("reset_id", resetID),
 			slog.Any("error", err))

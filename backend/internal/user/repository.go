@@ -43,6 +43,12 @@ const (
 		SET password_hash = $1, updated_at = now()
 		WHERE id = ($2::text)::uuid`
 
+	selectActiveAdminEmailsSQL = `
+		SELECT email
+		FROM users
+		WHERE role = 'admin' AND status = 'active'
+		ORDER BY created_at, email`
+
 	countUsersSQL = `
 		SELECT count(*)
 		FROM users
@@ -205,6 +211,27 @@ func List(ctx context.Context, db *sql.DB, filter ListFilter) ([]User, int, erro
 		return nil, 0, fmt.Errorf("user: list rows: %w", err)
 	}
 	return accounts, total, nil
+}
+
+func ActiveAdminEmails(ctx context.Context, db *sql.DB) ([]string, error) {
+	rows, err := db.QueryContext(ctx, selectActiveAdminEmailsSQL)
+	if err != nil {
+		return nil, fmt.Errorf("user: list admin emails: %w", err)
+	}
+	defer rows.Close()
+
+	emails := make([]string, 0)
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, fmt.Errorf("user: admin email row: %w", err)
+		}
+		emails = append(emails, email)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("user: admin email rows: %w", err)
+	}
+	return emails, nil
 }
 
 func isUniqueViolation(err error) bool {

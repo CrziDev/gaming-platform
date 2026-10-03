@@ -590,12 +590,19 @@ Password reset and change:
   for the submitting browser. A failed check changes neither passwords nor sessions.
 
 Reset secrets are random 32-byte values delivered only in the email link; only SHA-256
-hashes reach PostgreSQL. Delivery uses Resend's HTTPS send-email API with bearer
-authentication, text and HTML bodies, the reset record ID as its idempotency key, a
-bounded client timeout, and bounded retries for temporary failures. Configuration is
-`EMAIL_DELIVERY_PROVIDER=disabled|resend`, `PUBLIC_WEB_URL`, `RESEND_API_KEY`, and
-`RESEND_FROM`; Resend mode fails startup unless the public URL is HTTPS and every sender
-credential is valid. No password or raw session/reset secret is logged.
+hashes reach PostgreSQL. `internal/mail` delivers it through one of two HTTPS
+providers, each with text and HTML bodies, a bounded client timeout, and bounded retries
+for temporary failures. The Gmail API sends as the account that granted an OAuth refresh
+token the `gmail.send` scope: the token is exchanged for an access token that is reused
+until shortly before it expires and refreshed once when Gmail rejects it, and the
+message is a multipart RFC 5322 body whose headers are built from parsed addresses and
+an encoded subject. Resend uses its send-email API with bearer authentication and the
+reset record ID as its idempotency key. Configuration is
+`EMAIL_DELIVERY_PROVIDER=disabled|gmail|resend` and `PUBLIC_WEB_URL`, plus
+`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, and `GMAIL_FROM`, or
+`RESEND_API_KEY` and `RESEND_FROM`; an enabled provider fails startup unless the public
+URL is HTTPS and every credential and sender is valid. No password, OAuth secret, or raw
+session/reset secret is logged.
 
 These self-service operations do not create operator audit entries. Session rows retain
 their revocation timestamps; an eventual operator-initiated reset remains a separate,
@@ -781,6 +788,12 @@ against those values before the server enforces them again.
 A request carries an idempotency key, so a retried submission returns the original
 request with `200 OK` instead of queueing a second one or retaining another proof file.
 
+When email delivery is enabled, a newly created request emails every active
+administrator after it commits: the player's name and email, the amount in the
+currency's major units, the method, reference, submission time, request ID, and a link
+to the deposit queue. It is sent in the background, so the player's response does not
+wait on it, and a failure is logged without changing the request. A retry sends nothing.
+
 An operator works the queue and either approves or rejects. A rejection requires a
 reason. Approval is one transaction:
 
@@ -954,7 +967,11 @@ the role guard, validation, and status mapping.
 Password tests additionally cover hashed 30-minute reset records, superseded links,
 identical invalid-token failures, concurrent single-use confirmation, full session
 rotation, disabled delivery without a database lookup, and Resend authentication,
-payloads, idempotency, retry, timeout, and secret-free failure handling.
+payloads, idempotency, retry, timeout, and secret-free failure handling. Gmail tests
+cover the token exchange and its reuse and expiry, a rejected access token, retries,
+a revoked refresh token reported without secrets, header injection, and the parsed
+multipart message. The deposit alert test covers its recipients, content, and a retry
+that sends nothing.
 
 Database-backed tests read only `TEST_DATABASE_URL`, whose database name ends in
 `_test`, and skip when it is absent or unreachable. CI sets `REQUIRE_TEST_DATABASE=1` so

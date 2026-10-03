@@ -200,7 +200,9 @@ it.
 `Idempotency-Key` header of at most 200 characters. The entire HTTP body is limited to
 6 MiB and the proof itself to 5 MiB. Only PNG and JPEG content identified from its bytes
 is accepted; the client filename and declared MIME type are not trusted. A retry returns
-the original request and does not retain the redundant uploaded file.
+the original request and does not retain the redundant uploaded file. When email
+delivery is enabled, a new request emails every active administrator in the background;
+a retry does not, and a delivery failure never changes the response.
 
 `POST /api/games/{slug}/rounds` plays one round of an integrated game. It requires an
 `Idempotency-Key` header of at most 200 characters and a body of `stake_minor`,

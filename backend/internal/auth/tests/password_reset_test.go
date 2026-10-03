@@ -12,38 +12,55 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"slices"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gaming-platform/backend/internal/app"
-	"github.com/gaming-platform/backend/internal/auth"
 	"github.com/gaming-platform/backend/internal/chat"
+	"github.com/gaming-platform/backend/internal/mail"
 )
 
 const newPassword = "a-different-development-password"
 
-type recordingResetSender struct {
+type recordingMailer struct {
 	mu       sync.Mutex
-	messages []auth.PasswordResetMessage
+	messages []mail.Message
 	err      error
 }
 
-func (s *recordingResetSender) SendPasswordReset(_ context.Context, message auth.PasswordResetMessage) error {
+func (s *recordingMailer) Send(_ context.Context, message mail.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messages = append(s.messages, message)
 	return s.err
 }
 
-func (s *recordingResetSender) sent() []auth.PasswordResetMessage {
+func (s *recordingMailer) sent() []mail.Message {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return slices.Clone(s.messages)
 }
 
-func newPasswordServer(t *testing.T, db *sql.DB, sender auth.PasswordResetSender) (string, *http.Client) {
+var resetLinkToken = regexp.MustCompile(`/reset\?token=(\S+)`)
+
+func resetToken(t *testing.T, message mail.Message) string {
+	t.Helper()
+	match := resetLinkToken.FindStringSubmatch(message.Text)
+	if match == nil {
+		t.Fatalf("reset email has no link: %q", message.Text)
+	}
+	token, err := url.QueryUnescape(match[1])
+	if err != nil {
+		t.Fatalf("reset link token: %v", err)
+	}
+	return token
+}
+
+func newPasswordServer(t *testing.T, db *sql.DB, sender mail.Sender) (string, *http.Client) {
 	t.Helper()
 	server := httptest.NewServer(app.New(db, slog.New(slog.NewTextHandler(io.Discard, nil)), app.Config{
 		CookieName: "gp_session", SessionTTL: time.Hour, AllowedOrigins: []string{webOrigin},
@@ -67,7 +84,7 @@ func confirmReset(t *testing.T, client *http.Client, base, token, password strin
 
 func TestPasswordResetRequestDoesNotRevealAccounts(t *testing.T) {
 	db := requireDB(t)
-	sender := &recordingResetSender{}
+	sender := &recordingMailer{}
 	base, client := newPasswordServer(t, db, sender)
 	if status, body := register(t, client, base); status != http.StatusCreated {
 		t.Fatalf("register: %d %s", status, body)
@@ -96,7 +113,7 @@ func TestPasswordResetRequestDoesNotRevealAccounts(t *testing.T) {
 		t.Fatalf("response windows diverged: known=%s unknown=%s", knownDuration, unknownDuration)
 	}
 	messages := sender.sent()
-	if len(messages) != 1 || messages[0].Recipient != testEmail {
+	if len(messages) != 1 || len(messages[0].To) != 1 || messages[0].To[0] != testEmail {
 		t.Fatalf("deliveries = %+v, want one for the active account", messages)
 	}
 
@@ -113,7 +130,7 @@ func TestPasswordResetRequestDoesNotRevealAccounts(t *testing.T) {
 
 func TestPasswordResetRequestStoresOnlyAThirtyMinuteHash(t *testing.T) {
 	db := requireDB(t)
-	sender := &recordingResetSender{}
+	sender := &recordingMailer{}
 	base, client := newPasswordServer(t, db, sender)
 	register(t, client, base)
 	if status, body := requestReset(t, client, base, testEmail); status != http.StatusNoContent {
@@ -126,11 +143,11 @@ func TestPasswordResetRequestStoresOnlyAThirtyMinuteHash(t *testing.T) {
 	if err := db.QueryRow(`SELECT token_hash, created_at, expires_at FROM password_reset_tokens`).Scan(&stored, &createdAt, &expiresAt); err != nil {
 		t.Fatalf("read token: %v", err)
 	}
-	want := sha256.Sum256([]byte(message.Token))
+	want := sha256.Sum256([]byte(resetToken(t, message)))
 	if !bytes.Equal(stored, want[:]) {
 		t.Fatal("the stored hash does not match the delivered token")
 	}
-	if bytes.Contains(stored, []byte(message.Token)) {
+	if bytes.Contains(stored, []byte(resetToken(t, message))) {
 		t.Fatal("the raw reset token was stored")
 	}
 	if ttl := expiresAt.Sub(createdAt); ttl < 29*time.Minute+59*time.Second || ttl > 30*time.Minute+time.Second {
@@ -140,7 +157,7 @@ func TestPasswordResetRequestStoresOnlyAThirtyMinuteHash(t *testing.T) {
 
 func TestANewerResetRequestSupersedesTheOldLink(t *testing.T) {
 	db := requireDB(t)
-	sender := &recordingResetSender{}
+	sender := &recordingMailer{}
 	base, client := newPasswordServer(t, db, sender)
 	register(t, client, base)
 	requestReset(t, client, base, testEmail)
@@ -150,23 +167,23 @@ func TestANewerResetRequestSupersedesTheOldLink(t *testing.T) {
 		t.Fatalf("deliveries = %d, want 2", len(messages))
 	}
 
-	oldStatus, oldBody := confirmReset(t, clientWithCookies(t), base, messages[0].Token, newPassword)
+	oldStatus, oldBody := confirmReset(t, clientWithCookies(t), base, resetToken(t, messages[0]), newPassword)
 	if oldStatus != http.StatusBadRequest {
 		t.Fatalf("old link: want 400, got %d (%s)", oldStatus, oldBody)
 	}
-	if status, body := confirmReset(t, clientWithCookies(t), base, messages[1].Token, newPassword); status != http.StatusOK {
+	if status, body := confirmReset(t, clientWithCookies(t), base, resetToken(t, messages[1]), newPassword); status != http.StatusOK {
 		t.Fatalf("new link: want 200, got %d (%s)", status, body)
 	}
 }
 
 func TestInvalidResetLinksFailIdentically(t *testing.T) {
 	db := requireDB(t)
-	sender := &recordingResetSender{}
+	sender := &recordingMailer{}
 	base, client := newPasswordServer(t, db, sender)
 	register(t, client, base)
 
 	requestReset(t, client, base, testEmail)
-	expiredToken := sender.sent()[0].Token
+	expiredToken := resetToken(t, sender.sent()[0])
 	if _, err := db.Exec(`UPDATE password_reset_tokens SET expires_at = now() - interval '1 second'`); err != nil {
 		t.Fatalf("expire: %v", err)
 	}
@@ -176,7 +193,7 @@ func TestInvalidResetLinksFailIdentically(t *testing.T) {
 	}
 
 	requestReset(t, client, base, testEmail)
-	usedToken := sender.sent()[1].Token
+	usedToken := resetToken(t, sender.sent()[1])
 	if status, body := confirmReset(t, clientWithCookies(t), base, usedToken, newPassword); status != http.StatusOK {
 		t.Fatalf("first confirmation: want 200, got %d (%s)", status, body)
 	}
@@ -185,7 +202,7 @@ func TestInvalidResetLinksFailIdentically(t *testing.T) {
 	unknownStatus, unknownBody := confirmReset(t, clientWithCookies(t), base, unknown, "another-valid-password")
 	malformedStatus, malformedBody := confirmReset(t, clientWithCookies(t), base, "malformed", "another-valid-password")
 	requestReset(t, client, base, testEmail)
-	inactiveToken := sender.sent()[2].Token
+	inactiveToken := resetToken(t, sender.sent()[2])
 	if _, err := db.Exec(`UPDATE users SET status = 'suspended' WHERE email = $1`, testEmail); err != nil {
 		t.Fatalf("suspend: %v", err)
 	}
@@ -209,11 +226,11 @@ func TestInvalidResetLinksFailIdentically(t *testing.T) {
 
 func TestConcurrentResetConfirmationHasOneWinner(t *testing.T) {
 	db := requireDB(t)
-	sender := &recordingResetSender{}
+	sender := &recordingMailer{}
 	base, client := newPasswordServer(t, db, sender)
 	register(t, client, base)
 	requestReset(t, client, base, testEmail)
-	token := sender.sent()[0].Token
+	token := resetToken(t, sender.sent()[0])
 
 	type result struct {
 		status int
@@ -254,7 +271,7 @@ func TestConcurrentResetConfirmationHasOneWinner(t *testing.T) {
 
 func TestPasswordResetRevokesEveryOldSessionAndKeepsTheConfirmingBrowser(t *testing.T) {
 	db := requireDB(t)
-	sender := &recordingResetSender{}
+	sender := &recordingMailer{}
 	base, first := newPasswordServer(t, db, sender)
 	register(t, first, base)
 	second := clientWithCookies(t)
@@ -263,7 +280,7 @@ func TestPasswordResetRevokesEveryOldSessionAndKeepsTheConfirmingBrowser(t *test
 	}
 	requestReset(t, first, base, testEmail)
 	confirming := clientWithCookies(t)
-	if status, body := confirmReset(t, confirming, base, sender.sent()[0].Token, newPassword); status != http.StatusOK {
+	if status, body := confirmReset(t, confirming, base, resetToken(t, sender.sent()[0]), newPassword); status != http.StatusOK {
 		t.Fatalf("confirm: want 200, got %d (%s)", status, body)
 	}
 
@@ -357,7 +374,7 @@ func TestDisabledPasswordDeliveryReturnsUnavailableWithoutADatabase(t *testing.T
 
 func TestPasswordEndpointsShareTheCredentialRateLimit(t *testing.T) {
 	db := requireDB(t)
-	sender := &recordingResetSender{}
+	sender := &recordingMailer{}
 	server := httptest.NewServer(app.New(db, slog.New(slog.NewTextHandler(io.Discard, nil)), app.Config{
 		CookieName: "gp_session", SessionTTL: time.Hour, AllowedOrigins: []string{webOrigin},
 		MaxBodyBytes: 1 << 20, LoginsPerMinute: 2,
@@ -367,7 +384,7 @@ func TestPasswordEndpointsShareTheCredentialRateLimit(t *testing.T) {
 	register(t, client, server.URL)
 	requestReset(t, client, server.URL, testEmail)
 
-	if status, body := confirmReset(t, client, server.URL, sender.sent()[0].Token, newPassword); status != http.StatusTooManyRequests {
+	if status, body := confirmReset(t, client, server.URL, resetToken(t, sender.sent()[0]), newPassword); status != http.StatusTooManyRequests {
 		t.Fatalf("reset confirmation: want 429, got %d (%s)", status, body)
 	}
 	if status, body := send(t, client, http.MethodPost, server.URL+"/api/password", map[string]string{
@@ -380,7 +397,7 @@ func TestPasswordEndpointsShareTheCredentialRateLimit(t *testing.T) {
 func TestPasswordResetDeliveryFailureDoesNotLeakTheTokenToLogs(t *testing.T) {
 	db := requireDB(t)
 	var logs bytes.Buffer
-	sender := &recordingResetSender{err: errors.New("provider unavailable")}
+	sender := &recordingMailer{err: errors.New("provider unavailable")}
 	server := httptest.NewServer(app.New(db, slog.New(slog.NewTextHandler(&logs, nil)), app.Config{
 		CookieName: "gp_session", SessionTTL: time.Hour, AllowedOrigins: []string{webOrigin},
 		MaxBodyBytes: 1 << 20, LoginsPerMinute: 100,
@@ -391,7 +408,7 @@ func TestPasswordResetDeliveryFailureDoesNotLeakTheTokenToLogs(t *testing.T) {
 	if status, body := requestReset(t, client, server.URL, testEmail); status != http.StatusNoContent {
 		t.Fatalf("request: want 204, got %d (%s)", status, body)
 	}
-	token := sender.sent()[0].Token
+	token := resetToken(t, sender.sent()[0])
 	if bytes.Contains(logs.Bytes(), []byte(token)) {
 		t.Fatalf("logs contain the reset token: %s", logs.Bytes())
 	}

@@ -185,6 +185,14 @@ func Create(ctx context.Context, db *sql.DB, userID, methodID, currency string, 
 	return item, created, nil
 }
 
+func currencyMinorUnits(ctx context.Context, db *sql.DB, code string) (int, error) {
+	var minorUnits int
+	if err := db.QueryRowContext(ctx, `SELECT minor_units FROM currencies WHERE code = $1`, code).Scan(&minorUnits); err != nil {
+		return 0, fmt.Errorf("deposit: read currency minor units: %w", err)
+	}
+	return minorUnits, nil
+}
+
 func scanRequests(rows *sql.Rows) ([]Request, error) {
 	result := make([]Request, 0)
 	for rows.Next() {

@@ -131,6 +131,40 @@ func TestConfigFromEnvValidatesResend(t *testing.T) {
 	}
 }
 
+func TestConfigFromEnvValidatesGmail(t *testing.T) {
+	valid := map[string]string{
+		"DATABASE_URL": "postgres://example", "EMAIL_DELIVERY_PROVIDER": "gmail",
+		"PUBLIC_WEB_URL": "https://play.example.com", "GMAIL_CLIENT_ID": "123-abc.apps.googleusercontent.com",
+		"GMAIL_CLIENT_SECRET": "client-secret", "GMAIL_REFRESH_TOKEN": "1//refresh-token",
+		"GMAIL_FROM": "HeziBet <owner@gmail.com>",
+	}
+	cfg, err := ConfigFromEnv(func(key string) string { return valid[key] })
+	if err != nil {
+		t.Fatalf("valid Gmail configuration rejected: %v", err)
+	}
+	if cfg.GmailClientID != valid["GMAIL_CLIENT_ID"] || cfg.GmailRefreshToken != valid["GMAIL_REFRESH_TOKEN"] || cfg.GmailFrom != valid["GMAIL_FROM"] {
+		t.Fatalf("Gmail configuration not read: %+v", cfg)
+	}
+
+	for name, mutate := range map[string]func(map[string]string){
+		"http URL":         func(env map[string]string) { env["PUBLIC_WEB_URL"] = "http://play.example.com" },
+		"bad client ID":    func(env map[string]string) { env["GMAIL_CLIENT_ID"] = "client-id" },
+		"missing secret":   func(env map[string]string) { env["GMAIL_CLIENT_SECRET"] = "" },
+		"missing refresh":  func(env map[string]string) { env["GMAIL_REFRESH_TOKEN"] = "" },
+		"spaced refresh":   func(env map[string]string) { env["GMAIL_REFRESH_TOKEN"] = "1//a b" },
+		"bad sender":       func(env map[string]string) { env["GMAIL_FROM"] = "not an address" },
+		"resend key alone": func(env map[string]string) { env["GMAIL_CLIENT_ID"] = ""; env["RESEND_API_KEY"] = "re_key" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			env := cloneEnv(valid)
+			mutate(env)
+			if _, err := ConfigFromEnv(func(key string) string { return env[key] }); err == nil {
+				t.Fatal("invalid email configuration was accepted")
+			}
+		})
+	}
+}
+
 func cloneEnv(source map[string]string) map[string]string {
 	copy := make(map[string]string, len(source))
 	for key, value := range source {
