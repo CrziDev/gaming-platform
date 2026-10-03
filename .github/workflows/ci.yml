@@ -68,7 +68,7 @@ jobs:
         env:
           APP_ENV: development
           ALLOW_DEMO_SEED: "true"
-          SEED_USER_EMAIL: owner@example.com
+          SEED_ADMIN_EMAILS: owner@example.com
           SEED_USER_PASSWORD: ci-seed-only
           SEED_PLAYER_PASSWORD: ci-demo-player-only
 

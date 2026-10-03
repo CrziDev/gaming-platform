@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN alert_emails BOOLEAN NOT NULL DEFAULT false;

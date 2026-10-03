@@ -67,12 +67,14 @@ dependency order: `000001` `users` · `000002` `auth_sessions` · `000003`
 `deposit_requests` · `000013` `audit_logs` · `000014` `game_favorites` · `000015`
 `chat_messages` · `000016` `notifications` · `000017` replaces `rtp_profiles` with
 `games.rtp_basis_points` · `000018` adds the partial recent-settlement index used by the
-hot-game ranking · `000019` adds the case-insensitive unique payment-method name index.
+hot-game ranking · `000019` adds the case-insensitive unique payment-method name index ·
+`000025` adds `users.alert_emails`.
 
 ### 4.1 Accounts and sessions
 
 `users` holds `id`, `email`, `password_hash`, `display_name`, `role`
-(`player` / `admin`), `status` (`active` / `suspended` / `closed`), and timestamps, with
+(`player` / `admin`), `status` (`active` / `suspended` / `closed`), `alert_emails`
+(an administrator's opt-in to request alerts, false by default), and timestamps, with
 the email normalisation and vocabulary checks in the table itself.
 
 `auth_sessions` holds `token_hash` (32 bytes, unique), `issued_at`, `expires_at`,
@@ -568,8 +570,9 @@ one-pending-per-wallet rule that §12.1 checks under the wallet lock.
 
 The account service covers registration, login, logout, `/api/me`, the
 paginated/searchable/status-filtered admin account list, individual admin detail,
-audited suspend/reinstate operations with immediate session revocation, and the
-paginated operator audit feed. Authentication uses Argon2id hashing with a per-hash salt
+audited suspend/reinstate operations with immediate session revocation, the staff list
+of administrators with each one's audited email-alert switch, and the paginated operator
+audit feed. Authentication uses Argon2id hashing with a per-hash salt
 and constant-time comparison, opaque 32-byte session tokens stored as a SHA-256 hash in
 an HttpOnly cookie, the `Origin` allowlist, indistinguishable login failures with matched
 timing, and a per-client rate limit on the credential endpoints.
@@ -789,7 +792,7 @@ A request carries an idempotency key, so a retried submission returns the origin
 request with `200 OK` instead of queueing a second one or retaining another proof file.
 
 When email delivery is enabled, a newly created request emails every active
-administrator after it commits: the player's name and email, the amount in the
+administrator with `alert_emails` on after it commits: the player's name and email, the amount in the
 currency's major units, the method, reference, submission time, request ID, and a link
 to the deposit queue. It is sent in the background, so the player's response does not
 wait on it, and a failure is logged without changing the request. A retry sends nothing.
@@ -868,6 +871,11 @@ review and a cancel takes the row lock first settles the request; the other sees
 status that is no longer `pending` and answers `409 WITHDRAWAL_ALREADY_REVIEWED`. Each
 review writes the player's notification in its transaction, and each step its audit row.
 A frozen or closed wallet refuses the debit and the refund alike, with its own code.
+
+A newly created request alerts administrators the way a deposit does: the same
+recipients, sent in the background after it commits, with the player, amount, method,
+account name and number, submission time, request ID, and a link to the withdrawal
+queue. A retry sends nothing.
 
 ## 13. Audit trail
 
@@ -970,8 +978,10 @@ rotation, disabled delivery without a database lookup, and Resend authentication
 payloads, idempotency, retry, timeout, and secret-free failure handling. Gmail tests
 cover the token exchange and its reuse and expiry, a rejected access token, retries,
 a revoked refresh token reported without secrets, header injection, and the parsed
-multipart message. The deposit alert test covers its recipients, content, and a retry
-that sends nothing.
+multipart message. The deposit and withdrawal alert tests cover their recipients — only
+active administrators with alerts on — content, and a retry that sends nothing; the
+staff test covers the default, the role guard, any administrator switching any
+administrator's alerts, and the audit row written only on a change.
 
 Database-backed tests read only `TEST_DATABASE_URL`, whose database name ends in
 `_test`, and skip when it is absent or unreachable. CI sets `REQUIRE_TEST_DATABASE=1` so

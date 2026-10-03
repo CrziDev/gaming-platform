@@ -37,12 +37,29 @@ describe('admin settings', () => {
     expect(await within(methodRow).findByText('Off')).toBeInTheDocument()
   })
 
+  it('lists administrators and turns one administrator\'s email alerts on', async () => {
+    const user = userEvent.setup()
+    renderSettings()
+
+    await user.click(await screen.findByRole('tab', { name: 'Staff' }))
+    const table = within(await screen.findByRole('table', { name: 'Administrators' }))
+    const cruzRow = within(table.getByText('R. Cruz').closest('tr')!)
+    const reyesRow = within(table.getByText('A. Reyes').closest('tr')!)
+    expect(cruzRow.getByText('Off')).toBeInTheDocument()
+    expect(reyesRow.getByText('Off')).toBeInTheDocument()
+
+    await user.click(reyesRow.getByRole('button', { name: 'Turn on' }))
+    expect(await reyesRow.findByText('On')).toBeInTheDocument()
+    expect(reyesRow.getByRole('button', { name: 'Turn off' })).toBeInTheDocument()
+    expect(cruzRow.getByText('Off')).toBeInTheDocument()
+  })
+
   it('marks unsupported settings without showing inert controls', async () => {
     const user = userEvent.setup()
     renderSettings()
 
     await screen.findByRole('heading', { name: 'Settings' })
-    for (const tab of ['Staff', 'Limits', 'Platform']) {
+    for (const tab of ['Limits', 'Platform']) {
       await user.click(screen.getByRole('tab', { name: tab }))
       expect(screen.getByText('Future development')).toBeInTheDocument()
       expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()

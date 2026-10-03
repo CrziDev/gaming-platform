@@ -11,13 +11,20 @@ import (
 	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/mail"
 	"github.com/gaming-platform/backend/internal/user"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
+type Config struct {
+	Mailer       mail.Sender
+	PublicWebURL string
+}
+
 type Handler struct {
 	db     *sql.DB
 	logger *slog.Logger
+	cfg    Config
 }
 
 type requestResponse struct {
@@ -43,8 +50,8 @@ type adminRequestResponse struct {
 	DisplayName string `json:"display_name"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger) *Handler {
-	return &Handler{db: db, logger: logger}
+func NewHandler(db *sql.DB, logger *slog.Logger, cfg Config) *Handler {
+	return &Handler{db: db, logger: logger, cfg: cfg}
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request, account user.User) {
@@ -159,6 +166,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, account user.Us
 		h.internal(w, r, err)
 	case created:
 		httpx.WriteJSON(w, http.StatusCreated, newRequestResponse(item))
+		h.alertAdmins(item, account)
 	default:
 		httpx.WriteJSON(w, http.StatusOK, newRequestResponse(item))
 	}

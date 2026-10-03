@@ -43,10 +43,16 @@ const (
 		SET password_hash = $1, updated_at = now()
 		WHERE id = ($2::text)::uuid`
 
-	selectActiveAdminEmailsSQL = `
+	selectAlertRecipientEmailsSQL = `
 		SELECT email
 		FROM users
-		WHERE role = 'admin' AND status = 'active'
+		WHERE role = 'admin' AND status = 'active' AND alert_emails
+		ORDER BY created_at, email`
+
+	listStaffSQL = `
+		SELECT id::text, email, display_name, status, alert_emails, created_at
+		FROM users
+		WHERE role = 'admin'
 		ORDER BY created_at, email`
 
 	countUsersSQL = `
@@ -85,6 +91,15 @@ type User struct {
 	Role         string
 	Status       string
 	CreatedAt    time.Time
+}
+
+type Staff struct {
+	ID          string
+	Email       string
+	DisplayName string
+	Status      string
+	AlertEmails bool
+	CreatedAt   time.Time
 }
 
 type ListFilter struct {
@@ -213,8 +228,8 @@ func List(ctx context.Context, db *sql.DB, filter ListFilter) ([]User, int, erro
 	return accounts, total, nil
 }
 
-func ActiveAdminEmails(ctx context.Context, db *sql.DB) ([]string, error) {
-	rows, err := db.QueryContext(ctx, selectActiveAdminEmailsSQL)
+func AlertRecipientEmails(ctx context.Context, db *sql.DB) ([]string, error) {
+	rows, err := db.QueryContext(ctx, selectAlertRecipientEmailsSQL)
 	if err != nil {
 		return nil, fmt.Errorf("user: list admin emails: %w", err)
 	}
@@ -232,6 +247,27 @@ func ActiveAdminEmails(ctx context.Context, db *sql.DB) ([]string, error) {
 		return nil, fmt.Errorf("user: admin email rows: %w", err)
 	}
 	return emails, nil
+}
+
+func ListStaff(ctx context.Context, db *sql.DB) ([]Staff, error) {
+	rows, err := db.QueryContext(ctx, listStaffSQL)
+	if err != nil {
+		return nil, fmt.Errorf("user: list staff: %w", err)
+	}
+	defer rows.Close()
+
+	staff := make([]Staff, 0)
+	for rows.Next() {
+		var member Staff
+		if err := rows.Scan(&member.ID, &member.Email, &member.DisplayName, &member.Status, &member.AlertEmails, &member.CreatedAt); err != nil {
+			return nil, fmt.Errorf("user: staff row: %w", err)
+		}
+		staff = append(staff, member)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("user: staff rows: %w", err)
+	}
+	return staff, nil
 }
 
 func isUniqueViolation(err error) bool {

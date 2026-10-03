@@ -26,6 +26,26 @@ type adminUserResponse struct {
 	CreatedAt   string `json:"created_at"`
 }
 
+type staffResponse struct {
+	ID          string `json:"id"`
+	Email       string `json:"email"`
+	DisplayName string `json:"display_name"`
+	Status      string `json:"status"`
+	AlertEmails bool   `json:"alert_emails"`
+	CreatedAt   string `json:"created_at"`
+}
+
+func newStaffResponse(member user.Staff) staffResponse {
+	return staffResponse{
+		ID:          member.ID,
+		Email:       member.Email,
+		DisplayName: member.DisplayName,
+		Status:      member.Status,
+		AlertEmails: member.AlertEmails,
+		CreatedAt:   member.CreatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
 func newUserResponse(u user.User) userResponse {
 	return userResponse{
 		ID:          u.ID,

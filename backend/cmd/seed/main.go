@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -34,13 +35,13 @@ func main() {
 
 func run(mode string, lookup func(string) string) error {
 	databaseURL := lookup("DATABASE_URL")
-	adminEmail := strings.ToLower(strings.TrimSpace(lookup("SEED_USER_EMAIL")))
+	adminEmails := parseAdminEmails(lookup("SEED_ADMIN_EMAILS"))
 
 	if databaseURL == "" {
 		return errors.New("seed: DATABASE_URL is required")
 	}
-	if adminEmail == "" {
-		return errors.New("seed: SEED_USER_EMAIL must be set")
+	if len(adminEmails) == 0 {
+		return errors.New("seed: SEED_ADMIN_EMAILS must list at least one email")
 	}
 	if mode == "demo" {
 		if err := allowDemoSeed(lookup); err != nil {
@@ -65,11 +66,11 @@ func run(mode string, lookup func(string) string) error {
 
 	switch mode {
 	case "bootstrap":
-		if err := bootstrap(ctx, tx, lookup, adminEmail); err != nil {
+		if err := bootstrap(ctx, tx, lookup, adminEmails); err != nil {
 			return err
 		}
 	case "demo":
-		if err := demo(ctx, tx, lookup, adminEmail); err != nil {
+		if err := demo(ctx, tx, lookup, adminEmails[0]); err != nil {
 			return err
 		}
 	default:
@@ -83,23 +84,21 @@ func run(mode string, lookup func(string) string) error {
 	return nil
 }
 
-func bootstrap(ctx context.Context, tx *sql.Tx, lookup func(string) string, adminEmail string) error {
+func bootstrap(ctx context.Context, tx *sql.Tx, lookup func(string) string, adminEmails []string) error {
 	adminPassword := lookup("SEED_USER_PASSWORD")
 	if adminPassword == "" {
 		return errors.New("seed: SEED_USER_PASSWORD must be set for bootstrap")
 	}
-	adminDisplayName := strings.TrimSpace(lookup("SEED_USER_DISPLAY_NAME"))
-	if adminDisplayName == "" {
-		adminDisplayName = "Owner"
-	}
-	adminID, created, err := seedAdmin(ctx, tx, adminEmail, adminPassword, adminDisplayName)
-	if err != nil {
-		return err
+	for _, email := range adminEmails {
+		adminID, created, err := seedAdmin(ctx, tx, email, adminPassword, adminDisplayName(email))
+		if err != nil {
+			return err
+		}
+		fmt.Printf("ensured admin %s (%s, created=%t)\n", email, adminID, created)
 	}
 	if err := seedCatalogue(ctx, tx); err != nil {
 		return err
 	}
-	fmt.Printf("ensured admin %s (%s, created=%t)\n", adminEmail, adminID, created)
 	fmt.Printf("ensured %d categories and %d games\n", len(categories), len(games))
 	return nil
 }
@@ -131,6 +130,28 @@ func demo(ctx context.Context, tx *sql.Tx, lookup func(string) string, adminEmai
 	fmt.Printf("seeded %d demo players with opening balances\n", playerCount)
 	fmt.Printf("seeded %d payment methods with development destinations\n", len(paymentMethods))
 	return nil
+}
+
+func parseAdminEmails(value string) []string {
+	emails := make([]string, 0)
+	for _, part := range strings.Split(value, ",") {
+		email := strings.ToLower(strings.TrimSpace(part))
+		if email != "" && !slices.Contains(emails, email) {
+			emails = append(emails, email)
+		}
+	}
+	return emails
+}
+
+func adminDisplayName(email string) string {
+	name, _, _ := strings.Cut(email, "@")
+	if name == "" {
+		name = email
+	}
+	if runes := []rune(name); len(runes) > 80 {
+		name = string(runes[:80])
+	}
+	return name
 }
 
 func allowDemoSeed(lookup func(string) string) error {

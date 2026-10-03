@@ -54,15 +54,16 @@ PUBLIC_WEB_URL=https://stage.example.com
 ALLOW_DEMO_SEED=true
 ```
 
-Set unique `SEED_USER_PASSWORD` and `SEED_PLAYER_PASSWORD` secrets, apply migrations,
+List the administrators in `SEED_ADMIN_EMAILS`, set unique `SEED_USER_PASSWORD` and
+`SEED_PLAYER_PASSWORD` secrets, apply migrations,
 then run `make docker-bootstrap docker-seed-demo ENV_FILE=.env.prod`. The deployment
 health check is `GET /api/health`.
 
 ## Email
 
 Email delivery is disabled by default, so local reset requests return `503`. When
-enabled it sends password-reset links and alerts every active administrator to a new
-deposit request. For a deployment using the Gmail API, configure:
+enabled it sends password-reset links and alerts every active administrator with email
+alerts on (Settings → Staff) to a new deposit or withdrawal request. For a deployment using the Gmail API, configure:
 
 ```dotenv
 EMAIL_DELIVERY_PROVIDER=gmail

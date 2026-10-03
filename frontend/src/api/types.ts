@@ -16,6 +16,15 @@ export type AdminUser = User & {
   status: AccountStatus
 }
 
+export type StaffMember = {
+  id: string
+  email: string
+  display_name: string
+  status: AccountStatus
+  alert_emails: boolean
+  created_at: string
+}
+
 export type ApiErrorBody = {
   error: string
   code?: string

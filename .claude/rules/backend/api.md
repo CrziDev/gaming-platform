@@ -201,8 +201,9 @@ it.
 6 MiB and the proof itself to 5 MiB. Only PNG and JPEG content identified from its bytes
 is accepted; the client filename and declared MIME type are not trusted. A retry returns
 the original request and does not retain the redundant uploaded file. When email
-delivery is enabled, a new request emails every active administrator in the background;
-a retry does not, and a delivery failure never changes the response.
+delivery is enabled, a new request emails every active administrator with email alerts
+on in the background; a retry does not, and a delivery failure never changes the
+response.
 
 `POST /api/games/{slug}/rounds` plays one round of an integrated game. It requires an
 `Idempotency-Key` header of at most 200 characters and a body of `stake_minor`,
@@ -241,8 +242,8 @@ amount back as a `refund` movement referencing the withdrawal, exactly once. Rev
 cancel serialize on the request, so only the first settles it and the other is `409`
 `WITHDRAWAL_ALREADY_REVIEWED`. Each step is audited as `withdrawal.request`,
 `withdrawal.approve`, `withdrawal.reject`, or `withdrawal.cancel`; a review notifies the
-player and a cancel does not. An admin withdrawal adds `user_id`, `user_email`, and
-`display_name`.
+player and a cancel does not. A new request emails administrators exactly as a new
+deposit does. An admin withdrawal adds `user_id`, `user_email`, and `display_name`.
 
 The migration creates GCash and Maya disabled with placeholder destinations. Operators
 manage payment methods through the admin endpoints. `make seed-demo` enables the two
@@ -261,6 +262,8 @@ session. Those two are omitted from the failure column.
 | `PATCH` | `/api/admin/users/{id}/status` | `200` + the account; accepts `active` or `suspended` | `400` · `404` · `409` `SELF_STATUS_CHANGE` / `ACCOUNT_CLOSED` |
 | `GET` | `/api/admin/users/{id}/wallets` | `200` + the account's wallets | `404` |
 | `POST` | `/api/admin/users/{id}/wallet-adjustments` | `201` + the movement | `400` · `404` · `409` `INSUFFICIENT_BALANCE` / `WALLET_FROZEN` / `WALLET_CLOSED` / `AMOUNT_OVERFLOW` |
+| `GET` | `/api/admin/staff` | `200` + every administrator | — |
+| `PATCH` | `/api/admin/staff/{id}/alerts` | `200` + the administrator; takes `enabled` | `400` · `404` not an administrator |
 | `GET` | `/api/admin/transactions` | `200` + a page of movements | — |
 | `GET` | `/api/admin/rounds` | `200` + a page of rounds; accepts `user_id`, `game_id`, `status`, `currency`, `from`, `to` | `400` invalid filter |
 | `GET` | `/api/admin/deposits` | `200` + a page of requests; defaults to pending and accepts `user_id` plus `status=all|pending|approved|rejected` | `400` invalid filter |
@@ -360,10 +363,19 @@ Timestamps are RFC 3339 UTC.
 
 ## Accounts
 
-Public registration always creates a player. `make bootstrap` provisions the initial
-administrator when absent; re-running it preserves the existing account and password.
+Public registration always creates a player. `make bootstrap` provisions each
+administrator in `SEED_ADMIN_EMAILS` when absent; re-running it preserves existing
+accounts and passwords.
 `make seed-demo` provisions synthetic players only in an explicitly allowed development
 or staging environment.
 
 The account body carries `id`, `email`, `display_name`, `role`, and `created_at`. The
 admin listing adds `status`.
+
+The staff list is a plain array of every administrator, oldest first, each
+`{ "id", "email", "display_name", "status", "alert_emails", "created_at" }`. It is
+bounded by bootstrap, so it is not paged. `alert_emails` is false until an
+administrator turns it on, and only active administrators with it on are emailed about
+new deposit and withdrawal requests. Any administrator may turn it on or off for any
+administrator, themselves included; a change is audited as `user.alert_emails_change`,
+and setting the value already in force writes no audit row.

@@ -16,6 +16,7 @@ import type {
   DashboardSummary,
   GameStatus,
   Round,
+  StaffMember,
   Transaction,
   Wallet,
   WagerLimit,
@@ -890,6 +891,27 @@ export async function updatePaymentMethod({
     })
   }
   return api.patch<AdminPaymentMethod>(`/admin/payment-methods/${encodeURIComponent(id)}`, patch)
+}
+
+export async function fetchStaff(): Promise<StaffMember[]> {
+  if (usingTestFixtures) {
+    const { staffMembers } = await import('@/mocks/admin')
+    return mockRequest(() => staffMembers.map((member) => ({ ...member })))
+  }
+  return api.get<StaffMember[]>('/admin/staff')
+}
+
+export async function setStaffAlerts({ id, enabled }: { id: string; enabled: boolean }): Promise<StaffMember> {
+  if (usingTestFixtures) {
+    const { staffMembers } = await import('@/mocks/admin')
+    return mockRequest(() => {
+      const member = staffMembers.find((candidate) => candidate.id === id)
+      if (!member) throw new ApiError(404, 'Administrator not found')
+      member.alert_emails = enabled
+      return { ...member }
+    })
+  }
+  return api.patch<StaffMember>(`/admin/staff/${encodeURIComponent(id)}/alerts`, { enabled })
 }
 
 export type ConsoleSearchResults = {

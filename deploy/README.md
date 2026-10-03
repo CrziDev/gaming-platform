@@ -16,7 +16,7 @@ Every command reads `.env.prod`: Compose through `--env-file`, the make targets 
 ```bash
 git clone <repo> gaming-platform && cd gaming-platform
 cp .env.prod.example .env.prod
-nano .env.prod                      # DB_PASSWORD, SITE_ADDRESS, DATABASE_URL, SEED_USER_*, origins
+nano .env.prod                      # DB_PASSWORD, SITE_ADDRESS, DATABASE_URL, SEED_ADMIN_EMAILS, SEED_USER_PASSWORD, origins
 
 docker compose --env-file .env.prod up -d --build
 make docker-migrate-up docker-bootstrap ENV_FILE=.env.prod
