@@ -120,7 +120,9 @@ function MethodsTab() {
                   <Button variant="secondary" size="sm" onClick={() => toggle(row)} disabled={update.isPending}>
                     {row.enabled ? 'Disable' : 'Enable'}
                   </Button>
-                  <Button size="sm" onClick={() => setEditing(row)}>Edit</Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditing(row)}>
+                    Edit
+                  </Button>
                 </span>
               ),
             },
@@ -135,7 +137,9 @@ function MethodsTab() {
                   <Button variant="secondary" size="sm" onClick={() => toggle(row)} disabled={update.isPending}>
                     {row.enabled ? 'Disable' : 'Enable'}
                   </Button>
-                  <Button size="sm" onClick={() => setEditing(row)}>Edit</Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditing(row)}>
+                    Edit
+                  </Button>
                 </>
               }
             />

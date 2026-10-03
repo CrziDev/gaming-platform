@@ -54,6 +54,7 @@ async function boot() {
       state.stage = { x: message.x, y: message.y, width: message.width, height: message.height }
       state.controls = message.controls
       board.fit()
+      ui.placeFoot(message.y + message.height)
     },
 
     drop(message) {

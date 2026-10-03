@@ -11,6 +11,7 @@ export type {
 } from './api'
 export { setActiveCurrency, useActiveCurrency } from './activeCurrency'
 export { ledgerColumns } from './ledger'
+export { LedgerStatus } from './LedgerStatus'
 export { depositColumns, withdrawalColumns } from './requests'
 export { SwitchCurrencyDialog } from './SwitchCurrencyDialog'
 export { createDepositSchema, createWithdrawalSchema, fallbackDepositLimits } from './schemas'

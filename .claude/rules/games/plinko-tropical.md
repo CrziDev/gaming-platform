@@ -61,7 +61,9 @@ only: an infinity pool, a lounge under a thatched pergola with hanging lanterns,
 and a bay of limestone islands with moored boats, from a wide photo or a tall one,
 whichever is nearer the zone's shape. A wooden signboard stands on the right of the photo
 and is never cropped off. The top darkens a little under the title row and the foot under
-the bet panel.
+the bet panel, and below the stage the scene fades into the page ground (`#04070d`) by the
+frame's foot, so the round history beneath starts on the same black; where the stage
+reaches the foot, as in the side panel layout, nothing fades.
 
 In front of it stands a slate board: a matte dark face with a fine grain, lifted toward
 the upper middle, shaped as a tall trapezoid from a narrow neck to upright walls around

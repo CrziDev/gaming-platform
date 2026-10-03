@@ -6,11 +6,11 @@ import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable } from '@/components/ui/RecordTable'
 import { Skeleton, SkeletonRows } from '@/components/ui/Skeleton'
-import { StatCard } from '@/components/ui/StatCard'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
 import {
+  LedgerStatus,
   ledgerColumns,
   useRounds,
   useTransactions,
@@ -20,7 +20,7 @@ import {
   type SummaryFilter,
 } from '@/features/wallet'
 import { formatClock, formatDate, formatMultiplier } from '@/lib/format'
-import { formatMoney, money } from '@/lib/money'
+import { formatMoney, money, type Money } from '@/lib/money'
 
 const kindTabs = [
   { id: 'all' as const, label: 'All' },
@@ -209,7 +209,7 @@ export function HistoryPage() {
                         className="text-sm"
                       />
                     }
-                    aside={<StatusBadge status={row.status} />}
+                    aside={<LedgerStatus status={row.status} />}
                   />
                 ))}
               </section>
@@ -279,10 +279,10 @@ function SummaryStrip({ filter }: { filter: SummaryFilter }) {
 
   if (summaryQuery.isPending) {
     return (
-      <div role="status" aria-label="Loading summary" className="grid gap-3 sm:grid-cols-3">
-        <Skeleton className="h-[74px] rounded-card" />
-        <Skeleton className="h-[74px] rounded-card" />
-        <Skeleton className="h-[74px] rounded-card" />
+      <div role="status" aria-label="Loading summary" className="grid grid-cols-3 gap-2 sm:gap-3">
+        <Skeleton className="h-[58px] rounded-tile" />
+        <Skeleton className="h-[58px] rounded-tile" />
+        <Skeleton className="h-[58px] rounded-tile" />
       </div>
     )
   }
@@ -298,27 +298,29 @@ function SummaryStrip({ filter }: { filter: SummaryFilter }) {
   if (summaryQuery.data.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {summaryQuery.data.map((entry) => (
         <section
           key={entry.currency}
           aria-label={`${entry.currency} summary`}
-          className="grid gap-3 sm:grid-cols-3"
+          className="grid grid-cols-3 gap-2 sm:gap-3"
         >
-          <StatCard
-            label={`Deposited · ${filter.days}d`}
-            value={formatMoney(money(entry.deposited_minor, entry.currency))}
-          />
-          <StatCard
-            label={`Staked · ${filter.days}d`}
-            value={formatMoney(money(entry.staked_minor, entry.currency))}
-          />
-          <StatCard
-            label={`Returned · ${filter.days}d`}
-            value={formatMoney(money(entry.returned_minor, entry.currency))}
-          />
+          <SummaryFigure label="Deposited" value={money(entry.deposited_minor, entry.currency)} />
+          <SummaryFigure label="Staked" value={money(entry.staked_minor, entry.currency)} />
+          <SummaryFigure label="Returned" value={money(entry.returned_minor, entry.currency)} />
         </section>
       ))}
+    </div>
+  )
+}
+
+function SummaryFigure({ label, value }: { label: string; value: Money }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-tile glass-panel px-3 py-2.5 sm:px-4 sm:py-3">
+      <span className="label-mono text-ink-cool">{label}</span>
+      <span className="text-[13.5px] font-medium [overflow-wrap:anywhere] text-ink tnum sm:text-[16px]">
+        {formatMoney(value)}
+      </span>
     </div>
   )
 }

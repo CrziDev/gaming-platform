@@ -54,6 +54,10 @@ see-through navy glass above it. Each drop mouth is an ice-blue ring with a soft
 halo brightest at its back, a blue-white spark on the back lip, and a small light just
 above it.
 
+Below the stage the scene fades into the page ground (`#04070d`) by the frame's foot, so
+the round history beneath starts on the same black; where the stage reaches the foot, as
+in the side panel layout, nothing fades.
+
 ## Brand lines
 
 `GOOD PLAYERS BET BETTER` in the left gutter and `SAME GAME BIGGER VIEWS` in the right,

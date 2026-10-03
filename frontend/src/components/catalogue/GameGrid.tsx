@@ -3,7 +3,7 @@ import { GameCard } from '@/components/catalogue/GameCard'
 import { cn } from '@/lib/cn'
 
 export const gameGrid =
-  'grid gap-2.5 grid-cols-[repeat(auto-fill,minmax(116px,1fr))] @min-[560px]:grid-cols-[repeat(auto-fill,minmax(126px,1fr))]'
+  'grid gap-2 grid-cols-[repeat(auto-fill,minmax(104px,1fr))] @min-[560px]:gap-2.5 @min-[560px]:grid-cols-[repeat(auto-fill,minmax(126px,1fr))]'
 
 type GameGridProps = {
   games: Game[]

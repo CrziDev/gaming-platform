@@ -15,9 +15,10 @@ energy comes from content — the game scene, game art, win amounts, live chat �
 the one primary action on a screen. Everything else is quiet glass that lets the content
 through.
 
-- **Glass is the surface language.** Chrome, panels, menus, and dialogs are translucent
-  navy glass with a backdrop blur, a cool hairline, a top-lit rim, and a 1px inset top
-  highlight. The blue lives in the glass; the ground stays near-black.
+- **Glass is the surface language.** Chrome and panels are translucent navy glass with a
+  backdrop blur, a cool hairline, a top-lit rim, and a 1px inset top highlight. Menus and
+  dialogs are the same navy made opaque, so nothing behind them reads through their text.
+  The blue lives in the glass; the ground stays near-black.
 - **One call to action glows.** The primary or play action is the only filled, gradient,
   glowing control in a region. Everything else is a glass or ghost control.
 - **Wallet is ambient.** One balance renders in the top bar on every route, at every
@@ -43,7 +44,9 @@ through.
    here.
 3. **Glass recipes, not ad-hoc blur.** A surface is one of `glass-chrome`, `glass-panel`,
    `glass-float`, or `glass-menu`. No other blur values, no noise, no stripes, no radial
-   blooms.
+   blooms. A recipe declares the standard `backdrop-filter` only and the build adds the
+   Safari prefix; a hand-written `-webkit-backdrop-filter` beside it makes the build drop
+   the standard one, and every other browser loses the blur.
 4. **Hairlines are cool white at 7–20%** (`hairline-soft`, `hairline`, `hairline-strong`,
    all `rgb(170 205 255 / …)`). They edge glass surfaces, the lobby banner and big-wins
    rows (`edge-lit`), and separate dense tabular data.
@@ -80,7 +83,7 @@ are named in its game file and follow the same rule.
 | `glass-chrome` | `panel`, `rgb(4 13 27 / .86)` + `blur(14px) saturate(1.2)` | Top bar, sidebar, bottom nav, drawer, chat rail |
 | `glass-panel` | `rgb(6 15 29 / .82)` + `blur(16px) saturate(1.2)`, `hairline`, `rim-light`, inset highlight | Cards and panels |
 | `glass-float` | `rgb(4 16 32 / .6)` + `blur(10px)`, `hairline-strong`, `rim-light`; `float-hover` on hover | Glass controls over game art |
-| `glass-menu` | `rgb(12 20 32 / .96)`, cool hairline 14%, overlay shadow | Menus, popovers, dialogs |
+| `glass-menu` | `rgb(12 20 32)`, opaque, cool hairline 14%, overlay shadow | Menus, popovers, dialogs |
 | `surface-1` | `#0a111c` | Solid card ground where blur would be wasted (tables, long lists) |
 | `surface-2` | `#111a27` | Raised object inside a card; row hover |
 | `surface-3` | `#182333` | Media placeholders, active chips, avatars |
@@ -215,7 +218,8 @@ its font loads only there.
 `3 / 4` portrait, `tile` radius, `surface-3` placeholder with a centred uppercase mono
 caption until real art lands. The name sits inside the tile over the `tile-scrim`; the
 studio sits beneath in `ink-mute` at 11px. The grid is
-`repeat(auto-fill, minmax(126px, 1fr))` at a 10px gutter, 116px under 560px. Hover
+`repeat(auto-fill, minmax(126px, 1fr))` at a 10px gutter, 104px at an 8px gutter under
+560px, so every phone from 360px holds three across. Hover
 reveals a Play chip by a 120ms opacity fade — no scale.
 
 ## Placeholders
@@ -263,7 +267,13 @@ colour-blindness. A credit reads `+₱1,200.00` in `success`; a debit reads `−
 `ink-soft`. Big wins on the lobby read in `win` beside a gold ₱ disc.
 
 Badges: active and approved in `success`, pending in `warning`, rejected in `danger`,
-everything else in `ink-mute` on `wash`.
+everything else in `ink-mute` on `wash`. A badge marks a state that differs from the
+normal one: a ledger movement that is simply applied carries none, and a figure takes a
+status tone only while there is something to act on (a pending count of 0 is plain).
+A status summary sits on `glass-panel`; its tint stays on the icon disc.
+
+An avatar without a photo shows the account's initials, uppercase Plex Mono in `ink-mute`
+on `surface-3`, never an empty circle.
 
 ## Icons
 

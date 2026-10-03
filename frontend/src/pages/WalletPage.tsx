@@ -11,6 +11,7 @@ import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import {
+  LedgerStatus,
   SwitchCurrencyDialog,
   depositColumns,
   ledgerColumns,
@@ -141,7 +142,7 @@ function ActivityTab() {
           value={
             <MoneyDisplay value={money(row.amount_minor, row.currency)} tone="auto" sign="always" className="text-sm" />
           }
-          aside={<StatusBadge status={row.status} />}
+          aside={<LedgerStatus status={row.status} />}
         />
       )}
       footer={

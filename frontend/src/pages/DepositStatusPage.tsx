@@ -13,27 +13,24 @@ import { paths } from '@/routes/paths'
 
 const presentation: Record<
   DepositStatus,
-  { icon: typeof Clock; heading: string; body: string; frame: string; ring: string }
+  { icon: typeof Clock; heading: string; body: string; ring: string }
 > = {
   pending: {
     icon: Clock,
     heading: 'Awaiting approval',
     body: "We'll notify you once it has been reviewed. You can keep playing with your current balance.",
-    frame: 'bg-warning/10',
     ring: 'bg-warning/14 text-warning',
   },
   approved: {
     icon: Check,
     heading: 'Approved',
     body: 'The funds are in your wallet.',
-    frame: 'bg-success/10',
     ring: 'bg-success/14 text-success',
   },
   rejected: {
     icon: X,
     heading: 'Rejected',
     body: 'No funds were added.',
-    frame: 'bg-danger/10',
     ring: 'bg-danger/14 text-danger',
   },
 }
@@ -87,7 +84,7 @@ export function DepositStatusPage() {
       </header>
 
       <section
-        className={cn('flex flex-col items-center gap-3 rounded-card p-6 text-center', state.frame)}
+        className="flex flex-col items-center gap-3 rounded-card glass-panel p-6 text-center"
       >
         <span className={cn('flex size-14 items-center justify-center rounded-full', state.ring)}>
           <Icon aria-hidden size={24} strokeWidth={1.5} />

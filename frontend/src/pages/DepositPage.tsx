@@ -222,10 +222,7 @@ export function DepositPage() {
                       <span className="truncate text-[13.5px] font-semibold text-ink-soft">
                         {method.name}
                       </span>
-                      <span className="truncate text-[12px] text-ink-mute">
-                        {method.description}
-                      </span>
-                      <span className="truncate font-mono text-[11.5px] text-ink-soft">
+                      <span className="font-mono text-[11.5px] break-words text-ink-soft">
                         Send to {method.pay_to}
                       </span>
                     </span>
@@ -289,10 +286,11 @@ export function DepositPage() {
                     onClick={() =>
                       setValue('amount', label.replace(/,/g, ''), { shouldValidate: true })
                     }
+                    aria-pressed={active}
                     className={cn(
-                      'min-h-11 rounded-chip font-mono text-[12.5px] transition-colors duration-fast lg:min-h-8',
+                      'min-h-11 rounded-chip text-[14px] font-medium tnum transition-colors duration-fast lg:min-h-8',
                       active
-                        ? 'bg-accent font-semibold text-on-accent'
+                        ? 'bg-selected text-ink ring-1 ring-accent-ink/45 ring-inset'
                         : 'bg-inset text-ink-mute hover:bg-wash hover:text-ink-soft',
                     )}
                   >

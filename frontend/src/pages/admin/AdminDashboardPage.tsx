@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 
 import type { AdminDeposit, DashboardGameActivity } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
+import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
 import { SeeAll } from '@/components/ui/SeeAll'
@@ -12,7 +13,7 @@ import { EmptyState, ErrorState } from '@/components/ui/States'
 import { SegmentedTrack } from '@/components/ui/Tabs'
 import { useAuditEntries, useDashboard, useDepositQueue } from '@/features/admin'
 import { useCurrencies } from '@/features/wallet'
-import { formatClock, formatCount, formatDuration, formatPercent } from '@/lib/format'
+import { formatClock, formatCount, formatDuration, formatPercent, formatQuantity } from '@/lib/format'
 import { formatDate } from '@/lib/format'
 import { formatMoney, money, type Currency } from '@/lib/money'
 import { adminPaths } from '@/routes/paths'
@@ -61,7 +62,7 @@ export function AdminDashboardPage() {
       ) : summary ? (
         <div className="grid gap-3.5 sm:grid-cols-2 wide:grid-cols-4">
           <StatCard
-            tone="warning"
+            tone={summary.pending_deposits > 0 ? 'warning' : 'default'}
             label="Pending deposits"
             value={summary.pending_deposits}
             meta={pendingMeta}
@@ -72,14 +73,14 @@ export function AdminDashboardPage() {
             value={formatMoney(money(summary.approved_today_minor, summary.currency), {
               decimals: 'trim',
             })}
-            meta={`${summary.approved_today_count} requests`}
+            meta={formatQuantity(summary.approved_today_count, 'request')}
           />
           <StatCard
             label="Staked today"
             value={formatMoney(money(summary.staked_today_minor, summary.currency), {
               decimals: 'trim',
             })}
-            meta={`${formatCount(summary.rounds_today)} rounds · ${summary.players_today} players`}
+            meta={`${formatQuantity(summary.rounds_today, 'round')} · ${formatQuantity(summary.players_today, 'player')}`}
             help="Everything wagered on rounds settled since midnight UTC, and the rounds and players behind it. A round that was refunded does not count."
           />
           <StatCard
@@ -134,7 +135,7 @@ export function AdminDashboardPage() {
                       {formatDuration(row.created_at)}
                     </span>
                   }
-                  leading={<span aria-hidden className="size-8 shrink-0 rounded-full bg-surface-3" />}
+                  leading={<Avatar name={row.username} className="size-8 text-[10.5px]" />}
                   actions={
                     <>
                       <Button variant="secondary" size="sm" onClick={() => setReviewing(row)}>
@@ -166,7 +167,7 @@ export function AdminDashboardPage() {
                 renderCard={(row) => (
                   <RecordCard
                     title={row.game_name}
-                    meta={`${formatCount(row.rounds)} rounds · RTP ${formatPercent(row.effective_rtp_basis_points)} · expected ${formatPercent(row.expected_rtp_basis_points)}`}
+                    meta={`${formatQuantity(row.rounds, 'round')} · RTP ${formatPercent(row.effective_rtp_basis_points)} · expected ${formatPercent(row.expected_rtp_basis_points)}`}
                     value={
                       <span className="text-[15px] font-medium tnum">
                         {formatMoney(money(row.hold_minor, summary.currency), { decimals: 'trim' })}
@@ -210,7 +211,13 @@ export function AdminDashboardPage() {
                     <span className="w-11 shrink-0 font-mono text-[11.5px] text-ink-mute">
                       {formatClock(entry.created_at)}
                     </span>
-                    <span className="text-[13px] leading-snug text-ink-soft">{entry.detail}</span>
+                    <span className="flex min-w-0 flex-col gap-0.5 text-[13px] leading-snug text-ink-soft">
+                      <span>
+                        {entry.operator} <span className="text-ink-mute">·</span>{' '}
+                        <span className="font-mono text-[12px] text-ink-cool">{entry.action}</span>
+                      </span>
+                      {entry.detail ? <span className="text-ink-mute">{entry.detail}</span> : null}
+                    </span>
                   </li>
                 ))}
               </ul>

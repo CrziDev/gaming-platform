@@ -35,4 +35,18 @@ describe('admin dashboard', () => {
     expect(aurora.getByText('105.24%')).toBeInTheDocument()
     expect(aurora.getByText('expected 96.00%')).toBeInTheDocument()
   })
+
+  it('names who did what in the activity log, with the detail beneath', async () => {
+    stubFetchRoutes({
+      'GET /me': { status: 200, body: userBody({ role: 'admin', display_name: 'R. Cruz' }) },
+    })
+
+    renderApp('/admin')
+
+    const heading = await screen.findByRole('heading', { name: 'Activity log' })
+    const log = within(heading.closest('section')!)
+    expect(await log.findByText('deposit.approve')).toBeInTheDocument()
+    expect(log.getAllByText('R. Cruz').length).toBeGreaterThan(0)
+    expect(log.getByText('Approved 8837 · +₱1,500.00 to mlopez')).toBeInTheDocument()
+  })
 })

@@ -2,7 +2,7 @@ import type { AdminRound, Round } from '@/api/types'
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { formatDateTime, formatMultiplier } from '@/lib/format'
+import { formatDateTime, formatDateTimeCompact, formatMultiplier } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
 
 type RoundRecordsProps = {
@@ -82,7 +82,7 @@ export function RoundRecords({ rows, showPlayer = false }: RoundRecordsProps) {
       renderCard={(row) => (
         <RecordCard
           title={row.game_name}
-          meta={`${showPlayer ? `${playerName(row)} · ` : ''}${row.id.slice(0, 8)} · ${formatDateTime(row.started_at)}`}
+          meta={`${showPlayer ? `${playerName(row)} · ` : ''}${row.id.slice(0, 8)} · ${formatDateTimeCompact(row.started_at)}`}
           value={<RoundReturn round={row} />}
           aside={<StatusBadge status={row.status} />}
         />

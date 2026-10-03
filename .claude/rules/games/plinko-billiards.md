@@ -71,6 +71,10 @@ with pearl sights, a rack of numbered pool balls in ten rows, the cue ball on th
 spot, and eleven leather pockets with brass lips along the foot cushion. Each pocket's
 payout is an enamelled plate in a brass bezel on the apron.
 
+Below the stage the scene fades into the page ground (`#04070d`) by the frame's foot, so
+the round history beneath starts on the same black; where the stage reaches the foot, as
+in the side panel layout, nothing fades.
+
 ## Brand lines
 
 `GOOD PLAYERS BET BETTER` in the left gutter and `SAME GAME BIGGER VIEWS` in the right,

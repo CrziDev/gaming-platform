@@ -58,6 +58,9 @@ React Hook Form plus Zod. The Zod schema is the client-side source of truth, and
 validation is UX only — the server validates independently and its `fields` response is
 what gets shown against an input.
 
+A dialog that holds a field opens with focus in its first field; one without a field
+opens on its first control.
+
 ## Auth
 
 The session is an HttpOnly cookie the browser cannot read. **Nothing credential-shaped

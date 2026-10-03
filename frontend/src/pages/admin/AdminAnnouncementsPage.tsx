@@ -34,8 +34,8 @@ export function AdminAnnouncementsPage() {
     return () => window.clearInterval(interval)
   }, [])
 
-  const newAnnouncement = (
-    <Button size="sm" onClick={() => setCreating(true)}>
+  const newAnnouncement = (variant: 'primary' | 'secondary') => (
+    <Button variant={variant} size="sm" onClick={() => setCreating(true)}>
       <Plus aria-hidden size={15} strokeWidth={2} />
       New announcement
     </Button>
@@ -76,7 +76,7 @@ export function AdminAnnouncementsPage() {
       <PageHeading
         title="Announcements"
         meta="Messages published here appear in the lobby announcement bar."
-        actions={newAnnouncement}
+        actions={newAnnouncement('primary')}
       />
 
       {statusError ? (
@@ -97,7 +97,7 @@ export function AdminAnnouncementsPage() {
         <EmptyState
           title="No announcements yet"
           description="Publish a message to show an announcement bar on the lobby."
-          action={newAnnouncement}
+          action={newAnnouncement('secondary')}
         />
       ) : (
         <RecordTable

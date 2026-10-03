@@ -65,7 +65,7 @@ export function AdminGameDetailPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3.5 sm:grid-cols-2 wide:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 wide:grid-cols-4">
         <StatCard label="RTP" value={game.rtp_basis_points === null ? '—' : formatPercent(game.rtp_basis_points)} />
         <StatCard label="Rounds 30d" value={formatCount(game.rounds_30d)} />
         <StatCard label="Category" value={game.category_name} />

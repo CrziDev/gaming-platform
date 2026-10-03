@@ -36,6 +36,12 @@ export const ui = {
     })
   },
 
+  // Below the stage the scene fades into the page ground, so the host's round history
+  // starts on the same black. Where the stage reaches the frame's foot nothing fades.
+  placeFoot(stageBottom) {
+    document.documentElement.style.setProperty('--stage-bottom', `${stageBottom}px`)
+  },
+
   // The host formats the amount; the frame only places it. Wins read green, returns
   // under the stake read grey.
   toast(x, y, text, win) {
