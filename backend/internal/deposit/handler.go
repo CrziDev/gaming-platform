@@ -17,14 +17,21 @@ import (
 	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/mail"
 	"github.com/gaming-platform/backend/internal/user"
 	"github.com/gaming-platform/backend/internal/wallet"
 )
 
+type Config struct {
+	ProofDir     string
+	Mailer       mail.Sender
+	PublicWebURL string
+}
+
 type Handler struct {
-	db       *sql.DB
-	logger   *slog.Logger
-	proofDir string
+	db     *sql.DB
+	logger *slog.Logger
+	cfg    Config
 }
 
 type methodResponse struct {
@@ -83,8 +90,8 @@ type adminRequestResponse struct {
 	DisplayName string `json:"display_name"`
 }
 
-func NewHandler(db *sql.DB, logger *slog.Logger, proofDir string) *Handler {
-	return &Handler{db: db, logger: logger, proofDir: proofDir}
+func NewHandler(db *sql.DB, logger *slog.Logger, cfg Config) *Handler {
+	return &Handler{db: db, logger: logger, cfg: cfg}
 }
 
 func (h *Handler) Methods(w http.ResponseWriter, r *http.Request, _ user.User) {
@@ -324,11 +331,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, account user.Us
 		h.internal(w, r, err)
 		return
 	}
-	if err := os.MkdirAll(h.proofDir, 0o700); err != nil {
+	if err := os.MkdirAll(h.cfg.ProofDir, 0o700); err != nil {
 		h.internal(w, r, err)
 		return
 	}
-	if err := os.Chmod(h.proofDir, 0o700); err != nil {
+	if err := os.Chmod(h.cfg.ProofDir, 0o700); err != nil {
 		h.internal(w, r, err)
 		return
 	}
@@ -338,7 +345,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, account user.Us
 		return
 	}
 	filename := fmt.Sprintf("%x%s", nameBytes, extension)
-	path := filepath.Join(h.proofDir, filename)
+	path := filepath.Join(h.cfg.ProofDir, filename)
 	destination, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		h.internal(w, r, err)
@@ -385,11 +392,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request, account user.Us
 		h.internal(w, r, err)
 		return
 	}
-	status := http.StatusCreated
 	if !created {
-		status = http.StatusOK
+		httpx.WriteJSON(w, http.StatusOK, newRequestResponse(item))
+		return
 	}
-	httpx.WriteJSON(w, status, newRequestResponse(item))
+	h.alertAdmins(item, account)
+	httpx.WriteJSON(w, http.StatusCreated, newRequestResponse(item))
 }
 
 func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request, _ user.User) {
@@ -500,7 +508,7 @@ func (h *Handler) AdminProof(w http.ResponseWriter, r *http.Request, _ user.User
 		return
 	}
 	filename := filepath.Base(stored)
-	path := filepath.Join(h.proofDir, filename)
+	path := filepath.Join(h.cfg.ProofDir, filename)
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		httpx.WriteError(w, http.StatusNotFound, "Proof not found")

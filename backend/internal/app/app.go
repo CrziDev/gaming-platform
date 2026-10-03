@@ -17,6 +17,7 @@ import (
 	"github.com/gaming-platform/backend/internal/engine/plinko"
 	"github.com/gaming-platform/backend/internal/game"
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/mail"
 	"github.com/gaming-platform/backend/internal/notification"
 	"github.com/gaming-platform/backend/internal/round"
 	"github.com/gaming-platform/backend/internal/user"
@@ -24,27 +25,36 @@ import (
 	"github.com/gaming-platform/backend/internal/withdrawal"
 )
 
-func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, resetSenders ...auth.PasswordResetSender) http.Handler {
-	var resetSender auth.PasswordResetSender
-	if len(resetSenders) > 0 {
-		resetSender = resetSenders[0]
-	} else if cfg.EmailDeliveryProvider == "resend" {
-		resetSender = auth.NewResendSender(auth.ResendConfig{
-			APIKey: cfg.ResendAPIKey, From: cfg.ResendFrom, PublicWebURL: cfg.PublicWebURL,
+// New builds the route table. A test may pass a mailer in place of the one the
+// configured provider would build; none is built while delivery is disabled.
+func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, mailers ...mail.Sender) http.Handler {
+	var mailer mail.Sender
+	switch {
+	case len(mailers) > 0:
+		mailer = mailers[0]
+	case cfg.EmailDeliveryProvider == "resend":
+		mailer = mail.NewResend(mail.ResendConfig{APIKey: cfg.ResendAPIKey, From: cfg.ResendFrom})
+	case cfg.EmailDeliveryProvider == "gmail":
+		mailer = mail.NewGmail(mail.GmailConfig{
+			ClientID: cfg.GmailClientID, ClientSecret: cfg.GmailClientSecret,
+			RefreshToken: cfg.GmailRefreshToken, From: cfg.GmailFrom,
 		})
 	}
 	authHandler := auth.NewHandler(db, logger, auth.Config{
-		CookieName:          cfg.CookieName,
-		CookieSecure:        cfg.CookieSecure,
-		SessionTTL:          cfg.SessionTTL,
-		LoginsPerMinute:     cfg.LoginsPerMinute,
-		PasswordResetSender: resetSender,
+		CookieName:      cfg.CookieName,
+		CookieSecure:    cfg.CookieSecure,
+		SessionTTL:      cfg.SessionTTL,
+		LoginsPerMinute: cfg.LoginsPerMinute,
+		Mailer:          mailer,
+		PublicWebURL:    cfg.PublicWebURL,
 	})
 	currencyHandler := currency.NewHandler(db, logger)
 	engines := round.Engines{"plinko": plinko.New(), "plinko-billiards": plinko.New(), "plinko-tropical": plinko.New()}
 	gameHandler := game.NewHandler(db, logger, engines)
 	walletHandler := wallet.NewHandler(db, logger)
-	depositHandler := deposit.NewHandler(db, logger, cfg.ProofDir)
+	depositHandler := deposit.NewHandler(db, logger, deposit.Config{
+		ProofDir: cfg.ProofDir, Mailer: mailer, PublicWebURL: cfg.PublicWebURL,
+	})
 	withdrawalHandler := withdrawal.NewHandler(db, logger)
 	dashboardHandler := dashboard.NewHandler(db, logger)
 	auditHandler := audit.NewHandler(db, logger)

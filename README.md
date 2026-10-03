@@ -58,18 +58,26 @@ Set unique `SEED_USER_PASSWORD` and `SEED_PLAYER_PASSWORD` secrets, apply migrat
 then run `make docker-bootstrap docker-seed-demo ENV_FILE=.env.prod`. The deployment
 health check is `GET /api/health`.
 
-## Password-reset email
+## Email
 
-Email delivery is disabled by default, so local reset requests return `503`. For a
-deployment using Resend, configure:
+Email delivery is disabled by default, so local reset requests return `503`. When
+enabled it sends password-reset links and alerts every active administrator to a new
+deposit request. For a deployment using the Gmail API, configure:
 
 ```dotenv
-EMAIL_DELIVERY_PROVIDER=resend
+EMAIL_DELIVERY_PROVIDER=gmail
 PUBLIC_WEB_URL=https://play.example.com
-RESEND_API_KEY=re_...
-RESEND_FROM=HeziBet <security@example.com>
+GMAIL_CLIENT_ID=....apps.googleusercontent.com
+GMAIL_CLIENT_SECRET=...
+GMAIL_REFRESH_TOKEN=1//...
+GMAIL_FROM=HeziBet <sender@gmail.com>
 ```
 
-`PUBLIC_WEB_URL` must be HTTPS and `RESEND_FROM` must be a valid, verified sender. The
-server fails startup when enabled delivery is incomplete or invalid. Reset links expire
-after 30 minutes; the API stores only their SHA-256 hashes.
+The refresh token is granted the `gmail.send` scope by the `GMAIL_FROM` account. While
+the OAuth app is in Google's Testing status the token lasts seven days; a published app's
+token does not expire on a schedule. Resend is configured instead with
+`EMAIL_DELIVERY_PROVIDER=resend`, `RESEND_API_KEY`, and a verified `RESEND_FROM`.
+
+`PUBLIC_WEB_URL` must be HTTPS. The server fails startup when enabled delivery is
+incomplete or invalid. Reset links expire after 30 minutes; the API stores only their
+SHA-256 hashes.

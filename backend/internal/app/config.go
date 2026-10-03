@@ -31,6 +31,10 @@ type Config struct {
 	PublicWebURL               string
 	ResendAPIKey               string
 	ResendFrom                 string
+	GmailClientID              string
+	GmailClientSecret          string
+	GmailRefreshToken          string
+	GmailFrom                  string
 	TrustProxyHeaders          bool
 }
 
@@ -111,6 +115,10 @@ func ConfigFromEnv(lookup func(string) string) (Config, error) {
 		PublicWebURL:               strings.TrimSpace(env(lookup, "PUBLIC_WEB_URL", "http://localhost:5173")),
 		ResendAPIKey:               strings.TrimSpace(lookup("RESEND_API_KEY")),
 		ResendFrom:                 strings.TrimSpace(lookup("RESEND_FROM")),
+		GmailClientID:              strings.TrimSpace(lookup("GMAIL_CLIENT_ID")),
+		GmailClientSecret:          strings.TrimSpace(lookup("GMAIL_CLIENT_SECRET")),
+		GmailRefreshToken:          strings.TrimSpace(lookup("GMAIL_REFRESH_TOKEN")),
+		GmailFrom:                  strings.TrimSpace(lookup("GMAIL_FROM")),
 		TrustProxyHeaders:          trustProxyHeaders,
 	}
 	if err := validateEmailDelivery(cfg); err != nil {
@@ -123,15 +131,33 @@ func validateEmailDelivery(cfg Config) error {
 	switch cfg.EmailDeliveryProvider {
 	case "disabled":
 		return nil
-	case "resend":
+	case "resend", "gmail":
 	default:
-		return errors.New("EMAIL_DELIVERY_PROVIDER must be disabled or resend")
+		return errors.New("EMAIL_DELIVERY_PROVIDER must be disabled, gmail, or resend")
 	}
 
 	publicURL, err := url.Parse(cfg.PublicWebURL)
 	if err != nil || publicURL.Scheme != "https" || publicURL.Host == "" || publicURL.User != nil || (publicURL.Path != "" && publicURL.Path != "/") || publicURL.RawQuery != "" || publicURL.Fragment != "" {
-		return errors.New("PUBLIC_WEB_URL must be an HTTPS origin without credentials, path, query, or fragment when Resend is enabled")
+		return errors.New("PUBLIC_WEB_URL must be an HTTPS origin without credentials, path, query, or fragment when email delivery is enabled")
 	}
+
+	if cfg.EmailDeliveryProvider == "gmail" {
+		if !strings.HasSuffix(cfg.GmailClientID, ".apps.googleusercontent.com") || strings.ContainsAny(cfg.GmailClientID, " \t\r\n") {
+			return errors.New("GMAIL_CLIENT_ID must be a Google OAuth client ID when Gmail is enabled")
+		}
+		if cfg.GmailClientSecret == "" || strings.ContainsAny(cfg.GmailClientSecret, " \t\r\n") {
+			return errors.New("GMAIL_CLIENT_SECRET must be set when Gmail is enabled")
+		}
+		if cfg.GmailRefreshToken == "" || strings.ContainsAny(cfg.GmailRefreshToken, " \t\r\n") {
+			return errors.New("GMAIL_REFRESH_TOKEN must be set when Gmail is enabled")
+		}
+		from, err := mail.ParseAddress(cfg.GmailFrom)
+		if err != nil || from.Address == "" {
+			return errors.New("GMAIL_FROM must be a valid email sender when Gmail is enabled")
+		}
+		return nil
+	}
+
 	if !strings.HasPrefix(cfg.ResendAPIKey, "re_") || strings.ContainsAny(cfg.ResendAPIKey, " \t\r\n") {
 		return errors.New("RESEND_API_KEY must be a valid Resend API key when Resend is enabled")
 	}

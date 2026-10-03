@@ -5,12 +5,13 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"net/mail"
+	netmail "net/mail"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/gaming-platform/backend/internal/httpx"
+	"github.com/gaming-platform/backend/internal/mail"
 	"github.com/gaming-platform/backend/internal/ratelimit"
 	"github.com/gaming-platform/backend/internal/user"
 )
@@ -25,11 +26,12 @@ const (
 const invalidCredentials = "Email or password is incorrect"
 
 type Config struct {
-	CookieName          string
-	CookieSecure        bool
-	SessionTTL          time.Duration
-	LoginsPerMinute     int
-	PasswordResetSender PasswordResetSender
+	CookieName      string
+	CookieSecure    bool
+	SessionTTL      time.Duration
+	LoginsPerMinute int
+	Mailer          mail.Sender
+	PublicWebURL    string
 }
 
 type Handler struct {
@@ -298,7 +300,7 @@ func validateRegistration(email, password, displayName string) map[string]string
 }
 
 func isEmailAddress(value string) bool {
-	parsed, err := mail.ParseAddress(value)
+	parsed, err := netmail.ParseAddress(value)
 	return err == nil && parsed.Address == value
 }
 
