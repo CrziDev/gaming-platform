@@ -1,0 +1,12 @@
+Trimmed, filtered, normalised, and re-encoded (mono, 44.1 kHz, 96 kbit/s MP3) from
+Freesound recordings dedicated to the public domain under CC0 1.0
+(https://creativecommons.org/publicdomain/zero/1.0/).
+
+clack-1.mp3  "billiard ball clack" by Za-Games
+             https://freesound.org/people/Za-Games/sounds/539854/
+clack-2.mp3  "pool ball hits pool ball.wav" by Hankof, 0.152 s for 0.124 s
+             https://freesound.org/people/Hankof/sounds/655629/
+rack.mp3     "Racking Pool Balls" by Sirkoto51, 0.345 s for 0.5 s
+             https://freesound.org/people/Sirkoto51/sounds/274566/
+pocket.mp3   "Pool_Table_Ball_Hit_Sink.WAV" by AmberdeMeillon, 4.29 s for 0.96 s
+             https://freesound.org/people/AmberdeMeillon/sounds/443066/

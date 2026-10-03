@@ -27,6 +27,14 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 // desktop zone steps down to what still reads sharp.
 const PIXEL_BUDGET = 4_500_000
 
+// Recordings of real pool balls, trimmed and levelled (audio/SOURCES.txt). A name may
+// hold variants; each play picks one.
+const SAMPLES = {
+  clack: ['audio/clack-1.mp3', 'audio/clack-2.mp3'],
+  rack: ['audio/rack.mp3'],
+  pocket: ['audio/pocket.mp3'],
+}
+
 // The 3D table. It draws only what the host tells it: the payouts it is configured
 // with, and the slot each round has already settled in.
 export const board = {
@@ -54,7 +62,8 @@ export const board = {
   frameRequest: 0,
   lastFrame: 0,
   audioCtx: null,
-  noise: null,
+  output: null,
+  samples: {},
   onLanded: null,
 
   init(T, addons, host) {
@@ -84,6 +93,7 @@ export const board = {
     this.trails = createTrails(kit, this.upper, this.camera)
     this.chalk = createChalk(kit, this.upper)
     this.ballGeometry = new T.SphereGeometry(BALL_RADIUS, 48, 32)
+    this.loadSamples()
 
     this.scene.updateMatrixWorld(true)
     this.fit()
@@ -135,6 +145,7 @@ export const board = {
       this.land(ball)
       return
     }
+    this.playRack()
 
     const T = this.T
     ball.mesh = new T.Mesh(this.ballGeometry, this.cueMaterial)
@@ -169,7 +180,7 @@ export const board = {
     let segment = ball.segments[ball.index]
     let t = (now - ball.startedAt) / segment.duration
     while (t >= 1) {
-      if (segment.peg) this.hitPeg(segment.peg, segment.x1, segment.y1)
+      if (segment.peg) this.hitPeg(segment.peg, segment.x1, segment.y1, segment.kind === 'fall')
       ball.index++
       ball.startedAt += segment.duration
       if (ball.index >= ball.segments.length) {
@@ -200,14 +211,14 @@ export const board = {
   },
 
   // The struck ball gives a little along the line of the hit and settles back.
-  hitPeg(key, fromX, fromY) {
+  hitPeg(key, fromX, fromY, hard) {
     const peg = this.pegs.get(key)
     if (peg) {
       peg.level = 1
       peg.dir.set(peg.base.x - fromX, peg.base.y - fromY, 0).normalize()
       this.chalk.burst(peg.base, fromX, fromY)
     }
-    this.playTick()
+    this.playStrike(hard)
   },
 
   // Renders on demand: the loop runs while anything is moving or fading and stops once
@@ -261,61 +272,80 @@ export const board = {
     else this.renderer.render(this.scene, this.camera)
   },
 
+  // Sound is a garnish; a browser without it still plays the round.
   audio() {
     if (!state.sound) return null
-    if (!this.audioCtx) this.audioCtx = new AudioContext()
+    if (!this.audioCtx) {
+      this.audioCtx = new AudioContext()
+      this.output = this.audioCtx.createDynamicsCompressor()
+      this.output.connect(this.audioCtx.destination)
+    }
     return this.audioCtx.state === 'suspended' ? null : this.audioCtx
   },
 
-  noiseBuffer(audio) {
-    if (!this.noise) {
-      const length = Math.floor(audio.sampleRate * 0.4)
-      this.noise = audio.createBuffer(1, length, audio.sampleRate)
-      const data = this.noise.getChannelData(0)
-      for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1
-    }
-    return this.noise
+  // Decoded with the frame in an offline context, so the first drop already has them
+  // without starting audio before the player has played.
+  loadSamples() {
+    try {
+      const decoder = new OfflineAudioContext(1, 1, 44100)
+      for (const [name, urls] of Object.entries(SAMPLES)) {
+        const decoded = urls.map((url) =>
+          fetch(url)
+            .then((response) => response.arrayBuffer())
+            .then((bytes) => decoder.decodeAudioData(bytes)),
+        )
+        Promise.all(decoded)
+          .then((buffers) => {
+            this.samples[name] = buffers
+          })
+          .catch(() => {})
+      }
+    } catch {}
   },
 
-  // A burst of filtered noise: the body of a click or a thud.
-  playNoise(audio, type, frequency, q, volume, duration) {
+  playSample(audio, name, volume, rate = 1) {
+    const variants = this.samples[name]
+    if (!variants) return
     const source = audio.createBufferSource()
-    source.buffer = this.noiseBuffer(audio)
-    const filter = audio.createBiquadFilter()
-    filter.type = type
-    filter.frequency.value = frequency
-    filter.Q.value = q
+    source.buffer = variants[Math.floor(Math.random() * variants.length)]
+    source.playbackRate.value = rate
     const gain = audio.createGain()
-    gain.gain.setValueAtTime(volume, audio.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + duration)
-    source.connect(filter)
-    filter.connect(gain)
-    gain.connect(audio.destination)
+    gain.gain.value = volume
+    source.connect(gain)
+    gain.connect(this.output)
     source.start()
-    source.stop(audio.currentTime + duration + 0.02)
   },
 
-  playTone(audio, frequency, duration, volume, type, glideTo) {
+  playTone(audio, frequency, duration, volume, type, at = 0) {
+    const start = audio.currentTime + at
     const osc = audio.createOscillator()
     const gain = audio.createGain()
     osc.type = type
-    osc.frequency.setValueAtTime(frequency, audio.currentTime)
-    if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, audio.currentTime + duration)
-    gain.gain.setValueAtTime(volume, audio.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + duration)
+    osc.frequency.setValueAtTime(frequency, start)
+    gain.gain.setValueAtTime(volume, start)
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
     osc.connect(gain)
-    gain.connect(audio.destination)
-    osc.start()
-    osc.stop(audio.currentTime + duration + 0.02)
+    gain.connect(this.output)
+    osc.start(start)
+    osc.stop(start + duration + 0.02)
   },
 
-  // Sound is a garnish; a browser without it still plays the round.
-  playTick() {
+  // The rattle of balls in the rack, which runs until the cue ball meets the 8-ball.
+  playRack() {
+    try {
+      const audio = this.audio()
+      if (audio) this.playSample(audio, 'rack', 0.55, 0.97 + Math.random() * 0.06)
+    } catch {}
+  },
+
+  // The first strike is the break off the fall; every one after is a glancing hit,
+  // softer and a shade off in pitch so a run of them never repeats exactly.
+  playStrike(hard) {
     try {
       const audio = this.audio()
       if (!audio) return
-      this.playNoise(audio, 'bandpass', 2600 + Math.random() * 700, 1.4, 0.22, 0.045)
-      this.playTone(audio, 1900 + Math.random() * 500, 0.03, 0.035, 'triangle')
+      if (hard) this.playSample(audio, 'clack', 0.9)
+      else this.playSample(audio, 'clack', 0.42 + Math.random() * 0.2, 0.93 + Math.random() * 0.14)
     } catch {}
   },
 
@@ -323,11 +353,10 @@ export const board = {
     try {
       const audio = this.audio()
       if (!audio) return
-      this.playTone(audio, 150, 0.24, 0.14, 'sine', 70)
-      this.playNoise(audio, 'lowpass', 420, 0.7, 0.12, 0.18)
+      this.playSample(audio, 'pocket', 0.8)
       const times = multiplier / 100
-      if (times >= 1) setTimeout(() => this.playTone(audio, 660 + times * 40, 0.28, 0.05, 'sine'), 60)
-      if (times >= 3) setTimeout(() => this.playTone(audio, 1320, 0.3, 0.04, 'sine'), 150)
+      if (times >= 1) this.playTone(audio, 660 + times * 40, 0.28, 0.05, 'sine', 0.06)
+      if (times >= 3) this.playTone(audio, 1320, 0.3, 0.04, 'sine', 0.15)
     } catch {}
   },
 }

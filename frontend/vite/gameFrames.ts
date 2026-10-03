@@ -19,6 +19,7 @@ const contentTypes: Record<string, string> = {
   '.ico': 'image/x-icon',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
+  '.mp3': 'audio/mpeg',
 }
 
 // Each integrated game is a static page outside the React bundle. In development
