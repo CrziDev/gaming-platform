@@ -96,7 +96,7 @@ export function AdminUserDetailPage() {
           onRetry={() => void walletsQuery.refetch()}
         />
       ) : (
-        <div className="grid gap-3.5 sm:grid-cols-2 wide:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 wide:grid-cols-4">
           {wallets.map((wallet) => (
             <StatCard
               key={wallet.currency}

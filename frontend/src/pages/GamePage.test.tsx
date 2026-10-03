@@ -301,14 +301,15 @@ describe('the Plinko game page', () => {
     expect(lastDrop(post)).toBeUndefined()
   })
 
-  it('shows the return and the payouts of the board in play', async () => {
+  it('shows the payouts of the board in play and no return', async () => {
     const user = userEvent.setup()
     await readyBoard()
 
     await user.click(screen.getByRole('button', { name: 'Fair game' }))
 
     const dialog = screen.getByRole('dialog', { name: 'Fair game' })
-    expect(within(dialog).getByText('95.00%')).toBeInTheDocument()
+    expect(within(dialog).queryByText('95.00%')).not.toBeInTheDocument()
+    expect(within(dialog).queryByText(/return to player/i)).not.toBeInTheDocument()
     expect(within(dialog).getByText('Payouts · 10 rows · Normal')).toBeInTheDocument()
     expect(within(dialog).getAllByText(formatMultiplier(1000))).toHaveLength(2)
   })

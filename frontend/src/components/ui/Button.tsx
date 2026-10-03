@@ -26,8 +26,8 @@ const variants: Record<ButtonVariant, string> = {
 }
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'tap-target min-h-[34px] px-3 text-[12.5px] lg:min-h-8',
-  md: 'tap-target min-h-9 px-3.5 text-[13px] lg:min-h-[34px] lg:px-4',
+  sm: 'tap-target min-h-[38px] px-3 text-[12.5px] lg:min-h-8',
+  md: 'tap-target min-h-10 px-3.5 text-[13px] lg:min-h-[34px] lg:px-4',
   lg: 'tap-target min-h-10 px-4 text-[13.5px] lg:min-h-[38px] lg:px-5',
 }
 
@@ -62,12 +62,13 @@ export function Button({
 
 type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string
-  size?: 'compact' | 'md' | 'round' | 'float'
+  size?: 'compact' | 'md' | 'menu' | 'round' | 'float'
 }
 
 const iconSizes: Record<NonNullable<IconButtonProps['size']>, string> = {
   compact: 'tap-target size-9 rounded-chip text-ink-mute hover:bg-wash hover:text-ink-soft lg:size-8',
   md: 'size-11 rounded-chip text-ink-mute hover:bg-wash hover:text-ink-soft lg:size-8',
+  menu: 'tap-target size-[42px] rounded-chip text-ink-soft hover:bg-wash lg:size-8',
   round: 'tap-target glass-pill size-10 rounded-full text-ink-soft hover:bg-wash',
   float: 'tap-target glass-float size-9 rounded-input text-ink-control hover:bg-float-hover sm:size-9.5',
 }

@@ -29,7 +29,7 @@ export function WalletIndicator({ balance }: { balance: Money }) {
           to={paths.deposit}
           aria-label="Deposit"
           title="Deposit"
-          className="cta-gradient cta-glow flex size-8.5 shrink-0 items-center justify-center rounded-full transition-[filter] duration-fast ease-standard hover:brightness-110 sm:size-8"
+          className="tap-target cta-gradient cta-glow flex size-8 shrink-0 items-center justify-center rounded-full transition-[filter] duration-fast ease-standard hover:brightness-110"
         >
           <Plus aria-hidden size={16} strokeWidth={3} />
         </Link>

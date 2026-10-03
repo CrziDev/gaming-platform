@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import type { AdminWithdrawal } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
+import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
@@ -46,7 +47,7 @@ export function AdminWithdrawalsPage() {
             <RecordCard
               title={row.display_name || row.user_email}
               meta={`${row.method_name} · ${row.account_number}`}
-              leading={<span aria-hidden className="size-9 shrink-0 rounded-full bg-surface-3" />}
+              leading={<Avatar name={row.display_name || row.user_email} className="size-9 text-[11px]" />}
               value={
                 <span className="text-sm font-medium tnum">
                   {formatMoney(money(row.amount_minor, row.currency), { decimals: 'trim' })}

@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react'
 import type { ComponentProps, ReactNode, SelectHTMLAttributes } from 'react'
 
 import { cn } from '@/lib/cn'
@@ -46,12 +47,12 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
       <select className={cn(inputClass, 'appearance-none pr-10', className)} {...props}>
         {children}
       </select>
-      <span
+      <ChevronDown
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-mute"
-      >
-        ⌄
-      </span>
+        size={16}
+        strokeWidth={1.8}
+        className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-ink-mute"
+      />
     </div>
   )
 }

@@ -8,6 +8,9 @@ import { cn } from '@/lib/cn'
 const focusable =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+const fieldSelector =
+  'input:not([disabled]):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), select:not([disabled]), textarea:not([disabled])'
+
 export type ModalSize = 'sm' | 'md' | 'lg'
 
 const sizes: Record<ModalSize, string> = {
@@ -50,7 +53,10 @@ export function Modal({
     const previous = document.activeElement as HTMLElement | null
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    panelRef.current?.querySelector<HTMLElement>(focusable)?.focus()
+    const panel = panelRef.current
+    const initialFocus =
+      panel?.querySelector<HTMLElement>(fieldSelector) ?? panel?.querySelector<HTMLElement>(focusable)
+    initialFocus?.focus()
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {

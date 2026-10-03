@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 
 import type { AdminDeposit } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
+import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { PageNav } from '@/components/ui/PageNav'
 import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTable'
@@ -68,7 +69,7 @@ export function AdminDepositsPage() {
             <RecordCard
               title={row.username}
               meta={`${row.reference} · ${row.method_name}`}
-              leading={<span aria-hidden className="size-9 shrink-0 rounded-full bg-surface-3" />}
+              leading={<Avatar name={row.username} className="size-9 text-[11px]" />}
               value={
                 <span className="text-sm font-medium tnum">
                   {formatMoney(money(row.amount_minor, row.currency), { decimals: 'trim' })}

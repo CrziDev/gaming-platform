@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 
 import { ApiError } from '@/api/client'
+import { Wordmark } from '@/components/shell/Wordmark'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import {
@@ -39,9 +40,7 @@ export function ResetPasswordPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
       <div className="w-full max-w-md rounded-card glass-panel p-6">
-        <Link to={paths.lobby} className="mb-6 inline-block text-[18px] font-semibold tracking-[-0.02em] text-ink">
-          HeziBet
-        </Link>
+        <Wordmark className="mb-6 w-fit" />
 
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">

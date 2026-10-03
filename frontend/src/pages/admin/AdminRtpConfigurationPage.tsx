@@ -47,7 +47,7 @@ export function AdminRtpConfigurationPage() {
       <header className="flex flex-col gap-3">
         <Link to={adminPaths.rtp} className="inline-flex w-fit items-center gap-1.5 text-[12.5px] text-ink-mute hover:text-ink-soft">
           <ArrowLeft aria-hidden size={15} strokeWidth={1.5} />
-          RTP <span aria-hidden>/</span> <span className="hidden sm:inline">{game.name}</span>
+          RTP <span aria-hidden className="hidden sm:inline">/ {game.name}</span>
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

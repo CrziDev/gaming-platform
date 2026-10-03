@@ -17,34 +17,30 @@ import { paths } from '@/routes/paths'
 
 const presentation: Record<
   WithdrawalStatus,
-  { icon: typeof Clock; heading: string; body: string; frame: string; ring: string }
+  { icon: typeof Clock; heading: string; body: string; ring: string }
 > = {
   pending: {
     icon: Clock,
     heading: 'Awaiting review',
     body: "This amount is held from your balance. We'll notify you once it has been paid out.",
-    frame: 'bg-warning/10',
     ring: 'bg-warning/14 text-warning',
   },
   approved: {
     icon: Check,
     heading: 'Paid out',
     body: 'The amount has been sent to your account.',
-    frame: 'bg-success/10',
     ring: 'bg-success/14 text-success',
   },
   rejected: {
     icon: X,
     heading: 'Rejected',
     body: 'The amount is back in your wallet.',
-    frame: 'bg-danger/10',
     ring: 'bg-danger/14 text-danger',
   },
   cancelled: {
     icon: Ban,
     heading: 'Cancelled',
     body: 'The amount is back in your wallet.',
-    frame: 'bg-wash',
     ring: 'bg-inset text-ink-mute',
   },
 }
@@ -115,7 +111,7 @@ export function WithdrawalStatusPage() {
         <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Withdrawal</h1>
       </header>
 
-      <section className={cn('flex flex-col items-center gap-3 rounded-card p-6 text-center', state.frame)}>
+      <section className="flex flex-col items-center gap-3 rounded-card glass-panel p-6 text-center">
         <span className={cn('flex size-14 items-center justify-center rounded-full', state.ring)}>
           <Icon aria-hidden size={24} strokeWidth={1.5} />
         </span>

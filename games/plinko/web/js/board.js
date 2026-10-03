@@ -259,13 +259,13 @@ export const board = {
   },
 
   playTick() {
-    this.playTone(1300 + Math.random() * 600, 0.05, 0.03, 'triangle')
+    this.playTone(1300 + Math.random() * 600, 0.05, 0.07, 'triangle')
   },
 
   playLanding(multiplier) {
     const times = multiplier / 100
-    this.playTone(times >= 1 ? 660 + times * 40 : 330, 0.28, 0.06, 'sine')
-    if (times >= 3) setTimeout(() => this.playTone(1320, 0.3, 0.04, 'sine'), 90)
+    this.playTone(times >= 1 ? 660 + times * 40 : 330, 0.28, 0.13, 'sine')
+    if (times >= 3) setTimeout(() => this.playTone(1320, 0.3, 0.09, 'sine'), 90)
   },
 
   playTone(frequency, duration, volume, type) {

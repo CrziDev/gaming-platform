@@ -9,9 +9,8 @@ import { RecordCard, RecordTable, type Column } from '@/components/ui/RecordTabl
 import { SegmentedTrack } from '@/components/ui/Tabs'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useAdminRounds, useAdminTransactions } from '@/features/admin'
-import type { HistoryKind } from '@/features/wallet'
+import { LedgerStatus, type HistoryKind } from '@/features/wallet'
 import { formatDateTime, formatRelative } from '@/lib/format'
 import { money } from '@/lib/money'
 
@@ -99,7 +98,7 @@ export function AdminTransactionsPage() {
                   className="text-sm"
                 />
               }
-              aside={<StatusBadge status={row.status} />}
+              aside={<LedgerStatus status={row.status} />}
             />
           )}
           footer={
@@ -133,7 +132,7 @@ const columns: Column<Transaction>[] = [
     width: '140px',
     cell: (row) => <span className="font-mono text-[13px] text-ink-mute">{row.reference}</span>,
   },
-  { key: 'status', header: 'Status', width: '130px', cell: (row) => <StatusBadge status={row.status} /> },
+  { key: 'status', header: 'Status', width: '130px', cell: (row) => <LedgerStatus status={row.status} /> },
   {
     key: 'amount',
     header: 'Amount',

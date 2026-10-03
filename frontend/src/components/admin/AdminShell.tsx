@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 
 import { MenuGlyph } from '@/components/shell/MenuGlyph'
+import { Avatar } from '@/components/ui/Avatar'
 import { IconButton } from '@/components/ui/Button'
 import { useLogout, useSession } from '@/features/auth'
 import { useAdminWithdrawals, useDepositQueue } from '@/features/admin'
@@ -139,12 +140,7 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
       {operator ? (
         <div className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="flex size-[26px] items-center justify-center rounded-full bg-surface-3 font-mono text-[10.5px] font-medium text-ink-mute uppercase"
-          >
-            {operator.display_name.slice(0, 2)}
-          </span>
+          <Avatar name={operator.display_name} className="size-[26px] text-[10.5px]" />
           <span className="hidden flex-col leading-tight sm:flex">
             <span className="text-[12.5px] font-medium text-ink-soft">{operator.display_name}</span>
             <span className="font-mono text-[10px] text-ink-mute">Operator</span>

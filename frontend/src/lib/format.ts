@@ -1,4 +1,10 @@
 const dateTime = new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
+const dateTimeThisYear = new Intl.DateTimeFormat('en-PH', {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+})
 const dateOnly = new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' })
 const dayMonth = new Intl.DateTimeFormat('en-PH', { day: '2-digit', month: 'short' })
 const clock = new Intl.DateTimeFormat('en-PH', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -12,6 +18,11 @@ const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
 export function formatDateTime(iso: string): string {
   return dateTime.format(new Date(iso))
+}
+
+export function formatDateTimeCompact(iso: string): string {
+  const date = new Date(iso)
+  return date.getFullYear() === new Date().getFullYear() ? dateTimeThisYear.format(date) : dateTime.format(date)
 }
 
 export function formatDate(iso: string): string {
@@ -67,6 +78,10 @@ export function formatDuration(iso: string, now: number = Date.now()): string {
 
 export function formatCount(value: number): string {
   return new Intl.NumberFormat('en-PH').format(value)
+}
+
+export function formatQuantity(value: number, singular: string, plural = `${singular}s`): string {
+  return `${formatCount(value)} ${value === 1 ? singular : plural}`
 }
 
 export function formatPercent(basisPoints: number): string {
