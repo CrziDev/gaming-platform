@@ -40,7 +40,7 @@ export function flightTo(slot, upper, T) {
   let y = ROW_TOP + contact
   let peg = 1
   const segments = [
-    { kind: 'fall', onPane: true, x0: 0, y0: NOTCH_Y, x1: 0, y1: y, z0: FACE / 2, z1: z, duration: 300, peg: '0-1' },
+    { kind: 'fall', onPane: true, x0: 0, y0: NOTCH_Y, x1: 0, y1: y, z0: FACE / 2, z1: z, duration: 450, peg: '0-1' },
   ]
   for (let row = 0; row < ROWS - 1; row++) {
     peg += turns[row]
@@ -56,7 +56,7 @@ export function flightTo(slot, upper, T) {
       z0: z,
       z1: z,
       height: 0.32,
-      duration: 165,
+      duration: 250,
       peg: `${row + 1}-${peg}`,
     })
     x = nextX
@@ -65,7 +65,7 @@ export function flightTo(slot, upper, T) {
 
   const exitX = x + halfStep(turns[ROWS - 1])
   const exitY = y - 0.45
-  segments.push({ kind: 'bounce', onPane: true, x0: x, y0: y, x1: exitX, y1: exitY, z0: z, z1: z, height: 0.24, duration: 150 })
+  segments.push({ kind: 'bounce', onPane: true, x0: x, y0: y, x1: exitX, y1: exitY, z0: z, z1: z, height: 0.24, duration: 225 })
 
   const exit = upper.localToWorld(new T.Vector3(exitX, exitY, z))
   const hover = MOUTH_Y + 0.45
@@ -78,7 +78,7 @@ export function flightTo(slot, upper, T) {
     y1: hover,
     z1: MOUTH_Z,
     height: 0.22,
-    duration: 280,
+    duration: 420,
   })
   segments.push({
     kind: 'sink',
@@ -88,7 +88,7 @@ export function flightTo(slot, upper, T) {
     x1: slotX(slot),
     y1: CUP_TOP - 0.3,
     z1: CUP_Z,
-    duration: 420,
+    duration: 630,
   })
   return segments
 }

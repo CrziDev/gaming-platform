@@ -30,6 +30,9 @@ describe('Plinko RTP configuration', () => {
     expect(outcomes.getByText('Slot 0')).toBeInTheDocument()
     expect(outcomes.getAllByText('0.303%')).toHaveLength(2)
     expect(outcomes.getByText('100.000%')).toBeInTheDocument()
+    expect(outcomes.getAllByText('10×')).not.toHaveLength(0)
+    expect(outcomes.getAllByText('2.5×')).not.toHaveLength(0)
+    expect(outcomes.queryAllByText('1×')).toHaveLength(0)
 
     await user.click(screen.getByRole('button', { name: '105.00%' }))
     expect(await screen.findByText('plinko/10500')).toBeInTheDocument()

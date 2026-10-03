@@ -315,5 +315,8 @@ function formatChance(thousandthsPercent: number): string {
 }
 
 function formatMultiplier(hundredths: number): string {
-  return `${(hundredths / 100).toFixed(2).replace(/\.00$/, '').replace(/0$/, '')}×`
+  const whole = Math.trunc(hundredths / 100)
+  const fraction = hundredths % 100
+  if (fraction === 0) return `${whole}×`
+  return `${whole}.${String(fraction).padStart(2, '0').replace(/0$/, '')}×`
 }
