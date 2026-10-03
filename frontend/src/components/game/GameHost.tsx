@@ -3,6 +3,8 @@ import { useLayoutEffect, useRef, type CSSProperties, type ReactNode, type Ref }
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 
+import { GameLoader } from './GameLoader'
+
 export type GameFrameStatus = 'loading' | 'ready' | 'error'
 
 export type GameFrame = {
@@ -121,7 +123,10 @@ export function GameHost({
           referrerPolicy="same-origin"
           tabIndex={-1}
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 block size-full border-0"
+          className={cn(
+            'pointer-events-none absolute inset-0 -z-10 block size-full border-0 transition-opacity duration-standard ease-standard',
+            frame.status === 'loading' && 'opacity-0',
+          )}
         />
       ) : null}
 
@@ -176,15 +181,7 @@ export function GameHost({
               </div>
             ) : null}
 
-            {frame?.status === 'loading' ? (
-              <div
-                role="status"
-                aria-label={`Loading ${name}`}
-                className="absolute inset-0 flex items-center justify-center font-mono text-[11px] tracking-[0.2em] text-ink-mute"
-              >
-                LOADING BOARD
-              </div>
-            ) : null}
+            {frame?.status === 'loading' ? <GameLoader name={name} /> : null}
 
             {frame?.status === 'error' ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">

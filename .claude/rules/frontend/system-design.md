@@ -248,6 +248,9 @@ A section with nothing to show does not render.
 
 The same tokens and primitives as the player side, without background art or brand
 lines beyond the wordmark. Dense tables use `surface-1` rows with hairline separators.
+Its calls to action keep the CTA gradient but carry a quieter glow, `0 0 14px rgb(40 230
+130 / .25)` plus the same inset highlights, because a console screen has many primary
+actions and the full glow is too loud there.
 
 ## Money and status
 
