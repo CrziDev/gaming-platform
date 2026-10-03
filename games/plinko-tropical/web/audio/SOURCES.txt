@@ -1,0 +1,9 @@
+music.mp3    "Coming Of Age" by Hazelwood (2024), from Free To Use Music,
+             https://freetouse.com/music, free to use with the credit:
+             Music track: Coming Of Age by Hazelwood
+             Source: https://freetouse.com/music
+             Free To Use Music for Video
+             The first 20 s cut, the remaining 188.3 s faded out over the last 1.5 s,
+             low-passed at 11 kHz, lowered 12 dB, and re-encoded (stereo, 32 kHz,
+             56 kbit/s MP3).
+             The same file plays in all three Plinko frames.

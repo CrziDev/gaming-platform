@@ -1,5 +1,6 @@
 import { board } from './board.js'
 import { bridge } from './bridge.js'
+import { music } from './music.js'
 import { state } from './state.js'
 import { ui } from './ui.js'
 
@@ -48,6 +49,7 @@ async function boot() {
       state.sound = message.sound
       state.configured = true
       board.setLabels()
+      music.sync()
     },
 
     layout(message) {
@@ -55,9 +57,11 @@ async function boot() {
       state.controls = message.controls
       board.fit()
       ui.placeFoot(message.y + message.height)
+      music.sync()
     },
 
     drop(message) {
+      music.sync()
       // A drop before the board is configured cannot be drawn; the round is already
       // settled, so it is reported landed at once rather than lost.
       if (!state.configured) {
@@ -74,9 +78,11 @@ async function boot() {
 
     set_sound(message) {
       state.sound = message.enabled
+      music.sync()
     },
   })
 
+  document.addEventListener('visibilitychange', () => music.sync())
   bridge.send({ type: 'ready', game: 'plinko' })
 }
 

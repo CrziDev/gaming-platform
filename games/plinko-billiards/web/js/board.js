@@ -334,7 +334,7 @@ export const board = {
   playRack() {
     try {
       const audio = this.audio()
-      if (audio) this.playSample(audio, 'rack', 0.55, 0.97 + Math.random() * 0.06)
+      if (audio) this.playSample(audio, 'rack', 0.3, 0.97 + Math.random() * 0.06)
     } catch {}
   },
 
@@ -344,8 +344,8 @@ export const board = {
     try {
       const audio = this.audio()
       if (!audio) return
-      if (hard) this.playSample(audio, 'clack', 0.9)
-      else this.playSample(audio, 'clack', 0.42 + Math.random() * 0.2, 0.93 + Math.random() * 0.14)
+      if (hard) this.playSample(audio, 'clack', 0.5)
+      else this.playSample(audio, 'clack', 0.23 + Math.random() * 0.11, 0.93 + Math.random() * 0.14)
     } catch {}
   },
 
@@ -353,7 +353,7 @@ export const board = {
     try {
       const audio = this.audio()
       if (!audio) return
-      this.playSample(audio, 'pocket', 0.8)
+      this.playSample(audio, 'pocket', 0.45)
       const times = multiplier / 100
       if (times >= 1) this.playTone(audio, 660 + times * 40, 0.28, 0.05, 'sine', 0.06)
       if (times >= 3) this.playTone(audio, 1320, 0.3, 0.04, 'sine', 0.15)

@@ -58,6 +58,7 @@ for what the platform took over from the vendor; nothing of its drawing code rem
 | `js/state.js` | Risk, the configured multipliers, sound flag, configured flag, and the host's stage rect |
 | `js/bridge.js` | The frame side of the protocol: guards origin, source, version, type, and fields |
 | `js/board.js` | The board: renderer, lighting, bloom, camera framing inside the stage rect, cup labels, the drop, the render-on-demand loop, and peg and landing tones |
+| `js/music.js` | The background music: a quiet loop under the board's own sounds, faded in once the browser lets the frame play sound and out when the player turns sound off or the page is hidden; it is retried on each message from the host, since a frame may start sound only after the player has used the page |
 | `js/theme.js` | The cup bands (silver, teal, purple, orange, red by distance from the centre) and the label font |
 | `js/ui.js` | Tagline placement in the gutters between each frame edge and the nearest glass or host control at the tagline's own height: 40px from the glass or control beside it where the gutter has room, and never nearer the frame's edge than 40px; centred in the gutter otherwise, and hidden when a gutter cannot hold them clear; the left one stands down while the backdrop paints it; the scene's fade into the page ground below the stage rect; the result toast; and `formatMultiplier` |
 | `js/board/geometry.js` | Every dimension of the board and the curves the pane, fins, and mouths follow |
@@ -66,6 +67,7 @@ for what the platform took over from the vendor; nothing of its drawing code rem
 | `js/board/pane.js`, `tray.js`, `fins.js`, `cups.js` | The pane and pegs; the base slab, front sheet, back panel, and opening shadow; the raked fins and side plates; the cups and drop mouths |
 | `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
 | `js/board/trail.js` | The ball's light streak, sampled backwards along the flight path rather than from past frames, and the sparks a struck peg throws |
+| `audio/` | `music.mp3`, about 1.3 MB: Hazelwood's "Coming Of Age" from Free To Use Music, 3 minutes 8 from its 20th second; `SOURCES.txt` names the recording, its credit, and the cut |
 | `img/city.jpg` | The 1916×821 wide backdrop |
 | `img/city-portrait.jpg` | The 940×1672 tall backdrop of the same scene, with `GOOD PLAYERS BET BETTER` painted on its pillar |
 | `js/vendor/` | three.js 0.169.0 (`three.module.min.js`, and the postprocessing addons the bloom pass needs) with its MIT licence |
