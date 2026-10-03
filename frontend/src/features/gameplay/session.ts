@@ -28,9 +28,8 @@ export type GameSession = {
   attachFrame: Ref<HTMLIFrameElement | null>
   frame: { status: GameFrameStatus; key: number; error?: string | undefined; retry: () => void }
   setStage: (stage: GameStage) => void
-  // The played board's payouts and the return they settle at, from the manifest.
+  // The played board's payouts, from the manifest.
   board: PlinkoBoard | null
-  rtpBasisPoints: number | null
   params: PlinkoParams
   setParams: (params: PlinkoParams) => void
   canChangeParams: boolean
@@ -332,7 +331,6 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
     frame,
     setStage,
     board,
-    rtpBasisPoints: boards?.rtp_basis_points ?? null,
     params,
     setParams,
     canChangeParams: !playLocked,

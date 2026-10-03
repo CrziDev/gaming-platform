@@ -30,7 +30,7 @@ import {
 } from '@/features/gameplay'
 import { useActiveCurrency, useWallet } from '@/features/wallet'
 import { cn } from '@/lib/cn'
-import { formatMultiplier, formatPercent } from '@/lib/format'
+import { formatMultiplier } from '@/lib/format'
 import { formatMoney, money, type Currency, type Money } from '@/lib/money'
 import { paths } from '@/routes/paths'
 
@@ -185,12 +185,6 @@ function FairGameDialog({ open, onClose, session }: { open: boolean; onClose: ()
   return (
     <Modal open={open} onClose={onClose} title="Fair game" size="sm">
       <dl className="flex flex-col gap-3 text-[13.5px]">
-        <div className="flex justify-between gap-4">
-          <dt className="text-ink-mute">Return to player</dt>
-          <dd className="font-medium text-ink tnum">
-            {session?.rtpBasisPoints ? formatPercent(session.rtpBasisPoints) : '—'}
-          </dd>
-        </div>
         {session && payouts ? (
           <div className="flex flex-col gap-2">
             <dt className="text-ink-mute">

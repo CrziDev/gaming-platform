@@ -241,8 +241,8 @@ a slug with no module in `registry.ts` keeps the display-slot placeholder.
 
 The stepper walks a 1-2-5 ladder of stakes the server accepts — `min + n × step` inside
 the currency's wager limits, the limits themselves always included. Space places a bet
-unless focus is in a control or a dialog is open. FAIR GAME shows the manifest's return
-and the payouts of the board in play.
+unless focus is in a control or a dialog is open. FAIR GAME shows the payouts of the board
+in play; a player never sees the return.
 
 Protocol version 3, same-origin. The host accepts a message only when its origin is the
 frame's and its source is the iframe's own window; the frame accepts only its parent on
