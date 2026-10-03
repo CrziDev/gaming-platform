@@ -9,162 +9,223 @@ import { SeeAll } from '@/components/ui/SeeAll'
 import { Skeleton, SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ChipTabs, type TabItem } from '@/components/ui/Tabs'
 import {
   SwitchCurrencyDialog,
+  depositColumns,
   ledgerColumns,
   useActiveCurrency,
   useActiveWallet,
-  usePendingDeposits,
+  useDeposits,
   useTransactions,
   useWallets,
   useWithdrawals,
+  withdrawalColumns,
 } from '@/features/wallet'
-import { cn } from '@/lib/cn'
 import { formatRelative } from '@/lib/format'
 import { formatMoney, money } from '@/lib/money'
 import { paths } from '@/routes/paths'
+
+type RecordTab = 'activity' | 'withdrawals' | 'deposits'
 
 export function WalletPage() {
   const currency = useActiveCurrency()
   const walletQuery = useActiveWallet()
   const walletsQuery = useWallets()
-  const pendingQuery = usePendingDeposits()
-  const pendingWithdrawalsQuery = useWithdrawals('pending')
-  const historyQuery = useTransactions({ kind: 'all', days: 30, page: 1, currency })
-  const navigate = useNavigate()
   const [switching, setSwitching] = useState(false)
+  const [tab, setTab] = useState<RecordTab>('activity')
+  const depositsQuery = useDeposits()
+  const withdrawalsQuery = useWithdrawals()
 
-  const pending = pendingQuery.data ?? []
-  const pendingWithdrawals = pendingWithdrawalsQuery.data ?? []
-  const openCount = pending.length + pendingWithdrawals.length
-  const recent = historyQuery.data?.rows.slice(0, 5) ?? []
   const canSwitch = (walletsQuery.data?.length ?? 0) > 1
+  const tabs: TabItem<RecordTab>[] = [
+    { id: 'activity', label: 'Activity' },
+    { id: 'withdrawals', label: 'Withdrawals', count: pendingCount(withdrawalsQuery.data) },
+    { id: 'deposits', label: 'Deposits', count: pendingCount(depositsQuery.data) },
+  ]
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-[20px] font-bold tracking-[-0.02em] text-ink">Wallet</h1>
 
-      <section className="flex flex-col gap-5 rounded-card glass-panel p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="label-mono text-ink-cool">Available balance · {currency}</span>
-            {canSwitch ? (
-              <Button variant="secondary" size="sm" onClick={() => setSwitching(true)}>
-                Switch currency
-              </Button>
-            ) : null}
+      <section className="flex flex-col gap-2 rounded-card glass-panel p-4 sm:p-5">
+        {canSwitch ? (
+          <div className="flex justify-end">
+            <Button variant="secondary" size="sm" onClick={() => setSwitching(true)}>
+              Switch currency
+            </Button>
           </div>
-          {walletQuery.data ? (
-            <span className="text-[28px] leading-none font-medium tracking-[-0.02em] text-ink tnum wide:text-[34px]">
-              {formatMoney(money(walletQuery.data.balance_minor, walletQuery.data.currency))}
-            </span>
-          ) : walletQuery.isError ? (
-            <ErrorState
-              title="Balance unavailable"
-              message="Your balance could not be loaded."
-              onRetry={() => void walletQuery.refetch()}
-            />
-          ) : (
-            <Skeleton className="h-10 w-48" />
-          )}
-        </div>
+        ) : null}
 
-        <div className="grid grid-cols-2 gap-2 sm:flex">
-          <Link to={paths.deposit} className={cn(buttonStyles('primary', 'md'), 'sm:px-5')}>
-            <Plus aria-hidden size={17} strokeWidth={2} />
-            Deposit
-          </Link>
-          <Link to={paths.cashOut} className={cn(buttonStyles('secondary', 'md'), 'sm:px-5')}>
-            Cash out
-          </Link>
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <span className="label-mono text-ink-cool">Available balance · {currency}</span>
+            {walletQuery.data ? (
+              <span className="text-[28px] leading-none font-medium tracking-[-0.02em] text-ink tnum wide:text-[34px]">
+                {formatMoney(money(walletQuery.data.balance_minor, walletQuery.data.currency))}
+              </span>
+            ) : walletQuery.isError ? (
+              <ErrorState
+                title="Balance unavailable"
+                message="Your balance could not be loaded."
+                onRetry={() => void walletQuery.refetch()}
+              />
+            ) : (
+              <Skeleton className="h-10 w-48" />
+            )}
+          </div>
+
+          <div className="grid w-full max-w-sm grid-cols-2 gap-2">
+            <Link to={paths.deposit} className={buttonStyles('primary', 'md')}>
+              <Plus aria-hidden size={17} strokeWidth={2} />
+              Deposit
+            </Link>
+            <Link to={paths.cashOut} className={buttonStyles('secondary', 'md')}>
+              Cash out
+            </Link>
+          </div>
         </div>
       </section>
 
-      <div
-        className={cn(
-          'grid gap-6',
-          openCount > 0 && 'lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start',
+      <section className="flex flex-col gap-3">
+        <ChipTabs items={tabs} value={tab} onChange={setTab} label="Wallet records" />
+
+        {tab === 'activity' ? (
+          <ActivityTab />
+        ) : tab === 'withdrawals' ? (
+          <WithdrawalsTab query={withdrawalsQuery} />
+        ) : (
+          <DepositsTab query={depositsQuery} />
         )}
-      >
-        {openCount > 0 ? (
-          <section className="flex flex-col gap-3 lg:order-2">
-            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">
-              Open requests · {openCount}
-            </h2>
-            <div className="flex flex-col gap-0.5">
-              {pending.map((request) => (
-                <RecordCard
-                  key={request.id}
-                  title={`${formatMoney(money(request.amount_minor, request.currency))} · ${request.method_name}`}
-                  meta={`Ref ${request.reference} · ${formatRelative(request.created_at)}`}
-                  aside={<StatusBadge status="pending" />}
-                  onClick={() => void navigate(paths.depositStatus(request.id))}
-                />
-              ))}
-              {pendingWithdrawals.map((request) => (
-                <RecordCard
-                  key={request.id}
-                  title={`Withdrawal · ${formatMoney(money(request.amount_minor, request.currency))} · ${request.method_name}`}
-                  meta={formatRelative(request.created_at)}
-                  aside={<StatusBadge status="pending" />}
-                  onClick={() => void navigate(paths.withdrawalStatus(request.id))}
-                />
-              ))}
-            </div>
-            {pending.length > 0 ? (
-              <p className="text-[12.5px] leading-relaxed text-ink-mute">
-                Funds are added once a request is approved.
-              </p>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section className="flex flex-col gap-3 lg:order-1">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-ink-soft">Recent activity</h2>
-            <SeeAll to={paths.history} subject="history" />
-          </div>
-
-          {historyQuery.isPending ? (
-            <SkeletonRows count={4} />
-          ) : historyQuery.isError ? (
-            <ErrorState
-              title="Activity unavailable"
-              message="Recent activity could not be loaded."
-              onRetry={() => void historyQuery.refetch()}
-            />
-          ) : recent.length === 0 ? (
-            <EmptyState
-              title="No activity yet"
-              description="Your deposits, bets and wins will appear here."
-            />
-          ) : (
-            <RecordTable
-              label="Recent wallet activity"
-              columns={ledgerColumns}
-              rows={recent}
-              rowKey={(row) => row.id}
-              renderCard={(row) => (
-                <RecordCard
-                  title={row.label}
-                  meta={`${row.reference} · ${formatRelative(row.created_at)}`}
-                  value={
-                    <MoneyDisplay
-                      value={money(row.amount_minor, row.currency)}
-                      tone="auto"
-                      sign="always"
-                      className="text-sm"
-                    />
-                  }
-                  aside={<StatusBadge status={row.status} />}
-                />
-              )}
-            />
-          )}
-        </section>
-      </div>
+      </section>
 
       <SwitchCurrencyDialog open={switching} onClose={() => setSwitching(false)} />
     </div>
+  )
+}
+
+function pendingCount(requests: { status: string }[] | undefined): number | undefined {
+  const count = requests?.filter((request) => request.status === 'pending').length ?? 0
+  return count > 0 ? count : undefined
+}
+
+function ActivityTab() {
+  const currency = useActiveCurrency()
+  const historyQuery = useTransactions({ kind: 'all', days: 30, page: 1, currency })
+  const recent = historyQuery.data?.rows.slice(0, 5) ?? []
+
+  if (historyQuery.isPending) return <SkeletonRows count={4} />
+  if (historyQuery.isError) {
+    return (
+      <ErrorState
+        title="Activity unavailable"
+        message="Recent activity could not be loaded."
+        onRetry={() => void historyQuery.refetch()}
+      />
+    )
+  }
+  if (recent.length === 0) {
+    return <EmptyState title="No activity yet" description="Your deposits, bets and wins will appear here." />
+  }
+
+  return (
+    <RecordTable
+      label="Recent wallet activity"
+      columns={ledgerColumns}
+      rows={recent}
+      rowKey={(row) => row.id}
+      renderCard={(row) => (
+        <RecordCard
+          title={row.label}
+          meta={`${row.reference} · ${formatRelative(row.created_at)}`}
+          value={
+            <MoneyDisplay value={money(row.amount_minor, row.currency)} tone="auto" sign="always" className="text-sm" />
+          }
+          aside={<StatusBadge status={row.status} />}
+        />
+      )}
+      footer={
+        <div className="flex justify-end">
+          <SeeAll to={paths.history} subject="history" />
+        </div>
+      }
+    />
+  )
+}
+
+function WithdrawalsTab({ query }: { query: ReturnType<typeof useWithdrawals> }) {
+  const navigate = useNavigate()
+
+  if (query.isPending) return <SkeletonRows count={3} />
+  if (query.isError) {
+    return (
+      <ErrorState
+        title="Withdrawals unavailable"
+        message="Your withdrawals could not be loaded."
+        onRetry={() => void query.refetch()}
+      />
+    )
+  }
+  if (query.data.length === 0) {
+    return <EmptyState title="No withdrawals yet" description="Your cash-out requests will appear here." />
+  }
+
+  return (
+    <RecordTable
+      label="Withdrawal requests"
+      columns={withdrawalColumns}
+      rows={query.data}
+      rowKey={(row) => row.id}
+      onRowClick={(row) => void navigate(paths.withdrawalStatus(row.id))}
+      renderCard={(row) => (
+        <RecordCard
+          title={`${formatMoney(money(row.amount_minor, row.currency))} · ${row.method_name}`}
+          meta={formatRelative(row.created_at)}
+          aside={<StatusBadge status={row.status} />}
+          onClick={() => void navigate(paths.withdrawalStatus(row.id))}
+        />
+      )}
+    />
+  )
+}
+
+function DepositsTab({ query }: { query: ReturnType<typeof useDeposits> }) {
+  const navigate = useNavigate()
+
+  if (query.isPending) return <SkeletonRows count={3} />
+  if (query.isError) {
+    return (
+      <ErrorState
+        title="Deposits unavailable"
+        message="Your deposits could not be loaded."
+        onRetry={() => void query.refetch()}
+      />
+    )
+  }
+  if (query.data.length === 0) {
+    return <EmptyState title="No deposits yet" description="Your deposit requests will appear here." />
+  }
+
+  return (
+    <RecordTable
+      label="Deposit requests"
+      columns={depositColumns}
+      rows={query.data}
+      rowKey={(row) => row.id}
+      onRowClick={(row) => void navigate(paths.depositStatus(row.id))}
+      renderCard={(row) => (
+        <RecordCard
+          title={`${formatMoney(money(row.amount_minor, row.currency))} · ${row.method_name}`}
+          meta={`Ref ${row.reference} · ${formatRelative(row.created_at)}`}
+          aside={<StatusBadge status={row.status} />}
+          onClick={() => void navigate(paths.depositStatus(row.id))}
+        />
+      )}
+      footer={
+        query.data.some((request) => request.status === 'pending') ? (
+          <p className="text-[12.5px] leading-relaxed text-ink-mute">Funds are added once a request is approved.</p>
+        ) : null
+      }
+    />
   )
 }

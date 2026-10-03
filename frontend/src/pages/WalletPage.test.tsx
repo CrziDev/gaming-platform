@@ -23,7 +23,7 @@ describe('the wallet page', () => {
     expect(await main.findByText('₱5,250.00')).toBeInTheDocument()
     const header = within(await screen.findByRole('banner'))
     expect(header.getByRole('link', { name: 'Wallet balance ₱5,250.00' })).toBeInTheDocument()
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /PHP|USD/ })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Switch currency' }))
     const sheet = within(await screen.findByRole('dialog', { name: 'Switch currency' }))
@@ -37,35 +37,42 @@ describe('the wallet page', () => {
     expect(screen.queryByText(/fixed at registration/i)).not.toBeInTheDocument()
   })
 
-  it('lists every open request and opens its status page', async () => {
+  it('opens on activity and lists every deposit request in its tab', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({ 'GET /me': player })
 
     renderApp('/wallet')
 
-    expect(await screen.findByRole('heading', { name: 'Open requests · 3' })).toBeInTheDocument()
-    expect(screen.getByText('₱2,500.00 · Method A')).toBeInTheDocument()
-    expect(screen.getByText('₱1,000.00 · Method A')).toBeInTheDocument()
-    expect(screen.getByText('Withdrawal · $50.00 · Method A')).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: 'Activity' })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('tab', { name: /^Deposits\s*2$/ })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^Withdrawals\s*1$/ })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /₱2,500\.00 · Method A/ }))
+    await user.click(screen.getByRole('tab', { name: /^Deposits\s*2$/ }))
+    const deposits = within(screen.getByRole('table', { name: 'Deposit requests' }))
+    expect(deposits.getAllByText('pending')).toHaveLength(2)
+    expect(deposits.getByText('approved')).toBeInTheDocument()
+    expect(deposits.getByText('rejected')).toBeInTheDocument()
+    expect(screen.getByText('Funds are added once a request is approved.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /₱2,500\.00 · Method A.*Ref 8850/ }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Request 8850' })).toBeInTheDocument()
   })
 
-  it('opens a pending withdrawal from the open requests', async () => {
+  it('opens a pending withdrawal from its tab', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({ 'GET /me': player })
 
     renderApp('/wallet')
 
-    await user.click(await screen.findByRole('button', { name: /Withdrawal · \$50\.00/ }))
+    await user.click(await screen.findByRole('tab', { name: /^Withdrawals/ }))
+    await user.click(await screen.findByRole('button', { name: /\$50\.00 · Method A/ }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Withdrawal' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Awaiting review' })).toBeInTheDocument()
   })
 
-  it('offers deposit and cash out side by side', async () => {
+  it('offers deposit and cash out under the balance', async () => {
     const user = userEvent.setup()
     stubFetchRoutes({ 'GET /me': player })
 
