@@ -38,8 +38,8 @@ export function RecordTable<T>({
         ))}
       </div>
 
-      <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full border-separate border-spacing-y-0.5 text-left">
+      <div className="hidden overflow-x-auto rounded-tile border border-hairline bg-surface-1 lg:block">
+        <table className="w-full border-collapse text-left">
           <caption className="sr-only">{label}</caption>
           <thead>
             <tr>
@@ -49,7 +49,7 @@ export function RecordTable<T>({
                   scope="col"
                   style={column.width ? { width: column.width } : undefined}
                   className={cn(
-                    'label-mono px-3 pt-1 pb-2 font-medium text-ink-cool',
+                    'label-mono border-b border-hairline px-3 py-2.5 font-medium text-ink-cool',
                     column.align === 'right' && 'text-right',
                     column.columnClass,
                   )}
@@ -65,7 +65,7 @@ export function RecordTable<T>({
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={cn(
-                  'bg-surface-1',
+                  'border-t border-hairline-soft first:border-t-0',
                   onRowClick && 'cursor-pointer transition-colors duration-fast hover:bg-surface-2 focus-within:bg-surface-2',
                 )}
               >
@@ -73,7 +73,7 @@ export function RecordTable<T>({
                   <td
                     key={column.key}
                     className={cn(
-                      'px-3 py-3 align-middle text-[13px] text-ink-soft first:rounded-l-tile last:rounded-r-tile',
+                      'px-3 py-3 align-middle text-[13px] text-ink-soft',
                       column.align === 'right' && 'text-right',
                       column.columnClass,
                     )}
