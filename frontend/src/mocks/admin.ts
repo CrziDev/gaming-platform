@@ -7,6 +7,7 @@ import type {
   Adjustment,
   AuditEntry,
   DashboardSummary,
+  StaffMember,
   Wallet,
 } from '@/api/types'
 import {
@@ -120,6 +121,25 @@ function buildUsers(): { users: AdminUser[]; wallets: Record<string, Wallet[]> }
 const userFixtures = buildUsers()
 export const adminUsers = userFixtures.users
 export const adminUserWallets = userFixtures.wallets
+
+export const staffMembers: StaffMember[] = [
+  {
+    id: 'staff-0001',
+    email: 'r.cruz@example.com',
+    display_name: 'R. Cruz',
+    status: 'active',
+    alert_emails: false,
+    created_at: daysAgo(200),
+  },
+  {
+    id: 'staff-0002',
+    email: 'a.reyes@example.com',
+    display_name: 'A. Reyes',
+    status: 'active',
+    alert_emails: false,
+    created_at: daysAgo(120),
+  },
+]
 
 export const adminWithdrawals: AdminWithdrawal[] = [
   {

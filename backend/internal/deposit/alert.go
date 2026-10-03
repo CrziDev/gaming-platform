@@ -15,7 +15,7 @@ import (
 
 const adminAlertTimeout = 30 * time.Second
 
-// alertAdmins emails every active administrator about a new request without
+// alertAdmins emails every active administrator with alerts on about a new request without
 // holding up the player's response. A failed alert is logged; the request stands.
 func (h *Handler) alertAdmins(request Request, player user.User) {
 	if h.cfg.Mailer == nil {
@@ -31,7 +31,7 @@ func (h *Handler) alertAdmins(request Request, player user.User) {
 }
 
 func (h *Handler) sendAdminAlert(ctx context.Context, request Request, player user.User) error {
-	recipients, err := user.ActiveAdminEmails(ctx, h.db)
+	recipients, err := user.AlertRecipientEmails(ctx, h.db)
 	if err != nil {
 		return err
 	}

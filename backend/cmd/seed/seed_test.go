@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -267,5 +268,18 @@ func TestSeedPaymentMethodsEnablesEachMethodOnceWithoutARealDestination(t *testi
 	}
 	if legacyAfter != legacyBefore {
 		t.Fatal("the seed changed a method it does not define")
+	}
+}
+
+func TestSeedAdminEmailsAreNormalizedAndDeduplicated(t *testing.T) {
+	got := parseAdminEmails(" Cohen.Hezi@Example.com, second@example.com,,cohen.hezi@example.com ")
+	if !slices.Equal(got, []string{"cohen.hezi@example.com", "second@example.com"}) {
+		t.Fatalf("admin emails = %v", got)
+	}
+	if got := parseAdminEmails(" , "); len(got) != 0 {
+		t.Fatalf("blank list = %v", got)
+	}
+	if name := adminDisplayName("cohen.hezi@example.com"); name != "cohen.hezi" {
+		t.Fatalf("display name = %q", name)
 	}
 }

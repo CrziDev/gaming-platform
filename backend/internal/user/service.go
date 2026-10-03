@@ -84,3 +84,50 @@ func ChangeStatus(ctx context.Context, db *sql.DB, actorID, userID, status strin
 	account.Status = status
 	return account, nil
 }
+
+func SetAlertEmails(ctx context.Context, db *sql.DB, actorID, userID string, enabled bool) (Staff, error) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return Staff{}, fmt.Errorf("user: begin alert change: %w", err)
+	}
+	defer tx.Rollback()
+
+	var member Staff
+	err = tx.QueryRowContext(ctx, `
+		SELECT id::text, email, display_name, status, alert_emails, created_at
+		FROM users
+		WHERE id = ($1::text)::uuid AND role = 'admin'
+		FOR UPDATE`, userID).Scan(
+		&member.ID, &member.Email, &member.DisplayName, &member.Status, &member.AlertEmails, &member.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Staff{}, ErrNoUser
+	}
+	if err != nil {
+		return Staff{}, fmt.Errorf("user: lock for alert change: %w", err)
+	}
+	if member.AlertEmails == enabled {
+		return member, nil
+	}
+
+	if _, err := tx.ExecContext(ctx, `UPDATE users SET alert_emails = $1, updated_at = now() WHERE id = ($2::text)::uuid`, enabled, userID); err != nil {
+		return Staff{}, fmt.Errorf("user: update alert emails: %w", err)
+	}
+	detail := "Email alerts turned off"
+	if enabled {
+		detail = "Email alerts turned on"
+	}
+	if err := audit.Record(ctx, tx, audit.Change{
+		ActorID: actorID, Action: "user.alert_emails_change", EntityType: "user", EntityID: member.ID, Detail: detail,
+		Before: map[string]bool{"alert_emails": member.AlertEmails},
+		After:  map[string]bool{"alert_emails": enabled},
+	}); err != nil {
+		return Staff{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Staff{}, fmt.Errorf("user: commit alert change: %w", err)
+	}
+
+	member.AlertEmails = enabled
+	return member, nil
+}

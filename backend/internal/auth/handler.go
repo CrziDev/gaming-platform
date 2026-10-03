@@ -270,6 +270,48 @@ func (h *Handler) AdminUserStatus(w http.ResponseWriter, r *http.Request, actor 
 	httpx.WriteJSON(w, http.StatusOK, newAdminUserResponse(target))
 }
 
+func (h *Handler) AdminStaff(w http.ResponseWriter, r *http.Request, _ user.User) {
+	staff, err := user.ListStaff(r.Context(), h.db)
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	response := make([]staffResponse, 0, len(staff))
+	for _, member := range staff {
+		response = append(response, newStaffResponse(member))
+	}
+	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) AdminStaffAlerts(w http.ResponseWriter, r *http.Request, actor user.User) {
+	if !httpx.IsUUID(r.PathValue("id")) {
+		httpx.WriteError(w, http.StatusNotFound, "Administrator not found")
+		return
+	}
+
+	var body struct {
+		Enabled *bool `json:"enabled"`
+	}
+	if !httpx.ReadJSON(w, r, &body) {
+		return
+	}
+	if body.Enabled == nil {
+		httpx.WriteFieldErrors(w, "One or more fields are invalid", map[string]string{"enabled": "Choose whether email alerts are on"})
+		return
+	}
+
+	member, err := user.SetAlertEmails(r.Context(), h.db, actor.ID, r.PathValue("id"), *body.Enabled)
+	if errors.Is(err, user.ErrNoUser) {
+		httpx.WriteError(w, http.StatusNotFound, "Administrator not found")
+		return
+	}
+	if err != nil {
+		h.internal(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, newStaffResponse(member))
+}
+
 func validateRegistration(email, password, displayName string) map[string]string {
 	fields := make(map[string]string)
 

@@ -55,7 +55,7 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, mailers ...
 	depositHandler := deposit.NewHandler(db, logger, deposit.Config{
 		ProofDir: cfg.ProofDir, Mailer: mailer, PublicWebURL: cfg.PublicWebURL,
 	})
-	withdrawalHandler := withdrawal.NewHandler(db, logger)
+	withdrawalHandler := withdrawal.NewHandler(db, logger, withdrawal.Config{Mailer: mailer, PublicWebURL: cfg.PublicWebURL})
 	dashboardHandler := dashboard.NewHandler(db, logger)
 	auditHandler := audit.NewHandler(db, logger)
 	roundHandler := round.NewHandler(db, logger, engines, cfg.BigWinMultiplierHundredths)
@@ -109,6 +109,8 @@ func New(db *sql.DB, logger *slog.Logger, cfg Config, hub *chat.Hub, mailers ...
 	mux.HandleFunc("PATCH /api/admin/users/{id}/status", admin(authHandler.AdminUserStatus))
 	mux.HandleFunc("GET /api/admin/users/{id}/wallets", admin(walletHandler.AdminUserWallets))
 	mux.HandleFunc("POST /api/admin/users/{id}/wallet-adjustments", admin(walletHandler.AdminAdjust))
+	mux.HandleFunc("GET /api/admin/staff", admin(authHandler.AdminStaff))
+	mux.HandleFunc("PATCH /api/admin/staff/{id}/alerts", admin(authHandler.AdminStaffAlerts))
 	mux.HandleFunc("GET /api/admin/transactions", admin(walletHandler.AdminTransactions))
 	mux.HandleFunc("GET /api/admin/rounds", admin(roundHandler.AdminList))
 	mux.HandleFunc("GET /api/admin/deposits", admin(depositHandler.AdminList))

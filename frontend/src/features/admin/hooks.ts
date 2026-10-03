@@ -11,6 +11,7 @@ import {
   fetchAdminGame,
   fetchAdminGames,
   fetchAdminPaymentMethods,
+  fetchStaff,
   fetchAdminTransactions,
   fetchAdminWithdrawals,
   fetchAdminRounds,
@@ -32,6 +33,7 @@ import {
   setGameRtp,
   setUserStatus,
   updateGame,
+  setStaffAlerts,
   updatePaymentMethod,
   type AdminDepositFilter,
   type AdminWithdrawalFilter,
@@ -254,6 +256,18 @@ export function useUpdatePaymentMethod() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'payment-methods'] }),
       queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
     ]),
+  })
+}
+
+export function useStaff() {
+  return useQuery({ queryKey: ['admin', 'staff'], queryFn: fetchStaff })
+}
+
+export function useSetStaffAlerts() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: setStaffAlerts,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'staff'] }),
   })
 }
 

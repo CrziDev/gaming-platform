@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
-import type { AdminPaymentMethod } from '@/api/types'
+import type { AdminPaymentMethod, StaffMember } from '@/api/types'
 import { PageHeading } from '@/components/admin/PageHeading'
 import { Button } from '@/components/ui/Button'
 import { FutureDevelopment } from '@/components/ui/FutureDevelopment'
@@ -10,7 +10,7 @@ import { SkeletonRows } from '@/components/ui/Skeleton'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ChipTabs } from '@/components/ui/Tabs'
-import { useAdminPaymentMethods, useUpdatePaymentMethod } from '@/features/admin'
+import { useAdminPaymentMethods, useSetStaffAlerts, useStaff, useUpdatePaymentMethod } from '@/features/admin'
 
 import { PaymentMethodDialog } from './PaymentMethodDialog'
 
@@ -163,7 +163,84 @@ function MethodsTab() {
 }
 
 function StaffTab() {
-  return <FutureDevelopment />
+  const staffQuery = useStaff()
+  const setAlerts = useSetStaffAlerts()
+
+  const toggle = (member: StaffMember) => {
+    setAlerts.mutate({ id: member.id, enabled: !member.alert_emails })
+  }
+  const toggleButton = (member: StaffMember) => (
+    <Button variant="secondary" size="sm" onClick={() => toggle(member)} disabled={setAlerts.isPending}>
+      {member.alert_emails ? 'Turn off' : 'Turn on'}
+    </Button>
+  )
+
+  return (
+    <section className="flex flex-col gap-4">
+      <p className="max-w-[60ch] text-[13px] leading-relaxed text-ink-mute">
+        Administrators with email alerts on are emailed about new deposit and withdrawal requests.
+      </p>
+
+      {staffQuery.isPending ? (
+        <SkeletonRows count={2} />
+      ) : staffQuery.isError ? (
+        <ErrorState
+          title="Staff unavailable"
+          message="Administrators could not be loaded."
+          onRetry={() => void staffQuery.refetch()}
+        />
+      ) : (
+        <RecordTable
+          label="Administrators"
+          rows={staffQuery.data ?? []}
+          rowKey={(row) => row.id}
+          columns={[
+            {
+              key: 'name',
+              header: 'Name',
+              cell: (row) => <span className="text-[13.5px]">{row.display_name}</span>,
+            },
+            {
+              key: 'email',
+              header: 'Email',
+              cell: (row) => <span className="text-[12.5px] text-ink-mute">{row.email}</span>,
+            },
+            {
+              key: 'status',
+              header: 'Status',
+              width: '110px',
+              cell: (row) => <StatusBadge status={row.status} />,
+            },
+            {
+              key: 'alerts',
+              header: 'Email alerts',
+              width: '120px',
+              cell: (row) => <StatusBadge status={row.alert_emails ? 'On' : 'Off'} tone={row.alert_emails ? 'success' : 'neutral'} />,
+            },
+            {
+              key: 'actions',
+              header: 'Actions',
+              align: 'right',
+              width: '130px',
+              cell: (row) => <span className="flex justify-end">{toggleButton(row)}</span>,
+            },
+          ]}
+          renderCard={(row) => (
+            <RecordCard
+              title={row.display_name}
+              meta={row.email}
+              aside={<StatusBadge status={row.alert_emails ? 'Alerts on' : 'Alerts off'} tone={row.alert_emails ? 'success' : 'neutral'} />}
+              actions={toggleButton(row)}
+            />
+          )}
+        />
+      )}
+
+      {setAlerts.isError ? (
+        <p role="alert" className="text-[13px] text-danger">Email alerts could not be changed.</p>
+      ) : null}
+    </section>
+  )
 }
 
 function LimitsTab() {

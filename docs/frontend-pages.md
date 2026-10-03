@@ -79,7 +79,7 @@ means the server is behind it.
 - [x] **RTP configuration** — `/admin/rtp/:id` (read-only inspection of each engine option by board, including the configuration reference, target and theoretical RTP, multipliers, and normalized slot chances from `GET /api/admin/games/{id}/rtp-configuration`)
 - [x] **Audit log** — `/admin/audit` (real paginated append-only feed)
 - [x] **Announcements** — `/admin/announcements` (real paginated create, edit, enable, and disable management for permanent or end-dated lobby announcements)
-- [x] **Settings** — `/admin/settings` (payment methods have real list/create/edit/enable/disable APIs and audit entries; Staff, Limits, and Platform are explicit Future Development panels without inert controls)
+- [x] **Settings** — `/admin/settings` (payment methods have real list/create/edit/enable/disable APIs and audit entries; Staff lists every administrator with an audited email-alert switch any administrator can turn on or off; Limits and Platform are explicit Future Development panels without inert controls)
 
 ## Coverage
 
