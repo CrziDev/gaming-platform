@@ -3,6 +3,19 @@
    is named in the game's file and loads with the mark, on this game's page only. No glow
    and no motion; the shadows only lift the white lettering off the bright terrace. Rules
    in system-design.md, Games; design in .claude/rules/games/plinko-tropical.md. */
+
+/* The face holds only the logo's letters, P L I N K O, so it costs a few kilobytes, and a
+   browser fetches it only when the mark draws them. Licence in
+   assets/fonts/LICENSE.kaushan-script.txt. */
+@font-face {
+  font-family: 'Kaushan Script';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../../assets/fonts/kaushan-script-plinko.woff2?no-inline') format('woff2');
+  unicode-range: U+49, U+4B-4C, U+4E-50;
+}
+
 [data-title-mark='plinko-tropical'] {
   /* Headroom for the logo's tilt and the swash's reach, so the mark stays inside the
      title row's box. */
