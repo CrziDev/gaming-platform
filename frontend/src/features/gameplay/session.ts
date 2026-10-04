@@ -16,7 +16,7 @@ import { PLINKO_BOARD_ROWS, PLINKO_RISKS, type PlinkoBoard, type PlinkoParams, t
 import type { GameModule } from './registry'
 import { PROTOCOL_VERSION, type FrameMessage, type PlinkoBoards } from './schemas'
 
-const READY_TIMEOUT_MS = 10_000
+const READY_TIMEOUT_MS = 30_000
 const SETTLE_FALLBACK_MS = 8_000
 const NOT_ON_THIS_SERVER = "This game isn't available right now."
 

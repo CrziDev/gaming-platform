@@ -102,37 +102,70 @@ export function createKit(T, scene) {
   }
 
   // Splits every triangle until no edge is longer than maxEdge, so a shape can be bent
-  // smoothly vertex by vertex.
+  // smoothly vertex by vertex. Triangles share their corners and the midpoints of the
+  // edges they split, so each vertex is stored, and bent by the caller, once.
   function subdivide(source, maxEdge) {
-    const geometry = source.index ? source.toNonIndexed() : source
-    const positions = geometry.attributes.position.array
-    const normals = geometry.attributes.normal?.array ?? null
-    const uvs = geometry.attributes.uv?.array ?? null
-    const out = { position: [], normal: [], uv: [] }
+    const positions = source.attributes.position.array
+    const normals = source.attributes.normal?.array ?? null
+    const uvs = source.attributes.uv?.array ?? null
+    const position = []
+    const normal = []
+    const uv = []
+    const index = []
     const limit = maxEdge * maxEdge
 
-    const vertex = (i) => ({
-      p: [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]],
-      n: normals ? [normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]] : null,
-      u: uvs ? [uvs[i * 2], uvs[i * 2 + 1]] : null,
-    })
-    const midpoint = (a, b) => {
-      let n = null
-      if (a.n) {
-        n = a.n.map((value, k) => value + b.n[k])
-        const length = Math.hypot(...n) || 1
-        n = n.map((value) => value / length)
+    // A corner of the source is stored once, however many triangles meet at it; an
+    // unindexed source repeats a corner per triangle, so those are matched by value.
+    const corners = new Map()
+    const corner = (i) => {
+      const values = [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]]
+      if (normals) values.push(normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2])
+      if (uvs) values.push(uvs[i * 2], uvs[i * 2 + 1])
+      const key = source.index ? i : values.join()
+      let stored = corners.get(key)
+      if (stored === undefined) {
+        stored = position.length / 3
+        corners.set(key, stored)
+        position.push(values[0], values[1], values[2])
+        if (normals) normal.push(values[3], values[4], values[5])
+        if (uvs) uv.push(values[values.length - 2], values[values.length - 1])
       }
-      return {
-        p: a.p.map((value, k) => (value + b.p[k]) / 2),
-        n,
-        u: a.u ? a.u.map((value, k) => (value + b.u[k]) / 2) : null,
-      }
+      return stored
     }
-    const distance2 = (a, b) => (a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2 + (a.p[2] - b.p[2]) ** 2
 
+    const midpoints = new Map()
+    const midpoint = (a, b) => {
+      const key = a < b ? a * 0x4000000 + b : b * 0x4000000 + a
+      let m = midpoints.get(key)
+      if (m !== undefined) return m
+      m = position.length / 3
+      midpoints.set(key, m)
+      for (let k = 0; k < 3; k++) position.push((position[a * 3 + k] + position[b * 3 + k]) / 2)
+      if (normals) {
+        const x = normal[a * 3] + normal[b * 3]
+        const y = normal[a * 3 + 1] + normal[b * 3 + 1]
+        const z = normal[a * 3 + 2] + normal[b * 3 + 2]
+        const length = Math.hypot(x, y, z) || 1
+        normal.push(x / length, y / length, z / length)
+      }
+      if (uvs) for (let k = 0; k < 2; k++) uv.push((uv[a * 2 + k] + uv[b * 2 + k]) / 2)
+      return m
+    }
+    const distance2 = (a, b) =>
+      (position[a * 3] - position[b * 3]) ** 2 +
+      (position[a * 3 + 1] - position[b * 3 + 1]) ** 2 +
+      (position[a * 3 + 2] - position[b * 3 + 2]) ** 2
+
+    const sourceIndex = source.index?.array ?? null
+    const count = sourceIndex ? sourceIndex.length : positions.length / 3
     const stack = []
-    for (let i = 0; i < positions.length / 3; i += 3) stack.push([vertex(i), vertex(i + 1), vertex(i + 2)])
+    for (let i = 0; i < count; i += 3) {
+      stack.push(
+        sourceIndex
+          ? [corner(sourceIndex[i]), corner(sourceIndex[i + 1]), corner(sourceIndex[i + 2])]
+          : [corner(i), corner(i + 1), corner(i + 2)],
+      )
+    }
     while (stack.length) {
       const [a, b, c] = stack.pop()
       const ab = distance2(a, b)
@@ -140,11 +173,7 @@ export function createKit(T, scene) {
       const ca = distance2(c, a)
       const longest = Math.max(ab, bc, ca)
       if (longest <= limit) {
-        for (const v of [a, b, c]) {
-          out.position.push(...v.p)
-          if (v.n) out.normal.push(...v.n)
-          if (v.u) out.uv.push(...v.u)
-        }
+        index.push(a, b, c)
         continue
       }
       if (longest === ab) {
@@ -160,9 +189,10 @@ export function createKit(T, scene) {
     }
 
     const result = new T.BufferGeometry()
-    result.setAttribute('position', new T.Float32BufferAttribute(out.position, 3))
-    if (normals) result.setAttribute('normal', new T.Float32BufferAttribute(out.normal, 3))
-    if (uvs) result.setAttribute('uv', new T.Float32BufferAttribute(out.uv, 2))
+    result.setAttribute('position', new T.Float32BufferAttribute(position, 3))
+    if (normals) result.setAttribute('normal', new T.Float32BufferAttribute(normal, 3))
+    if (uvs) result.setAttribute('uv', new T.Float32BufferAttribute(uv, 2))
+    result.setIndex(index)
     return result
   }
 
