@@ -15,8 +15,9 @@ protocol, the host, and the round lifecycle are in `plinko-runtime.md` and
 | `backend/cmd/seed/catalogue.go` | The catalogue row, integrated at 95% when absent |
 | `frontend/vite.config.ts` | The frame served at `/games/plinko-tropical/` |
 | `frontend/src/features/gameplay/registry.ts` | Its module: the Plinko board and risk menu, its own frame URL, `stageAspect` 0.98, `stageGutter` 12, `titleOverlap` 30, and `TitleMark` |
-| `frontend/src/features/gameplay/TropicalTitleMark.tsx` | The title mark: the heading named in full, the logo lettering and swash, the arched subtitle, and the link that loads Kaushan Script subset to `PLINKO` |
-| `frontend/src/styles/games/plinko-tropical.css` | The mark's styles, scoped to `[data-title-mark='plinko-tropical']` |
+| `frontend/src/features/gameplay/TropicalTitleMark.tsx` | The title mark: the heading named in full, the logo lettering and swash, and the arched subtitle |
+| `frontend/src/styles/games/plinko-tropical.css` | The mark's styles, scoped to `[data-title-mark='plinko-tropical']`, and its Kaushan Script face, subset to the letters of `PLINKO` and fetched only when the mark draws them |
+| `frontend/src/assets/fonts/kaushan-script-plinko.woff2` | That subset, under 3 KB, beside its OFL licence |
 | `frontend/src/assets/games/plinko-tropical.jpg`, `frontend/src/assets/banners/plinko-tropical.jpg`, `frontend/src/assets/banners/phone/plinko-tropical.jpg` | Tile, banner, and phone banner |
 
 `GameHost` takes the two page-level options every title may set: `titleOverlap`, the
@@ -40,7 +41,7 @@ terrace is a photograph drawn in the scene behind the board.
 | File | Role |
 | --- | --- |
 | `index.html` | The full-viewport `#scene`, the left brand line, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
-| `css/tropical.css` | The frame's ground, the brand line (21px, 28 from 640), and the result toast |
+| `css/tropical.css` | The frame's font faces, ground, the brand line (21px, 28 from 640), and the result toast |
 | `js/main.js`, `js/bridge.js`, `js/state.js` | The same boot, protocol-3 bridge, and state as Plinko's frame, and the same `ready` with `game: 'plinko'`, the engine's protocol; boot waits up to 2.5 s for Inter, IBM Plex Sans, and Caveat Brush |
 | `js/music.js` | The same background music as Plinko's frame |
 | `js/ui.js` | The left brand line's placement: high on the board, below any host control over that side, a short reach from the board or control beside it and never nearer the frame's edge than 40px, centred in the gutter otherwise, and hidden when the gutter cannot hold it clear; the scene's fade into the page ground below the stage rect; the result toast; and `formatMultiplier` |
@@ -58,6 +59,7 @@ terrace is a photograph drawn in the scene behind the board.
 | `img/terrace.jpg` | The 1916×821 wide backdrop |
 | `img/terrace-portrait.jpg` | The 941×1672 tall backdrop of the same terrace |
 | `js/vendor/` | three.js 0.169.0 and the bloom pass's addons with their MIT licence, vendored beside this game as `packages.md` requires |
+| `fonts/` | IBM Plex Sans (one variable file for every weight, with its Latin Extended file for the ₱ in the toast), Inter 700, and Caveat Brush, Google Fonts' Latin subsets with their OFL licences; `index.html` preloads the three the boot waits for |
 
 The frame never decides an outcome. As in Plinko, a `drop` names the settled slot and the
 path turns right exactly `slot` times in shuffled order: a fall from the cradle onto the
@@ -98,7 +100,7 @@ of a 720×960 frame alone with the brand line hidden and the board's stage at x 
 The host is Plinko's, so its tests cover this title. `registry.test.ts` pins the module to
 its own frame, stage, and title mark on the shared board; `GameHost.test.tsx` covers the
 title mark replacing the platform's heading and the overlap; `TropicalTitleMark.test.tsx`
-covers the heading's full name, the arched subtitle, and the subset font.
+covers the heading's full name and the arched subtitle.
 `TestPlinkoVariantsShareTheEngineButKeepTheirOwnRoundsAndReturn` plays a round on this slug
 at its own return through the real route table and checks that its return, manifest, and
 rounds stay separate. The frame was driven headless through the bridge — configured, laid

@@ -39,7 +39,7 @@ one, and its edges are antialiased to one screen pixel at any size.
 | File | Role |
 | --- | --- |
 | `index.html` | The full-viewport `#scene`, the two taglines, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
-| `css/billiards.css` | The frame's ground, taglines, and result toast in the hall's warm tones |
+| `css/billiards.css` | The frame's font faces, and its ground, taglines, and result toast in the hall's warm tones |
 | `js/main.js`, `js/bridge.js`, `js/state.js`, `js/ui.js` | The same boot, protocol-3 bridge, state, and tagline and toast placement as Plinko's frame, and the same `ready` with `game: 'plinko'`, the engine's protocol |
 | `js/music.js` | The same background music as Plinko's frame |
 | `js/theme.js` | The pocket bands (ivory, blue, purple, orange, red by distance from the centre) and the pool-ball colours |
@@ -53,6 +53,7 @@ one, and its edges are antialiased to one screen pixel at any size.
 | `js/board/trail.js` | The marks the cue ball leaves, sampled backwards along the flight path: the ivory smear, the nap track, and the chalk puffed off each strike |
 | `audio/` | The recorded sounds, about 25 KB of mono MP3 cut from CC0 Freesound recordings and decoded with the frame: two clacks, the rack, and the pocket; and the same `music.mp3` as Plinko's frame; `SOURCES.txt` names each recording and the cut |
 | `js/vendor/` | three.js 0.169.0 and the bloom and shader passes' addons with their MIT licence, vendored beside this game as `packages.md` requires |
+| `fonts/` | The same faces as Plinko's frame, with their OFL licences, preloaded the same way |
 
 The frame never decides an outcome. As in Plinko, a `drop` names the settled slot, the
 path turns right exactly `slot` times in shuffled order, a struck ball gives a little

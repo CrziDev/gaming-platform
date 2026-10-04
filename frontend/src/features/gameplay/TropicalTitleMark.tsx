@@ -5,10 +5,6 @@ export type TitleMarkProps = {
   subtitle: string
 }
 
-// The subset holds only the logo's letters, so the brush face costs a few kilobytes and
-// loads only where the mark renders.
-const LOGO_FONT = 'https://fonts.googleapis.com/css2?family=Kaushan+Script&text=PLINKO&display=block'
-
 // Plinko Tropical's title mark: the name as the game's brush-script logo over a swash,
 // with the subtitle arched beneath it. The heading keeps the game's full name for
 // assistive technology; the lettering is art. Styled in styles/games/plinko-tropical.css.
@@ -17,7 +13,6 @@ export function TropicalTitleMark({ name, subtitle }: TitleMarkProps) {
 
   return (
     <div data-title-mark="plinko-tropical">
-      <link rel="stylesheet" href={LOGO_FONT} />
       <h1 aria-label={name} data-part="title-logo">
         <svg aria-hidden data-part="title-swash" viewBox="0 0 200 28" preserveAspectRatio="none">
           <path

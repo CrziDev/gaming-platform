@@ -36,8 +36,8 @@ stays inside the title row. Beside it, on
 `glass-float` at 38px: FAIR GAME (label and shield, icon only under 430px), sound, and
 favourite; in the side panel they stand 14px further below the mark.
 
-The mark is declared in `frontend/src/styles/games/plinko-tropical.css` and drawn by
-`TropicalTitleMark.tsx`, which loads the face subset to the logo's letters.
+The mark is declared in `frontend/src/styles/games/plinko-tropical.css`, with its face
+subset to the logo's letters, and drawn by `TropicalTitleMark.tsx`.
 
 ## Bet panel
 

@@ -25,7 +25,7 @@ Review date:                         2026-09-19
 Source complete and buildable:       PASS — complete package, no build step, runs from Main/index.html
 Financial flow identifiable:         YES — in-memory balance in state.js, debited and credited in logic.js
 Outcome and RNG identifiable:        YES — physics.js picks a slot with Math.random() over a 0.24 decay; paytable in state.js
-External backend required:           NO — no fetch, XMLHttpRequest, WebSocket, or storage; the only request is Google Fonts
+External backend required:           NO — no fetch, XMLHttpRequest, WebSocket, or storage; the only request is Google Fonts, which the integrated frame replaces with its own fonts/
 Server-authoritative outcome viable: YES — the picker is separable from the animation, which steers to a chosen slot
 Central wallet integration viable:   YES — one balance field in state.js, debited and credited in two places in logic.js
 RTP verification viable:             YES — weights and multipliers are plain data (plinko-rtp.md §9)
@@ -53,7 +53,7 @@ for what the platform took over from the vendor; nothing of its drawing code rem
 | File | Role |
 | --- | --- |
 | `index.html` | The full-viewport `#scene`, the two taglines, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
-| `css/plinko.css` | The frame's own art values: ground, taglines (smaller under 768px), and the result toast. It copies no platform tokens |
+| `css/plinko.css` | The frame's own art values: font faces, ground, taglines (smaller under 768px), and the result toast. It copies no platform tokens |
 | `js/main.js` | Boot: loads three.js, the optional bloom pass, and the label and tagline fonts (at most 2.5 s), builds the board, starts the bridge, posts `ready` |
 | `js/state.js` | Risk, the configured multipliers, sound flag, configured flag, and the host's stage rect |
 | `js/bridge.js` | The frame side of the protocol: guards origin, source, version, type, and fields |
@@ -71,6 +71,7 @@ for what the platform took over from the vendor; nothing of its drawing code rem
 | `img/city.jpg` | The 1916×821 wide backdrop |
 | `img/city-portrait.jpg` | The 940×1672 tall backdrop of the same scene, with `GOOD PLAYERS BET BETTER` painted on its pillar |
 | `js/vendor/` | three.js 0.169.0 (`three.module.min.js`, and the postprocessing addons the bloom pass needs) with its MIT licence |
+| `fonts/` | IBM Plex Sans (one variable file for every weight, with its Latin Extended file for the ₱ in the toast), IBM Plex Sans Condensed 500, and Inter 700, Google Fonts' Latin subsets with their OFL licences; `index.html` preloads the three the boot waits for. The frame makes no request to another origin |
 
 three.js is vendored under `packages.md`'s rule for a supplied game's libraries: it never
 enters the React bundle. WebGL has no standard-library alternative, and the board is

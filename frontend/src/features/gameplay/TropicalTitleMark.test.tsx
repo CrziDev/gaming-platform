@@ -18,10 +18,4 @@ describe('TropicalTitleMark', () => {
     expect(textPath).toHaveTextContent('RISK · PLAY · WIN')
     expect(textPath?.getAttribute('href')).toBe(`#${path?.id}`)
   })
-
-  it('loads its brush face with the mark, subset to the logo', () => {
-    const { container } = render(<TropicalTitleMark name="Plinko Tropical" subtitle="RISK · PLAY · WIN" />)
-    const link = container.ownerDocument.querySelector<HTMLLinkElement>('link[rel="stylesheet"][href*="Kaushan+Script"]')
-    expect(link?.href).toContain('text=PLINKO')
-  })
 })
