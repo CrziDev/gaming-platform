@@ -59,7 +59,8 @@ A `glass-panel` card with the deep panel shadow, 12px padding and 10px internals
 A sunlit terrace fills the whole game area behind the column and belongs to this page
 only: an infinity pool, a lounge under a thatched pergola with hanging lanterns, palms,
 and a bay of limestone islands with moored boats, from a wide photo or a tall one,
-whichever is nearer the zone's shape. A wooden signboard stands on the right of the photo
+whichever is nearer the zone's shape, softened by a slight blur so the ball reads against
+it. A wooden signboard stands on the right of the photo
 and is never cropped off. The top darkens a little under the title row and the foot under
 the bet panel, and below the stage the scene fades into the page ground (`#04070d`) by the
 frame's foot, so the round history beneath starts on the same black; where the stage
@@ -100,7 +101,8 @@ tiles stays dark until a tile is landed in: the landing tile brightens, washes i
 up the slate and over the floor, and gives a hair under the ball for about half a second.
 A falling ball draws a light streak behind it, a warm white core in a soft aqua glow,
 stretching with its speed, that takes on the landing tile's band only on the last hop and
-drains into the tile after it. A struck peg glows warm and throws a few gold glints. The
+drains into the tile after it. A soft halo of the streak's colour rides on the ball, so it
+stands out from the chrome pegs, and fades as the ball sinks behind its tile. A struck peg glows warm and throws a few gold glints. The
 bulbs, the chute, the lit tiles, and the streak are the only light bright enough to
 bloom. The frame's result toast is set in Inter 700, gold at or above 1× and grey below.
 

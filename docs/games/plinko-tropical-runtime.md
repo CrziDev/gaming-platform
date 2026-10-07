@@ -55,7 +55,7 @@ terrace is a photograph drawn in the scene behind the board.
 | `js/board/slate.js` | The face, the rim and its bulbs, the chute, the pegs, and the waiting ball |
 | `js/board/tiles.js` | The tray: recess, dividers, floor, the tiles and their painted faces |
 | `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
-| `js/board/trail.js` | The ball's light streak, sampled backwards along the flight path, and the glints a struck peg throws |
+| `js/board/trail.js` | The ball's light streak, sampled backwards along the flight path, the halo that rides on the ball, and the glints a struck peg throws |
 | `audio/` | The same `music.mp3` and `SOURCES.txt` as Plinko's frame |
 | `img/terrace.jpg` | The 1916×821 wide backdrop |
 | `img/terrace-portrait.jpg` | The 941×1672 tall backdrop of the same terrace |
@@ -86,9 +86,11 @@ signboard, whose right edge stays on screen; vertically each photo's anchor heig
 the board's band as far as cover allows. Each photo's signboard is lettered on a canvas
 when it loads, `SAME GAME BIGGER VIEWS` a word a plank in Caveat Brush at one size, the
 largest that fits every plank, following each plank's tilt; on the tall photo the lettering
-sits on the planks' right ends, the part a phone's board leaves in view. The top darkens
-30% under the title row and the foot 25% under the bet panel, with a slight saturation
-lift. Mipmaps keep desktop downscaling clean.
+sits on the planks' right ends, the part a phone's board leaves in view. The photo is
+blurred over a disc of twelve samples with a radius of 0.3% of the frame's height, enough
+to soften it behind the ball while the signboard still reads. The top darkens 30% under
+the title row and the foot 25% under the bet panel, with a slight saturation lift.
+Mipmaps keep desktop downscaling clean.
 
 ### Art
 
