@@ -31,6 +31,9 @@ export const theme = {
   // The ball's light streak and the glints a struck peg throws.
   trail: { streak: '#c9f3ff', spark: '#ffe2a0' },
 
+  // The confetti a big win throws out of its tile: the bands' faces and the rim's gold.
+  burst: { confetti: ['#ffffff', '#1e7bff', '#16c47a', '#ffbf14', '#ff7a1a', '#ff2a4a', '#e9c47e'] },
+
   labelFont(size) {
     return `700 ${size}px Inter, "IBM Plex Sans", sans-serif`
   },

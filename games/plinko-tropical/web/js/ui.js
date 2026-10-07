@@ -1,9 +1,10 @@
-// The frame's DOM around the canvas: the brand line beside the board and the result
-// toast over the tile that paid. The other brand line is painted on the backdrop's
-// signboard.
+// The frame's DOM around the canvas: the brand line beside the board, the result
+// toast over the tile that paid, and a big win's multiplier across the board. The other
+// brand line is painted on the backdrop's signboard.
 export const ui = {
   scene: null,
   toasts: null,
+  bigWinShown: null,
   tagline: null,
 
   mount() {
@@ -65,6 +66,45 @@ export const ui = {
       ],
       { duration: 1300, easing: 'ease-out' },
     ).onfinish = () => toast.remove()
+  },
+
+  // A big win's multiplier stands across the middle of the stage over the host's
+  // amount, instead of the toast over the tile. A newer one replaces it.
+  bigWin(stage, hundredths, label) {
+    this.bigWinShown?.remove()
+    const card = document.createElement('div')
+    card.className = 'big-win'
+    const times = document.createElement('div')
+    times.className = 'big-win-times'
+    times.textContent = `${this.formatMultiplier(hundredths).slice(0, -1)}×`
+    const amount = document.createElement('div')
+    amount.className = 'big-win-amount'
+    amount.textContent = label
+    card.append(times, amount)
+    card.style.left = `${stage.x + stage.width / 2}px`
+    card.style.top = `${stage.y + stage.height * 0.42}px`
+    card.style.setProperty('--big-win-size', `${Math.round(Math.min(96, Math.max(48, stage.width * 0.17)))}px`)
+    this.toasts.appendChild(card)
+    this.bigWinShown = card
+
+    const done = () => {
+      card.remove()
+      if (this.bigWinShown === card) this.bigWinShown = null
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setTimeout(done, 1800)
+      return
+    }
+    card.animate(
+      [
+        { opacity: 0, transform: 'translate(-50%,-50%) scale(.7)' },
+        { opacity: 1, transform: 'translate(-50%,-50%) scale(1.06)', offset: 0.12 },
+        { opacity: 1, transform: 'translate(-50%,-50%) scale(1)', offset: 0.22 },
+        { opacity: 1, transform: 'translate(-50%,-56%) scale(1)', offset: 0.8 },
+        { opacity: 0, transform: 'translate(-50%,-70%) scale(1)' },
+      ],
+      { duration: 1800, easing: 'ease-out' },
+    ).onfinish = done
   },
 
   // 170 reads 1.7x, 600 reads 6x, 50 reads 0.5x.

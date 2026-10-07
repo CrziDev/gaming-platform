@@ -1,3 +1,4 @@
+import { burst, shakeOffset, winTier } from './celebration.js'
 import { state } from './state.js'
 import { theme } from './theme.js'
 import { ui } from './ui.js'
@@ -22,6 +23,9 @@ import { buildTable } from './board/table.js'
 import { createChalk, createTrails } from './board/trail.js'
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+// A winning pocket's pulse fires again once the first has faded this far.
+const FLASH_AGAIN_BELOW = 0.45
 
 // The most device pixels the frame draws: a phone gets its full density, a large
 // desktop zone steps down to what still reads sharp.
@@ -59,6 +63,8 @@ export const board = {
   chalk: null,
   ballGeometry: null,
   regrowAt: null,
+  view: null,
+  shakeStartedAt: null,
   frameRequest: 0,
   lastFrame: 0,
   audioCtx: null,
@@ -119,7 +125,8 @@ export const board = {
     this.background.resize(width, height, stage)
     const extremes = boardExtremes(this.T, this.upper, this.apron)
     frameBoard(this.T, this.camera, extremes, stage)
-    this.camera.setViewOffset(stage.width, stage.height, -stage.x, -stage.y, width, height)
+    this.view = { stage, width, height }
+    this.offsetView(0, 0)
     ui.placeTaglines(screenBounds(this.camera, boardExtremes(this.T, this.upper, this.apron), width, height), width, state.controls)
     this.wake()
   },
@@ -166,10 +173,25 @@ export const board = {
 
   land(ball) {
     const cup = this.cups[ball.slot]
-    if (!reducedMotion.matches) cup.level = 1
+    const tier = winTier(ball.multiplier)
+    if (!reducedMotion.matches) {
+      cup.level = 1
+      cup.flashes = tier ? 1 : 0
+    }
 
     const point = this.upper.localToWorld(new this.T.Vector3(slotX(ball.slot), POCKET_Y + 0.85, 0.3)).project(this.camera)
-    ui.toast(((point.x + 1) / 2) * this.host.clientWidth, ((1 - point.y) / 2) * this.host.clientHeight, ball.label, ball.multiplier >= 100)
+    const x = ((point.x + 1) / 2) * this.host.clientWidth
+    const y = ((1 - point.y) / 2) * this.host.clientHeight
+    if (tier === 'big') {
+      const stage = this.view?.stage ?? defaultStage(this.host.clientWidth, this.host.clientHeight)
+      ui.bigWin(stage, ball.multiplier, ball.label)
+      if (!reducedMotion.matches) {
+        burst.fire(x, y, stage.height)
+        this.shakeStartedAt = performance.now()
+      }
+    } else {
+      ui.toast(x, y, ball.label, ball.multiplier >= 100)
+    }
     this.playLanding(ball.multiplier)
     if (this.onLanded) this.onLanded(ball.round_id, ball.slot)
     this.wake()
@@ -246,8 +268,13 @@ export const board = {
     this.cups.forEach((cup) => {
       if (cup.level <= 0) return
       cup.level = Math.max(0, cup.level - dt * 1.6)
+      if (cup.flashes > 0 && cup.level < FLASH_AGAIN_BELOW) {
+        cup.flashes--
+        cup.level = 1
+      }
       applyPulse(cup)
     })
+    this.stepShake(now)
     if (this.regrowAt !== null) {
       const t = clamp01((now - this.regrowAt) / 450)
       this.waitingBall.scale.setScalar(Math.max(0.001, t * t * (3 - 2 * t)))
@@ -262,9 +289,28 @@ export const board = {
       this.trails.alive ||
       this.chalk.alive ||
       this.regrowAt !== null ||
+      this.shakeStartedAt !== null ||
       this.cups.some((cup) => cup.level > 0) ||
       [...this.pegs.values()].some((peg) => peg.level > 0)
     )
+  },
+
+  stepShake(now) {
+    if (this.shakeStartedAt === null) return
+    const offset = shakeOffset(now - this.shakeStartedAt)
+    if (offset) this.offsetView(offset.x, offset.y)
+    else {
+      this.offsetView(0, 0)
+      this.shakeStartedAt = null
+    }
+  },
+
+  // Shifts the framed table by a few pixels inside its stage; the backdrop, drawn in
+  // screen space, stays put.
+  offsetView(dx, dy) {
+    if (!this.view) return
+    const { stage, width, height } = this.view
+    this.camera.setViewOffset(stage.width, stage.height, -stage.x - dx, -stage.y - dy, width, height)
   },
 
   render() {

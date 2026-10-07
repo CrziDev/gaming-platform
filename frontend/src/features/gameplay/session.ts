@@ -43,6 +43,9 @@ export type GameSession = {
   playing: boolean
   sound: boolean
   setSound: (enabled: boolean) => void
+  // Temporary: drops a ball into `slot` that no round settled, to show the frame's
+  // landing effects. Nothing is staked, paid, or sent to the server.
+  previewDrop: (slot: number, stakeMinor: number) => void
 }
 
 type GameSessionOptions = {
@@ -238,6 +241,26 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
     if (status === 'ready') bridgeRef.current?.send({ v: PROTOCOL_VERSION, type: 'set_sound', enabled: sound })
   }, [status, sound])
 
+  const previewDrop = useCallback(
+    (slot: number, stakeMinor: number) => {
+      const { params, status, boards } = latest.current
+      const multiplier = boards?.board[params.risk][slot]
+      if (status !== 'ready' || multiplier === undefined) return
+      const label = formatMoney(money(Math.floor((stakeMinor * multiplier) / 100), currency), {
+        sign: multiplier >= 100 ? 'always' : 'auto',
+      })
+      bridgeRef.current?.send({
+        v: PROTOCOL_VERSION,
+        type: 'drop',
+        round_id: `preview-${createUUID()}`,
+        slot,
+        multiplier_hundredths: multiplier,
+        result_label: label,
+      })
+    },
+    [currency],
+  )
+
   const play = useCallback(
     async (stakeMinor: number) => {
       const { status: frameStatus, module: active, params: current, boards: served } = latest.current
@@ -265,7 +288,10 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
         const roundId = response.round.id
         const slot = response.result.slot
         const multiplier = response.round.multiplier_hundredths
-        const label = formatMoney(money(response.round.win_minor ?? 0, currency), { sign: 'always' })
+        // A return under the stake is a loss, so only 1× and up reads with a plus.
+        const label = formatMoney(money(response.round.win_minor ?? 0, currency), {
+          sign: multiplier !== null && multiplier >= 100 ? 'always' : 'auto',
+        })
 
         pendingRef.current.set(roundId, {
           timer: window.setTimeout(() => settle(roundId), SETTLE_FALLBACK_MS),
@@ -340,5 +366,6 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
     playing: playLocked,
     sound,
     setSound,
+    previewDrop,
   }
 }

@@ -1,5 +1,6 @@
 import { board } from './board.js'
 import { bridge } from './bridge.js'
+import { burst } from './celebration.js'
 import { music } from './music.js'
 import { state } from './state.js'
 import { ui } from './ui.js'
@@ -39,6 +40,7 @@ async function loadFonts() {
 async function boot() {
   const [THREE, bloom] = await Promise.all([import('three'), loadBloom(), loadFonts()])
   ui.mount()
+  burst.mount()
   board.init(THREE, bloom, ui.scene)
   board.onLanded = (round_id, slot) => bridge.send({ type: 'landed', round_id, slot })
 
