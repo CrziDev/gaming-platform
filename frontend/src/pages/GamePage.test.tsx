@@ -234,6 +234,23 @@ describe('the Plinko game page', () => {
     expect(loss.result_label).toMatch(/^₱/)
   })
 
+  it('previews a landing without placing a bet', async () => {
+    const user = userEvent.setup()
+    const { post } = await readyBoard()
+    const before = rounds.length
+    const preview = screen.getByRole('group', { name: 'Preview landing effects' })
+
+    await user.click(within(preview).getByRole('button', { name: '10.00×' }))
+
+    const drop = lastDrop(post)!
+    expect(drop.round_id).toMatch(/^preview-/)
+    expect(drop.multiplier_hundredths).toBe(1000)
+    expect([0, 10]).toContain(drop.slot)
+    expect(drop.result_label).toBe('+₱10.00')
+    expect(rounds).toHaveLength(before)
+    expect(wallets.find((wallet) => wallet.currency === 'PHP')!.balance_minor).toBe(startingBalance)
+  })
+
   it('places a bet with the space bar', async () => {
     const user = userEvent.setup()
     const { post } = await readyBoard()
