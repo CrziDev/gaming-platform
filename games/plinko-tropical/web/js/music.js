@@ -4,7 +4,7 @@ import { state } from './state.js'
 // sounds. It fades in once the browser lets the frame play, and out when sound is turned
 // off or the page is hidden. The recording and its cut are in audio/SOURCES.txt.
 const SOURCE = 'audio/music.mp3'
-const VOLUME = 0.12
+const VOLUME = 0.17
 const FADE_IN = 3
 const FADE_OUT = 0.4
 
