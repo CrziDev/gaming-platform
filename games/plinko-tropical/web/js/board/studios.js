@@ -50,10 +50,11 @@ function lampStudio(T, renderer) {
 // The mirror ball's world, drawn with hard edges so the reflections stay crisp on a small
 // ball: a sky deepening to saturated blue in front, a thin bright horizon, a dark steel
 // floor streaked with gold that warms toward the sides, and gold light behind so the rim
-// catches fire. A paned window high on the right lays the big highlight, light strips
-// stand at either side, and two amber lamps hang low. Directions are in degrees: `az`
-// round from the camera, `el` up from the horizon. Only the window's top and the strips'
-// tips pass the bloom threshold, and only just, so the ball sparkles without a haze.
+// catches fire. A round skylight high on the right, feathered at its edge so a small peg
+// shows a soft glint rather than a square, lays the big highlight; light strips stand at
+// either side, and two amber lamps hang low. Directions are in degrees: `az` round from
+// the camera, `el` up from the horizon. Only the skylight's top and the strips' tips pass
+// the bloom threshold, and only just, so the ball sparkles without a haze.
 function ballStudio(T, renderer) {
   const studio = domeStudio(T, `
 #define band(v, lo, hi, soft) (smoothstep((lo) - (soft), (lo), v) * (1. - smoothstep((hi), (hi) + (soft), v)))
@@ -73,10 +74,10 @@ function ballStudio(T, renderer) {
     colour = mix(colour, vec3(.85, .5, .12), behind);
     colour += vec3(1., .8, .45) * smoothstep(.975, .995, -d.z) * (1. - smoothstep(.3, .6, d.y)) * .9;
 
-    float window = band(az, 38., 122., 2.) * band(el, 40., 80., 2.);
-    float mullion = band(az, 79., 82., .8);
-    vec3 pane = mix(vec3(.8, .88, 1.), vec3(1.16, 1.19, 1.24), smoothstep(40., 72., el));
-    colour = mix(colour, pane, window * (1. - mullion * .75));
+    vec3 skylightAt = normalize(vec3(.49, .87, .09));
+    float skylight = smoothstep(cos(radians(26.)), cos(radians(12.)), dot(d, skylightAt));
+    vec3 glass = mix(vec3(.8, .88, 1.), vec3(1.16, 1.19, 1.24), smoothstep(40., 72., el));
+    colour = mix(colour, glass, skylight);
     float right = band(az, 46., 60., 1.5) * band(el, -4., 24., 2.);
     colour = mix(colour, mix(vec3(.6, .75, .95), vec3(1.08, 1.12, 1.18), smoothstep(-4., 20., el)), right);
     float left = band(az, -106., -84., 1.5) * band(el, 2., 40., 2.);

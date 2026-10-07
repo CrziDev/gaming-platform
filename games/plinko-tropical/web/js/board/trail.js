@@ -9,6 +9,9 @@ const STREAK_STEP = 7.5
 const STREAK_HALF_WIDTH = BALL_RADIUS * 1.4
 const STREAK_HEAT = 1.5
 
+const HALO_SIZE = BALL_RADIUS * 6
+const HALO_OPACITY = 0.75
+
 const SPARK_POOL = 48
 const SPARK_DRAG = 6
 const SPARK_FALL = 4
@@ -31,6 +34,8 @@ const RIBBON_VERTEX = `
 
 // A light streak behind each falling ball: a warm white core in a soft aqua glow that
 // takes on the landing tile's colour on the last hop and drains into the tile after it.
+// A soft halo of the same colour rides on the ball, so it stands out from the chrome
+// pegs, and fades as the ball sinks behind its tile.
 export function createStreaks(kit, camera) {
   const { T, scene } = kit
   const material = new T.ShaderMaterial({
@@ -63,8 +68,11 @@ export function createStreaks(kit, camera) {
       const mesh = ribbonMesh(T, STREAK_SAMPLES, material)
       mesh.renderOrder = 12
       scene.add(mesh)
+      const halo = kit.glowSprite(theme.trail.streak, HALO_OPACITY, HALO_SIZE)
+      halo.renderOrder = 11
+      scene.add(halo)
       const samples = Array.from({ length: STREAK_SAMPLES }, () => ({ point: new T.Vector3(), half: 0, fade: 0, tint: new T.Color() }))
-      live.push({ mesh, samples, segments, launchedAt, total: flightDuration(segments), band: new T.Color(theme.cupBand(slot, SLOTS).glow) })
+      live.push({ mesh, halo, samples, segments, launchedAt, total: flightDuration(segments), band: new T.Color(theme.cupBand(slot, SLOTS).glow) })
     },
 
     update(now) {
@@ -72,11 +80,13 @@ export function createStreaks(kit, camera) {
         const streak = live[i]
         const elapsed = now - streak.launchedAt
         if (elapsed - (STREAK_SAMPLES - 1) * STREAK_STEP >= streak.total) {
-          scene.remove(streak.mesh)
+          scene.remove(streak.mesh, streak.halo)
           streak.mesh.geometry.dispose()
+          streak.halo.material.dispose()
           live.splice(i, 1)
           continue
         }
+        let sinking = 0
         streak.samples.forEach((sample, k) => {
           const time = Math.min(streak.total, Math.max(0, elapsed - k * STREAK_STEP))
           const [x, y, z, segment, t] = pathAt(streak.segments, time)
@@ -86,7 +96,12 @@ export function createStreaks(kit, camera) {
           sample.tint.copy(aqua)
           if (segment.kind === 'exit') sample.tint.lerp(streak.band, t)
           if (segment.kind === 'sink') sample.tint.copy(streak.band)
+          if (k === 0 && segment.kind === 'sink') sinking = t
         })
+        const head = streak.samples[0]
+        streak.halo.position.copy(head.point)
+        streak.halo.material.color.copy(head.tint)
+        streak.halo.material.opacity = elapsed >= streak.total ? 0 : HALO_OPACITY * (1 - sinking)
         lay(streak.mesh, streak.samples, (point, out) => out.subVectors(camera.position, point))
       }
     },

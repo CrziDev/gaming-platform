@@ -3,11 +3,14 @@
 // photo covers the frame, ZOOM beyond cover, centred unless that would crop the
 // signboard on its right, whose edge (keepRight) stays on screen. Where the frame is
 // wider than the photo, the photo's anchor height (0 at the bottom) sits on the board's
-// band (bandY). The top darkens a little under the title and the foot under the bet panel.
+// band (bandY). The photo is softened by a slight blur, BLUR of the frame's height, so the
+// ball reads against it. The top darkens a little under the title and the foot under the
+// bet panel.
 const BACKGROUND_GLSL = `
 uniform sampler2D map;
 uniform float has, imageAspect, viewAspect, bandY, anchor, keepRight;
-const float ZOOM = 1.03, SATURATION = 1.05;
+const float ZOOM = 1.03, SATURATION = 1.05, BLUR = .003;
+const int TAPS = 12;
 
 vec3 backgroundAt(vec2 q) {
   vec3 c = vec3(.03, .08, .12);
@@ -17,7 +20,15 @@ vec3 backgroundAt(vec2 q) {
     float shown = min(1., 1. / r) / ZOOM;
     float left = clamp(max((1. - span) / 2., keepRight - span), 0., 1. - span);
     float start = clamp(anchor - bandY * shown, 0., 1. - shown);
-    c = texture2D(map, vec2(left + q.x * span, start + q.y * shown)).rgb;
+    vec2 uv = vec2(left + q.x * span, start + q.y * shown);
+    vec2 reach = BLUR * vec2(span / viewAspect, shown);
+    c = vec3(0.);
+    for (int i = 0; i < TAPS; i++) {
+      float angle = float(i) * 2.39996;
+      float radius = sqrt((float(i) + .5) / float(TAPS));
+      c += texture2D(map, uv + reach * radius * vec2(cos(angle), sin(angle)), .5).rgb;
+    }
+    c /= float(TAPS);
     c = max(mix(vec3(dot(c, vec3(.2126, .7152, .0722))), c, SATURATION), 0.);
   }
   c *= 1. - .3 * smoothstep(.72, 1., q.y);
