@@ -44,7 +44,7 @@ terrace is a photograph drawn in the scene behind the board.
 | `css/tropical.css` | The frame's font faces, ground, the brand line (21px, 28 from 640), the result toast, and the big-win multiplier |
 | `js/main.js`, `js/bridge.js`, `js/state.js` | The same boot, protocol-3 bridge, and state as Plinko's frame, and the same `ready` with `game: 'plinko'`, the engine's protocol; boot waits up to 2.5 s for Inter, IBM Plex Sans, and Caveat Brush |
 | `js/celebration.js` | Plinko's win tiers and shake, with a burst of confetti in the tile bands' colours and the rim's gold |
-| `js/music.js` | The same background music as Plinko's frame |
+| `js/music.js` | Plinko's music player, playing this frame's own track |
 | `js/ui.js` | The left brand line's placement: high on the board, below any host control over that side, a short reach from the board or control beside it and never nearer the frame's edge than 40px, centred in the gutter otherwise, and hidden when the gutter cannot hold it clear; the scene's fade into the page ground below the stage rect; the result toast; a big win's multiplier and label centred on the stage; and `formatMultiplier` |
 | `js/theme.js` | The tile bands (pearl, blue, green, yellow, orange, red by distance from the centre), the slate and rim colours, the chute's blue, the streak and glint colours, and the confetti colours |
 | `js/board.js` | Renderer, its pixel budget (full device density up to 3x and 4.5 million device pixels), bloom, camera framing inside the stage rect, tile labels, the drop, the landing pulse and a winning tile's second flash, the big-win shake, the render-on-demand loop, and the peg and landing tones |
@@ -56,7 +56,7 @@ terrace is a photograph drawn in the scene behind the board.
 | `js/board/tiles.js` | The tray: recess, dividers, floor, the tiles and their painted faces |
 | `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
 | `js/board/trail.js` | The ball's light streak, sampled backwards along the flight path, the halo that rides on the ball, and the glints a struck peg throws |
-| `audio/` | The same `music.mp3` and `SOURCES.txt` as Plinko's frame |
+| `audio/` | `music.mp3`, about 1.8 MB: tubebackr's "Viajes" from Free To Use Music, 4 minutes 13 to its closing silence; `SOURCES.txt` names the recording, its credit, and the cut |
 | `img/terrace.jpg` | The 1916×821 wide backdrop |
 | `img/terrace-portrait.jpg` | The 941×1672 tall backdrop of the same terrace |
 | `js/vendor/` | three.js 0.169.0 and the bloom pass's addons with their MIT licence, vendored beside this game as `packages.md` requires |
