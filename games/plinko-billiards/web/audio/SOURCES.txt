@@ -11,7 +11,8 @@ rack.mp3     "Racking Pool Balls" by Sirkoto51, 0.345 s for 0.5 s
 pocket.mp3   "Pool_Table_Ball_Hit_Sink.WAV" by AmberdeMeillon, 4.29 s for 0.96 s
              https://freesound.org/people/AmberdeMeillon/sounds/443066/
 
-music.mp3    "Old Blues in the Bar" by Novifi, from Pixabay (track 255099),
+old-blues-in-the-bar.mp3
+             "Old Blues in the Bar" by Novifi, from Pixabay (track 255099),
              https://pixabay.com/music/, under the Pixabay Content License
              (https://pixabay.com/service/license-summary/), which asks no credit.
              The last 1.5 s faded out, low-passed at 11 kHz, lowered 11.1 dB to the
