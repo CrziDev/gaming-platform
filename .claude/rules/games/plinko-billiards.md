@@ -97,8 +97,17 @@ ring, lining, and plate pulse for about half a second, and a struck ball gives a
 and glows. The rolling cue ball leaves no light: a faint ivory smear blurs behind it,
 taking on the landing pocket's band only on the last roll in; it brushes a soft track in
 the nap that fades where it lies over about a second and breaks where the ball hops; and
-each strike knocks off a small puff of blue cue chalk. The frame's result toast is green
-at or above 1× and grey below.
+each strike knocks off a small puff of blue cue chalk. The frame's result toast is set in
+Inter 700, gold at or above 1× and grey below.
+
+## Big wins
+
+A landing at 5× or more is a big win: gold coins burst in puffs of blue cue chalk from
+the landing pocket; the multiplier stands across the middle of the stage over the result
+in gold, both in Inter 700 with tabular figures, in place of the toast over the pocket;
+and the table shakes a few pixels for about 350ms while the backdrop stays still. A
+landing from 2.5× up, big wins included, flashes its pocket twice. Under reduced motion a
+big win shows only the multiplier and result, with no burst, shake, or flash.
 
 ## Art
 

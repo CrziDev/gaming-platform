@@ -93,16 +93,25 @@ title mark alone.
 ## Palette and light
 
 Declared once in `js/theme.js` and `css/tropical.css`, never copied from or into platform
-tokens. Tile bands run pearl, blue, green, yellow, orange, red by distance from the centre;
-each band paints its tile's face, inks its label (the figure with a smaller ×), tints its
-edge, and spills a little light on the floor before it. The slate above the tiles stays
-dark until a tile is landed in: the landing tile brightens, washes its colour up the slate
-and over the floor, and gives a hair under the ball for about half a second. A falling
-ball draws a light streak behind it, a warm white core in a soft aqua glow, stretching
-with its speed, that takes on the landing tile's band only on the last hop and drains into
-the tile after it. A struck peg glows warm and throws a few gold glints. The bulbs, the
-chute, the lit tiles, and the streak are the only light bright enough to bloom. The
-frame's result toast is green at or above 1× and grey below.
+tokens. Tile bands run pearl, blue, green, yellow, orange, red by distance from the
+centre; each band paints its tile's face, inks its label (the figure with a smaller ×),
+tints its edge, and spills a little light on the floor before it. The slate above the
+tiles stays dark until a tile is landed in: the landing tile brightens, washes its colour
+up the slate and over the floor, and gives a hair under the ball for about half a second.
+A falling ball draws a light streak behind it, a warm white core in a soft aqua glow,
+stretching with its speed, that takes on the landing tile's band only on the last hop and
+drains into the tile after it. A struck peg glows warm and throws a few gold glints. The
+bulbs, the chute, the lit tiles, and the streak are the only light bright enough to
+bloom. The frame's result toast is set in Inter 700, gold at or above 1× and grey below.
+
+## Big wins
+
+A landing at 5× or more is a big win: confetti in the tile bands' colours bursts from the
+landing tile; the multiplier stands across the middle of the stage over the result in
+gold, both in Inter 700 with tabular figures, in place of the toast over the tile; and
+the board shakes a few pixels for about 350ms while the backdrop stays still. A landing
+from 2.5× up, big wins included, flashes its tile twice. Under reduced motion a big win
+shows only the multiplier and result, with no burst, shake, or flash.
 
 ## Art
 

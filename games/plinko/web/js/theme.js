@@ -15,6 +15,9 @@ export const theme = {
   // The ball's light streak and the sparks a struck peg throws.
   trail: { streak: '#cfe6ff', spark: '#e8f3ff' },
 
+  // The coins and sparks a big win throws out of its cup.
+  burst: { coin: { face: '#f2c14e', rim: '#a8771c', shine: '#fff3c4' }, spark: '#e8f3ff' },
+
   labelFont(size) {
     return `700 ${size}px Inter, "IBM Plex Sans", sans-serif`
   },

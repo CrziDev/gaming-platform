@@ -52,15 +52,16 @@ for what the platform took over from the vendor; nothing of its drawing code rem
 
 | File | Role |
 | --- | --- |
-| `index.html` | The full-viewport `#scene`, the two taglines, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
-| `css/plinko.css` | The frame's own art values: font faces, ground, taglines (smaller under 768px), and the result toast. It copies no platform tokens |
+| `index.html` | The full-viewport `#scene`, the two taglines, the big-win burst canvas, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
+| `css/plinko.css` | The frame's own art values: font faces, ground, taglines (smaller under 768px), the result toast, and the big-win multiplier. It copies no platform tokens |
 | `js/main.js` | Boot: loads three.js, the optional bloom pass, and the label and tagline fonts (at most 2.5 s), builds the board, starts the bridge, posts `ready` |
 | `js/state.js` | Risk, the configured multipliers, sound flag, configured flag, and the host's stage rect |
 | `js/bridge.js` | The frame side of the protocol: guards origin, source, version, type, and fields |
-| `js/board.js` | The board: renderer, lighting, bloom, camera framing inside the stage rect, cup labels, the drop, the render-on-demand loop, and peg and landing tones |
+| `js/board.js` | The board: renderer, lighting, bloom, camera framing inside the stage rect, cup labels, the drop, the landing pulse and a winning cup's second flash, the big-win shake, the render-on-demand loop, and peg and landing tones |
+| `js/celebration.js` | The win tiers (5× and up big, 2.5× and up a flash), the shake's offset over time, and the burst of gold coins and ice-white sparks drawn on its own canvas while any are in the air |
 | `js/music.js` | The background music: a quiet loop under the board's own sounds, faded in once the browser lets the frame play sound and out when the player turns sound off or the page is hidden; it is retried on each message from the host, since a frame may start sound only after the player has used the page |
-| `js/theme.js` | The cup bands (silver, teal, purple, orange, red by distance from the centre) and the label font |
-| `js/ui.js` | Tagline placement in the gutters between each frame edge and the nearest glass or host control at the tagline's own height: 40px from the glass or control beside it where the gutter has room, and never nearer the frame's edge than 40px; centred in the gutter otherwise, and hidden when a gutter cannot hold them clear; the left one stands down while the backdrop paints it; the scene's fade into the page ground below the stage rect; the result toast; and `formatMultiplier` |
+| `js/theme.js` | The cup bands (silver, teal, purple, orange, red by distance from the centre), the label font, and the burst's coin and spark colours |
+| `js/ui.js` | Tagline placement in the gutters between each frame edge and the nearest glass or host control at the tagline's own height: 40px from the glass or control beside it where the gutter has room, and never nearer the frame's edge than 40px; centred in the gutter otherwise, and hidden when a gutter cannot hold them clear; the left one stands down while the backdrop paints it; the scene's fade into the page ground below the stage rect; the result toast; a big win's multiplier and label centred on the stage; and `formatMultiplier` |
 | `js/board/geometry.js` | Every dimension of the board and the curves the pane, fins, and mouths follow |
 | `js/board/kit.js` | Shared builders: canvas textures, glow sprites, highlight tubes, glass, subdivision, ribbons |
 | `js/board/background.js` | The city backdrop shader, shared with the tinted back panel so the panel samples the same pixels, and the choice between the wide and tall photos |
@@ -94,6 +95,14 @@ into the chute mouth, and a sink into the cup. It posts `landed` for that slot w
 path ends. Under reduced motion the cup lights at once and `landed` is posted without
 the flight. A `drop` before the board is configured is reported landed at once.
 
+A landing that pays 5× or more is a big win: gold coins and ice-white sparks burst out of
+the cup, the multiplier stands across the middle of the stage over the host's result
+label in place of the toast, and the board shakes a few pixels for 350 ms by shifting its
+view offset, so the backdrop stays still. A landing from 2.5× up flashes its cup twice.
+The tiers are read from the settled `multiplier_hundredths`, and `js/celebration.js`
+holds them. Under reduced motion a big win shows only the multiplier and label, without
+the burst, the shake, or the flash.
+
 The streak behind the ball is the path itself, read back over its last 220 ms, so it is
 a smooth curve at any frame rate and stretches with the ball's speed. It outlives the
 ball by that long, draining into the cup, and the render loop runs until it and the peg
@@ -103,14 +112,14 @@ sparks have faded. Under reduced motion there is neither.
 
 The board's colours are game art, declared once in `js/theme.js` and nowhere in the
 platform. Each cup band colours its cup's liquid from deep to light, paints its label in
-its ink, and spills its glow onto the back wall, the front sheet, and the tray. Everything
-else in the tray — the base slab, front sheet, fins, cup glass above the liquid
-(`CUP_FILL`), and the drop-mouth rings with their halo, spark, and light — is ice-blue
-glass, set in `cups.js`, `tray.js`, and `fins.js` rather than in the bands. The landing cup
-pulses for about half a second. The streak is a white-hot core in an ice-blue glow,
-the only part of it bright enough to bloom; on the arc into the mouth and the sink it
-takes on the landing cup's band, never earlier. The frame's toast shows the host's result label in green
-at or above 1× and in grey below it.
+its ink, and spills its glow onto the back wall, the front sheet, and the tray.
+Everything else in the tray — the base slab, front sheet, fins, cup glass above the
+liquid (`CUP_FILL`), and the drop-mouth rings with their halo, spark, and light — is
+ice-blue glass, set in `cups.js`, `tray.js`, and `fins.js` rather than in the bands. The
+landing cup pulses for about half a second. The streak is a white-hot core in an ice-blue
+glow, the only part of it bright enough to bloom; on the arc into the mouth and the sink
+it takes on the landing cup's band, never earlier. The frame's toast shows the host's
+result label in Inter 700, gold at or above 1× and grey below it.
 
 ### Backdrop
 
@@ -263,7 +272,8 @@ rejected, so a frame cached from an earlier version fails cleanly as
 | host → frame | `drop` | `round_id`, `slot`, `multiplier_hundredths`, `result_label` |
 | host → frame | `set_sound` | `enabled` |
 
-`result_label` is money already formatted by the host; the frame formats no money.
+`result_label` is money already formatted by the host; the frame formats no money. The
+host signs it `+` only at or above 1×, since a return under the stake is a loss.
 
 ### Lifecycle
 

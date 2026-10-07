@@ -38,12 +38,13 @@ one, and its edges are antialiased to one screen pixel at any size.
 
 | File | Role |
 | --- | --- |
-| `index.html` | The full-viewport `#scene`, the two taglines, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
-| `css/billiards.css` | The frame's font faces, and its ground, taglines, and result toast in the hall's warm tones |
-| `js/main.js`, `js/bridge.js`, `js/state.js`, `js/ui.js` | The same boot, protocol-3 bridge, state, and tagline and toast placement as Plinko's frame, and the same `ready` with `game: 'plinko'`, the engine's protocol |
+| `index.html` | The full-viewport `#scene`, the two taglines, the big-win burst canvas, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
+| `css/billiards.css` | The frame's font faces, and its ground, taglines, result toast, and big-win multiplier in the hall's warm tones |
+| `js/main.js`, `js/bridge.js`, `js/state.js`, `js/ui.js` | The same boot, protocol-3 bridge, state, and tagline, toast, and big-win placement as Plinko's frame, and the same `ready` with `game: 'plinko'`, the engine's protocol |
+| `js/celebration.js` | Plinko's win tiers and shake, with a burst of gold coins in blue chalk puffs |
 | `js/music.js` | The same background music as Plinko's frame |
-| `js/theme.js` | The pocket bands (ivory, blue, purple, orange, red by distance from the centre) and the pool-ball colours |
-| `js/board.js` | Renderer, its pixel budget (full device density up to 3x and 4.5 million device pixels), hall lighting, bloom, sharpen, camera framing inside the stage rect, the drop, the render-on-demand loop, and the sounds: the rack rattling on the drop, a ball-on-ball clack at each strike (the first the loudest, the rest varied in level and pitch), and the ball sinking into the pocket, with a chime over it from 1× |
+| `js/theme.js` | The pocket bands (ivory, blue, purple, orange, red by distance from the centre), the pool-ball colours, and the burst's coin and chalk colours |
+| `js/board.js` | Renderer, its pixel budget (full device density up to 3x and 4.5 million device pixels), hall lighting, bloom, sharpen, camera framing inside the stage rect, the drop, a winning pocket's second flash, the big-win shake, the render-on-demand loop, and the sounds: the rack rattling on the drop, a ball-on-ball clack at each strike (the first the loudest, the rest varied in level and pitch), and the ball sinking into the pocket, with a chime over it from 1× |
 | `js/board/geometry.js` | Every dimension of the table, the rack, the pockets, and the apron |
 | `js/board/kit.js` | Canvas textures (cloth, mahogany, leather, pool balls, cue ball, chalk dust), glow sprites, contact shadows |
 | `js/board/background.js` | The hall shader |
@@ -64,6 +65,14 @@ in the nap, lighter down the middle with a darker line each side, fades in place
 about 900 ms and breaks where the ball hops; and each strike puffs blue chalk that
 spreads, lifts, and thins out. None of it is light, so none of it blooms, and none of it
 is drawn under reduced motion.
+
+A landing that pays 5× or more is a big win: gold coins burst in puffs of blue chalk out
+of the pocket, the multiplier stands across the middle of the stage over the host's
+result label in place of the toast, and the table shakes a few pixels for 350 ms by
+shifting its view offset, so the backdrop stays still. A landing from 2.5× up flashes its
+pocket twice. The tiers are read from the settled `multiplier_hundredths`, and
+`js/celebration.js` holds them. Under reduced motion a big win shows only the multiplier
+and label, without the burst, the shake, or the flash.
 
 ## Checks
 

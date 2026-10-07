@@ -146,6 +146,15 @@ body::after {
   }
 }
 
+.burst {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 .toasts {
   position: fixed;
   inset: 0;
@@ -156,18 +165,58 @@ body::after {
 .toast {
   position: absolute;
   transform: translate(-50%, -50%);
-  padding: 5px 9px;
+  padding: 6px 11px;
   border: 1px solid rgb(255 230 190 / 0.18);
   border-radius: 9px;
   background: rgb(14 10 7 / 0.86);
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
-  color: #b3bfcf;
-  font-size: 13px;
-  font-weight: 600;
+  color: #b8ad9c;
+  font-family: Inter, 'IBM Plex Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .toast-win {
-  color: #4af2a4;
+  border-color: rgb(242 199 110 / 0.38);
+  color: #f2c76e;
+}
+
+.big-win {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.big-win-times {
+  color: #f6efdc;
+  font-family: Inter, 'IBM Plex Sans', sans-serif;
+  font-size: var(--big-win-size, 72px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 2px 0 #6b4a1a,
+    0 0 16px rgb(255 200 120 / 0.45),
+    0 6px 18px rgb(0 0 0 / 0.5);
+}
+
+.big-win-amount {
+  padding: 6px 12px;
+  border: 1px solid rgb(242 199 110 / 0.38);
+  border-radius: 10px;
+  background: rgb(14 10 7 / 0.88);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+  color: #f2c76e;
+  font-family: Inter, 'IBM Plex Sans', sans-serif;
+  font-size: calc(var(--big-win-size, 72px) * 0.26);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }

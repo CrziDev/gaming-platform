@@ -19,6 +19,9 @@ export const theme = {
   // and the blue of the chalk a strike knocks off.
   trail: { smear: '#f3eee2', napLight: '#a9e0bf', napDark: '#03140b', chalk: '#5d8fd8' },
 
+  // The coins and chalk a big win throws out of its pocket.
+  burst: { coin: { face: '#f2c14e', rim: '#a8771c', shine: '#fff3c4' }, chalk: '#5d8fd8' },
+
   labelFont(size) {
     return `700 ${size}px Inter, "IBM Plex Sans", sans-serif`
   },

@@ -77,12 +77,20 @@ taglines, beside the platform's IBM Plex Sans.
 Declared once in `js/theme.js` and `css/plinko.css`, never copied from or into platform
 tokens. Cup bands run silver, teal, purple, orange, red by distance from the centre; each
 band colours its cup's liquid, inks its label, and spills its glow onto the wall, sheet,
-and tray.
-A falling ball draws a light streak behind it: a white-hot core in a soft ice-blue glow,
-stretching with its speed, that takes on the landing cup's band only on the last arc in
-and drains into the cup after it. A struck peg throws a few ice-white sparks.
-The landing cup pulses for about half a second. The frame's result toast is green at or
-above 1× and grey below.
+and tray. A falling ball draws a light streak behind it: a white-hot core in a soft
+ice-blue glow, stretching with its speed, that takes on the landing cup's band only on
+the last arc in and drains into the cup after it. A struck peg throws a few ice-white
+sparks. The landing cup pulses for about half a second. The frame's result toast is set
+in Inter 700, gold at or above 1× and grey below.
+
+## Big wins
+
+A landing at 5× or more is a big win: gold coins and ice-white sparks burst from the
+landing cup; the multiplier stands across the middle of the stage over the result in
+gold, both in Inter 700 with tabular figures, in place of the toast over the cup; and the
+board shakes a few pixels for about 350ms while the backdrop stays still. A landing from
+2.5× up, big wins included, flashes its cup twice. Under reduced motion a big win shows
+only the multiplier and result, with no burst, shake, or flash.
 
 ## Art
 

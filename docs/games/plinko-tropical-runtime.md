@@ -40,13 +40,14 @@ terrace is a photograph drawn in the scene behind the board.
 
 | File | Role |
 | --- | --- |
-| `index.html` | The full-viewport `#scene`, the left brand line, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
-| `css/tropical.css` | The frame's font faces, ground, the brand line (21px, 28 from 640), and the result toast |
+| `index.html` | The full-viewport `#scene`, the left brand line, the big-win burst canvas, the toast layer; an import map points `three` and `three/addons/` at `js/vendor/` |
+| `css/tropical.css` | The frame's font faces, ground, the brand line (21px, 28 from 640), the result toast, and the big-win multiplier |
 | `js/main.js`, `js/bridge.js`, `js/state.js` | The same boot, protocol-3 bridge, and state as Plinko's frame, and the same `ready` with `game: 'plinko'`, the engine's protocol; boot waits up to 2.5 s for Inter, IBM Plex Sans, and Caveat Brush |
+| `js/celebration.js` | Plinko's win tiers and shake, with a burst of confetti in the tile bands' colours and the rim's gold |
 | `js/music.js` | The same background music as Plinko's frame |
-| `js/ui.js` | The left brand line's placement: high on the board, below any host control over that side, a short reach from the board or control beside it and never nearer the frame's edge than 40px, centred in the gutter otherwise, and hidden when the gutter cannot hold it clear; the scene's fade into the page ground below the stage rect; the result toast; and `formatMultiplier` |
-| `js/theme.js` | The tile bands (pearl, blue, green, yellow, orange, red by distance from the centre), the slate and rim colours, the chute's blue, and the streak and glint colours |
-| `js/board.js` | Renderer, its pixel budget (full device density up to 3x and 4.5 million device pixels), bloom, camera framing inside the stage rect, tile labels, the drop, the landing pulse, the render-on-demand loop, and the peg and landing tones |
+| `js/ui.js` | The left brand line's placement: high on the board, below any host control over that side, a short reach from the board or control beside it and never nearer the frame's edge than 40px, centred in the gutter otherwise, and hidden when the gutter cannot hold it clear; the scene's fade into the page ground below the stage rect; the result toast; a big win's multiplier and label centred on the stage; and `formatMultiplier` |
+| `js/theme.js` | The tile bands (pearl, blue, green, yellow, orange, red by distance from the centre), the slate and rim colours, the chute's blue, the streak and glint colours, and the confetti colours |
+| `js/board.js` | Renderer, its pixel budget (full device density up to 3x and 4.5 million device pixels), bloom, camera framing inside the stage rect, tile labels, the drop, the landing pulse and a winning tile's second flash, the big-win shake, the render-on-demand loop, and the peg and landing tones |
 | `js/board/geometry.js` | Every dimension of the slate, rim, cradle, chute, pegs, and tray, and the outline every rim layer is offset from |
 | `js/board/kit.js` | Canvas textures, glow sprites, and highlight lines |
 | `js/board/studios.js` | The three environment maps — daylight for the steel and the face, a warm cabana for the gold, a crisp studio of its own for the mirror pegs and ball — and the daylight on the board |
@@ -68,6 +69,14 @@ keeps its sideways speed so a ball bound for an outer tile is over it before it 
 divider tops. The landing tile pulses for about half a second before `landed` is posted.
 Under reduced motion the tile lights at once and `landed` is posted without the flight. A
 `drop` before the board is configured is reported landed at once.
+
+A landing that pays 5× or more is a big win: confetti in the tiles' colours bursts out of
+the tile, the multiplier stands across the middle of the stage over the host's result
+label in place of the toast, and the board shakes a few pixels for 350 ms by shifting its
+view offset, so the backdrop stays still. A landing from 2.5× up flashes its tile twice.
+The tiers are read from the settled `multiplier_hundredths`, and `js/celebration.js`
+holds them. Under reduced motion a big win shows only the multiplier and label, without
+the burst, the shake, or the flash.
 
 ### Backdrop
 

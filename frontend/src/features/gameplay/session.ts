@@ -265,7 +265,10 @@ export function useGameSession({ module, slug, currency, onShortfall }: GameSess
         const roundId = response.round.id
         const slot = response.result.slot
         const multiplier = response.round.multiplier_hundredths
-        const label = formatMoney(money(response.round.win_minor ?? 0, currency), { sign: 'always' })
+        // A return under the stake is a loss, so only 1× and up reads with a plus.
+        const label = formatMoney(money(response.round.win_minor ?? 0, currency), {
+          sign: multiplier !== null && multiplier >= 100 ? 'always' : 'auto',
+        })
 
         pendingRef.current.set(roundId, {
           timer: window.setTimeout(() => settle(roundId), SETTLE_FALLBACK_MS),

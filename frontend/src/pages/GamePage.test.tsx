@@ -23,6 +23,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   vi.useRealTimers()
   const php = wallets.find((wallet) => wallet.currency === 'PHP')
@@ -75,7 +76,9 @@ function riskButton() {
 
 function lastDrop(post: ReturnType<typeof vi.spyOn>) {
   const call = [...post.mock.calls].reverse().find((entry) => (entry[0] as { type: string }).type === 'drop')
-  return call?.[0] as { round_id: string; slot: number; result_label: string } | undefined
+  return call?.[0] as
+    | { round_id: string; slot: number; multiplier_hundredths: number; result_label: string }
+    | undefined
 }
 
 describe('a title without an engine', () => {
@@ -198,7 +201,7 @@ describe('the Plinko game page', () => {
     const drop = lastDrop(post)!
     expect(drop.slot).toBeGreaterThanOrEqual(0)
     expect(drop.slot).toBeLessThanOrEqual(10)
-    expect(drop.result_label).toMatch(/^\+₱/)
+    expect(drop.result_label).toMatch(drop.multiplier_hundredths >= 100 ? /^\+₱/ : /^₱/)
 
     // The risk is locked while the ball is falling.
     expect(riskButton()).toBeDisabled()
@@ -208,6 +211,27 @@ describe('the Plinko game page', () => {
     await waitFor(() => expect(riskButton()).toBeEnabled())
     const php = wallets.find((wallet) => wallet.currency === 'PHP')!
     expect(php.balance_minor).not.toBe(startingBalance)
+  })
+
+  it('labels a return of 1× and up with a plus and one under the stake without', async () => {
+    const user = userEvent.setup()
+    const { iframe, post } = await readyBoard()
+
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    await user.click(screen.getByRole('button', { name: /PLACE BET/ }))
+    await waitFor(() => expect(lastDrop(post)).toBeDefined())
+    const win = lastDrop(post)!
+    expect(win.multiplier_hundredths).toBeGreaterThanOrEqual(100)
+    expect(win.result_label).toMatch(/^\+₱/)
+    frameSays(iframe, { v: 3, type: 'landed', round_id: win.round_id, slot: win.slot })
+    await waitFor(() => expect(riskButton()).toBeEnabled())
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    await user.click(screen.getByRole('button', { name: /PLACE BET/ }))
+    await waitFor(() => expect(lastDrop(post)?.round_id).not.toBe(win.round_id))
+    const loss = lastDrop(post)!
+    expect(loss.multiplier_hundredths).toBeLessThan(100)
+    expect(loss.result_label).toMatch(/^₱/)
   })
 
   it('places a bet with the space bar', async () => {
