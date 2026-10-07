@@ -42,7 +42,7 @@ one, and its edges are antialiased to one screen pixel at any size.
 | `css/billiards.css` | The frame's font faces, and its ground, taglines, result toast, and big-win multiplier in the hall's warm tones |
 | `js/main.js`, `js/bridge.js`, `js/state.js`, `js/ui.js` | The same boot, protocol-3 bridge, state, and tagline, toast, and big-win placement as Plinko's frame, and the same `ready` with `game: 'plinko'`, the engine's protocol |
 | `js/celebration.js` | Plinko's win tiers and shake, with a burst of gold coins in blue chalk puffs |
-| `js/music.js` | The same background music as Plinko's frame |
+| `js/music.js` | Plinko's music player, playing this frame's own track |
 | `js/theme.js` | The pocket bands (ivory, blue, purple, orange, red by distance from the centre), the pool-ball colours, and the burst's coin and chalk colours |
 | `js/board.js` | Renderer, its pixel budget (full device density up to 3x and 4.5 million device pixels), hall lighting, bloom, sharpen, camera framing inside the stage rect, the drop, a winning pocket's second flash, the big-win shake, the render-on-demand loop, and the sounds: the rack rattling on the drop, a ball-on-ball clack at each strike (the first the loudest, the rest varied in level and pitch), and the ball sinking into the pocket, with a chime over it from 1× |
 | `js/board/geometry.js` | Every dimension of the table, the rack, the pockets, and the apron |
@@ -52,7 +52,7 @@ one, and its edges are antialiased to one screen pixel at any size.
 | `js/board/table.js`, `pockets.js`, `rack.js` | Cloth, cushions, rails, sights, and apron; pockets and their plates; the rack and the cue ball |
 | `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
 | `js/board/trail.js` | The marks the cue ball leaves, sampled backwards along the flight path: the ivory smear, the nap track, and the chalk puffed off each strike |
-| `audio/` | The recorded sounds, about 25 KB of mono MP3 cut from CC0 Freesound recordings and decoded with the frame: two clacks, the rack, and the pocket; and the same `music.mp3` as Plinko's frame; `SOURCES.txt` names each recording and the cut |
+| `audio/` | The recorded sounds, about 25 KB of mono MP3 cut from CC0 Freesound recordings and decoded with the frame: two clacks, the rack, and the pocket; and `music.mp3`, about 0.9 MB: Novifi's "Old Blues in the Bar" from Pixabay, all 2 minutes 8; `SOURCES.txt` names each recording, its licence, and the cut |
 | `js/vendor/` | three.js 0.169.0 and the bloom and shader passes' addons with their MIT licence, vendored beside this game as `packages.md` requires |
 | `fonts/` | The same faces as Plinko's frame, with their OFL licences, preloaded the same way |
 
