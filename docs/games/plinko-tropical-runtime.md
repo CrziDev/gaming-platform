@@ -56,7 +56,7 @@ terrace is a photograph drawn in the scene behind the board.
 | `js/board/tiles.js` | The tray: recess, dividers, floor, the tiles and their painted faces |
 | `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
 | `js/board/trail.js` | The ball's light streak, sampled backwards along the flight path, the halo that rides on the ball, and the glints a struck peg throws |
-| `audio/` | `music.mp3`, about 1.8 MB: tubebackr's "Viajes" from Free To Use Music, 4 minutes 13 to its closing silence; `SOURCES.txt` names the recording, its credit, and the cut |
+| `audio/` | `viajes.mp3`, about 1.8 MB: tubebackr's "Viajes" from Free To Use Music, 4 minutes 13 to its closing silence; `SOURCES.txt` names the recording, its credit, and the cut |
 | `img/terrace.jpg` | The 1916×821 wide backdrop |
 | `img/terrace-portrait.jpg` | The 941×1672 tall backdrop of the same terrace |
 | `js/vendor/` | three.js 0.169.0 and the bloom pass's addons with their MIT licence, vendored beside this game as `packages.md` requires |

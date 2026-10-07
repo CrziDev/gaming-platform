@@ -52,7 +52,7 @@ one, and its edges are antialiased to one screen pixel at any size.
 | `js/board/table.js`, `pockets.js`, `rack.js` | Cloth, cushions, rails, sights, and apron; pockets and their plates; the rack and the cue ball |
 | `js/board/flight.js` | The drop path to a given slot, the ball's position along it, and `pathAt`, its position at any time since the drop |
 | `js/board/trail.js` | The marks the cue ball leaves, sampled backwards along the flight path: the ivory smear, the nap track, and the chalk puffed off each strike |
-| `audio/` | The recorded sounds, about 25 KB of mono MP3 cut from CC0 Freesound recordings and decoded with the frame: two clacks, the rack, and the pocket; and `music.mp3`, about 0.9 MB: Novifi's "Old Blues in the Bar" from Pixabay, all 2 minutes 8; `SOURCES.txt` names each recording, its licence, and the cut |
+| `audio/` | The recorded sounds, about 25 KB of mono MP3 cut from CC0 Freesound recordings and decoded with the frame: two clacks, the rack, and the pocket; and `old-blues-in-the-bar.mp3`, about 0.9 MB: Novifi's "Old Blues in the Bar" from Pixabay, all 2 minutes 8; `SOURCES.txt` names each recording, its licence, and the cut |
 | `js/vendor/` | three.js 0.169.0 and the bloom and shader passes' addons with their MIT licence, vendored beside this game as `packages.md` requires |
 | `fonts/` | The same faces as Plinko's frame, with their OFL licences, preloaded the same way |
 
