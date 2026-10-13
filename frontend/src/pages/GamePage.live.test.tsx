@@ -115,7 +115,7 @@ describe('Plinko against a server without the play endpoint', () => {
 
     expect(await screen.findByText("This game isn't available right now.")).toBeInTheDocument()
     expect(posted(post, 'drop')).toHaveLength(0)
-    expect(screen.getByRole('button', { name: /10 rows ·/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /^(Low|Normal|High)$/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'PLACE BET' })).toBeEnabled()
 
     const play = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')
@@ -264,7 +264,7 @@ describe('Plinko when the RTP changes mid-session', () => {
     await waitFor(() =>
       expect(queryClient.getQueryData(['game-manifest', 'plinko'])).toMatchObject({ rtp_basis_points: 10500 }),
     )
-    expect(screen.getByRole('button', { name: /10 rows ·/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^(Low|Normal|High)$/ })).toBeDisabled()
     expect(posted(post, 'configure')).toHaveLength(1)
 
     frameSays(iframe, { v: 3, type: 'landed', round_id: 'round-live-1', slot: 5 })
