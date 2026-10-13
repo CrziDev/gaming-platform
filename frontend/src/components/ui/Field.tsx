@@ -1,5 +1,5 @@
-import { ChevronDown } from 'lucide-react'
-import type { ComponentProps, ReactNode, SelectHTMLAttributes } from 'react'
+import { ChevronDown, Eye, EyeOff } from 'lucide-react'
+import { useState, type ComponentProps, type ReactNode, type SelectHTMLAttributes } from 'react'
 
 import { cn } from '@/lib/cn'
 
@@ -39,6 +39,26 @@ export function Field({ label, htmlFor, error, hint, action, children }: FieldPr
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(inputClass, className)} {...props} />
+}
+
+export function PasswordInput({ className, ...props }: Omit<ComponentProps<'input'>, 'type'>) {
+  const [visible, setVisible] = useState(false)
+  const Icon = visible ? EyeOff : Eye
+
+  return (
+    <div className="relative">
+      <input type={visible ? 'text' : 'password'} className={cn(inputClass, 'pr-12', className)} {...props} />
+      <button
+        type="button"
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
+        onClick={() => setVisible((shown) => !shown)}
+        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-input text-ink-mute transition-colors duration-fast ease-standard hover:text-ink-soft lg:w-10"
+      >
+        <Icon aria-hidden size={18} strokeWidth={1.8} />
+      </button>
+    </div>
+  )
 }
 
 export function Select({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {

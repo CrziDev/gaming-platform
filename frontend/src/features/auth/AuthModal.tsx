@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router'
 
 import { ApiError } from '@/api/client'
 import { Button } from '@/components/ui/Button'
-import { Field, Input } from '@/components/ui/Field'
+import { Field, Input, PasswordInput } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { ChipTabs } from '@/components/ui/Tabs'
 import { paths } from '@/routes/paths'
@@ -119,9 +119,8 @@ function SignInForm({ mutation }: { mutation: ReturnType<typeof useLogin> }) {
           </Link>
         }
       >
-        <Input
+        <PasswordInput
           id="signin-password"
-          type="password"
           autoComplete="current-password"
           {...register('password')}
         />
