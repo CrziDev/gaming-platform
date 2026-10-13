@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 
 import { Button } from '@/components/ui/Button'
-import { Field, Input } from '@/components/ui/Field'
+import { Field, Input, PasswordInput } from '@/components/ui/Field'
 import { adminLoginSchema, useAdminLogin, type AdminLoginInput } from '@/features/auth'
 import { adminPaths } from '@/routes/paths'
 
@@ -40,9 +40,8 @@ export function AdminLoginPage() {
           </Field>
 
           <Field label="Password" htmlFor="admin-password" error={errors.password?.message}>
-            <Input
+            <PasswordInput
               id="admin-password"
-              type="password"
               autoComplete="current-password"
               {...register('password')}
             />
