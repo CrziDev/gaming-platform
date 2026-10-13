@@ -21,7 +21,7 @@ export type PlinkoBoard = Record<PlinkoRisk, readonly number[]>
 export const riskLabels: Record<PlinkoRisk, string> = { low: 'Low', normal: 'Normal', high: 'High' }
 
 export function summarizePlinko(params: PlinkoParams): string {
-  return `${params.rows} rows · ${riskLabels[params.risk]}`
+  return riskLabels[params.risk]
 }
 
 // The supplied paytable, in integer hundredths (1.7× is 170). It is the demo fixture's

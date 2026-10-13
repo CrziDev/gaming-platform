@@ -33,7 +33,7 @@ A `glass-panel` card with the deep panel shadow, 12px padding and 10px internals
 
 - **Balance row:** a 42px wallet tile (40px under 640, hidden under 380px), the `BALANCE`
   micro-label, and the balance in 18 · 500 `tnum` (16 under 640); the risk menu to its right.
-- **Risk menu:** a 42px secondary glass control (40 under 640) reading `10 rows · Normal`,
+- **Risk menu:** a 42px secondary glass control (40 under 640) reading `Normal`,
   with a sliders icon from 430px; its menu lists the three risks with each one's payout
   range.
 - **Stake and play:** the stepper (`field`, ± cells, stake in 18 · 500 `tnum`, 15 under
@@ -61,7 +61,7 @@ in the side panel layout, nothing fades.
 ## Brand lines
 
 `GOOD PLAYERS BET BETTER` in the left gutter and `SAME GAME BIGGER VIEWS` in the right,
-placed by `js/ui.js`, with a 44px `stageGutter` kept for them on narrow screens, and hidden
+placed by `js/ui.js`, with a 12px `stageGutter` on narrow screens, and hidden
 when a gutter cannot hold them clear of the glass and the host's controls. Where the tall
 backdrop shows, `GOOD PLAYERS BET BETTER` is the line painted on its pillar, and the
 frame's own left tagline is not drawn. They and the

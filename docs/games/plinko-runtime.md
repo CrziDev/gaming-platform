@@ -233,8 +233,8 @@ edge, and the platform lays a single centred column over it — the title row (n
 subtitle, FAIR GAME, sound, favourite), the board's stage, and the bet panel. The stage
 keeps the board's 10:11.2 shape and shrinks so the bet panel always fits, and the zone is
 only as tall as the column, so round history follows straight after the bet panel. On a
-narrow screen the stage keeps the module's `stageGutter` (44px) clear on each side, so
-the board narrows and the taglines stand beside it. On a short screen (a viewport under
+narrow screen the stage keeps the module's `stageGutter` (12px) clear on each side, so
+the board nearly fills the width and the taglines show only where a gutter holds them. On a short screen (a viewport under
 900px tall, the zone at least 640px wide) the column splits through the `game-side`
 variant in `frontend/src/styles/index.css`: the stage takes the full height and the title
 row and bet panel stand in a 340px panel beside it. The stage's rect and the rects of the

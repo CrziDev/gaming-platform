@@ -37,7 +37,7 @@ function plinkoTitle(slug: string, options: PlinkoTitleOptions = {}): GameModule
     frameUrl: `/games/${slug}/index.html`,
     subtitle: 'RISK · PLAY · WIN',
     stageAspect: 10 / 11.2,
-    stageGutter: 44,
+    stageGutter: 12,
     titleOverlap: 0,
     defaultParams: DEFAULT_PLINKO_PARAMS,
     Controls: RiskMenu,
@@ -54,7 +54,6 @@ const gameModules: Readonly<Record<string, GameModule>> = {
   'plinko-billiards': plinkoTitle('plinko-billiards', { skin: true }),
   'plinko-tropical': plinkoTitle('plinko-tropical', {
     stageAspect: 0.98,
-    stageGutter: 12,
     titleOverlap: 30,
     TitleMark: TropicalTitleMark,
   }),

@@ -71,7 +71,7 @@ async function untilDropped(post: ReturnType<typeof vi.spyOn>) {
 }
 
 function riskButton() {
-  return screen.getByRole('button', { name: /10 rows ·/ })
+  return screen.getByRole('button', { name: /^(Low|Normal|High)$/ })
 }
 
 function lastDrop(post: ReturnType<typeof vi.spyOn>) {
@@ -112,7 +112,7 @@ describe('the Plinko game page', () => {
     expect(configure.multipliers_hundredths).toEqual(plinkoManifest().multipliers_hundredths['10']?.normal)
     expect(configure.sound).toBe(true)
     expect(screen.queryByRole('status', { name: 'Loading Plinko' })).not.toBeInTheDocument()
-    expect(riskButton()).toHaveTextContent('10 rows · Normal')
+    expect(riskButton()).toHaveTextContent('Normal')
   })
 
   it('tells the frame where the board sits once it is ready', async () => {
@@ -173,7 +173,7 @@ describe('the Plinko game page', () => {
         window.location.origin,
       ),
     )
-    expect(riskButton()).toHaveTextContent('10 rows · High')
+    expect(riskButton()).toHaveTextContent('High')
     expect(window.localStorage.getItem('game.plinko.risk')).toBe('high')
   })
 
@@ -232,23 +232,6 @@ describe('the Plinko game page', () => {
     const loss = lastDrop(post)!
     expect(loss.multiplier_hundredths).toBeLessThan(100)
     expect(loss.result_label).toMatch(/^₱/)
-  })
-
-  it('previews a landing without placing a bet', async () => {
-    const user = userEvent.setup()
-    const { post } = await readyBoard()
-    const before = rounds.length
-    const preview = screen.getByRole('group', { name: 'Preview landing effects' })
-
-    await user.click(within(preview).getByRole('button', { name: '10.00×' }))
-
-    const drop = lastDrop(post)!
-    expect(drop.round_id).toMatch(/^preview-/)
-    expect(drop.multiplier_hundredths).toBe(1000)
-    expect([0, 10]).toContain(drop.slot)
-    expect(drop.result_label).toBe('+₱10.00')
-    expect(rounds).toHaveLength(before)
-    expect(wallets.find((wallet) => wallet.currency === 'PHP')!.balance_minor).toBe(startingBalance)
   })
 
   it('places a bet with the space bar', async () => {
@@ -351,7 +334,7 @@ describe('the Plinko game page', () => {
     const dialog = screen.getByRole('dialog', { name: 'Fair game' })
     expect(within(dialog).queryByText('95.00%')).not.toBeInTheDocument()
     expect(within(dialog).queryByText(/return to player/i)).not.toBeInTheDocument()
-    expect(within(dialog).getByText('Payouts · 10 rows · Normal')).toBeInTheDocument()
+    expect(within(dialog).getByText('Payouts · Normal')).toBeInTheDocument()
     expect(within(dialog).getAllByText(formatMultiplier(1000))).toHaveLength(2)
   })
 
@@ -371,7 +354,7 @@ describe('the Plinko game page', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     await openPlinko()
 
-    await vi.advanceTimersByTimeAsync(10_100)
+    await vi.advanceTimersByTimeAsync(30_100)
 
     expect(await screen.findByRole('alert')).toHaveTextContent('too long to respond')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()

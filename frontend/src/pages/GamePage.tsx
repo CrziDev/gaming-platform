@@ -145,31 +145,28 @@ export function GamePage() {
           </>
         }
         controls={
-          <>
-            <BetPanel
-              stakeMinor={stakeMinor}
-              setStakeMinor={setStakeMinor}
-              balance={wallet ? money(wallet.balance_minor, wallet.currency) : null}
-              currency={currency}
-              minMinor={limits.min_wager_minor}
-              maxMinor={limits.max_wager_minor}
-              stepMinor={limits.wager_step_minor}
-              session={module ? session : null}
-              paramsSlot={
-                module ? (
-                  <module.Controls
-                    params={session.params}
-                    onChange={session.setParams}
-                    disabled={!session.canChangeParams}
-                    board={session.board}
-                  />
-                ) : null
-              }
-              shortfall={shortfall}
-              onShortfall={setShortfall}
-            />
-            {module ? <EffectsPreview session={session} stakeMinor={stakeMinor} /> : null}
-          </>
+          <BetPanel
+            stakeMinor={stakeMinor}
+            setStakeMinor={setStakeMinor}
+            balance={wallet ? money(wallet.balance_minor, wallet.currency) : null}
+            currency={currency}
+            minMinor={limits.min_wager_minor}
+            maxMinor={limits.max_wager_minor}
+            stepMinor={limits.wager_step_minor}
+            session={module ? session : null}
+            paramsSlot={
+              module ? (
+                <module.Controls
+                  params={session.params}
+                  onChange={session.setParams}
+                  disabled={!session.canChangeParams}
+                  board={session.board}
+                />
+              ) : null
+            }
+            shortfall={shortfall}
+            onShortfall={setShortfall}
+          />
         }
       />
 
@@ -178,36 +175,6 @@ export function GamePage() {
       </div>
 
       <FairGameDialog open={fairGame} onClose={() => setFairGame(false)} session={module ? session : null} />
-    </div>
-  )
-}
-
-// Temporary: one button per payout on the chosen risk, each dropping a ball that no
-// round settled so the landing effects can be seen without a bet. Remove with
-// `previewDrop` in the game session.
-function EffectsPreview({ session, stakeMinor }: { session: GameSession; stakeMinor: number }) {
-  const payouts = session.board?.[session.params.risk]
-  if (!payouts) return null
-  const half = payouts.slice(0, Math.ceil(payouts.length / 2))
-
-  return (
-    <div
-      role="group"
-      aria-label="Preview landing effects"
-      className="mt-2 flex flex-wrap items-center gap-1.5 rounded-card border border-hairline-soft bg-inset px-2.5 py-2"
-    >
-      <span className="label-mono mr-1 text-[10px] text-ink-cool">Preview</span>
-      {half.map((hundredths, slot) => (
-        <Button
-          key={slot}
-          size="sm"
-          variant="secondary"
-          className="tnum"
-          onClick={() => session.previewDrop(Math.random() < 0.5 ? slot : payouts.length - 1 - slot, stakeMinor)}
-        >
-          {formatMultiplier(hundredths)}
-        </Button>
-      ))}
     </div>
   )
 }
@@ -221,7 +188,7 @@ function FairGameDialog({ open, onClose, session }: { open: boolean; onClose: ()
         {session && payouts ? (
           <div className="flex flex-col gap-2">
             <dt className="text-ink-mute">
-              Payouts · {session.params.rows} rows · {riskLabels[session.params.risk]}
+              Payouts · {riskLabels[session.params.risk]}
             </dt>
             <dd className="grid grid-cols-3 gap-1.5 min-[400px]:grid-cols-5">
               {payouts.map((hundredths, slot) => (

@@ -33,7 +33,7 @@ A card with the deep panel shadow, 12px padding and 10px internals (10px and 8px
 
 - **Balance row:** a 42px wallet tile (40px under 640, hidden under 380px), the `BALANCE`
   micro-label, and the balance in 18 · 500 `tnum` (16 under 640); the risk menu to its right.
-- **Risk menu:** a 42px secondary glass control (40 under 640) reading `10 rows · Normal`,
+- **Risk menu:** a 42px secondary glass control (40 under 640) reading `Normal`,
   with a sliders icon from 430px; its menu lists the three risks with each one's payout
   range.
 - **Stake and play:** the stepper (`field`, ± cells, stake in 18 · 500 `tnum`, 15 under
@@ -66,7 +66,7 @@ A pool hall fills the whole game area behind the column and belongs to this page
 dark panelled mahogany walls with a chair rail, wainscot, and baseboard over a dark plank
 floor, under a row of warm hanging lamps, the brightest over the table. The hall keeps
 its scale beside the table, so a wider screen shows more of it. In front of it a billiard
-table leans back over an upright mahogany apron: green cloth, cushions, varnished rails
+table leans back over an upright mahogany apron: green cloth, cushions, slim varnished rails
 with pearl sights, a rack of numbered pool balls in ten rows, the cue ball on the head
 spot, and eleven leather pockets with brass lips along the foot cushion. Each pocket's
 payout is an enamelled plate in a brass bezel on the apron.
@@ -78,7 +78,7 @@ in the side panel layout, nothing fades.
 ## Brand lines
 
 `GOOD PLAYERS BET BETTER` in the left gutter and `SAME GAME BIGGER VIEWS` in the right,
-placed by `js/ui.js`, with a 44px `stageGutter` kept for them on narrow screens, and hidden
+placed by `js/ui.js`, with a 12px `stageGutter` on narrow screens, and hidden
 when a gutter cannot hold them clear of the table and the host's controls. They and the
 subtitle are brand art, never extended into explanatory text.
 

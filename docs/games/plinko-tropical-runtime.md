@@ -14,7 +14,7 @@ protocol, the host, and the round lifecycle are in `plinko-runtime.md` and
 | `backend/internal/app/app.go` | `plinko-tropical` in `round.Engines`, mapped to `plinko.New()` |
 | `backend/cmd/seed/catalogue.go` | The catalogue row, integrated at 95% when absent |
 | `frontend/vite.config.ts` | The frame served at `/games/plinko-tropical/` |
-| `frontend/src/features/gameplay/registry.ts` | Its module: the Plinko board and risk menu, its own frame URL, `stageAspect` 0.98, `stageGutter` 12, `titleOverlap` 30, and `TitleMark` |
+| `frontend/src/features/gameplay/registry.ts` | Its module: the Plinko board and risk menu, its own frame URL, `stageAspect` 0.98, `titleOverlap` 30, and `TitleMark` |
 | `frontend/src/features/gameplay/TropicalTitleMark.tsx` | The title mark: the heading named in full, the logo lettering and swash, and the arched subtitle |
 | `frontend/src/styles/games/plinko-tropical.css` | The mark's styles, scoped to `[data-title-mark='plinko-tropical']`, and its Kaushan Script face, subset to the letters of `PLINKO` and fetched only when the mark draws them |
 | `frontend/src/assets/fonts/kaushan-script-plinko.woff2` | That subset, under 3 KB, beside its OFL licence |

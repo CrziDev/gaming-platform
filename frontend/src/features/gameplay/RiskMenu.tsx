@@ -5,7 +5,6 @@ import { cn } from '@/lib/cn'
 import { formatMultiplier } from '@/lib/format'
 
 import {
-  PLINKO_BOARD_ROWS,
   PLINKO_RISKS,
   riskLabels,
   summarizePlinko,
@@ -79,7 +78,7 @@ export function RiskMenu({ params, onChange, disabled, board }: GameControlsProp
           className="pop-enter glass-menu absolute right-0 bottom-[calc(100%+8px)] z-20 flex w-52 flex-col gap-0.5 rounded-input p-1.5"
         >
           <div data-part="risk-menu-head" className="px-2.5 pt-1.5 pb-1 font-mono text-[10px] tracking-[0.14em] text-ink-mute">
-            RISK · {PLINKO_BOARD_ROWS} ROWS
+            RISK
           </div>
           {PLINKO_RISKS.map((risk) => {
             const payouts = board?.[risk]

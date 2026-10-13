@@ -46,7 +46,7 @@ A `glass-panel` card with the deep panel shadow, 12px padding and 10px internals
 
 - **Balance row:** a 42px wallet tile (40px under 640, hidden under 380px), the `BALANCE`
   micro-label, and the balance in 18 · 500 `tnum` (16 under 640); the risk menu to its right.
-- **Risk menu:** a 42px secondary glass control (40 under 640) reading `10 rows · Normal`,
+- **Risk menu:** a 42px secondary glass control (40 under 640) reading `Normal`,
   with a sliders icon from 430px; its menu lists the three risks with each one's payout
   range.
 - **Stake and play:** the stepper (`field`, ± cells, stake in 18 · 500 `tnum`, 15 under
