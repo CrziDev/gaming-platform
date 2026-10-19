@@ -107,7 +107,7 @@ func TestConfigFromEnvValidatesResend(t *testing.T) {
 	valid := map[string]string{
 		"DATABASE_URL": "postgres://example", "EMAIL_DELIVERY_PROVIDER": "resend",
 		"PUBLIC_WEB_URL": "https://play.example.com", "RESEND_API_KEY": "re_key",
-		"RESEND_FROM": "HeziBet <security@example.com>",
+		"RESEND_FROM": "PLAYMEVO <security@example.com>",
 	}
 	if _, err := ConfigFromEnv(func(key string) string { return valid[key] }); err != nil {
 		t.Fatalf("valid Resend configuration rejected: %v", err)
@@ -136,7 +136,7 @@ func TestConfigFromEnvValidatesGmail(t *testing.T) {
 		"DATABASE_URL": "postgres://example", "EMAIL_DELIVERY_PROVIDER": "gmail",
 		"PUBLIC_WEB_URL": "https://play.example.com", "GMAIL_CLIENT_ID": "123-abc.apps.googleusercontent.com",
 		"GMAIL_CLIENT_SECRET": "client-secret", "GMAIL_REFRESH_TOKEN": "1//refresh-token",
-		"GMAIL_FROM": "HeziBet <owner@gmail.com>",
+		"GMAIL_FROM": "PLAYMEVO <owner@gmail.com>",
 	}
 	cfg, err := ConfigFromEnv(func(key string) string { return valid[key] })
 	if err != nil {

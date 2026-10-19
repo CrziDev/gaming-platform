@@ -10,7 +10,7 @@ game's page is designed in its own file under `.claude/rules/games/` (see Games 
 
 ## Direction
 
-Cool navy glass over a near-black ground, one saturated green, and game art that glows. The
+Cool navy glass over a near-black ground, one violet-to-coral accent, and game art that glows. The
 energy comes from content — the game scene, game art, win amounts, live chat — and from
 the one primary action on a screen. Everything else is quiet glass that lets the content
 through.
@@ -37,11 +37,12 @@ through.
 1. **Gradients only where named.** The primary and play fill (`cta-gradient`), the two
    scrims that fade artwork into chrome (`tile-scrim`, `banner-scrim`), and the two light
    edges: `chrome-edge` under the top bar and `rim-light` on `glass-panel`,
-   `glass-float`, and `edge-lit`. Never on text, badges, cards, or backgrounds.
+   `glass-float`, and `edge-lit`. Never on text, badges, cards, or backgrounds. The
+   PLAYMEVO lockup is brand art and carries its own gradient.
 2. **Glow only on the call to action.** `cta-glow` sits on primary and play buttons and
    the round + deposit; the only other light is the `chrome-edge` bevel. Status,
-   links, and cards never glow. Glow inside a game frame is game art and is not governed
-   here.
+   links, and cards never glow. Glow inside a game frame, and the glow drawn into the
+   PLAYMEVO lockup, is art and is not governed here.
 3. **Glass recipes, not ad-hoc blur.** A surface is one of `glass-chrome`, `glass-panel`,
    `glass-float`, or `glass-menu`. No other blur values, no noise, no stripes, no radial
    blooms. A recipe declares the standard `backdrop-filter` only and the build adds the
@@ -51,9 +52,10 @@ through.
    all `rgb(170 205 255 / …)`). They edge glass surfaces, the lobby banner and big-wins
    rows (`edge-lit`), and separate dense tabular data.
    There are no hue-coloured borders except a status badge's own tint.
-5. **One green.** `brand` is the wordmark and the wallet icon; `accent-ink` is links and
-   live dots; the CTA gradient is the only green fill; `selected` is the green tint behind
-   a chosen option. Gold is reserved for the crown and win amounts. Status tints
+5. **One accent.** `brand` is the wallet icon; `accent-ink` is links, live dots, and the
+   focus ring; the CTA gradient, violet through magenta to coral, is the only accent fill
+   besides a chosen option's `accent` chip; `selected` is the magenta tint behind a chosen
+   option. Gold is reserved for win amounts. Status tints
    (`success`, `warning`, `danger`) exist only for state a person must act on.
 6. Keep chrome visually quiet, but preserve a visible scrollbar when content can overflow
    and dragging is not obvious or accessible. Hide a track only on deliberate touch-first
@@ -62,7 +64,7 @@ through.
    Plex Mono for micro-labels, IDs, and timestamps. A game frame, and a game's declared
    title mark, may use their own typefaces, named in the game file; nothing else uses
    them.
-8. **Weight 700 for display only.** Page and game titles, the wordmark, and CTA labels.
+8. **Weight 700 for display only.** Page and game titles and CTA labels.
    Everything else is 400–600.
 9. **Round only where named.** Avatars, status dots, round utility buttons (profile, bell,
    chat, + deposit), and the wallet pill. Every other control uses the radius scale.
@@ -71,9 +73,9 @@ Rules 1, 3, 4, and 5 do not govern a game's skin (see Games); rules 2, 6, 7, 8, 
 
 ## Brand lines
 
-`PLAY SMART` under the wordmark is brand art, not interface copy. It is not governed by
-the copy standard and is never extended into explanatory text. A game's own brand lines
-are named in its game file and follow the same rule.
+The platform carries no brand line; the PLAYMEVO lockup stands alone. A game's own brand
+lines are named in its game file: they are brand art, not interface copy, not governed by
+the copy standard, and never extended into explanatory text.
 
 ## Surfaces and ink
 
@@ -104,14 +106,15 @@ are named in its game file and follow the same rule.
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `brand` | `#2fe38a` | "Bet" in the wordmark, the wallet icon |
-| `accent-ink` | `#3ee08e` | Links, live dots, focus ring |
-| `accent-hi` | `#7cf0b5` | Link hover |
-| `cta-gradient` | `#4af2a4 → #1dcf7b → #11a860` (180deg) | Primary and play fill |
-| `cta-glow` | `0 0 26px rgb(40 230 130 / .42)` + inset highlights | Primary and play |
-| `on-accent` | `#04150b` | Ink on the CTA fill |
-| `selected` | `rgb(47 227 138 / .14)` | Chosen option, active nav row |
-| `gold` | `#f2c14e` | The crown; the ₱ disc beside a win |
+| `brand` | `#e651d6` | The wallet icon |
+| `accent` | `#d946ef` | A chosen option's chip, the Play chip on a tile |
+| `accent-ink` | `#f27fd9` | Links, live dots, focus ring |
+| `accent-hi` | `#f9b8ee` | Link hover |
+| `cta-gradient` | `#a26bff → #e651d6 → #ff7a6b` (90deg) | Primary and play fill |
+| `cta-glow` | `0 0 26px rgb(222 80 214 / .42)` + inset highlights | Primary and play |
+| `on-accent` | `#14041a` | Ink on the CTA fill and the `accent` chip (5:1 or better across the gradient) |
+| `selected` | `rgb(217 70 239 / .14)` | Chosen option, active nav row |
+| `gold` | `#f2c14e` | The ₱ disc beside a win |
 | `win` | `#e8c883` | Win amounts in the big-wins strip |
 | `success` | `#3ec07d` | Credit figures, approved, active |
 | `warning` | `#f5b23b` | Pending, in review |
@@ -136,7 +139,6 @@ never jump width. IBM Plex Mono for micro-labels with wide tracking.
 | card title | 12.5 · 500 | |
 | meta | 11 · 400 | `ink-mute` |
 | micro-label (`label-mono`) | Mono 10–11 · 500 | `.14em`, uppercase, `ink-cool` |
-| wordmark sub-line | Mono 8.5 · 400 | `.34em`, `ink-mute` |
 
 ## Spacing
 
@@ -169,8 +171,9 @@ colour, opacity, or at most 1px of translation; controls never bounce or scale.
 ## Shell
 
 - Top bar 60px on `glass-chrome` with a `chrome-edge` bottom edge: plain three-bar menu button
-  (42px) · a 1px divider · the wordmark (`Hezi` in white, `Bet` in `brand`, the gold crown
-  above the `B`, `PLAY SMART` beneath) · the wallet pill (40px: `brand` wallet icon,
+  (42px) · a 1px divider · the PLAYMEVO lockup, cut from the supplied logo art
+  (`src/assets/brand/`): the ribbon mark beside the name at 30px from 640px, the mark
+  above the name at 38px below that, linking to the lobby · the wallet pill (40px: `brand` wallet icon,
   balance in Sans 14 · 500 `tnum`, round 32px CTA + that opens a deposit; the balance links
   to the wallet) · chat toggle · bell with a `danger` dot · round 40px profile button.
 - Left rail on `glass-chrome`: 192px expanded / 56px collapsed. Search above; Home, Games,
@@ -252,8 +255,8 @@ A section with nothing to show does not render.
 
 The same tokens and primitives as the player side, without background art or brand
 lines beyond the wordmark. Dense tables use `surface-1` rows with hairline separators.
-Its calls to action keep the CTA gradient but carry a quieter glow, `0 0 14px rgb(40 230
-130 / .25)` plus the same inset highlights, because a console screen has many primary
+Its calls to action keep the CTA gradient but carry a quieter glow, `0 0 14px rgb(222 80
+214 / .25)` plus the same inset highlights, because a console screen has many primary
 actions and the full glow is too loud there.
 
 ## Money and status
@@ -278,7 +281,7 @@ on `surface-3`, never an empty circle.
 ## Icons
 
 A single outline set — 1.5–1.9px stroke, 24px grid, rounded caps. Lucide is the library;
-the custom glyphs are the crown in the wordmark and the filled wallet icon in the pill.
+the custom glyph is the filled wallet icon in the pill.
 Icons are always paired with a label in navigation; icon-only is permitted for top-bar
 utilities and controls over game art at 44px targets on touch.
 
@@ -326,10 +329,13 @@ Nothing ever emits a horizontal page scrollbar.
   the design; they are now named recipes instead of bans.
 - **The `#2fa96c` accent and the ₱ disc in the top bar** — one brighter green, and a wallet
   icon in the pill.
+- **The HeziBet wordmark and the green accent** — the platform is PLAYMEVO: its lockup
+  replaces the crown wordmark and `PLAY SMART`, and the accent follows the logo from
+  violet through magenta to coral. Status `success` stays green.
 - **Plex Mono for money** — v3 sets money in Plex Sans with tabular figures, which keeps
   the no-reflow guarantee at a friendlier size.
 - **The 56px top bar and the asymmetric menu glyph** — the top bar is 60px with a
-  plain three-bar menu and the crown wordmark.
+  plain three-bar menu.
 - **The 72px top bar and 46px utilities** — they read oversized on real screens; v3 runs
   one step denser (60 · 40) with 44px hit areas held by `tap-target`.
 - **The 600 weight cap** — display titles and CTA labels are 700.

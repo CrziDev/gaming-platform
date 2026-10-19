@@ -11,7 +11,7 @@ export const announcements: AdminAnnouncement[] = [
   },
   {
     id: 'an-0001',
-    text: 'Welcome to HeziBet.',
+    text: 'Welcome to PLAYMEVO.',
     ends_at: null,
     enabled: true,
     created_at: '2026-09-19T08:00:00Z',

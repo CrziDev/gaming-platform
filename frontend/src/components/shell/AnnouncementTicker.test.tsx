@@ -14,7 +14,7 @@ describe('the lobby announcement ticker', () => {
 
     const region = await screen.findByRole('region', { name: 'Announcements' })
     const items = within(region).getAllByRole('listitem').map((item) => item.textContent)
-    expect(items).toEqual(['New games are available in the lobby.', 'Welcome to HeziBet.'])
+    expect(items).toEqual(['New games are available in the lobby.', 'Welcome to PLAYMEVO.'])
     expect(region.closest('header')).toBeNull()
     expect(region).toHaveClass('absolute', 'inset-x-0', 'top-0')
     expect(region).toHaveClass('bg-surface-1/20')
