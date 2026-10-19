@@ -20,7 +20,7 @@ describe('the top bar for a guest', () => {
     renderApp('/')
 
     const banner = await screen.findByRole('banner')
-    expect(within(banner).getByRole('link', { name: 'HeziBet' })).toHaveAttribute('href', '/')
+    expect(within(banner).getByRole('link', { name: 'PLAYMEVO' })).toHaveAttribute('href', '/')
     expect(within(banner).getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
     expect(within(banner).getByRole('button', { name: 'Join now' })).toBeInTheDocument()
     expect(within(banner).queryByRole('link', { name: 'Deposit' })).not.toBeInTheDocument()

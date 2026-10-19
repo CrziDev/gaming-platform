@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 
 import { MenuGlyph } from '@/components/shell/MenuGlyph'
+import { BrandLockup } from '@/components/shell/Wordmark'
 import { Avatar } from '@/components/ui/Avatar'
 import { IconButton } from '@/components/ui/Button'
 import { useLogout, useSession } from '@/features/auth'
@@ -126,8 +127,9 @@ function AdminTopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
       </IconButton>
 
       <div className="flex items-center gap-2.5">
-        <span className="text-[18px] font-bold tracking-[-0.03em] text-ink sm:text-[20px]">
-          Hezi<span className="text-brand">Bet</span> <span className="font-semibold text-ink-soft">Console</span>
+        <span className="flex items-center gap-2">
+          <BrandLockup />
+          <span className="text-[18px] font-semibold tracking-[-0.03em] text-ink-soft sm:text-[20px]">Console</span>
         </span>
         <span className="label-mono hidden rounded-[5px] bg-wash px-1.5 py-1 text-ink-cool sm:inline">
           Live

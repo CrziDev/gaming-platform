@@ -81,7 +81,7 @@ func newFakeGoogle(t *testing.T) *fakeGoogle {
 func (f *fakeGoogle) sender(now func() time.Time) *mail.Gmail {
 	return mail.NewGmail(mail.GmailConfig{
 		ClientID: "client.apps.googleusercontent.com", ClientSecret: "client-secret", RefreshToken: "refresh-secret",
-		From: "HeziBet <owner@gmail.com>", TokenEndpoint: f.server.URL + "/token", SendEndpoint: f.server.URL + "/send",
+		From: "PLAYMEVO <owner@gmail.com>", TokenEndpoint: f.server.URL + "/token", SendEndpoint: f.server.URL + "/send",
 		MaxAttempts: 3, RetryDelay: -1, Now: now,
 	})
 }
@@ -107,7 +107,7 @@ func TestGmailSendsAMultipartMessageAsTheAuthorizedAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse message: %v", err)
 	}
-	if from := parsed.Header.Get("From"); from != `"HeziBet" <owner@gmail.com>` {
+	if from := parsed.Header.Get("From"); from != `"PLAYMEVO" <owner@gmail.com>` {
 		t.Fatalf("from = %q", from)
 	}
 	to, err := parsed.Header.AddressList("To")

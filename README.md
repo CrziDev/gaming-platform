@@ -72,7 +72,7 @@ PUBLIC_WEB_URL=https://play.example.com
 GMAIL_CLIENT_ID=....apps.googleusercontent.com
 GMAIL_CLIENT_SECRET=...
 GMAIL_REFRESH_TOKEN=1//...
-GMAIL_FROM=HeziBet <sender@gmail.com>
+GMAIL_FROM=PLAYMEVO <sender@gmail.com>
 ```
 
 The refresh token is granted the `gmail.send` scope by the `GMAIL_FROM` account. While

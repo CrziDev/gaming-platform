@@ -47,7 +47,7 @@ func TestResendSendsTheMessage(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	sender := mail.NewResend(mail.ResendConfig{
-		APIKey: "re_secret", From: "HeziBet <security@example.com>", Endpoint: server.URL, MaxAttempts: 1,
+		APIKey: "re_secret", From: "PLAYMEVO <security@example.com>", Endpoint: server.URL, MaxAttempts: 1,
 	})
 	message := testMessage()
 	if err := sender.Send(context.Background(), message); err != nil {
@@ -64,7 +64,7 @@ func TestResendSendsTheMessage(t *testing.T) {
 		t.Fatalf("content type = %q", request.ContentType)
 	}
 	body := request.Body
-	if body.From != "HeziBet <security@example.com>" || len(body.To) != 1 || body.To[0] != message.To[0] ||
+	if body.From != "PLAYMEVO <security@example.com>" || len(body.To) != 1 || body.To[0] != message.To[0] ||
 		body.Subject != message.Subject || body.Text != message.Text || body.HTML != message.HTML {
 		t.Fatalf("unexpected email: %+v", body)
 	}
